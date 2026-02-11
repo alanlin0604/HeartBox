@@ -1,15 +1,40 @@
 {
   "name": "HeartBox-心事盒",
   "short_name": "HeartBox",
+  "description": "AI 驅動的加密心情日記應用程式，記錄、分析並理解你的情緒。",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f0c29",
   "theme_color": "#7c3aed",
+  "categories": ["health", "lifestyle", "productivity"],
   "icons": [
     {
-      "src": "/vite.svg",
+      "src": "/icons/icon.svg",
       "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "192x192",
       "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "寫日記",
+      "url": "/",
+      "description": "開始撰寫新的心情日記"
+    },
+    {
+      "name": "數據分析",
+      "url": "/dashboard",
+      "description": "查看心情趨勢與分析"
     }
   ]
 }

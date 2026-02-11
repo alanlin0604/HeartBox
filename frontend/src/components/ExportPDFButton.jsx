@@ -39,7 +39,7 @@ export default function ExportPDFButton() {
       </button>
 
       {expanded && (
-        <div className="absolute right-0 top-full mt-2 glass-card p-4 z-20 min-w-[280px] space-y-3">
+        <div className="absolute right-0 top-full mt-2 glass-card p-4 z-20 min-w-[280px] max-w-[90vw] space-y-3">
           <h3 className="text-sm font-semibold">{t('export.title')}</h3>
           <div>
             <label className="text-xs opacity-60 block mb-1">{t('export.from')}</label>

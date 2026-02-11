@@ -18,6 +18,8 @@ from .views import (
     CounselorApplyView,
     CounselorListView,
     CounselorMyProfileView,
+    DeleteAccountView,
+    ExportDataView,
     ExportPDFView,
     MessageListView,
     MoodNoteViewSet,
@@ -48,6 +50,8 @@ urlpatterns = [
     path('auth/password/forgot/', ForgotPasswordView.as_view(), name='password-forgot'),
     path('auth/password/reset/', ResetPasswordView.as_view(), name='password-reset'),
     path('auth/logout-other-devices/', LogoutOtherDevicesView.as_view(), name='logout-other-devices'),
+    path('auth/delete-account/', DeleteAccountView.as_view(), name='delete-account'),
+    path('auth/export/', ExportDataView.as_view(), name='export-data'),
     # Analytics
     path('analytics/', AnalyticsView.as_view(), name='analytics'),
     path('analytics/calendar/', CalendarView.as_view(), name='analytics-calendar'),

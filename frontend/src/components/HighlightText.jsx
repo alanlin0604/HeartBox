@@ -1,8 +1,10 @@
+import { memo } from 'react'
+
 function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-export default function HighlightText({ text, keyword }) {
+export default memo(function HighlightText({ text, keyword }) {
   if (!keyword) return text
   const safe = escapeRegExp(keyword.trim())
   if (!safe) return text
@@ -18,4 +20,4 @@ export default function HighlightText({ text, keyword }) {
       ))}
     </>
   )
-}
+})

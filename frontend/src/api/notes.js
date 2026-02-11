@@ -62,6 +62,12 @@ export const exportNotesPDF = (dateFrom, dateTo, lang) => {
   return api.get(`/notes/export/?${params.toString()}`, { responseType: 'blob' });
 };
 
+export const togglePin = (noteId) => {
+  invalidate('notes');
+  invalidate(`note:${noteId}`);
+  return api.post(`/notes/${noteId}/toggle_pin/`);
+};
+
 export const uploadAttachment = (noteId, file) => {
   const formData = new FormData();
   formData.append('file', file);

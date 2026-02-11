@@ -33,6 +33,10 @@ export default function ScheduleManager() {
 
   const handleAdd = async (e) => {
     e.preventDefault()
+    if (startTime >= endTime) {
+      alert(t('schedule.startBeforeEnd') || '開始時間必須早於結束時間')
+      return
+    }
     setSaving(true)
     try {
       const res = await createTimeSlot({

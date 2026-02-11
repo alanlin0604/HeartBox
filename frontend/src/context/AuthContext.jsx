@@ -38,6 +38,9 @@ export function AuthProvider({ children }) {
   const logout = () => {
     clearAuthTokens();
     clearCache();
+    if ('caches' in window) {
+      caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+    }
     setUser(null);
     window.location.href = '/login';
   };

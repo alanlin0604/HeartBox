@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useLang } from '../context/LanguageContext'
 
 const WEATHER_KEYS = [
@@ -15,6 +15,12 @@ const WEATHER_KEYS = [
   { value: '🌤️ 晴時多雲', labelKey: 'noteForm.weatherPartlyCloudy' },
 ]
 
+const TEMPLATES = [
+  { key: 'morning', emoji: '🌅', label: '晨間心情', text: '今天早上醒來的心情是...\n今天最期待的事情是...\n給自己的一句話：' },
+  { key: 'gratitude', emoji: '🙏', label: '感恩日記', text: '今天感恩的三件事：\n1. \n2. \n3. \n這些事讓我感到...' },
+  { key: 'stress', emoji: '💆', label: '壓力抒發', text: '今天讓我感到壓力的事情：\n我的身體反應是...\n我想對自己說...' },
+]
+
 export default function NoteForm({ onSubmit, loading }) {
   const { t } = useLang()
   const [content, setContent] = useState('')
@@ -23,6 +29,14 @@ export default function NoteForm({ onSubmit, loading }) {
   const [tagsInput, setTagsInput] = useState('')
   const [files, setFiles] = useState([])
   const fileInputRef = useRef(null)
+
+  // Revoke object URLs on cleanup
+  const objectUrlsRef = useRef([])
+  useEffect(() => {
+    return () => {
+      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [])
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault()
@@ -69,6 +83,18 @@ export default function NoteForm({ onSubmit, loading }) {
   return (
     <form onSubmit={handleSubmit} className="glass p-6 space-y-4">
       <h2 className="text-lg font-semibold">{t('noteForm.title')}</h2>
+      <div className="flex flex-wrap gap-2">
+        {TEMPLATES.map((tpl) => (
+          <button
+            key={tpl.key}
+            type="button"
+            onClick={() => setContent(tpl.text)}
+            className="text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 hover:bg-purple-500/25 transition-colors cursor-pointer"
+          >
+            {tpl.emoji} {tpl.label}
+          </button>
+        ))}
+      </div>
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
@@ -129,7 +155,7 @@ export default function NoteForm({ onSubmit, loading }) {
             <div key={idx} className="glass-card p-2 flex items-center gap-2 text-xs">
               {f.type.startsWith('image/') ? (
                 <img
-                  src={URL.createObjectURL(f)}
+                  src={(() => { const u = URL.createObjectURL(f); objectUrlsRef.current.push(u); return u })()}
                   alt={f.name}
                   className="w-10 h-10 rounded object-cover"
                 />

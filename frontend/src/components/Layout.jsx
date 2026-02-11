@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
@@ -17,6 +17,8 @@ export default function Layout() {
   const { lang, setLang, t } = useLang()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const menuRef = useRef(null)
 
   // Close dropdown on outside click
@@ -30,38 +32,74 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // Online/offline listener
+  useEffect(() => {
+    const goOnline = () => setIsOffline(false)
+    const goOffline = () => setIsOffline(true)
+    window.addEventListener('online', goOnline)
+    window.addEventListener('offline', goOffline)
+    return () => {
+      window.removeEventListener('online', goOnline)
+      window.removeEventListener('offline', goOffline)
+    }
+  }, [])
+
+  const navLinks = [
+    { to: '/', label: t('nav.journal'), end: true },
+    { to: '/dashboard', label: t('nav.dashboard') },
+    { to: '/counselors', label: t('nav.counselors') },
+  ]
+
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Offline banner */}
+      {isOffline && (
+        <div className="bg-yellow-500/90 text-black text-center text-sm py-1.5 px-4 font-medium">
+          您目前離線，部分功能可能無法使用
+        </div>
+      )}
+
       <nav className="glass sticky top-0 z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
           HeartBox-心事盒
         </h1>
-        <div className="flex items-center gap-4 text-base">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `font-medium transition-colors ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
-            }
-          >
-            {t('nav.journal')}
-          </NavLink>
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) =>
-              `font-medium transition-colors ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
-            }
-          >
-            {t('nav.dashboard')}
-          </NavLink>
-          <NavLink
-            to="/counselors"
-            className={({ isActive }) =>
-              `font-medium transition-colors ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
-            }
-          >
-            {t('nav.counselors')}
-          </NavLink>
+
+        {/* Mobile hamburger */}
+        <button
+          onClick={() => setMobileNavOpen(!mobileNavOpen)}
+          className="md:hidden opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+          aria-label="Toggle menu"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {mobileNavOpen ? (
+              <>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </>
+            ) : (
+              <>
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </>
+            )}
+          </svg>
+        </button>
+
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-4 text-base">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              className={({ isActive }) =>
+                `font-medium transition-colors ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
           {user?.is_staff && (
             <NavLink
               to="/admin"
@@ -122,6 +160,7 @@ export default function Layout() {
                 <button
                   onClick={() => { toggleTheme(); setMenuOpen(false) }}
                   className="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer flex items-center gap-2"
+                  aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
                 >
                   <span className="text-base w-4 text-center">{theme === 'dark' ? '☀️' : '🌙'}</span>
                   {theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark')}
@@ -170,9 +209,69 @@ export default function Layout() {
           </div>
         </div>
       </nav>
+
+      {/* Mobile nav dropdown */}
+      {mobileNavOpen && (
+        <div className="md:hidden glass mx-4 mt-2 p-4 space-y-3 z-40">
+          {navLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              onClick={() => setMobileNavOpen(false)}
+              className={({ isActive }) =>
+                `block font-medium transition-colors py-1 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+          {user?.is_staff && (
+            <NavLink
+              to="/admin"
+              onClick={() => setMobileNavOpen(false)}
+              className={({ isActive }) =>
+                `block font-medium transition-colors py-1 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
+              }
+            >
+              {t('nav.admin')}
+            </NavLink>
+          )}
+          <div className="border-t border-[var(--card-border)] pt-3 flex items-center gap-3">
+            <NotificationBell />
+            <button
+              onClick={() => { navigate('/settings'); setMobileNavOpen(false) }}
+              className="text-sm opacity-60 hover:opacity-100"
+            >
+              {t('settings.title')}
+            </button>
+            <button
+              onClick={() => { toggleTheme(); setMobileNavOpen(false) }}
+              className="text-sm opacity-60 hover:opacity-100"
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+            <button
+              onClick={() => { logout(); setMobileNavOpen(false) }}
+              className="text-sm text-red-500 ml-auto"
+            >
+              {t('nav.logout')}
+            </button>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 p-4 max-w-6xl mx-auto w-full">
         <Outlet />
       </main>
+
+      {/* Footer */}
+      <footer className="text-center text-xs opacity-40 py-4 space-x-4">
+        <Link to="/privacy" className="hover:opacity-70">隱私政策</Link>
+        <Link to="/terms" className="hover:opacity-70">服務條款</Link>
+        <span>&copy; {new Date().getFullYear()} HeartBox</span>
+      </footer>
     </div>
   )
 }

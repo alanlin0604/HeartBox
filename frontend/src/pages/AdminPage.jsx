@@ -120,7 +120,8 @@ function UsersTab() {
       {loading ? (
         <p className="opacity-60">{t('common.loading')}</p>
       ) : (
-        <div className="overflow-x-auto">
+        {/* Desktop table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/10 text-left opacity-60">
@@ -168,6 +169,42 @@ function UsersTab() {
               ))}
             </tbody>
           </table>
+          {users.length === 0 && <p className="text-center py-8 opacity-50">{t('admin.noUsers')}</p>}
+        </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden space-y-3">
+          {users.map((u) => (
+            <div key={u.id} className="glass-card p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{u.username}</span>
+                {roleBadge(u)}
+              </div>
+              <p className="text-xs opacity-60">{u.email}</p>
+              <div className="flex items-center gap-2 text-xs">
+                <span className={`px-2 py-0.5 rounded-full ${u.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                  {u.is_active ? t('admin.statusActive') : t('admin.statusInactive')}
+                </span>
+                <span className="opacity-50">{new Date(u.date_joined).toLocaleDateString()}</span>
+              </div>
+              {!u.is_superuser && (
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => toggle(u, 'is_active')}
+                    className={`px-2 py-1 rounded text-xs cursor-pointer ${u.is_active ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}
+                  >
+                    {u.is_active ? t('admin.actionDeactivate') : t('admin.actionActivate')}
+                  </button>
+                  <button
+                    onClick={() => toggle(u, 'is_staff')}
+                    className={`px-2 py-1 rounded text-xs cursor-pointer ${u.is_staff ? 'bg-gray-500/20 opacity-70' : 'bg-purple-500/20 text-purple-400'}`}
+                  >
+                    {u.is_staff ? t('admin.actionRemoveAdmin') : t('admin.actionMakeAdmin')}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
           {users.length === 0 && <p className="text-center py-8 opacity-50">{t('admin.noUsers')}</p>}
         </div>
       )}

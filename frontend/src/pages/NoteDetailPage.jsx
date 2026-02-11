@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getNote, deleteNote, updateNote } from '../api/notes'
+import { getNote, deleteNote, updateNote, togglePin } from '../api/notes'
 import { useLang } from '../context/LanguageContext'
 import MoodBadge from '../components/MoodBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -8,8 +8,7 @@ import ShareNoteButton from '../components/ShareNoteButton'
 import ConfirmModal from '../components/ConfirmModal'
 import { useToast } from '../context/ToastContext'
 
-const LOCALE_MAP = { 'zh-TW': 'zh-TW', en: 'en-US', ja: 'ja-JP' }
-const TZ_MAP = { 'zh-TW': 'Asia/Taipei', en: 'UTC', ja: 'Asia/Tokyo' }
+import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
 
 export default function NoteDetailPage() {
   const { id } = useParams()
@@ -33,6 +32,27 @@ export default function NoteDetailPage() {
       .catch(() => navigate('/'))
       .finally(() => setLoading(false))
   }, [id, navigate])
+
+  // Warn before leaving if editing
+  useEffect(() => {
+    const handler = (e) => {
+      if (editing) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [editing])
+
+  const handleTogglePin = async () => {
+    try {
+      const { data } = await togglePin(id)
+      setNote((prev) => ({ ...prev, is_pinned: data.is_pinned }))
+    } catch {
+      toast?.error('操作失敗')
+    }
+  }
 
   const handleDelete = async () => {
     setConfirmOpen(false)
@@ -106,6 +126,13 @@ export default function NoteDetailPage() {
           <span className="text-sm opacity-60">{date}</span>
           <div className="flex items-center gap-3">
             <MoodBadge score={note.sentiment_score} />
+            <button
+              onClick={handleTogglePin}
+              className={`text-xs px-2 py-1 rounded-lg border cursor-pointer transition-colors ${note.is_pinned ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-500' : 'border-white/10 opacity-60 hover:opacity-100'}`}
+              title={note.is_pinned ? '取消置頂' : '置頂'}
+            >
+              📌
+            </button>
             <ShareNoteButton noteId={note.id} />
             <button onClick={handleStartEdit} className="btn-secondary text-xs">
               {t('noteDetail.edit')}
@@ -218,6 +245,9 @@ export default function NoteDetailPage() {
             <h3 className="text-sm font-semibold text-purple-500 mb-2">{t('noteDetail.aiFeedback')}</h3>
             <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-80">
               {note.ai_feedback}
+            </p>
+            <p className="text-xs opacity-40 mt-3 italic">
+              此為 AI 分析結果，僅供參考，不構成專業醫療或心理諮詢建議。
             </p>
           </div>
         )}

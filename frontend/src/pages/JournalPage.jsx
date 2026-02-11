@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getNotes, createNote, uploadAttachment } from '../api/notes'
+import { getAnalytics } from '../api/analytics'
 import { useLang } from '../context/LanguageContext'
 import NoteForm from '../components/NoteForm'
 import NoteCard from '../components/NoteCard'
@@ -20,6 +21,7 @@ export default function JournalPage() {
   const [creating, setCreating] = useState(false)
   const [page, setPage] = useState(1)
   const [hasNext, setHasNext] = useState(false)
+  const [streak, setStreak] = useState(0)
 
   // Initialize filters from URL query params (for calendar click-through)
   const [filters, setFilters] = useState(() => {
@@ -48,6 +50,12 @@ export default function JournalPage() {
   useEffect(() => {
     fetchNotes(1, filters)
   }, [filters])
+
+  useEffect(() => {
+    getAnalytics('week', 30)
+      .then((res) => setStreak(res.data.current_streak || 0))
+      .catch(() => {})
+  }, [])
 
   const handleCreate = async (content, metadata, files = []) => {
     setCreating(true)
@@ -84,11 +92,26 @@ export default function JournalPage() {
 
       <SearchFilterPanel filters={filters} onFilterChange={handleFilterChange} />
 
+      {streak > 0 && (
+        <div className="glass-card p-3 flex items-center gap-2 text-sm">
+          <span className="text-xl">🔥</span>
+          <span className="font-medium">{t('journal.streak') || '連續記錄'} {streak} {t('journal.days') || '天'}</span>
+        </div>
+      )}
+
       <NoteForm onSubmit={handleCreate} loading={creating} />
 
       <div>
         {loading ? (
-          <LoadingSpinner />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="glass-card p-4 animate-pulse space-y-3">
+                <div className="h-4 bg-white/10 rounded w-3/4" />
+                <div className="h-3 bg-white/10 rounded w-1/2" />
+                <div className="h-3 bg-white/10 rounded w-1/3" />
+              </div>
+            ))}
+          </div>
         ) : notes.length === 0 ? (
           <EmptyState
             title={t('journal.empty')}

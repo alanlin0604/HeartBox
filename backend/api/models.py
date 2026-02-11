@@ -28,12 +28,13 @@ class MoodNote(models.Model):
     sentiment_score = models.FloatField(null=True, blank=True, help_text='-1.0 (negative) to 1.0 (positive)')
     stress_index = models.IntegerField(null=True, blank=True, help_text='0 (calm) to 10 (extreme stress)')
     ai_feedback = models.TextField(blank=True, default='')
+    is_pinned = models.BooleanField(default=False)
     metadata = models.JSONField(default=dict, blank=True, help_text='weather, temperature, location, tags')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-is_pinned', '-created_at']
         indexes = [
             models.Index(fields=['user', '-created_at'], name='moodnote_user_created'),
             models.Index(fields=['user', 'sentiment_score'], name='moodnote_user_sentiment'),

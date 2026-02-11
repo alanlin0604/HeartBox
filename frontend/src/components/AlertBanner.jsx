@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { Link } from 'react-router-dom'
 import { getAlerts } from '../api/alerts'
 import { useLang } from '../context/LanguageContext'
@@ -8,7 +8,7 @@ const SEVERITY_STYLES = {
   medium: 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300',
 }
 
-export default function AlertBanner() {
+export default memo(function AlertBanner() {
   const { t } = useLang()
   const [alerts, setAlerts] = useState([])
   const [dismissed, setDismissed] = useState([])
@@ -68,4 +68,4 @@ export default function AlertBanner() {
       })}
     </div>
   )
-}
+})

@@ -5,8 +5,7 @@ import { useLang } from '../context/LanguageContext'
 import { getMessages, getConversations, sendMessage } from '../api/counselors'
 import LoadingSpinner from '../components/LoadingSpinner'
 
-const LOCALE_MAP = { 'zh-TW': 'zh-TW', en: 'en-US', ja: 'ja-JP' }
-const TZ_MAP = { 'zh-TW': 'Asia/Taipei', en: 'UTC', ja: 'Asia/Tokyo' }
+import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
 
 export default function ChatPage() {
   const { id } = useParams()
@@ -22,6 +21,7 @@ export default function ChatPage() {
   const bottomRef = useRef(null)
   const wsRef = useRef(null)
   const reconnectTimer = useRef(null)
+  const reconnectDelay = useRef(3000)
 
   const connectWs = useCallback(() => {
     const token = localStorage.getItem('access_token')
@@ -33,7 +33,10 @@ export default function ChatPage() {
       : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/chat/${id}/?token=${token}`
     const ws = new WebSocket(wsUrl)
 
-    ws.onopen = () => setWsConnected(true)
+    ws.onopen = () => {
+      setWsConnected(true)
+      reconnectDelay.current = 3000 // Reset on success
+    }
 
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data)
@@ -46,8 +49,8 @@ export default function ChatPage() {
 
     ws.onclose = () => {
       setWsConnected(false)
-      // Reconnect after 3 seconds
-      reconnectTimer.current = setTimeout(connectWs, 3000)
+      reconnectTimer.current = setTimeout(connectWs, reconnectDelay.current)
+      reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30000)
     }
 
     ws.onerror = () => ws.close()
@@ -115,7 +118,7 @@ export default function ChatPage() {
   if (loading) return <LoadingSpinner />
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)]">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Header */}
       <div className="glass p-4 flex items-center gap-3 mb-4">
         <button

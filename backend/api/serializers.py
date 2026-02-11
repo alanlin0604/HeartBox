@@ -44,7 +44,7 @@ class MoodNoteSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'content', 'decrypted_content',
             'sentiment_score', 'stress_index', 'ai_feedback',
-            'metadata', 'attachments', 'created_at', 'updated_at',
+            'is_pinned', 'metadata', 'attachments', 'created_at', 'updated_at',
         )
         read_only_fields = ('id', 'sentiment_score', 'stress_index', 'ai_feedback', 'created_at', 'updated_at')
 
@@ -77,7 +77,7 @@ class MoodNoteListSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'content_preview',
             'sentiment_score', 'stress_index',
-            'metadata', 'created_at',
+            'is_pinned', 'metadata', 'created_at',
         )
 
 

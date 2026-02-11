@@ -12,6 +12,7 @@ export default memo(function NotificationBell() {
   const [open, setOpen] = useState(false)
   const wsRef = useRef(null)
   const reconnectTimer = useRef(null)
+  const reconnectDelay = useRef(3000)
   const panelRef = useRef(null)
 
   // Load initial notifications
@@ -46,6 +47,10 @@ export default memo(function NotificationBell() {
       : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/notifications/?token=${token}`
     const ws = new WebSocket(wsUrl)
 
+    ws.onopen = () => {
+      reconnectDelay.current = 3000 // Reset on success
+    }
+
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data)
       setNotifications((prev) => [data, ...prev])
@@ -53,7 +58,8 @@ export default memo(function NotificationBell() {
     }
 
     ws.onclose = () => {
-      reconnectTimer.current = setTimeout(connectWs, 3000)
+      reconnectTimer.current = setTimeout(connectWs, reconnectDelay.current)
+      reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30000)
     }
 
     ws.onerror = () => ws.close()
@@ -111,6 +117,7 @@ export default memo(function NotificationBell() {
         onClick={handleOpen}
         className="relative opacity-70 hover:opacity-100 transition-opacity cursor-pointer text-lg"
         title={t('notification.title')}
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -124,7 +131,7 @@ export default memo(function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-8 w-80 max-h-96 overflow-y-auto rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)]">
+        <div className="absolute right-0 top-8 w-80 max-w-[90vw] max-h-96 overflow-y-auto rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)]">
           <div className="p-3 border-b border-[var(--card-border)] flex justify-between items-center">
             <span className="font-semibold text-sm">{t('notification.title')}</span>
             {unreadCount > 0 && (

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
-import { logoutOtherDevices, updateProfile } from '../api/auth'
+import { logoutOtherDevices, updateProfile, deleteAccount, exportData } from '../api/auth'
 import PasswordField from '../components/PasswordField'
 import { useToast } from '../context/ToastContext'
 import { isRememberedLogin, setAuthTokens } from '../utils/tokenStorage'
@@ -23,6 +23,10 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [pwSaving, setPwSaving] = useState(false)
   const [logoutOthersLoading, setLogoutOthersLoading] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const handleSaveProfile = async (e) => {
     e.preventDefault()
@@ -76,6 +80,39 @@ export default function SettingsPage() {
       }
     } finally {
       setPwSaving(false)
+    }
+  }
+
+  const handleExportData = async () => {
+    setExporting(true)
+    try {
+      const res = await exportData()
+      const blob = new Blob([res.data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `heartbox_export_${user?.username || 'data'}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast?.success(t('settings.exportSuccess') || '匯出成功')
+    } catch {
+      toast?.error(t('settings.exportFailed') || '匯出失敗')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) return
+    setDeleting(true)
+    try {
+      await deleteAccount(deletePassword)
+      window.location.href = '/login'
+    } catch (err) {
+      const msg = err.response?.data?.error || '刪除失敗'
+      toast?.error(msg)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -144,7 +181,22 @@ export default function SettingsPage() {
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => setAvatar(e.target.files?.[0] || null)}
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) {
+                if (file.size > 2 * 1024 * 1024) {
+                  toast?.error('圖片大小不可超過 2MB')
+                  e.target.value = ''
+                  return
+                }
+                if (!file.type.startsWith('image/')) {
+                  toast?.error('請上傳圖片檔案')
+                  e.target.value = ''
+                  return
+                }
+              }
+              setAvatar(file || null)
+            }}
             className="glass-input"
           />
         </div>
@@ -208,6 +260,63 @@ export default function SettingsPage() {
           <p>{t('settings.theme')}: {theme === 'dark' ? t('settings.themeDark') : t('settings.themeLight')}</p>
         </div>
       </div>
+
+      {/* Data Export */}
+      <div className="glass p-6 space-y-3">
+        <h2 className="text-lg font-semibold">資料匯出</h2>
+        <p className="text-sm opacity-60">匯出您的所有日記資料為 JSON 格式。</p>
+        <button onClick={handleExportData} disabled={exporting} className="btn-secondary">
+          {exporting ? '匯出中...' : '匯出資料'}
+        </button>
+      </div>
+
+      {/* Danger Zone - Delete Account */}
+      <div className="glass p-6 space-y-3 border border-red-500/20">
+        <h2 className="text-lg font-semibold text-red-500">危險區域</h2>
+        <p className="text-sm opacity-60">
+          刪除帳號後，所有資料將被永久移除且無法恢復。建議先匯出資料。
+        </p>
+        <button
+          onClick={() => setDeleteModalOpen(true)}
+          className="btn-danger"
+        >
+          刪除帳號
+        </button>
+      </div>
+
+      {/* Delete Account Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="glass p-6 w-full max-w-md space-y-4">
+            <h2 className="text-lg font-semibold text-red-500">確認刪除帳號</h2>
+            <p className="text-sm opacity-70">
+              此操作不可逆轉。請輸入您的密碼以確認刪除。
+            </p>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="請輸入密碼"
+              className="glass-input"
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => { setDeleteModalOpen(false); setDeletePassword('') }}
+                className="btn-secondary"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting || !deletePassword}
+                className="btn-danger"
+              >
+                {deleting ? '刪除中...' : '確認刪除'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

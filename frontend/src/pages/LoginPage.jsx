@@ -63,7 +63,7 @@ export default function LoginPage() {
         <p className="text-center opacity-60 text-sm mb-6">{t('login.title')}</p>
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+          <div role="alert" className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
             {error}
           </div>
         )}
@@ -107,6 +107,10 @@ export default function LoginPage() {
             {t('login.register')}
           </Link>
         </p>
+      </div>
+      <div className="mt-4 text-center text-xs opacity-40 space-x-3">
+        <Link to="/privacy" className="hover:opacity-70">隱私政策</Link>
+        <Link to="/terms" className="hover:opacity-70">服務條款</Link>
       </div>
     </div>
   )

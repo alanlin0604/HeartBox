@@ -16,3 +16,9 @@ export const forgotPassword = (email) => api.post('/auth/password/forgot/', { em
 
 export const resetPassword = (uid, token, newPassword) =>
   api.post('/auth/password/reset/', { uid, token, new_password: newPassword });
+
+export const deleteAccount = (password) =>
+  api.post('/auth/delete-account/', { password });
+
+export const exportData = () =>
+  api.get('/auth/export/', { responseType: 'blob' });

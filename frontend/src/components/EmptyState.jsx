@@ -1,4 +1,6 @@
-export default function EmptyState({ title, description, actionText, onAction }) {
+import { memo } from 'react'
+
+export default memo(function EmptyState({ title, description, actionText, onAction }) {
   return (
     <div className="glass-card p-8 text-center space-y-3">
       <div className="mx-auto w-24 h-24 rounded-full bg-purple-500/15 flex items-center justify-center">
@@ -17,4 +19,4 @@ export default function EmptyState({ title, description, actionText, onAction })
       )}
     </div>
   )
-}
+})

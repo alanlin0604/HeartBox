@@ -205,6 +205,13 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
             note.ai_feedback = result['ai_feedback']
             note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
 
+    @action(detail=True, methods=['post'])
+    def toggle_pin(self, request, pk=None):
+        note = self.get_object()
+        note.is_pinned = not note.is_pinned
+        note.save(update_fields=['is_pinned'])
+        return Response({'is_pinned': note.is_pinned})
+
 
 class AnalyticsView(APIView):
     def get(self, request):
@@ -212,11 +219,52 @@ class AnalyticsView(APIView):
         lookback_days = int(request.query_params.get('lookback_days', 30))
         qs = MoodNote.objects.filter(user=request.user)
 
+        # Calculate streaks
+        dates = list(
+            MoodNote.objects.filter(user=request.user)
+            .values_list('created_at__date', flat=True)
+            .distinct()
+            .order_by('-created_at__date')
+        )
+        current_streak = 0
+        longest_streak = 0
+        if dates:
+            today = timezone.now().date()
+            # Current streak: count consecutive days from today/yesterday
+            streak = 0
+            expected = today
+            for d in dates:
+                if d == expected:
+                    streak += 1
+                    expected = d - timezone.timedelta(days=1)
+                elif d == today - timezone.timedelta(days=1) and streak == 0:
+                    # Allow starting from yesterday if no entry today
+                    expected = d
+                    streak = 1
+                    expected = d - timezone.timedelta(days=1)
+                else:
+                    break
+            current_streak = streak
+
+            # Longest streak
+            best = 1
+            run = 1
+            sorted_dates = sorted(set(dates))
+            for i in range(1, len(sorted_dates)):
+                if (sorted_dates[i] - sorted_dates[i-1]).days == 1:
+                    run += 1
+                    best = max(best, run)
+                else:
+                    run = 1
+            longest_streak = best
+
         return Response({
             'mood_trends': get_mood_trends(qs, period=period, lookback_days=lookback_days),
             'weather_correlation': get_mood_weather_correlation(qs, lookback_days=lookback_days),
             'frequent_tags': get_frequent_tags(qs, lookback_days=lookback_days),
             'stress_by_tag': get_stress_by_tag(qs, lookback_days=lookback_days),
+            'current_streak': current_streak,
+            'longest_streak': longest_streak,
         })
 
 
@@ -691,3 +739,60 @@ class SharedNotesReceivedView(generics.ListAPIView):
 
     def get_queryset(self):
         return SharedNote.objects.filter(shared_with=self.request.user).select_related('note', 'note__user')
+
+
+# ===== Account Management Views =====
+
+class DeleteAccountView(APIView):
+    """Permanently delete user account and all related data."""
+
+    def post(self, request):
+        password = request.data.get('password', '')
+        if not password:
+            return Response({'error': '請輸入密碼'}, status=status.HTTP_400_BAD_REQUEST)
+        if not request.user.check_password(password):
+            return Response({'error': '密碼錯誤'}, status=status.HTTP_400_BAD_REQUEST)
+        request.user.delete()
+        return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+
+
+class ExportDataView(APIView):
+    """Export all user data as JSON (GDPR compliance)."""
+
+    def get(self, request):
+        import json
+        from django.http import HttpResponse
+
+        user = request.user
+        notes = MoodNote.objects.filter(user=user).order_by('-created_at')
+
+        data = {
+            'user': {
+                'username': user.username,
+                'email': user.email,
+                'date_joined': user.date_joined.isoformat(),
+            },
+            'notes': [],
+        }
+
+        for note in notes:
+            note_data = {
+                'id': note.id,
+                'content': note.content,
+                'mood': note.mood,
+                'weather': note.weather,
+                'tags': note.tags,
+                'sentiment_score': note.sentiment_score,
+                'stress_index': note.stress_index,
+                'ai_feedback': note.ai_feedback,
+                'created_at': note.created_at.isoformat(),
+                'updated_at': note.updated_at.isoformat(),
+            }
+            data['notes'].append(note_data)
+
+        response = HttpResponse(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            content_type='application/json',
+        )
+        response['Content-Disposition'] = f'attachment; filename="heartbox_export_{user.username}.json"'
+        return response

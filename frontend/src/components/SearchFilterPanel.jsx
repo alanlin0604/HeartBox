@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useLang } from '../context/LanguageContext'
 
 export default function SearchFilterPanel({ filters, onFilterChange }) {
@@ -6,6 +6,13 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
   const [expanded, setExpanded] = useState(false)
   const [search, setSearch] = useState(filters.search || '')
   const debounceRef = useRef(null)
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   const handleSearchSubmit = useCallback((e) => {
     e.preventDefault()
@@ -15,7 +22,13 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
   const updateFilter = useCallback((key, value) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      onFilterChange({ ...filters, [key]: value })
+      const next = { ...filters, [key]: value }
+      // Validate min <= max
+      if (key === 'sentiment_min' && next.sentiment_max && Number(value) > Number(next.sentiment_max)) return
+      if (key === 'sentiment_max' && next.sentiment_min && Number(value) < Number(next.sentiment_min)) return
+      if (key === 'stress_min' && next.stress_max && Number(value) > Number(next.stress_max)) return
+      if (key === 'stress_max' && next.stress_min && Number(value) < Number(next.stress_min)) return
+      onFilterChange(next)
     }, 300)
   }, [filters, onFilterChange])
 
@@ -45,6 +58,8 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
           onClick={() => setExpanded(!expanded)}
           className="btn-primary text-sm px-3 opacity-70"
           title={t('search.filters')}
+          aria-label={expanded ? 'Collapse filters' : 'Expand filters'}
+          aria-expanded={expanded}
         >
           {expanded ? '▲' : '▼'}
         </button>
