@@ -40,7 +40,7 @@ class EncryptionService:
             return self._fernet.decrypt(ciphertext.encode('utf-8')).decode('utf-8')
         except InvalidToken:
             logger.error('Failed to decrypt content — invalid token or wrong key')
-            return '[解密失敗]'
+            return '[Decryption failed]'
 
 
 encryption_service = EncryptionService()

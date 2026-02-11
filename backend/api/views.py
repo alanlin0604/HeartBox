@@ -218,9 +218,9 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
     def batch_delete(self, request):
         ids = request.data.get('ids', [])
         if not ids or not isinstance(ids, list):
-            return Response({'error': '請提供要刪除的日記 ID 列表'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Please provide a list of note IDs to delete.'}, status=status.HTTP_400_BAD_REQUEST)
         if len(ids) > 50:
-            return Response({'error': '一次最多刪除 50 篇'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Cannot delete more than 50 notes at once.'}, status=status.HTTP_400_BAD_REQUEST)
         deleted, _ = MoodNote.objects.filter(user=request.user, id__in=ids).delete()
         return Response({'deleted': deleted})
 
@@ -362,7 +362,7 @@ class ConversationCreateView(APIView):
         try:
             profile = CounselorProfile.objects.get(id=counselor_id, status='approved')
         except CounselorProfile.DoesNotExist:
-            return Response({'error': '找不到該諮商師'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         conv, created = Conversation.objects.get_or_create(
             user=request.user,
@@ -381,7 +381,7 @@ class MessageListView(APIView):
                 Q(id=conv_id) & (Q(user=request.user) | Q(counselor=request.user))
             )
         except Conversation.DoesNotExist:
-            return Response({'error': '對話不存在'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         # Mark unread messages as read
         conv.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
@@ -395,13 +395,13 @@ class MessageListView(APIView):
                 Q(id=conv_id) & (Q(user=request.user) | Q(counselor=request.user))
             )
         except Conversation.DoesNotExist:
-            return Response({'error': '對話不存在'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         content = request.data.get('content', '').strip()
         if not content:
-            return Response({'error': '訊息不可為空'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
         if len(content) > 5000:
-            return Response({'error': '訊息不可超過 5000 字'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Message cannot exceed 5000 characters.'}, status=status.HTTP_400_BAD_REQUEST)
 
         msg = Message.objects.create(conversation=conv, sender=request.user, content=content[:5000])
         conv.save()  # update updated_at
@@ -411,7 +411,7 @@ class MessageListView(APIView):
         notif = Notification.objects.create(
             user_id=recipient_id,
             type='message',
-            title='新訊息',
+            title='New message',
             message=content[:100],
             data={'conversation_id': conv.id, 'message_id': msg.id},
         )
@@ -499,11 +499,11 @@ class AdminCounselorActionView(APIView):
         try:
             profile = CounselorProfile.objects.get(pk=pk)
         except CounselorProfile.DoesNotExist:
-            return Response({'error': '找不到該諮商師'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         action = request.data.get('action')
         if action not in ('approve', 'reject'):
-            return Response({'error': 'action 必須為 approve 或 reject'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Action must be "approve" or "reject".'}, status=status.HTTP_400_BAD_REQUEST)
 
         profile.status = 'approved' if action == 'approve' else 'rejected'
         profile.reviewed_at = timezone.now()
@@ -544,29 +544,24 @@ class NoteAttachmentUploadView(APIView):
         try:
             note = MoodNote.objects.get(id=note_id, user=request.user)
         except MoodNote.DoesNotExist:
-            return Response({'error': '日記不存在'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Note not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         file = request.FILES.get('file')
         if not file:
-            return Response({'error': '請上傳檔案'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Please upload a file.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if file.size > self.MAX_FILE_SIZE:
-            return Response({'error': '檔案大小不可超過 10MB'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'File size cannot exceed 10MB.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check user storage quota
-        from django.db.models import Sum
-        used = NoteAttachment.objects.filter(
-            note__user=request.user
-        ).aggregate(total=Sum('file__size'))['total'] or 0
-        # Approximation: count existing attachments
+        # Check attachment count quota
         existing_count = NoteAttachment.objects.filter(note__user=request.user).count()
         if existing_count >= 500:
-            return Response({'error': '附件數量已達上限（500 個）'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Attachment limit reached (500).'}, status=status.HTTP_400_BAD_REQUEST)
 
         mime_type = file.content_type or mimetypes.guess_type(file.name)[0] or ''
         file_type = mime_type.split('/')[0]
         if file_type not in self.ALLOWED_TYPES:
-            return Response({'error': '只允許上傳圖片或音訊檔案'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Only image and audio files are allowed.'}, status=status.HTTP_400_BAD_REQUEST)
 
         attachment = NoteAttachment.objects.create(
             note=note,
@@ -608,18 +603,18 @@ class AvailableSlotsView(APIView):
     def get(self, request, counselor_id):
         date_str = request.query_params.get('date')
         if not date_str:
-            return Response({'error': '請提供 date 參數'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Please provide a date parameter.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
-            return Response({'error': '日期格式錯誤，請使用 YYYY-MM-DD'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Resolve CounselorProfile.pk → User.pk
         try:
             profile = CounselorProfile.objects.get(pk=counselor_id, status='approved')
         except CounselorProfile.DoesNotExist:
-            return Response({'error': '找不到該諮商師'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
         user_id = profile.user_id
 
         day_of_week = target_date.weekday()
@@ -662,13 +657,13 @@ class BookingCreateView(APIView):
         end_time = request.data.get('end_time')
 
         if not all([counselor_id, date_str, start_time, end_time]):
-            return Response({'error': '請提供所有必填欄位'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'All required fields must be provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Resolve CounselorProfile.pk → User.pk
         try:
             profile = CounselorProfile.objects.get(pk=counselor_id, status='approved')
         except CounselorProfile.DoesNotExist:
-            return Response({'error': '找不到該諮商師'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
         counselor_user_id = profile.user_id
 
         # Check for conflicts (overlapping time ranges)
@@ -682,7 +677,7 @@ class BookingCreateView(APIView):
             status__in=['pending', 'confirmed'],
         ).exists()
         if conflict:
-            return Response({'error': '該時段已被預約'}, status=status.HTTP_409_CONFLICT)
+            return Response({'error': 'This time slot is already booked.'}, status=status.HTTP_409_CONFLICT)
 
         booking = Booking.objects.create(
             user=request.user,
@@ -696,8 +691,8 @@ class BookingCreateView(APIView):
         Notification.objects.create(
             user_id=counselor_user_id,
             type='booking',
-            title='新預約',
-            message=f'{request.user.username} 預約了 {date_str} {start_time}',
+            title='New booking',
+            message=f'{request.user.username} booked {date_str} {start_time}',
             data={'booking_id': booking.id},
         )
 
@@ -709,7 +704,7 @@ class BookingActionView(APIView):
         try:
             booking = Booking.objects.get(pk=pk, counselor=request.user)
         except Booking.DoesNotExist:
-            return Response({'error': '預約不存在'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         action_type = request.data.get('action')
         if action_type == 'confirm':
@@ -719,7 +714,7 @@ class BookingActionView(APIView):
         elif action_type == 'complete':
             booking.status = 'completed'
         else:
-            return Response({'error': 'action 必須為 confirm / cancel / complete'},
+            return Response({'error': 'Action must be "confirm", "cancel", or "complete".'},
                             status=status.HTTP_400_BAD_REQUEST)
         booking.save(update_fields=['status'])
 
@@ -727,8 +722,8 @@ class BookingActionView(APIView):
         Notification.objects.create(
             user=booking.user,
             type='booking',
-            title=f'預約{booking.get_status_display()}',
-            message=f'您與 {booking.counselor.username} 的預約已{booking.get_status_display()}',
+            title=f'Booking {booking.status}',
+            message=f'Your booking with {booking.counselor.username} is now {booking.status}.',
             data={'booking_id': booking.id},
         )
 
@@ -742,13 +737,13 @@ class ShareNoteView(APIView):
         try:
             note = MoodNote.objects.get(id=note_id, user=request.user)
         except MoodNote.DoesNotExist:
-            return Response({'error': '日記不存在'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Note not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         counselor_id = request.data.get('counselor_user_id') or request.data.get('counselor_id')
         is_anonymous = request.data.get('is_anonymous', False)
 
         if not counselor_id:
-            return Response({'error': '請提供諮商師 ID'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Counselor ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Verify the target is an approved counselor (accept either profile pk or user pk)
         try:
@@ -757,7 +752,7 @@ class ShareNoteView(APIView):
             try:
                 profile = CounselorProfile.objects.get(user_id=counselor_id, status='approved')
             except CounselorProfile.DoesNotExist:
-                return Response({'error': '該諮商師不存在或未通過審核'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'error': 'Counselor not found or not approved.'}, status=status.HTTP_404_NOT_FOUND)
 
         counselor_user_id = profile.user_id
 
@@ -767,15 +762,15 @@ class ShareNoteView(APIView):
             defaults={'is_anonymous': is_anonymous},
         )
         if not created:
-            return Response({'error': '已分享過此日記'}, status=status.HTTP_409_CONFLICT)
+            return Response({'error': 'This note has already been shared.'}, status=status.HTTP_409_CONFLICT)
 
         # Notify counselor
-        author_name = '匿名使用者' if is_anonymous else request.user.username
+        author_name = 'Anonymous' if is_anonymous else request.user.username
         Notification.objects.create(
             user_id=counselor_user_id,
             type='share',
-            title='收到日記分享',
-            message=f'{author_name} 分享了一篇日記給您',
+            title='Note shared with you',
+            message=f'{author_name} shared a note with you.',
             data={'shared_note_id': shared.id, 'note_id': note.id},
         )
 
@@ -797,9 +792,9 @@ class DeleteAccountView(APIView):
     def post(self, request):
         password = request.data.get('password', '')
         if not password:
-            return Response({'error': '請輸入密碼'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Password is required.'}, status=status.HTTP_400_BAD_REQUEST)
         if not request.user.check_password(password):
-            return Response({'error': '密碼錯誤'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Incorrect password.'}, status=status.HTTP_400_BAD_REQUEST)
         request.user.delete()
         return Response({'status': 'ok'}, status=status.HTTP_200_OK)
 

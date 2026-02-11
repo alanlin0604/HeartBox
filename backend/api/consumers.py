@@ -65,7 +65,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         notification = Notification.objects.create(
             user_id=recipient_id,
             type='message',
-            title='新訊息',
+            title='New message',
             message=content[:100],
             data={'conversation_id': conv.id, 'message_id': msg.id},
         )

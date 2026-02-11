@@ -6,6 +6,11 @@ const DEV_BACKEND = process.env.VITE_PROXY_TARGET || 'http://localhost:8000'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.js',
+  },
   build: {
     rollupOptions: {
       output: {

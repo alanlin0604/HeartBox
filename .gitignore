@@ -42,8 +42,12 @@ chroma_db/
 # OS
 .DS_Store
 Thumbs.db
+nul
 
 # Coverage
 htmlcov/
 .coverage
 .coverage.*
+
+# Test databases
+test_db.sqlite3

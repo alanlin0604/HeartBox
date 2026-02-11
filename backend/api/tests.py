@@ -6,7 +6,12 @@ from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth.tokens import default_token_generator
 
-from .models import CustomUser, MoodNote
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+from .models import (
+    Booking, Conversation, CounselorProfile, CustomUser, Message,
+    MoodNote, NoteAttachment, Notification, SharedNote,
+)
 
 # Disable throttling for all non-throttle tests
 NO_THROTTLE = {
@@ -345,3 +350,419 @@ class ThrottleTests(APITestCase):
             'username': 'throttle_test', 'email': 'throttle@test.com', 'password': 'TestPass123!'
         }, format='json')
         self.assertIn(resp.status_code, [status.HTTP_201_CREATED, status.HTTP_429_TOO_MANY_REQUESTS])
+
+
+class CounselorFlowTests(APITestCase):
+    """Test counselor application, admin approval/rejection, and listing."""
+
+    def setUp(self):
+        self.admin = CustomUser.objects.create_user(
+            username='admin', email='admin@cf.com', password='AdminPass123!', is_staff=True,
+        )
+        self.user = CustomUser.objects.create_user(
+            username='counselor1', email='c1@cf.com', password='CounselorPass123!',
+        )
+        self.other = CustomUser.objects.create_user(
+            username='regular', email='r@cf.com', password='RegularPass123!',
+        )
+
+    def test_apply_as_counselor(self):
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.post('/api/counselors/apply/', {
+            'license_number': 'LIC-001',
+            'specialty': 'Anxiety',
+            'introduction': 'Experienced therapist.',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['status'], 'pending')
+
+    def test_admin_approve_counselor(self):
+        profile = CounselorProfile.objects.create(
+            user=self.user, license_number='LIC-002',
+            specialty='Depression', introduction='Test',
+        )
+        self.client.force_authenticate(user=self.admin)
+        resp = self.client.post(f'/api/admin/counselors/{profile.id}/action/', {
+            'action': 'approve',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        profile.refresh_from_db()
+        self.assertEqual(profile.status, 'approved')
+
+    def test_admin_reject_counselor(self):
+        profile = CounselorProfile.objects.create(
+            user=self.user, license_number='LIC-003',
+            specialty='Stress', introduction='Test',
+        )
+        self.client.force_authenticate(user=self.admin)
+        resp = self.client.post(f'/api/admin/counselors/{profile.id}/action/', {
+            'action': 'reject',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        profile.refresh_from_db()
+        self.assertEqual(profile.status, 'rejected')
+
+    def test_admin_invalid_action(self):
+        profile = CounselorProfile.objects.create(
+            user=self.user, license_number='LIC-004',
+            specialty='Test', introduction='Test',
+        )
+        self.client.force_authenticate(user=self.admin)
+        resp = self.client.post(f'/api/admin/counselors/{profile.id}/action/', {
+            'action': 'invalid',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_approved_counselor_listed(self):
+        CounselorProfile.objects.create(
+            user=self.user, license_number='LIC-005',
+            specialty='CBT', introduction='Listed', status='approved',
+        )
+        self.client.force_authenticate(user=self.other)
+        resp = self.client.get('/api/counselors/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        results = resp.data.get('results', resp.data)
+        self.assertGreaterEqual(len(results), 1)
+
+    def test_pending_counselor_not_listed(self):
+        CounselorProfile.objects.create(
+            user=self.user, license_number='LIC-006',
+            specialty='CBT', introduction='Not listed', status='pending',
+        )
+        self.client.force_authenticate(user=self.other)
+        resp = self.client.get('/api/counselors/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        results = resp.data.get('results', resp.data)
+        self.assertEqual(len(results), 0)
+
+
+class MessagingTests(APITestCase):
+    """Test conversation creation and messaging."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='msguser', email='msg@test.com', password='MsgPass123!',
+        )
+        self.counselor = CustomUser.objects.create_user(
+            username='msgcounselor', email='msgc@test.com', password='MsgPass123!',
+        )
+        self.profile = CounselorProfile.objects.create(
+            user=self.counselor, license_number='MSG-001',
+            specialty='Chat', introduction='Test', status='approved',
+        )
+
+    def test_create_conversation(self):
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.post('/api/conversations/create/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+    def test_create_conversation_duplicate_returns_existing(self):
+        self.client.force_authenticate(user=self.user)
+        resp1 = self.client.post('/api/conversations/create/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        resp2 = self.client.post('/api/conversations/create/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        self.assertEqual(resp2.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp1.data['id'], resp2.data['id'])
+
+    def test_send_and_list_messages(self):
+        self.client.force_authenticate(user=self.user)
+        conv_resp = self.client.post('/api/conversations/create/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        conv_id = conv_resp.data['id']
+
+        # Send message
+        send_resp = self.client.post(f'/api/conversations/{conv_id}/messages/', {
+            'content': 'Hello counselor!',
+        }, format='json')
+        self.assertEqual(send_resp.status_code, status.HTTP_201_CREATED)
+
+        # List messages
+        list_resp = self.client.get(f'/api/conversations/{conv_id}/messages/')
+        self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_resp.data), 1)
+        self.assertEqual(list_resp.data[0]['content'], 'Hello counselor!')
+
+    def test_empty_message_rejected(self):
+        self.client.force_authenticate(user=self.user)
+        conv = Conversation.objects.create(user=self.user, counselor=self.counselor)
+        resp = self.client.post(f'/api/conversations/{conv.id}/messages/', {
+            'content': '',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_message_too_long_rejected(self):
+        self.client.force_authenticate(user=self.user)
+        conv = Conversation.objects.create(user=self.user, counselor=self.counselor)
+        resp = self.client.post(f'/api/conversations/{conv.id}/messages/', {
+            'content': 'x' * 5001,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_non_participant_cannot_access(self):
+        outsider = CustomUser.objects.create_user(
+            username='outsider', password='OutPass123!',
+        )
+        conv = Conversation.objects.create(user=self.user, counselor=self.counselor)
+        self.client.force_authenticate(user=outsider)
+        resp = self.client.get(f'/api/conversations/{conv.id}/messages/')
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_message_creates_notification(self):
+        self.client.force_authenticate(user=self.user)
+        conv = Conversation.objects.create(user=self.user, counselor=self.counselor)
+        self.client.post(f'/api/conversations/{conv.id}/messages/', {
+            'content': 'Notify test',
+        }, format='json')
+        self.assertTrue(
+            Notification.objects.filter(user=self.counselor, type='message').exists()
+        )
+
+
+class AttachmentTests(APITestCase):
+    """Test note attachment upload with validation."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='attachuser', email='attach@test.com', password='AttachPass123!',
+        )
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.post('/api/notes/', {'content': 'Attachment test'}, format='json')
+        self.note_id = resp.data['id']
+
+    def test_upload_image(self):
+        # 1x1 PNG pixel
+        img = SimpleUploadedFile('test.png', b'\x89PNG\r\n\x1a\n' + b'\x00' * 100, content_type='image/png')
+        resp = self.client.post(
+            f'/api/notes/{self.note_id}/attachments/',
+            {'file': img},
+            format='multipart',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['file_type'], 'image')
+
+    def test_upload_audio(self):
+        audio = SimpleUploadedFile('test.mp3', b'\x00' * 100, content_type='audio/mpeg')
+        resp = self.client.post(
+            f'/api/notes/{self.note_id}/attachments/',
+            {'file': audio},
+            format='multipart',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['file_type'], 'audio')
+
+    def test_reject_non_media_file(self):
+        txt = SimpleUploadedFile('test.txt', b'hello world', content_type='text/plain')
+        resp = self.client.post(
+            f'/api/notes/{self.note_id}/attachments/',
+            {'file': txt},
+            format='multipart',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_reject_no_file(self):
+        resp = self.client.post(
+            f'/api/notes/{self.note_id}/attachments/',
+            {},
+            format='multipart',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_reject_other_users_note(self):
+        other = CustomUser.objects.create_user(username='other2', password='OtherPass123!')
+        note = MoodNote(user=other)
+        note.set_content('Other note')
+        note.save()
+        img = SimpleUploadedFile('test.png', b'\x89PNG' + b'\x00' * 100, content_type='image/png')
+        resp = self.client.post(
+            f'/api/notes/{note.id}/attachments/',
+            {'file': img},
+            format='multipart',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class BookingTests(APITestCase):
+    """Test booking creation, conflicts, and actions."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='bookuser', email='book@test.com', password='BookPass123!',
+        )
+        self.counselor = CustomUser.objects.create_user(
+            username='bookcounselor', email='bookc@test.com', password='BookPass123!',
+        )
+        self.profile = CounselorProfile.objects.create(
+            user=self.counselor, license_number='BK-001',
+            specialty='Booking', introduction='Test', status='approved',
+        )
+
+    def test_create_booking(self):
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.post('/api/bookings/create/', {
+            'counselor_id': self.profile.id,
+            'date': '2026-06-15',
+            'start_time': '10:00',
+            'end_time': '11:00',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['status'], 'pending')
+
+    def test_booking_conflict(self):
+        self.client.force_authenticate(user=self.user)
+        # Create first booking
+        self.client.post('/api/bookings/create/', {
+            'counselor_id': self.profile.id,
+            'date': '2026-06-16',
+            'start_time': '14:00',
+            'end_time': '15:00',
+        }, format='json')
+        # Try overlapping booking
+        resp = self.client.post('/api/bookings/create/', {
+            'counselor_id': self.profile.id,
+            'date': '2026-06-16',
+            'start_time': '14:30',
+            'end_time': '15:30',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+
+    def test_booking_missing_fields(self):
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.post('/api/bookings/create/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_confirm_booking(self):
+        self.client.force_authenticate(user=self.user)
+        booking = Booking.objects.create(
+            user=self.user, counselor=self.counselor,
+            date='2026-06-20', start_time='09:00', end_time='10:00',
+        )
+        # Counselor confirms
+        self.client.force_authenticate(user=self.counselor)
+        resp = self.client.post(f'/api/bookings/{booking.id}/action/', {
+            'action': 'confirm',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, 'confirmed')
+
+    def test_cancel_booking(self):
+        booking = Booking.objects.create(
+            user=self.user, counselor=self.counselor,
+            date='2026-06-21', start_time='09:00', end_time='10:00',
+        )
+        self.client.force_authenticate(user=self.counselor)
+        resp = self.client.post(f'/api/bookings/{booking.id}/action/', {
+            'action': 'cancel',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, 'cancelled')
+
+    def test_booking_action_creates_notification(self):
+        booking = Booking.objects.create(
+            user=self.user, counselor=self.counselor,
+            date='2026-06-22', start_time='09:00', end_time='10:00',
+        )
+        self.client.force_authenticate(user=self.counselor)
+        self.client.post(f'/api/bookings/{booking.id}/action/', {
+            'action': 'confirm',
+        }, format='json')
+        self.assertTrue(
+            Notification.objects.filter(user=self.user, type='booking').exists()
+        )
+
+
+class ShareNoteTests(APITestCase):
+    """Test note sharing with counselors."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='shareuser', email='share@test.com', password='SharePass123!',
+        )
+        self.counselor = CustomUser.objects.create_user(
+            username='sharecounselor', email='sharec@test.com', password='SharePass123!',
+        )
+        self.profile = CounselorProfile.objects.create(
+            user=self.counselor, license_number='SH-001',
+            specialty='Share', introduction='Test', status='approved',
+        )
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.post('/api/notes/', {'content': 'Shareable note'}, format='json')
+        self.note_id = resp.data['id']
+
+    def test_share_note(self):
+        resp = self.client.post(f'/api/notes/{self.note_id}/share/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+    def test_share_duplicate_rejected(self):
+        self.client.post(f'/api/notes/{self.note_id}/share/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        resp = self.client.post(f'/api/notes/{self.note_id}/share/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+
+    def test_share_anonymous(self):
+        resp = self.client.post(f'/api/notes/{self.note_id}/share/', {
+            'counselor_id': self.profile.id,
+            'is_anonymous': True,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(resp.data['is_anonymous'])
+
+    def test_share_creates_notification(self):
+        self.client.post(f'/api/notes/{self.note_id}/share/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        self.assertTrue(
+            Notification.objects.filter(user=self.counselor, type='share').exists()
+        )
+
+    def test_shared_notes_received(self):
+        self.client.post(f'/api/notes/{self.note_id}/share/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        self.client.force_authenticate(user=self.counselor)
+        resp = self.client.get('/api/shared-notes/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(resp.data), 1)
+
+
+class NotificationTests(APITestCase):
+    """Test notification listing and marking as read."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='notifuser', email='notif@test.com', password='NotifPass123!',
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_list_notifications(self):
+        Notification.objects.create(
+            user=self.user, type='system', title='Test', message='Hello',
+        )
+        resp = self.client.get('/api/notifications/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(resp.data), 1)
+
+    def test_mark_notifications_read(self):
+        n = Notification.objects.create(
+            user=self.user, type='system', title='Unread', message='Mark me',
+        )
+        resp = self.client.post('/api/notifications/read/', {
+            'ids': [n.id],
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        n.refresh_from_db()
+        self.assertTrue(n.is_read)
