@@ -91,12 +91,12 @@ export default memo(function MoodCalendar() {
               <button
                 key={dateStr}
                 onClick={() => info && handleDayClick(day)}
-                className="aspect-square rounded-lg flex flex-col items-center justify-center text-sm transition-all hover:scale-105 border border-white/5"
+                className="aspect-square rounded-lg flex flex-col items-center justify-center transition-all hover:scale-105 border border-white/5"
                 style={{ backgroundColor: bg }}
                 title={info ? `${t('calendar.avgSentiment')}: ${info.avg_sentiment}, ${t('calendar.noteCount')}: ${info.count}` : ''}
               >
-                <span className={info ? 'font-medium' : 'opacity-40'}>{day}</span>
-                {info && <span className="text-[10px] opacity-70">{info.count}</span>}
+                <span className={`text-lg ${info ? 'font-bold' : 'opacity-40'}`}>{day}</span>
+                {info && <span className="text-xs opacity-80">{info.count} {t('calendar.noteCount')}</span>}
               </button>
             )
           })}
@@ -104,17 +104,17 @@ export default memo(function MoodCalendar() {
       )}
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-4 mt-4 text-xs opacity-60">
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded" style={{ backgroundColor: 'rgba(34, 197, 94, 0.6)' }} />
+      <div className="flex items-center justify-center gap-5 mt-4 text-sm opacity-80">
+        <span className="flex items-center gap-1.5">
+          <span className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(34, 197, 94, 0.6)' }} />
           {t('calendar.positive')}
         </span>
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded" style={{ backgroundColor: 'rgba(250, 204, 21, 0.5)' }} />
+        <span className="flex items-center gap-1.5">
+          <span className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(250, 204, 21, 0.5)' }} />
           {t('calendar.neutral')}
         </span>
-        <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded" style={{ backgroundColor: 'rgba(239, 68, 68, 0.6)' }} />
+        <span className="flex items-center gap-1.5">
+          <span className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(239, 68, 68, 0.6)' }} />
           {t('calendar.negative')}
         </span>
       </div>

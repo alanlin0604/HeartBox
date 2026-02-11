@@ -322,9 +322,11 @@ class CounselorMyProfileView(generics.RetrieveUpdateAPIView):
 
 
 class CounselorListView(generics.ListAPIView):
-    """List all approved counselors (public for authenticated users)."""
+    """List all approved counselors (public for authenticated users), excluding self."""
     serializer_class = CounselorListSerializer
-    queryset = CounselorProfile.objects.filter(status='approved')
+
+    def get_queryset(self):
+        return CounselorProfile.objects.filter(status='approved').exclude(user=self.request.user)
 
 
 # ===== Messaging Views =====
@@ -571,7 +573,11 @@ class TimeSlotListView(APIView):
 
 
 class AvailableSlotsView(APIView):
-    """Get available slots for a counselor on a given date."""
+    """Get available slots for a counselor on a given date.
+
+    counselor_id in the URL is CounselorProfile.pk, but TimeSlot/Booking
+    reference User.pk, so we resolve the profile first.
+    """
 
     def get(self, request, counselor_id):
         date_str = request.query_params.get('date')
@@ -583,16 +589,23 @@ class AvailableSlotsView(APIView):
         except ValueError:
             return Response({'error': '日期格式錯誤，請使用 YYYY-MM-DD'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Resolve CounselorProfile.pk → User.pk
+        try:
+            profile = CounselorProfile.objects.get(pk=counselor_id, status='approved')
+        except CounselorProfile.DoesNotExist:
+            return Response({'error': '找不到該諮商師'}, status=status.HTTP_404_NOT_FOUND)
+        user_id = profile.user_id
+
         day_of_week = target_date.weekday()
         slots = TimeSlot.objects.filter(
-            counselor_id=counselor_id,
+            counselor_id=user_id,
             day_of_week=day_of_week,
             is_active=True,
         )
 
         # Exclude already booked slots
         booked = Booking.objects.filter(
-            counselor_id=counselor_id,
+            counselor_id=user_id,
             date=target_date,
             status__in=['pending', 'confirmed'],
         ).values_list('start_time', 'end_time')
@@ -625,10 +638,17 @@ class BookingCreateView(APIView):
         if not all([counselor_id, date_str, start_time, end_time]):
             return Response({'error': '請提供所有必填欄位'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Resolve CounselorProfile.pk → User.pk
+        try:
+            profile = CounselorProfile.objects.get(pk=counselor_id, status='approved')
+        except CounselorProfile.DoesNotExist:
+            return Response({'error': '找不到該諮商師'}, status=status.HTTP_404_NOT_FOUND)
+        counselor_user_id = profile.user_id
+
         # Check for conflicts
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         conflict = Booking.objects.filter(
-            counselor_id=counselor_id,
+            counselor_id=counselor_user_id,
             date=target_date,
             start_time=start_time,
             status__in=['pending', 'confirmed'],
@@ -638,7 +658,7 @@ class BookingCreateView(APIView):
 
         booking = Booking.objects.create(
             user=request.user,
-            counselor_id=counselor_id,
+            counselor_id=counselor_user_id,
             date=target_date,
             start_time=start_time,
             end_time=end_time,
@@ -646,7 +666,7 @@ class BookingCreateView(APIView):
 
         # Notify counselor
         Notification.objects.create(
-            user_id=counselor_id,
+            user_id=counselor_user_id,
             type='booking',
             title='新預約',
             message=f'{request.user.username} 預約了 {date_str} {start_time}',

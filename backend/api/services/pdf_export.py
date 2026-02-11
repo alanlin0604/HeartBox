@@ -1,4 +1,5 @@
 import io
+import os
 from datetime import datetime
 
 from reportlab.lib import colors
@@ -8,7 +9,7 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.platypus import (
-    Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+    Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
 
 
@@ -30,6 +31,7 @@ PDF_LABELS = {
         'ai_feedback': 'AI 分析回饋',
         'no_notes': '所選日期範圍內沒有找到日誌。',
         'weather': '天氣',
+        'attachments': '附件圖片',
     },
     'en': {
         'title': 'Mood Journal Report',
@@ -42,6 +44,7 @@ PDF_LABELS = {
         'ai_feedback': 'AI Analysis',
         'no_notes': 'No notes found in the selected date range.',
         'weather': 'Weather',
+        'attachments': 'Attached Images',
     },
     'ja': {
         'title': '気分日記レポート',
@@ -54,6 +57,7 @@ PDF_LABELS = {
         'ai_feedback': 'AI分析フィードバック',
         'no_notes': '選択された日付範囲に日記が見つかりませんでした。',
         'weather': '天気',
+        'attachments': '添付画像',
     },
 }
 
@@ -127,8 +131,8 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
     styles = _build_styles()
     story = []
 
-    # Filter by date range
-    qs = queryset.order_by('created_at')
+    # Filter by date range (prefetch image attachments)
+    qs = queryset.prefetch_related('attachments').order_by('created_at')
     if date_from:
         try:
             dt = datetime.strptime(date_from, '%Y-%m-%d')
@@ -213,6 +217,32 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
             story.append(Paragraph(f'<b>{labels["ai_feedback"]}</b>', styles['CJKFeedbackLabel']))
             feedback_parts = _format_ai_feedback(note.ai_feedback, styles['CJKFeedback'])
             story.extend(feedback_parts)
+
+        # Include image attachments
+        image_attachments = [a for a in note.attachments.all() if a.file_type == 'image']
+        if image_attachments:
+            story.append(Spacer(1, 2*mm))
+            story.append(Paragraph(f'<b>{labels["attachments"]}</b>', styles['CJKFeedbackLabel']))
+            for att in image_attachments:
+                try:
+                    img_path = att.file.path
+                    if os.path.exists(img_path):
+                        img = Image(img_path)
+                        # Scale to fit within page width (max 150mm wide, 100mm tall)
+                        max_w, max_h = 150*mm, 100*mm
+                        iw, ih = img.drawWidth, img.drawHeight
+                        if iw > max_w:
+                            ratio = max_w / iw
+                            iw, ih = iw * ratio, ih * ratio
+                        if ih > max_h:
+                            ratio = max_h / ih
+                            iw, ih = iw * ratio, ih * ratio
+                        img.drawWidth = iw
+                        img.drawHeight = ih
+                        story.append(img)
+                        story.append(Spacer(1, 2*mm))
+                except Exception:
+                    pass  # Skip images that can't be loaded
 
         story.append(Spacer(1, 4*mm))
 

@@ -32,14 +32,14 @@ export default memo(function AlertBanner() {
             key={`${alert.type}-${i}`}
             className={`rounded-xl border p-4 flex items-start gap-3 ${style}`}
           >
-            <span className="text-lg mt-0.5">
+            <span className="text-2xl mt-0.5">
               {alert.severity === 'high' ? '🚨' : '⚠️'}
             </span>
             <div className="flex-1">
-              <p className="text-sm font-medium">
+              <p className="text-base font-bold">
                 {t(`alert.${alert.type}.title`)}
               </p>
-              <p className="text-xs opacity-80 mt-1">
+              <p className="text-sm opacity-90 mt-1">
                 {alert.type === 'consecutive_negative' &&
                   t('alert.consecutive_negative.desc', { count: alert.data.count })}
                 {alert.type === 'high_stress' &&
@@ -48,10 +48,10 @@ export default memo(function AlertBanner() {
                   t('alert.sudden_drop.desc', { drop: alert.data.drop })}
               </p>
               <div className="flex items-center gap-3 mt-2">
-                <p className="text-xs opacity-70">{t('alert.recommendation')}</p>
+                <p className="text-sm font-medium opacity-80">{t('alert.recommendation')}</p>
                 <Link
                   to="/counselors"
-                  className="text-xs underline opacity-80 hover:opacity-100"
+                  className="text-sm font-medium underline opacity-90 hover:opacity-100"
                 >
                   {t('alert.findCounselor')}
                 </Link>

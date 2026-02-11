@@ -64,6 +64,9 @@ export default function ScheduleManager() {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">{t('schedule.manageTitle')}</h3>
+      <p className="text-sm opacity-70 bg-blue-500/10 border border-blue-400/30 rounded-lg px-4 py-2">
+        💡 {t('schedule.hint')}
+      </p>
 
       {/* Add slot form */}
       <form onSubmit={handleAdd} className="glass p-4 flex flex-wrap items-end gap-3">

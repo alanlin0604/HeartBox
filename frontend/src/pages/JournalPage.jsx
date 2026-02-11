@@ -94,12 +94,8 @@ export default function JournalPage() {
     <div className="space-y-6 mt-4">
       <AlertBanner />
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{t('journal.recentNotes')}</h2>
-        <ExportPDFButton />
-      </div>
-
-      <SearchFilterPanel filters={filters} onFilterChange={handleFilterChange} />
+      {/* Write section */}
+      <NoteForm onSubmit={handleCreate} loading={creating} />
 
       {streak > 0 && (
         <div className="glass-card p-3 flex items-center gap-2 text-sm">
@@ -108,7 +104,16 @@ export default function JournalPage() {
         </div>
       )}
 
-      <NoteForm onSubmit={handleCreate} loading={creating} />
+      {/* Divider */}
+      <hr className="border-white/10" />
+
+      {/* Browse section */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{t('journal.recentNotes')}</h2>
+        <ExportPDFButton />
+      </div>
+
+      <SearchFilterPanel filters={filters} onFilterChange={handleFilterChange} />
 
       <div>
         {loading ? (

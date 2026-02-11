@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
 
 export default function TermsPage() {
   const { t } = useLang()
+  const navigate = useNavigate()
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -52,9 +53,9 @@ export default function TermsPage() {
           <Link to="/privacy" className="text-purple-500 hover:text-purple-400">
             {t('legal.privacy')}
           </Link>
-          <Link to="/login" className="text-purple-500 hover:text-purple-400">
-            {t('legal.backToLogin')}
-          </Link>
+          <button onClick={() => navigate(-1)} className="text-purple-500 hover:text-purple-400 cursor-pointer">
+            {t('legal.back')}
+          </button>
         </div>
       </div>
     </div>
