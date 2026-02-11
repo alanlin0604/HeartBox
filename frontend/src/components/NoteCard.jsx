@@ -1,11 +1,9 @@
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
+import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
 import MoodBadge from './MoodBadge'
 import HighlightText from './HighlightText'
-
-const LOCALE_MAP = { 'zh-TW': 'zh-TW', en: 'en-US', ja: 'ja-JP' }
-const TZ_MAP = { 'zh-TW': 'Asia/Taipei', en: 'UTC', ja: 'Asia/Tokyo' }
 
 export default memo(function NoteCard({ note, highlight }) {
   const { lang, t } = useLang()

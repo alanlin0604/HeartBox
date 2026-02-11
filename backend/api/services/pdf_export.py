@@ -146,7 +146,7 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
         except ValueError:
             pass
 
-    notes = list(qs)
+    notes = list(qs[:1000])  # Cap at 1000 notes per PDF to prevent memory exhaustion
 
     # --- Title ---
     username = user.username if user else ''

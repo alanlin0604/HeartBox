@@ -14,7 +14,8 @@ export function ToastProvider({ children }) {
   const pushToast = useCallback((type, message, timeoutMs = 2600) => {
     const id = toastSeq++
     setToasts((prev) => [...prev, { id, type, message }])
-    window.setTimeout(() => removeToast(id), timeoutMs)
+    const timerId = window.setTimeout(() => removeToast(id), timeoutMs)
+    return () => clearTimeout(timerId)
   }, [removeToast])
 
   const api = useMemo(() => ({

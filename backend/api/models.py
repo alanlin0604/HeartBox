@@ -160,6 +160,7 @@ class Message(models.Model):
         ordering = ['created_at']
         indexes = [
             models.Index(fields=['conversation', 'is_read'], name='message_conv_read'),
+            models.Index(fields=['sender', 'created_at'], name='message_sender_created'),
         ]
 
     def __str__(self):
@@ -235,6 +236,9 @@ class TimeSlot(models.Model):
 
     class Meta:
         ordering = ['day_of_week', 'start_time']
+        indexes = [
+            models.Index(fields=['counselor', 'day_of_week', 'is_active'], name='timeslot_counselor_day'),
+        ]
 
     def __str__(self):
         days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -267,6 +271,9 @@ class Booking(models.Model):
 
     class Meta:
         ordering = ['-date', '-start_time']
+        indexes = [
+            models.Index(fields=['counselor', 'date', 'status'], name='booking_counselor_date'),
+        ]
 
     def __str__(self):
         return f'{self.user.username} → {self.counselor.username} {self.date} {self.start_time}'

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
 import { getNotifications, markNotificationsRead } from '../api/notifications'
+import { getAccessToken } from '../utils/tokenStorage'
 import EmptyState from './EmptyState'
 
 export default memo(function NotificationBell() {
@@ -38,7 +39,7 @@ export default memo(function NotificationBell() {
   }, [])
 
   const connectWs = () => {
-    const token = localStorage.getItem('access_token')
+    const token = getAccessToken()
     if (!token) return
 
     const wsBase = import.meta.env.VITE_WS_URL

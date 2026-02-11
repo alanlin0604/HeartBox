@@ -15,9 +15,7 @@ import BookingPanel from '../components/BookingPanel'
 import ScheduleManager from '../components/ScheduleManager'
 import EmptyState from '../components/EmptyState'
 import { useToast } from '../context/ToastContext'
-
-const LOCALE_MAP = { 'zh-TW': 'zh-TW', en: 'en-US', ja: 'ja-JP' }
-const TZ_MAP = { 'zh-TW': 'Asia/Taipei', en: 'UTC', ja: 'Asia/Tokyo' }
+import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
 
 export default function CounselorListPage() {
   const navigate = useNavigate()

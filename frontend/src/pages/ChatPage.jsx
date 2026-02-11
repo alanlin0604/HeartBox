@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
 import { getMessages, getConversations, sendMessage } from '../api/counselors'
 import { useToast } from '../context/ToastContext'
+import { getAccessToken } from '../utils/tokenStorage'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
@@ -26,7 +27,7 @@ export default function ChatPage() {
   const reconnectDelay = useRef(3000)
 
   const connectWs = useCallback(() => {
-    const token = localStorage.getItem('access_token')
+    const token = getAccessToken()
     if (!token) return
 
     const wsBase = import.meta.env.VITE_WS_URL

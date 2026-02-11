@@ -128,8 +128,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # CORS
 if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOWED_ORIGINS = [f'http://localhost:{p}' for p in range(5173, 5180)]
     CSRF_TRUSTED_ORIGINS = [f'http://localhost:{p}' for p in range(5173, 5180)]
+    CORS_ALLOW_CREDENTIALS = True
 else:
     CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
     CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173').split(',')
@@ -152,6 +153,11 @@ REST_FRAMEWORK = {
         'login': os.getenv('THROTTLE_LOGIN', '10/hour'),
         'register': os.getenv('THROTTLE_REGISTER', '5/hour'),
         'password_reset': os.getenv('THROTTLE_PASSWORD_RESET', '5/hour'),
+        'note_create': '30/hour',
+        'upload': '50/hour',
+        'export': '5/hour',
+        'booking': '20/hour',
+        'message_send': '60/hour',
     },
 }
 

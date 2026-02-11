@@ -1,7 +1,10 @@
+import logging
 import mimetypes
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.models import Sum
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db.models import Q
@@ -46,9 +49,13 @@ from .services.analytics import (
 from .services.alerts import check_mood_alerts
 from .services.pdf_export import generate_notes_pdf
 from .services.search import search_notes
-from .throttles import LoginRateThrottle, PasswordResetRateThrottle, RegisterRateThrottle
+from .throttles import (
+    BookingThrottle, ExportThrottle, LoginRateThrottle, MessageThrottle,
+    NoteCreateThrottle, PasswordResetRateThrottle, RegisterRateThrottle, UploadThrottle,
+)
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -108,13 +115,15 @@ class ForgotPasswordView(APIView):
             from django.conf import settings
             frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
             reset_url = f'{frontend_url.rstrip("/")}/reset-password?uid={uid}&token={token}'
-            send_mail(
-                'HeartBox Password Reset',
-                f'Use this link to reset your password: {reset_url}',
-                getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@moodnotes.local'),
-                [user.email],
-                fail_silently=True,
-            )
+            try:
+                send_mail(
+                    'HeartBox Password Reset',
+                    f'Use this link to reset your password: {reset_url}',
+                    getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@moodnotes.local'),
+                    [user.email],
+                )
+            except Exception as e:
+                logger.error('Failed to send password reset email to %s: %s', user.email, e)
         return Response({'status': 'ok'})
 
 
@@ -131,7 +140,7 @@ class ResetPasswordView(APIView):
         try:
             user_id = force_str(urlsafe_base64_decode(uid))
             user = User.objects.get(pk=user_id)
-        except Exception:
+        except (ValueError, TypeError, OverflowError, User.DoesNotExist):
             return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
         if not default_token_generator.check_token(user, token):
             return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
@@ -172,6 +181,11 @@ class LogoutOtherDevicesView(APIView):
 
 
 class MoodNoteViewSet(viewsets.ModelViewSet):
+    def get_throttles(self):
+        if self.action == 'create':
+            return [NoteCreateThrottle()]
+        return super().get_throttles()
+
     def get_serializer_class(self):
         if self.action == 'list':
             return MoodNoteListSerializer
@@ -198,14 +212,17 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         note = serializer.save(user=self.request.user)
-        from api.services.ai_engine import ai_engine
-        plaintext = note.content
-        if plaintext:
-            result = ai_engine.analyze(plaintext)
-            note.sentiment_score = result['sentiment_score']
-            note.stress_index = result['stress_index']
-            note.ai_feedback = result['ai_feedback']
-            note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
+        try:
+            from api.services.ai_engine import ai_engine
+            plaintext = note.content
+            if plaintext:
+                result = ai_engine.analyze(plaintext)
+                note.sentiment_score = result['sentiment_score']
+                note.stress_index = result['stress_index']
+                note.ai_feedback = result['ai_feedback']
+                note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
+        except Exception as e:
+            logger.warning('AI analysis failed for note %s: %s', note.pk, e)
 
     @action(detail=True, methods=['post'])
     def toggle_pin(self, request, pk=None):
@@ -228,15 +245,18 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
 class AnalyticsView(APIView):
     def get(self, request):
         period = request.query_params.get('period', 'week')
-        lookback_days = int(request.query_params.get('lookback_days', 30))
+        try:
+            lookback_days = min(max(int(request.query_params.get('lookback_days', 30)), 1), 365)
+        except (ValueError, TypeError):
+            lookback_days = 30
         qs = MoodNote.objects.filter(user=request.user)
 
-        # Calculate streaks
+        # Calculate streaks (cap to last 366 dates for performance)
         dates = list(
             MoodNote.objects.filter(user=request.user)
             .values_list('created_at__date', flat=True)
             .distinct()
-            .order_by('-created_at__date')
+            .order_by('-created_at__date')[:366]
         )
         current_streak = 0
         longest_streak = 0
@@ -282,17 +302,26 @@ class AnalyticsView(APIView):
 
 class CalendarView(APIView):
     def get(self, request):
-        year = int(request.query_params.get('year', timezone.now().year))
-        month = int(request.query_params.get('month', timezone.now().month))
+        try:
+            year = int(request.query_params.get('year', timezone.now().year))
+            month = int(request.query_params.get('month', timezone.now().month))
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid year or month.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not (1 <= month <= 12) or not (1900 <= year <= 2100):
+            return Response({'error': 'Year must be 1900-2100, month must be 1-12.'}, status=status.HTTP_400_BAD_REQUEST)
         qs = MoodNote.objects.filter(user=request.user)
         days = get_calendar_data(qs, year, month)
         return Response({'year': year, 'month': month, 'days': days})
 
 
 class ExportPDFView(APIView):
+    throttle_classes = [ExportThrottle]
+
     def get(self, request):
         date_from = request.query_params.get('date_from')
         date_to = request.query_params.get('date_to')
+        if date_from and date_to and date_from > date_to:
+            return Response({'error': 'date_from must be before date_to.'}, status=status.HTTP_400_BAD_REQUEST)
         lang = request.query_params.get('lang', 'zh-TW')
         qs = MoodNote.objects.filter(user=request.user)
         buf = generate_notes_pdf(qs, date_from=date_from, date_to=date_to, user=request.user, lang=lang)
@@ -375,6 +404,11 @@ class ConversationCreateView(APIView):
 class MessageListView(APIView):
     """List messages in a conversation and send new messages."""
 
+    def get_throttles(self):
+        if self.request.method == 'POST':
+            return [MessageThrottle()]
+        return super().get_throttles()
+
     def get(self, request, conv_id):
         try:
             conv = Conversation.objects.get(
@@ -436,8 +470,8 @@ class MessageListView(APIView):
                     },
                 },
             )
-        except Exception:
-            pass  # graceful degradation if channel layer not available
+        except Exception as e:
+            logger.debug('Channel layer push failed: %s', e)
 
         return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
 
@@ -508,6 +542,10 @@ class AdminCounselorActionView(APIView):
         profile.status = 'approved' if action == 'approve' else 'rejected'
         profile.reviewed_at = timezone.now()
         profile.save(update_fields=['status', 'reviewed_at'])
+        logger.info(
+            'Admin %s %sd counselor profile %s (user: %s)',
+            request.user.username, action, profile.pk, profile.user.username,
+        )
         return Response(AdminCounselorSerializer(profile).data)
 
 
@@ -535,9 +573,10 @@ class NotificationReadView(APIView):
 
 class NoteAttachmentUploadView(APIView):
     parser_classes = [MultiPartParser, FormParser]
+    throttle_classes = [UploadThrottle]
 
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
-    MAX_USER_STORAGE = 200 * 1024 * 1024  # 200MB per user
+    MAX_USER_ATTACHMENTS = 500
     ALLOWED_TYPES = {'image', 'audio'}
 
     def post(self, request, note_id):
@@ -555,7 +594,7 @@ class NoteAttachmentUploadView(APIView):
 
         # Check attachment count quota
         existing_count = NoteAttachment.objects.filter(note__user=request.user).count()
-        if existing_count >= 500:
+        if existing_count >= self.MAX_USER_ATTACHMENTS:
             return Response({'error': 'Attachment limit reached (500).'}, status=status.HTTP_400_BAD_REQUEST)
 
         mime_type = file.content_type or mimetypes.guess_type(file.name)[0] or ''
@@ -650,6 +689,8 @@ class BookingListView(APIView):
 
 
 class BookingCreateView(APIView):
+    throttle_classes = [BookingThrottle]
+
     def post(self, request):
         counselor_id = request.data.get('counselor_id')
         date_str = request.data.get('date')
@@ -667,8 +708,10 @@ class BookingCreateView(APIView):
         counselor_user_id = profile.user_id
 
         # Check for conflicts (overlapping time ranges)
-        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        from django.db.models import F
+        try:
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
         conflict = Booking.objects.filter(
             counselor_id=counselor_user_id,
             date=target_date,
@@ -801,6 +844,7 @@ class DeleteAccountView(APIView):
 
 class ExportDataView(APIView):
     """Export all user data as JSON (GDPR compliance)."""
+    throttle_classes = [ExportThrottle]
 
     def get(self, request):
         import json
@@ -843,6 +887,7 @@ class ExportDataView(APIView):
 
 class ExportCSVView(APIView):
     """Export all user notes as CSV."""
+    throttle_classes = [ExportThrottle]
 
     def get(self, request):
         import csv
