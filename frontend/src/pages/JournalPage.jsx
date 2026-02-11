@@ -62,12 +62,21 @@ export default function JournalPage() {
     try {
       const res = await createNote(content, metadata)
       const noteId = res.data.id
-      // Upload attachments after note creation
+      // Upload attachments after note creation (don't block refresh on failure)
+      let attachFailed = false
       for (const file of files) {
-        await uploadAttachment(noteId, file)
+        try {
+          await uploadAttachment(noteId, file)
+        } catch {
+          attachFailed = true
+        }
       }
       await fetchNotes(1, filters)
-      toast?.success(t('noteForm.saved'))
+      if (attachFailed) {
+        toast?.error(t('noteForm.attachFailed'))
+      } else {
+        toast?.success(t('noteForm.saved'))
+      }
     } catch (err) {
       console.error('Failed to create note:', err)
       toast?.error(t('noteForm.saveFailed'))
@@ -95,7 +104,7 @@ export default function JournalPage() {
       {streak > 0 && (
         <div className="glass-card p-3 flex items-center gap-2 text-sm">
           <span className="text-xl">🔥</span>
-          <span className="font-medium">{t('journal.streak') || '連續記錄'} {streak} {t('journal.days') || '天'}</span>
+          <span className="font-medium">{t('journal.streak', { days: streak })}</span>
         </div>
       )}
 

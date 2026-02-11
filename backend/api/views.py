@@ -776,15 +776,15 @@ class ExportDataView(APIView):
         }
 
         for note in notes:
+            meta = note.metadata or {}
             note_data = {
                 'id': note.id,
                 'content': note.content,
-                'mood': note.mood,
-                'weather': note.weather,
-                'tags': note.tags,
                 'sentiment_score': note.sentiment_score,
                 'stress_index': note.stress_index,
                 'ai_feedback': note.ai_feedback,
+                'is_pinned': note.is_pinned,
+                'metadata': meta,
                 'created_at': note.created_at.isoformat(),
                 'updated_at': note.updated_at.isoformat(),
             }

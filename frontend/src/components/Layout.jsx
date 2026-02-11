@@ -55,7 +55,7 @@ export default function Layout() {
       {/* Offline banner */}
       {isOffline && (
         <div className="bg-yellow-500/90 text-black text-center text-sm py-1.5 px-4 font-medium">
-          您目前離線，部分功能可能無法使用
+          {t('common.offline')}
         </div>
       )}
 
@@ -268,8 +268,8 @@ export default function Layout() {
 
       {/* Footer */}
       <footer className="text-center text-xs opacity-40 py-4 space-x-4">
-        <Link to="/privacy" className="hover:opacity-70">隱私政策</Link>
-        <Link to="/terms" className="hover:opacity-70">服務條款</Link>
+        <Link to="/privacy" className="hover:opacity-70">{t('legal.privacy')}</Link>
+        <Link to="/terms" className="hover:opacity-70">{t('legal.terms')}</Link>
         <span>&copy; {new Date().getFullYear()} HeartBox</span>
       </footer>
     </div>

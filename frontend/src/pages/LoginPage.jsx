@@ -40,7 +40,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="glass p-8 w-full max-w-md">
         <div className="flex justify-end mb-4 gap-1">
           {LANG_OPTIONS.map((opt) => (
@@ -108,9 +108,10 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-      <div className="mt-4 text-center text-xs opacity-40 space-x-3">
-        <Link to="/privacy" className="hover:opacity-70">隱私政策</Link>
-        <Link to="/terms" className="hover:opacity-70">服務條款</Link>
+      <div className="mt-6 text-center text-xs opacity-40 space-x-3">
+        <Link to="/privacy" className="hover:opacity-70">{t('legal.privacy')}</Link>
+        <span>|</span>
+        <Link to="/terms" className="hover:opacity-70">{t('legal.terms')}</Link>
       </div>
     </div>
   )

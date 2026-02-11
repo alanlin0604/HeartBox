@@ -1,28 +1,28 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useLang } from '../context/LanguageContext'
 
-const WEATHER_KEYS = [
-  { value: '', labelKey: 'noteForm.weather' },
-  { value: '☀️ 晴天', labelKey: 'noteForm.weatherSunny' },
-  { value: '⛅ 多雲', labelKey: 'noteForm.weatherCloudy' },
-  { value: '☁️ 陰天', labelKey: 'noteForm.weatherOvercast' },
-  { value: '🌧️ 小雨', labelKey: 'noteForm.weatherLightRain' },
-  { value: '⛈️ 大雨/雷雨', labelKey: 'noteForm.weatherHeavyRain' },
-  { value: '🌦️ 陣雨', labelKey: 'noteForm.weatherShower' },
-  { value: '❄️ 下雪', labelKey: 'noteForm.weatherSnow' },
-  { value: '🌫️ 霧', labelKey: 'noteForm.weatherFog' },
-  { value: '💨 強風', labelKey: 'noteForm.weatherWindy' },
-  { value: '🌤️ 晴時多雲', labelKey: 'noteForm.weatherPartlyCloudy' },
-]
-
-const TEMPLATES = [
-  { key: 'morning', emoji: '🌅', label: '晨間心情', text: '今天早上醒來的心情是...\n今天最期待的事情是...\n給自己的一句話：' },
-  { key: 'gratitude', emoji: '🙏', label: '感恩日記', text: '今天感恩的三件事：\n1. \n2. \n3. \n這些事讓我感到...' },
-  { key: 'stress', emoji: '💆', label: '壓力抒發', text: '今天讓我感到壓力的事情：\n我的身體反應是...\n我想對自己說...' },
+const WEATHER_LABEL_KEYS = [
+  { labelKey: 'noteForm.weather', isEmpty: true },
+  { labelKey: 'noteForm.weatherSunny' },
+  { labelKey: 'noteForm.weatherCloudy' },
+  { labelKey: 'noteForm.weatherOvercast' },
+  { labelKey: 'noteForm.weatherLightRain' },
+  { labelKey: 'noteForm.weatherHeavyRain' },
+  { labelKey: 'noteForm.weatherShower' },
+  { labelKey: 'noteForm.weatherSnow' },
+  { labelKey: 'noteForm.weatherFog' },
+  { labelKey: 'noteForm.weatherWindy' },
+  { labelKey: 'noteForm.weatherPartlyCloudy' },
 ]
 
 export default function NoteForm({ onSubmit, loading }) {
   const { t } = useLang()
+
+  const TEMPLATES = [
+    { key: 'morning', emoji: '🌅', labelKey: 'noteForm.tplMorning', textKey: 'noteForm.tplMorningText' },
+    { key: 'gratitude', emoji: '🙏', labelKey: 'noteForm.tplGratitude', textKey: 'noteForm.tplGratitudeText' },
+    { key: 'stress', emoji: '💆', labelKey: 'noteForm.tplStress', textKey: 'noteForm.tplStressText' },
+  ]
   const [content, setContent] = useState('')
   const [weather, setWeather] = useState('')
   const [temperature, setTemperature] = useState('')
@@ -88,10 +88,10 @@ export default function NoteForm({ onSubmit, loading }) {
           <button
             key={tpl.key}
             type="button"
-            onClick={() => setContent(tpl.text)}
+            onClick={() => setContent(t(tpl.textKey))}
             className="text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 hover:bg-purple-500/25 transition-colors cursor-pointer"
           >
-            {tpl.emoji} {tpl.label}
+            {tpl.emoji} {t(tpl.labelKey)}
           </button>
         ))}
       </div>
@@ -108,11 +108,14 @@ export default function NoteForm({ onSubmit, loading }) {
           onChange={(e) => setWeather(e.target.value)}
           className="glass-input"
         >
-          {WEATHER_KEYS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {t(opt.labelKey)}
-            </option>
-          ))}
+          {WEATHER_LABEL_KEYS.map((opt) => {
+            const label = t(opt.labelKey)
+            return (
+              <option key={opt.labelKey} value={opt.isEmpty ? '' : label}>
+                {label}
+              </option>
+            )
+          })}
         </select>
         <input
           type="number"

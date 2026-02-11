@@ -120,6 +120,7 @@ function UsersTab() {
       {loading ? (
         <p className="opacity-60">{t('common.loading')}</p>
       ) : (
+        <>
         {/* Desktop table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
@@ -207,6 +208,7 @@ function UsersTab() {
           ))}
           {users.length === 0 && <p className="text-center py-8 opacity-50">{t('admin.noUsers')}</p>}
         </div>
+        </>
       )}
     </div>
   )

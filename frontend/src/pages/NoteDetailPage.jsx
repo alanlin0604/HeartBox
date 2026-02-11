@@ -50,7 +50,7 @@ export default function NoteDetailPage() {
       const { data } = await togglePin(id)
       setNote((prev) => ({ ...prev, is_pinned: data.is_pinned }))
     } catch {
-      toast?.error('操作失敗')
+      toast?.error(t('common.operationFailed'))
     }
   }
 
@@ -129,7 +129,7 @@ export default function NoteDetailPage() {
             <button
               onClick={handleTogglePin}
               className={`text-xs px-2 py-1 rounded-lg border cursor-pointer transition-colors ${note.is_pinned ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-500' : 'border-white/10 opacity-60 hover:opacity-100'}`}
-              title={note.is_pinned ? '取消置頂' : '置頂'}
+              title={note.is_pinned ? t('noteDetail.unpin') : t('noteDetail.pin')}
             >
               📌
             </button>
@@ -247,7 +247,7 @@ export default function NoteDetailPage() {
               {note.ai_feedback}
             </p>
             <p className="text-xs opacity-40 mt-3 italic">
-              此為 AI 分析結果，僅供參考，不構成專業醫療或心理諮詢建議。
+              {t('noteDetail.aiDisclaimer')}
             </p>
           </div>
         )}

@@ -94,9 +94,9 @@ export default function SettingsPage() {
       a.download = `heartbox_export_${user?.username || 'data'}.json`
       a.click()
       URL.revokeObjectURL(url)
-      toast?.success(t('settings.exportSuccess') || '匯出成功')
+      toast?.success(t('settings.saveSuccess'))
     } catch {
-      toast?.error(t('settings.exportFailed') || '匯出失敗')
+      toast?.error(t('settings.exportFailed'))
     } finally {
       setExporting(false)
     }
@@ -109,7 +109,7 @@ export default function SettingsPage() {
       await deleteAccount(deletePassword)
       window.location.href = '/login'
     } catch (err) {
-      const msg = err.response?.data?.error || '刪除失敗'
+      const msg = err.response?.data?.error || t('settings.deleteFailed')
       toast?.error(msg)
     } finally {
       setDeleting(false)
@@ -185,12 +185,12 @@ export default function SettingsPage() {
               const file = e.target.files?.[0]
               if (file) {
                 if (file.size > 2 * 1024 * 1024) {
-                  toast?.error('圖片大小不可超過 2MB')
+                  toast?.error(t('settings.avatarTooLarge'))
                   e.target.value = ''
                   return
                 }
                 if (!file.type.startsWith('image/')) {
-                  toast?.error('請上傳圖片檔案')
+                  toast?.error(t('settings.avatarInvalid'))
                   e.target.value = ''
                   return
                 }
@@ -263,24 +263,22 @@ export default function SettingsPage() {
 
       {/* Data Export */}
       <div className="glass p-6 space-y-3">
-        <h2 className="text-lg font-semibold">資料匯出</h2>
-        <p className="text-sm opacity-60">匯出您的所有日記資料為 JSON 格式。</p>
+        <h2 className="text-lg font-semibold">{t('settings.exportData')}</h2>
+        <p className="text-sm opacity-60">{t('settings.exportDataDesc')}</p>
         <button onClick={handleExportData} disabled={exporting} className="btn-secondary">
-          {exporting ? '匯出中...' : '匯出資料'}
+          {exporting ? t('settings.exporting') : t('settings.exportButton')}
         </button>
       </div>
 
       {/* Danger Zone - Delete Account */}
       <div className="glass p-6 space-y-3 border border-red-500/20">
-        <h2 className="text-lg font-semibold text-red-500">危險區域</h2>
-        <p className="text-sm opacity-60">
-          刪除帳號後，所有資料將被永久移除且無法恢復。建議先匯出資料。
-        </p>
+        <h2 className="text-lg font-semibold text-red-500">{t('settings.dangerZone')}</h2>
+        <p className="text-sm opacity-60">{t('settings.deleteAccountDesc')}</p>
         <button
           onClick={() => setDeleteModalOpen(true)}
           className="btn-danger"
         >
-          刪除帳號
+          {t('settings.deleteAccount')}
         </button>
       </div>
 
@@ -288,15 +286,13 @@ export default function SettingsPage() {
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="glass p-6 w-full max-w-md space-y-4">
-            <h2 className="text-lg font-semibold text-red-500">確認刪除帳號</h2>
-            <p className="text-sm opacity-70">
-              此操作不可逆轉。請輸入您的密碼以確認刪除。
-            </p>
+            <h2 className="text-lg font-semibold text-red-500">{t('settings.deleteAccountConfirm')}</h2>
+            <p className="text-sm opacity-70">{t('settings.deleteAccountDesc')}</p>
             <input
               type="password"
               value={deletePassword}
               onChange={(e) => setDeletePassword(e.target.value)}
-              placeholder="請輸入密碼"
+              placeholder={t('settings.deleteAccountPassword')}
               className="glass-input"
             />
             <div className="flex gap-3 justify-end">
@@ -304,14 +300,14 @@ export default function SettingsPage() {
                 onClick={() => { setDeleteModalOpen(false); setDeletePassword('') }}
                 className="btn-secondary"
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleDeleteAccount}
                 disabled={deleting || !deletePassword}
                 className="btn-danger"
               >
-                {deleting ? '刪除中...' : '確認刪除'}
+                {deleting ? t('settings.deleting') : t('settings.deleteAccountButton')}
               </button>
             </div>
           </div>
