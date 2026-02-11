@@ -33,6 +33,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         message_text = content.get('message', '').strip()
         if not message_text:
             return
+        if len(message_text) > 5000:
+            message_text = message_text[:5000]
 
         msg_data = await self.save_message(user.id, self.conv_id, message_text)
         await self.channel_layer.group_send(self.group_name, {

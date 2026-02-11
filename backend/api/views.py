@@ -156,8 +156,10 @@ class ProfileView(generics.RetrieveUpdateAPIView):
             if not user.check_password(old_pw):
                 return Response({'old_password': ['OLD_PASSWORD_INCORRECT']}, status=status.HTTP_400_BAD_REQUEST)
             user.set_password(new_pw)
-            user.save()
-            return Response({'status': 'ok'})
+            # Invalidate all other device tokens
+            user.token_version = user.token_version + 1
+            user.save(update_fields=['password', 'token_version'])
+            return Response(_issue_tokens(user))
         return super().update(request, *args, **kwargs)
 
 
@@ -211,6 +213,16 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         note.is_pinned = not note.is_pinned
         note.save(update_fields=['is_pinned'])
         return Response({'is_pinned': note.is_pinned})
+
+    @action(detail=False, methods=['post'])
+    def batch_delete(self, request):
+        ids = request.data.get('ids', [])
+        if not ids or not isinstance(ids, list):
+            return Response({'error': '請提供要刪除的日記 ID 列表'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(ids) > 50:
+            return Response({'error': '一次最多刪除 50 篇'}, status=status.HTTP_400_BAD_REQUEST)
+        deleted, _ = MoodNote.objects.filter(user=request.user, id__in=ids).delete()
+        return Response({'deleted': deleted})
 
 
 class AnalyticsView(APIView):
@@ -388,8 +400,10 @@ class MessageListView(APIView):
         content = request.data.get('content', '').strip()
         if not content:
             return Response({'error': '訊息不可為空'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(content) > 5000:
+            return Response({'error': '訊息不可超過 5000 字'}, status=status.HTTP_400_BAD_REQUEST)
 
-        msg = Message.objects.create(conversation=conv, sender=request.user, content=content)
+        msg = Message.objects.create(conversation=conv, sender=request.user, content=content[:5000])
         conv.save()  # update updated_at
 
         # Create notification for the other party
@@ -501,9 +515,10 @@ class AdminCounselorActionView(APIView):
 
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
+    pagination_class = None  # Use custom limit
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+        return Notification.objects.filter(user=self.request.user).order_by('-created_at')[:100]
 
 
 class NotificationReadView(APIView):
@@ -522,6 +537,7 @@ class NoteAttachmentUploadView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+    MAX_USER_STORAGE = 200 * 1024 * 1024  # 200MB per user
     ALLOWED_TYPES = {'image', 'audio'}
 
     def post(self, request, note_id):
@@ -536,6 +552,16 @@ class NoteAttachmentUploadView(APIView):
 
         if file.size > self.MAX_FILE_SIZE:
             return Response({'error': '檔案大小不可超過 10MB'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check user storage quota
+        from django.db.models import Sum
+        used = NoteAttachment.objects.filter(
+            note__user=request.user
+        ).aggregate(total=Sum('file__size'))['total'] or 0
+        # Approximation: count existing attachments
+        existing_count = NoteAttachment.objects.filter(note__user=request.user).count()
+        if existing_count >= 500:
+            return Response({'error': '附件數量已達上限（500 個）'}, status=status.HTTP_400_BAD_REQUEST)
 
         mime_type = file.content_type or mimetypes.guess_type(file.name)[0] or ''
         file_type = mime_type.split('/')[0]
@@ -624,7 +650,7 @@ class BookingListView(APIView):
         user = request.user
         bookings = Booking.objects.filter(
             Q(user=user) | Q(counselor=user)
-        ).select_related('user', 'counselor').order_by('-created_at')
+        ).select_related('user', 'counselor').order_by('-created_at')[:100]
         return Response(BookingSerializer(bookings, many=True).data)
 
 
@@ -645,12 +671,14 @@ class BookingCreateView(APIView):
             return Response({'error': '找不到該諮商師'}, status=status.HTTP_404_NOT_FOUND)
         counselor_user_id = profile.user_id
 
-        # Check for conflicts
+        # Check for conflicts (overlapping time ranges)
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        from django.db.models import F
         conflict = Booking.objects.filter(
             counselor_id=counselor_user_id,
             date=target_date,
-            start_time=start_time,
+            start_time__lt=end_time,
+            end_time__gt=start_time,
             status__in=['pending', 'confirmed'],
         ).exists()
         if conflict:
@@ -815,4 +843,38 @@ class ExportDataView(APIView):
             content_type='application/json',
         )
         response['Content-Disposition'] = f'attachment; filename="heartbox_export_{user.username}.json"'
+        return response
+
+
+class ExportCSVView(APIView):
+    """Export all user notes as CSV."""
+
+    def get(self, request):
+        import csv
+        import io
+        from django.http import HttpResponse
+
+        user = request.user
+        notes = MoodNote.objects.filter(user=user).order_by('-created_at')
+
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(['ID', 'Content', 'Sentiment', 'Stress', 'Tags', 'Weather', 'Temperature', 'Pinned', 'Created'])
+
+        for note in notes:
+            meta = note.metadata or {}
+            writer.writerow([
+                note.id,
+                note.content,
+                note.sentiment_score,
+                note.stress_index,
+                ','.join(meta.get('tags', [])),
+                meta.get('weather', ''),
+                meta.get('temperature', ''),
+                note.is_pinned,
+                note.created_at.isoformat(),
+            ])
+
+        response = HttpResponse(buf.getvalue(), content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = f'attachment; filename="heartbox_export_{user.username}.csv"'
         return response

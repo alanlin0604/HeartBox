@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import threading
 
 from django.conf import settings
 
@@ -31,12 +32,15 @@ class AIEngine:
     """Singleton AI engine for sentiment analysis + RAG feedback."""
 
     _instance = None
+    _lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._chroma_collection = None
-            cls._instance._retriever = None
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._chroma_collection = None
+                    cls._instance._retriever = None
         return cls._instance
 
     # --- Chinese text segmentation ---
@@ -85,7 +89,7 @@ class AIEngine:
             '回傳 JSON 格式：{"sentiment_score": float (-1.0到1.0, 負面到正面), '
             '"stress_index": int (0到10, 0=平靜 10=極度壓力)}。'
             '只回傳 JSON，不要其他文字。\n\n'
-            f'日記內容：{text}'
+            f'日記內容：{text[:1500]}'
         )
         response = client.chat.completions.create(
             model=settings.OPENAI_MODEL,

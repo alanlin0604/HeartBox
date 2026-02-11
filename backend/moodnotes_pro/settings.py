@@ -10,7 +10,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load .env from project root (one level above backend/)
 load_dotenv(BASE_DIR.parent / '.env')
 
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-dev-key-change-me')
+_secret = os.getenv('DJANGO_SECRET_KEY', '')
+if not _secret:
+    raise RuntimeError('DJANGO_SECRET_KEY is not set. Add it to your .env file.')
+SECRET_KEY = _secret
 DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -141,7 +144,11 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+    ],
     'DEFAULT_THROTTLE_RATES': {
+        'user': os.getenv('THROTTLE_USER', '200/hour'),
         'login': os.getenv('THROTTLE_LOGIN', '10/hour'),
         'register': os.getenv('THROTTLE_REGISTER', '5/hour'),
         'password_reset': os.getenv('THROTTLE_PASSWORD_RESET', '5/hour'),

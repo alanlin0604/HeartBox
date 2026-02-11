@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useLang } from '../context/LanguageContext'
+import { getAnalytics } from '../api/analytics'
 
 const WEATHER_LABEL_KEYS = [
   { labelKey: 'noteForm.weather', isEmpty: true },
@@ -23,20 +24,47 @@ export default function NoteForm({ onSubmit, loading }) {
     { key: 'gratitude', emoji: '🙏', labelKey: 'noteForm.tplGratitude', textKey: 'noteForm.tplGratitudeText' },
     { key: 'stress', emoji: '💆', labelKey: 'noteForm.tplStress', textKey: 'noteForm.tplStressText' },
   ]
-  const [content, setContent] = useState('')
+  const [content, setContent] = useState(() => {
+    try { return localStorage.getItem('heartbox_draft') || '' } catch { return '' }
+  })
   const [weather, setWeather] = useState('')
   const [temperature, setTemperature] = useState('')
   const [tagsInput, setTagsInput] = useState('')
   const [files, setFiles] = useState([])
+  const [tagSuggestions, setTagSuggestions] = useState([])
   const fileInputRef = useRef(null)
+  const draftTimerRef = useRef(null)
 
-  // Revoke object URLs on cleanup
-  const objectUrlsRef = useRef([])
+  // Draft autosave: debounce 500ms after last keystroke
   useEffect(() => {
-    return () => {
-      objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
-    }
+    clearTimeout(draftTimerRef.current)
+    draftTimerRef.current = setTimeout(() => {
+      try { localStorage.setItem('heartbox_draft', content) } catch { /* quota */ }
+    }, 500)
+    return () => clearTimeout(draftTimerRef.current)
+  }, [content])
+
+  // Fetch frequent tags for autocomplete suggestions
+  useEffect(() => {
+    getAnalytics('week', 90)
+      .then((res) => {
+        const tags = res.data.frequent_tags || []
+        setTagSuggestions(tags.map((t) => t.name))
+      })
+      .catch(() => {})
   }, [])
+
+  // Manage object URLs for file previews — revoke old URLs when files change or on unmount
+  const [previewUrls, setPreviewUrls] = useState([])
+  useEffect(() => {
+    const urls = files
+      .filter((f) => f.type.startsWith('image/'))
+      .map((f) => URL.createObjectURL(f))
+    setPreviewUrls(urls)
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [files])
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault()
@@ -50,6 +78,7 @@ export default function NoteForm({ onSubmit, loading }) {
     }
 
     onSubmit(content, metadata, files)
+    try { localStorage.removeItem('heartbox_draft') } catch { /* ignore */ }
     setContent('')
     setWeather('')
     setTemperature('')
@@ -102,7 +131,12 @@ export default function NoteForm({ onSubmit, loading }) {
         className="glass-input min-h-[140px] resize-y text-base"
         rows={5}
       />
-      <div className="grid grid-cols-3 gap-3">
+      {content.length > 0 && (
+        <p className="text-xs opacity-40 text-right -mt-2">
+          {t('noteForm.wordCount', { chars: content.length })}
+        </p>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <select
           value={weather}
           onChange={(e) => setWeather(e.target.value)}
@@ -130,7 +164,13 @@ export default function NoteForm({ onSubmit, loading }) {
           onChange={(e) => setTagsInput(e.target.value)}
           placeholder={t('noteForm.tags')}
           className="glass-input"
+          list="heartbox-tag-suggestions"
         />
+        <datalist id="heartbox-tag-suggestions">
+          {tagSuggestions.map((tag) => (
+            <option key={tag} value={tag} />
+          ))}
+        </datalist>
       </div>
 
       {/* File upload area */}
@@ -154,11 +194,14 @@ export default function NoteForm({ onSubmit, loading }) {
       {/* File previews */}
       {files.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {files.map((f, idx) => (
+          {files.map((f, idx) => {
+            // For image files, find the corresponding preview URL
+            const imageIndex = files.slice(0, idx).filter((prev) => prev.type.startsWith('image/')).length
+            return (
             <div key={idx} className="glass-card p-2 flex items-center gap-2 text-xs">
               {f.type.startsWith('image/') ? (
                 <img
-                  src={(() => { const u = URL.createObjectURL(f); objectUrlsRef.current.push(u); return u })()}
+                  src={previewUrls[imageIndex]}
                   alt={f.name}
                   className="w-10 h-10 rounded object-cover"
                 />
@@ -179,7 +222,8 @@ export default function NoteForm({ onSubmit, loading }) {
                 &times;
               </button>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

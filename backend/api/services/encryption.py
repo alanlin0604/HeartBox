@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
@@ -10,18 +11,25 @@ class EncryptionService:
     """AES-256 Fernet encryption service (singleton)."""
 
     _instance = None
+    _lock = threading.Lock()
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            key = settings.ENCRYPTION_KEY
-            if not key:
-                key = Fernet.generate_key().decode()
-                logger.warning(
-                    'ENCRYPTION_KEY not set — generated a temporary key. '
-                    'Set ENCRYPTION_KEY in .env for persistent encryption.'
-                )
-            cls._instance._fernet = Fernet(key.encode() if isinstance(key, str) else key)
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    key = settings.ENCRYPTION_KEY
+                    if not key:
+                        raise RuntimeError(
+                            'ENCRYPTION_KEY is not set. '
+                            'Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" '
+                            'and add it to your .env file.'
+                        )
+                    try:
+                        cls._instance._fernet = Fernet(key.encode() if isinstance(key, str) else key)
+                    except Exception as e:
+                        cls._instance = None
+                        raise RuntimeError(f'Invalid ENCRYPTION_KEY: {e}')
         return cls._instance
 
     def encrypt(self, plaintext: str) -> str:

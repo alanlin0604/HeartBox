@@ -25,8 +25,16 @@ class MoodNote(models.Model):
         related_name='notes',
     )
     encrypted_content = models.TextField(help_text='AES-256 encrypted journal content')
-    sentiment_score = models.FloatField(null=True, blank=True, help_text='-1.0 (negative) to 1.0 (positive)')
-    stress_index = models.IntegerField(null=True, blank=True, help_text='0 (calm) to 10 (extreme stress)')
+    sentiment_score = models.FloatField(
+        null=True, blank=True,
+        validators=[MinValueValidator(-1.0), MaxValueValidator(1.0)],
+        help_text='-1.0 (negative) to 1.0 (positive)',
+    )
+    stress_index = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(0), MaxValueValidator(10)],
+        help_text='0 (calm) to 10 (extreme stress)',
+    )
     ai_feedback = models.TextField(blank=True, default='')
     is_pinned = models.BooleanField(default=False)
     metadata = models.JSONField(default=dict, blank=True, help_text='weather, temperature, location, tags')

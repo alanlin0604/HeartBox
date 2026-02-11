@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 import { getMySchedule, createTimeSlot, deleteTimeSlot } from '../api/schedule'
 
 const DAY_KEYS = [
@@ -9,6 +10,7 @@ const DAY_KEYS = [
 
 export default function ScheduleManager() {
   const { t } = useLang()
+  const toast = useToast()
   const [slots, setSlots] = useState([])
   const [loading, setLoading] = useState(true)
   const [dayOfWeek, setDayOfWeek] = useState(0)
@@ -26,6 +28,7 @@ export default function ScheduleManager() {
       setSlots(res.data)
     } catch (err) {
       console.error('Failed to load schedule', err)
+      toast?.error(t('common.operationFailed'))
     } finally {
       setLoading(false)
     }
@@ -34,7 +37,7 @@ export default function ScheduleManager() {
   const handleAdd = async (e) => {
     e.preventDefault()
     if (startTime >= endTime) {
-      alert(t('schedule.startBeforeEnd'))
+      toast?.error(t('schedule.startBeforeEnd'))
       return
     }
     setSaving(true)
@@ -47,6 +50,7 @@ export default function ScheduleManager() {
       setSlots((prev) => [...prev, res.data])
     } catch (err) {
       console.error('Failed to add slot', err)
+      toast?.error(t('common.operationFailed'))
     } finally {
       setSaving(false)
     }
@@ -58,6 +62,7 @@ export default function ScheduleManager() {
       setSlots((prev) => prev.filter((s) => s.id !== id))
     } catch (err) {
       console.error('Failed to delete slot', err)
+      toast?.error(t('common.operationFailed'))
     }
   }
 

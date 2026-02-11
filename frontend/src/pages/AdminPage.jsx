@@ -7,6 +7,7 @@ import {
   counselorAction,
 } from '../api/admin'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 
 export default function AdminPage() {
   const { t } = useLang()
@@ -44,10 +45,13 @@ export default function AdminPage() {
 
 function StatsTab() {
   const { t } = useLang()
+  const toast = useToast()
   const [stats, setStats] = useState(null)
 
   useEffect(() => {
-    getStats().then((r) => setStats(r.data))
+    getStats()
+      .then((r) => setStats(r.data))
+      .catch(() => toast?.error(t('common.operationFailed')))
   }, [])
 
   if (!stats) return <p className="opacity-60">{t('common.loading')}</p>
@@ -79,6 +83,7 @@ function StatsTab() {
 
 function UsersTab() {
   const { t } = useLang()
+  const toast = useToast()
   const [users, setUsers] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
@@ -87,6 +92,7 @@ function UsersTab() {
     setLoading(true)
     getUsers(search)
       .then((r) => setUsers(r.data.results ?? r.data))
+      .catch(() => toast?.error(t('common.operationFailed')))
       .finally(() => setLoading(false))
   }, [search])
 
@@ -96,8 +102,12 @@ function UsersTab() {
   }, [fetchUsers])
 
   const toggle = async (user, field) => {
-    await updateUser(user.id, { [field]: !user[field] })
-    fetchUsers()
+    try {
+      await updateUser(user.id, { [field]: !user[field] })
+      fetchUsers()
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
   }
 
   const roleBadge = (u) => {
@@ -218,6 +228,7 @@ function UsersTab() {
 
 function CounselorsTab() {
   const { t } = useLang()
+  const toast = useToast()
   const [counselors, setCounselors] = useState([])
   const [filter, setFilter] = useState('')
   const [loading, setLoading] = useState(false)

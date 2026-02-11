@@ -2,6 +2,7 @@ import { useState, useEffect, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCalendarData } from '../api/analytics'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 
 const WEEKDAY_KEYS = [
   'calendar.sun', 'calendar.mon', 'calendar.tue',
@@ -18,6 +19,7 @@ function sentimentColor(score) {
 
 export default memo(function MoodCalendar() {
   const { t } = useLang()
+  const toast = useToast()
   const navigate = useNavigate()
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -29,7 +31,10 @@ export default memo(function MoodCalendar() {
     setLoading(true)
     getCalendarData(year, month)
       .then((res) => setDays(res.data.days || []))
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err)
+        toast?.error(t('common.operationFailed'))
+      })
       .finally(() => setLoading(false))
   }, [year, month])
 
@@ -65,11 +70,11 @@ export default memo(function MoodCalendar() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">{t('calendar.title')}</h2>
         <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="btn-primary text-sm px-2 py-1">◀</button>
+          <button onClick={prevMonth} className="btn-primary text-sm px-2 py-1" aria-label="Previous month">◀</button>
           <span className="text-sm font-medium min-w-[100px] text-center">
             {year} / {String(month).padStart(2, '0')}
           </span>
-          <button onClick={nextMonth} className="btn-primary text-sm px-2 py-1">▶</button>
+          <button onClick={nextMonth} className="btn-primary text-sm px-2 py-1" aria-label="Next month">▶</button>
         </div>
       </div>
 

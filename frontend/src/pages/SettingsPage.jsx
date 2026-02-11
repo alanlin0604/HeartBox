@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
@@ -17,6 +17,24 @@ export default function SettingsPage() {
   const [bio, setBio] = useState(user?.bio || '')
   const [avatar, setAvatar] = useState(null)
   const [saving, setSaving] = useState(false)
+
+  // Track initial profile values for unsaved-changes detection
+  const initialProfile = useRef({ email: user?.email || '', bio: user?.bio || '' })
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      const hasUnsavedChanges =
+        email !== initialProfile.current.email ||
+        bio !== initialProfile.current.bio ||
+        avatar !== null
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [email, bio, avatar])
 
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -37,6 +55,9 @@ export default function SettingsPage() {
       formData.append('bio', bio)
       if (avatar) formData.append('avatar', avatar)
       await updateProfile(formData)
+      // Update initial values so beforeunload guard is cleared
+      initialProfile.current = { email, bio }
+      setAvatar(null)
       toast?.success(t('settings.saveSuccess'))
     } catch (err) {
       const data = err.response?.data

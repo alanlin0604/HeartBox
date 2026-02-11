@@ -19,6 +19,7 @@ from .views import (
     CounselorListView,
     CounselorMyProfileView,
     DeleteAccountView,
+    ExportCSVView,
     ExportDataView,
     ExportPDFView,
     MessageListView,
@@ -52,6 +53,7 @@ urlpatterns = [
     path('auth/logout-other-devices/', LogoutOtherDevicesView.as_view(), name='logout-other-devices'),
     path('auth/delete-account/', DeleteAccountView.as_view(), name='delete-account'),
     path('auth/export/', ExportDataView.as_view(), name='export-data'),
+    path('auth/export/csv/', ExportCSVView.as_view(), name='export-csv'),
     # Analytics
     path('analytics/', AnalyticsView.as_view(), name='analytics'),
     path('analytics/calendar/', CalendarView.as_view(), name='analytics-calendar'),

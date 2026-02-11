@@ -3,12 +3,30 @@ from django.test import override_settings
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APITestCase, APIClient
 from django.contrib.auth.tokens import default_token_generator
 
 from .models import CustomUser, MoodNote
 
+# Disable throttling for all non-throttle tests
+NO_THROTTLE = {
+    'DEFAULT_THROTTLE_CLASSES': [],
+    'DEFAULT_THROTTLE_RATES': {},
+}
 
+
+@override_settings(REST_FRAMEWORK={
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'api.authentication.VersionedJWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': [],
+    'DEFAULT_THROTTLE_RATES': {},
+})
 class AuthSecurityTests(APITestCase):
     def setUp(self):
         self.user = CustomUser.objects.create_user(
@@ -81,11 +99,7 @@ class NoteCRUDTests(APITestCase):
         self.user = CustomUser.objects.create_user(
             username='testuser', email='test@example.com', password='TestPass123!'
         )
-        resp = self.client.post('/api/auth/login/', {
-            'username': 'testuser', 'password': 'TestPass123!'
-        }, format='json')
-        self.token = resp.data['access']
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        self.client.force_authenticate(user=self.user)
 
     def test_create_note(self):
         resp = self.client.post('/api/notes/', {
@@ -140,11 +154,7 @@ class AccountManagementTests(APITestCase):
         self.user = CustomUser.objects.create_user(
             username='deluser', email='del@example.com', password='DelPass123!'
         )
-        resp = self.client.post('/api/auth/login/', {
-            'username': 'deluser', 'password': 'DelPass123!'
-        }, format='json')
-        self.token = resp.data['access']
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        self.client.force_authenticate(user=self.user)
 
     def test_delete_account_wrong_password(self):
         resp = self.client.post('/api/auth/delete-account/', {
@@ -165,6 +175,158 @@ class AccountManagementTests(APITestCase):
         resp = self.client.get('/api/auth/export/')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp['Content-Type'], 'application/json')
+
+
+class BatchDeleteTests(APITestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='batchuser', email='batch@test.com', password='TestPass123!'
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_batch_delete_success(self):
+        ids = []
+        for i in range(3):
+            r = self.client.post('/api/notes/', {'content': f'Note {i}'}, format='json')
+            ids.append(r.data['id'])
+        resp = self.client.post('/api/notes/batch_delete/', {'ids': ids}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['deleted'], 3)
+        self.assertEqual(MoodNote.objects.filter(user=self.user).count(), 0)
+
+    def test_batch_delete_empty_ids(self):
+        resp = self.client.post('/api/notes/batch_delete/', {'ids': []}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_batch_delete_other_user_notes(self):
+        other = CustomUser.objects.create_user(username='other', password='OtherPass123!')
+        note = MoodNote(user=other)
+        note.set_content('Other user note')
+        note.save()
+        resp = self.client.post('/api/notes/batch_delete/', {'ids': [note.id]}, format='json')
+        self.assertEqual(resp.data['deleted'], 0)
+        self.assertTrue(MoodNote.objects.filter(id=note.id).exists())
+
+
+class CSVExportTests(APITestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='csvuser', email='csv@test.com', password='TestPass123!'
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_csv_export(self):
+        self.client.post('/api/notes/', {'content': 'CSV test note'}, format='json')
+        resp = self.client.get('/api/auth/export/csv/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('text/csv', resp['Content-Type'])
+        content = resp.content.decode('utf-8-sig')
+        self.assertIn('CSV test note', content)
+        self.assertIn('ID', content)
+
+
+class AnalyticsTests(APITestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='analyticsuser', email='analytics@test.com', password='TestPass123!'
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_analytics_endpoint(self):
+        self.client.post('/api/notes/', {'content': 'Analytics test'}, format='json')
+        resp = self.client.get('/api/analytics/?period=week&lookback_days=30')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('mood_trends', resp.data)
+        self.assertIn('current_streak', resp.data)
+        self.assertIn('longest_streak', resp.data)
+
+    def test_calendar_endpoint(self):
+        resp = self.client.get('/api/analytics/calendar/?year=2026&month=2')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['year'], 2026)
+        self.assertEqual(resp.data['month'], 2)
+
+    def test_alerts_endpoint(self):
+        resp = self.client.get('/api/alerts/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('alerts', resp.data)
+
+
+class AdminTests(APITestCase):
+    def setUp(self):
+        self.admin = CustomUser.objects.create_user(
+            username='admin', email='admin@test.com', password='AdminPass123!',
+            is_staff=True,
+        )
+        self.regular = CustomUser.objects.create_user(
+            username='regular', email='regular@test.com', password='RegularPass123!',
+        )
+        self.client.force_authenticate(user=self.admin)
+
+    def test_admin_stats(self):
+        resp = self.client.get('/api/admin/stats/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('total_users', resp.data)
+        self.assertGreaterEqual(resp.data['total_users'], 2)
+
+    def test_admin_user_list(self):
+        resp = self.client.get('/api/admin/users/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_non_admin_denied(self):
+        self.client.force_authenticate(user=self.regular)
+        resp = self.client.get('/api/admin/stats/')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_update_user(self):
+        resp = self.client.patch(f'/api/admin/users/{self.regular.id}/', {
+            'is_active': False
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.regular.refresh_from_db()
+        self.assertFalse(self.regular.is_active)
+
+
+@override_settings(REST_FRAMEWORK={
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'api.authentication.VersionedJWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': [],
+    'DEFAULT_THROTTLE_RATES': {},
+})
+class PasswordChangeTokenTests(APITestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='pwuser', email='pw@test.com', password='OldPass123!'
+        )
+        resp = self.client.post('/api/auth/login/', {
+            'username': 'pwuser', 'password': 'OldPass123!'
+        }, format='json')
+        self.old_access = resp.data['access']
+
+    def test_password_change_invalidates_old_tokens(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.old_access}')
+        resp = self.client.patch('/api/auth/profile/', {
+            'old_password': 'OldPass123!',
+            'new_password': 'NewPass456!',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        new_access = resp.data['access']
+
+        # Old token should be invalid
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.old_access}')
+        resp = self.client.get('/api/auth/profile/')
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # New token should work
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {new_access}')
+        resp = self.client.get('/api/auth/profile/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
 
 
 class ThrottleTests(APITestCase):

@@ -84,6 +84,7 @@ export default function CounselorListPage() {
       }
     } catch (err) {
       console.error('Failed to load data', err)
+      toast?.error(t('common.operationFailed'))
       setError(t('counselor.loadFailed'))
     } finally {
       setLoading(false)
@@ -227,18 +228,28 @@ export default function CounselorListPage() {
               onAction={() => navigate('/')}
             />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
               {counselors.map((c) => (
                 <div key={c.id} className="glass-card p-5 space-y-3">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
                       {c.avatar ? (
-                        <img src={c.avatar} alt={c.username} className="w-10 h-10 rounded-full object-cover border border-white/20" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-purple-500/25 flex items-center justify-center text-sm font-semibold">
-                          {String(c.username || '?').slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
+                        <img
+                          src={c.avatar}
+                          alt={c.username}
+                          className="w-10 h-10 rounded-full object-cover border border-white/20"
+                          onError={(e) => {
+                            e.target.style.display = 'none'
+                            e.target.nextElementSibling.style.display = 'flex'
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className="w-10 h-10 rounded-full bg-purple-500/25 items-center justify-center text-sm font-semibold"
+                        style={{ display: c.avatar ? 'none' : 'flex' }}
+                      >
+                        {String(c.username || '?').slice(0, 1).toUpperCase()}
+                      </div>
                       <div>
                       <h3 className="text-lg font-semibold">{c.username}</h3>
                       <p className="text-sm opacity-60">{c.specialty}</p>

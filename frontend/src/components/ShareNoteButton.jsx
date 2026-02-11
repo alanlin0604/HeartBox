@@ -26,49 +26,8 @@ export default function ShareNoteButton({ noteId }) {
     setSharing(true)
     setError('')
     try {
-      // Find the counselor's user ID — counselor list returns CounselorProfile objects
-      // We need the user_id. The CounselorListSerializer has 'id' (profile id) and 'username'.
-      // The share endpoint needs counselor_user_id, which we can get from the profile's user relation.
-      // Since the API returns CounselorProfile.id, we'll pass it and let backend handle it.
-      // Actually, we need user_id. Let's check the serializer — CounselorListSerializer returns profile id.
-      // We need to find a counselor by profile and get the user. The share endpoint expects user_id.
-      // For now, pass selected counselor's user_id from the counselor object.
-
-      // The counselors list from getCounselors gives us CounselorProfile objects.
-      // We need the user_id. But the CounselorListSerializer only returns 'id' (profile), 'username', 'specialty', 'introduction'.
-      // The ShareNoteView expects 'counselor_user_id'. We'd need to match username to user.
-      // Let's use the profile ID and have the view look up via CounselorProfile.
-      // Actually, the view already does: CounselorProfile.objects.get(user_id=counselor_user_id)
-      // So we need user_id not profile_id. The list doesn't expose it.
-      // Quick fix: pass profile id, and we need to adapt. OR we know username and id from list.
-      // The simplest: pass the counselor profile id, search by it.
-      // But the current view code does: CounselorProfile.objects.get(user_id=counselor_user_id)
-      // We'll just pass selectedCounselor as user_id. The counselor list 'id' is profile pk.
-      // Mismatch! Let's just use username to get user_id from the selected counselor.
-
-      // Actually cleaner: pass the profile_id and adjust no code. Let me check the counselor data.
-      // getCounselors() => CounselorListSerializer => { id (profile pk), username, specialty, introduction }
-      // shareNote expects counselor_user_id. We don't have user_id in the list.
-      // Simplest approach: we need the user's ID. Since we can't get it from the list,
-      // let's just send the profile id but rename it. Actually the counselors share view
-      // does CounselorProfile.objects.get(user_id=counselor_user_id). We'd need to change that.
-      // Better: send the profile ID and fix the backend. But let's not touch the backend now.
-      // Instead: we know the username. We can find the user in conversations.
-      // Actually the cleanest fix: just change selectedCounselor to hold the full object
-      // and look up user_id from it — but the list doesn't have user_id.
-
-      // OK, let's just make it work: send the profile id and the backend will try
-      // CounselorProfile.objects.get(user_id=...) which won't match.
-      // So let's just adapt: send the username and look up on backend... no.
-      // Simplest: adjust the backend view to also try by pk. But we've finished backend.
-      // Better: just send the selected counselor id. In the counselor list page we
-      // already use c.id (profile pk) when calling handleStartChat(c.id). And createConversation
-      // does CounselorProfile.objects.get(id=counselor_id). So it's profile pk.
-      // The ShareNoteView should also accept profile pk. Let me just pass it.
-      // The share endpoint currently does CounselorProfile.objects.get(user_id=counselor_user_id)
-      // which expects user pk, not profile pk. But we don't have user pk from the list.
-      // Let me just pass the selectedCounselor (profile id) and we'll need a small backend fix.
-
+      // selectedCounselor holds the CounselorProfile pk from the counselor list.
+      // The backend ShareNoteView accepts counselor_id (profile pk).
       await shareNote(noteId, selectedCounselor, isAnonymous)
       setSuccess(true)
     } catch (err) {

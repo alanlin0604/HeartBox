@@ -165,14 +165,17 @@ class ConversationSerializer(serializers.ModelSerializer):
         return {'id': other.id, 'username': other.username, 'avatar': avatar}
 
     def get_last_message(self, obj):
-        msg = obj.messages.order_by('-created_at').first()
-        if msg:
+        # Use prefetched messages to avoid N+1
+        msgs = obj.messages.all()
+        if msgs:
+            msg = max(msgs, key=lambda m: m.created_at)
             return {'content': msg.content[:80], 'created_at': msg.created_at, 'sender_name': msg.sender.username}
         return None
 
     def get_unread_count(self, obj):
         request_user = self.context['request'].user
-        return obj.messages.filter(is_read=False).exclude(sender=request_user).count()
+        # Use prefetched messages to avoid N+1
+        return sum(1 for m in obj.messages.all() if not m.is_read and m.sender_id != request_user.id)
 
 
 # ===== Notification =====
@@ -200,6 +203,13 @@ class TimeSlotSerializer(serializers.ModelSerializer):
         model = TimeSlot
         fields = ('id', 'day_of_week', 'start_time', 'end_time', 'is_active')
         read_only_fields = ('id',)
+
+    def validate(self, data):
+        start = data.get('start_time')
+        end = data.get('end_time')
+        if start and end and start >= end:
+            raise serializers.ValidationError({'end_time': 'End time must be after start time.'})
+        return data
 
 
 class BookingSerializer(serializers.ModelSerializer):

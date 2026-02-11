@@ -2,6 +2,7 @@ import { useState, useEffect, memo } from 'react'
 import { Link } from 'react-router-dom'
 import { getAlerts } from '../api/alerts'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 
 const SEVERITY_STYLES = {
   high: 'bg-red-500/20 border-red-500/40 text-red-300',
@@ -10,13 +11,17 @@ const SEVERITY_STYLES = {
 
 export default memo(function AlertBanner() {
   const { t } = useLang()
+  const toast = useToast()
   const [alerts, setAlerts] = useState([])
   const [dismissed, setDismissed] = useState([])
 
   useEffect(() => {
     getAlerts()
       .then((res) => setAlerts(res.data.alerts || []))
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err)
+        toast?.error(t('common.operationFailed'))
+      })
   }, [])
 
   const visibleAlerts = alerts.filter((_, i) => !dismissed.includes(i))

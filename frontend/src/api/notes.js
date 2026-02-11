@@ -76,9 +76,9 @@ export const uploadAttachment = (noteId, file) => {
   });
 };
 
-export const shareNote = (noteId, counselorUserId, isAnonymous) =>
+export const shareNote = (noteId, counselorId, isAnonymous) =>
   api.post(`/notes/${noteId}/share/`, {
-    counselor_user_id: counselorUserId,
+    counselor_id: counselorId,
     is_anonymous: isAnonymous,
   });
 
@@ -90,3 +90,13 @@ export const getSharedNotes = () => {
     return res;
   });
 };
+
+export const batchDeleteNotes = (ids) => {
+  invalidate('notes');
+  invalidate('analytics');
+  invalidate('alerts');
+  return api.post('/notes/batch_delete/', { ids });
+};
+
+export const exportNotesCSV = () =>
+  api.get('/auth/export/csv/', { responseType: 'blob' });

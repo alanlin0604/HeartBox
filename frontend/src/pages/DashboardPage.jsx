@@ -7,6 +7,7 @@ import {
 import { getAnalytics } from '../api/analytics'
 import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import MoodCalendar from '../components/MoodCalendar'
 import StressRadarChart from '../components/StressRadarChart'
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const { theme } = useTheme()
   const { t } = useLang()
+  const toast = useToast()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('week')
@@ -25,7 +27,10 @@ export default function DashboardPage() {
     setLoading(true)
     getAnalytics(period, lookback)
       .then((res) => setData(res.data))
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err)
+        toast?.error(t('common.operationFailed'))
+      })
       .finally(() => setLoading(false))
   }, [period, lookback])
 
@@ -49,6 +54,24 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 mt-4">
       <MoodCalendar />
+
+      {/* Streak stats */}
+      {(data?.current_streak > 0 || data?.longest_streak > 0) && (
+        <div className="glass p-4 flex flex-wrap items-center gap-6">
+          {data?.current_streak > 0 && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-xl">🔥</span>
+              <span className="font-medium">{t('journal.streak', { days: data.current_streak })}</span>
+            </div>
+          )}
+          {data?.longest_streak > 0 && (
+            <div className="flex items-center gap-2 text-sm opacity-70">
+              <span className="text-xl">🏆</span>
+              <span>{t('dashboard.longestStreak', { days: data.longest_streak })}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Controls */}
       <div className="glass p-4 flex flex-wrap items-center gap-4">

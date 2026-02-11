@@ -17,12 +17,22 @@ export default function BookingPanel({ counselorId, counselorName, onClose }) {
     setDate(val)
     if (!val) return
 
+    // Validate selected date is not in the past
+    const today = new Date().toISOString().split('T')[0]
+    if (val < today) {
+      toast?.error(t('booking.pastDate'))
+      setDate('')
+      setSlots([])
+      return
+    }
+
     setLoadingSlots(true)
     try {
       const res = await getAvailableSlots(counselorId, val)
       setSlots(res.data)
     } catch (err) {
       console.error('Failed to load slots', err)
+      toast?.error(t('common.operationFailed'))
       setSlots([])
     } finally {
       setLoadingSlots(false)

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
 import { getMessages, getConversations, sendMessage } from '../api/counselors'
+import { useToast } from '../context/ToastContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
@@ -11,6 +12,7 @@ export default function ChatPage() {
   const { id } = useParams()
   const { user } = useAuth()
   const { lang, t } = useLang()
+  const toast = useToast()
   const navigate = useNavigate()
   const [messages, setMessages] = useState([])
   const [otherUser, setOtherUser] = useState(null)
@@ -81,6 +83,7 @@ export default function ChatPage() {
       if (conv) setOtherUser(conv.other_user)
     } catch (err) {
       console.error('Failed to load conversation info', err)
+      toast?.error(t('common.operationFailed'))
     }
   }
 
@@ -90,6 +93,7 @@ export default function ChatPage() {
       setMessages(res.data)
     } catch (err) {
       console.error('Failed to load messages', err)
+      toast?.error(t('common.operationFailed'))
     } finally {
       setLoading(false)
     }
@@ -110,7 +114,7 @@ export default function ChatPage() {
           setMessages((prev) => [...prev, res.data])
           setNewMsg('')
         })
-        .catch(() => alert(t('chat.sendFailed')))
+        .catch(() => toast?.error(t('chat.sendFailed')))
         .finally(() => setSending(false))
     }
   }
