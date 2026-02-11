@@ -1,0 +1,150 @@
+from datetime import timedelta
+
+import pandas as pd
+from django.utils import timezone
+from scipy import stats
+
+
+def get_mood_trends(queryset, period='week', lookback_days=30):
+    """Calculate mood trends over time. Returns Recharts-compatible LineChart data."""
+    since = timezone.now() - timedelta(days=lookback_days)
+    notes = queryset.filter(
+        created_at__gte=since,
+        sentiment_score__isnull=False,
+    ).values('created_at', 'sentiment_score', 'stress_index')
+
+    if not notes:
+        return []
+
+    df = pd.DataFrame(list(notes))
+    df['date'] = pd.to_datetime(df['created_at']).dt.tz_localize(None)
+
+    if period == 'week':
+        df['period'] = df['date'].dt.isocalendar().week.astype(str) + 'W'
+        df['sort_key'] = df['date'].dt.isocalendar().week
+    else:  # month
+        df['period'] = df['date'].dt.strftime('%Y-%m')
+        df['sort_key'] = df['date'].dt.to_period('M').astype(str)
+
+    grouped = df.groupby('period').agg(
+        avg_sentiment=('sentiment_score', 'mean'),
+        avg_stress=('stress_index', 'mean'),
+        count=('sentiment_score', 'count'),
+    ).reset_index()
+
+    grouped['avg_sentiment'] = grouped['avg_sentiment'].round(2)
+    grouped['avg_stress'] = grouped['avg_stress'].round(1)
+
+    return grouped.rename(columns={'period': 'name'}).to_dict(orient='records')
+
+
+def get_mood_weather_correlation(queryset, lookback_days=90):
+    """Pearson correlation between sentiment and temperature + heatmap buckets."""
+    since = timezone.now() - timedelta(days=lookback_days)
+    notes = queryset.filter(
+        created_at__gte=since,
+        sentiment_score__isnull=False,
+    ).values('sentiment_score', 'metadata')
+
+    pairs = []
+    for note in notes:
+        meta = note.get('metadata') or {}
+        temp = meta.get('temperature')
+        if temp is not None:
+            try:
+                pairs.append({
+                    'sentiment': note['sentiment_score'],
+                    'temperature': float(temp),
+                })
+            except (ValueError, TypeError):
+                continue
+
+    if len(pairs) < 3:
+        return {'correlation': None, 'p_value': None, 'scatter_data': pairs, 'sample_size': len(pairs)}
+
+    df = pd.DataFrame(pairs)
+    r, p = stats.pearsonr(df['sentiment'], df['temperature'])
+
+    # Heatmap buckets (temp ranges × sentiment ranges)
+    temp_bins = pd.cut(df['temperature'], bins=5, labels=False)
+    sent_bins = pd.cut(df['sentiment'], bins=5, labels=False)
+    heatmap = df.assign(temp_bin=temp_bins, sent_bin=sent_bins)\
+        .groupby(['temp_bin', 'sent_bin']).size().reset_index(name='count')
+
+    return {
+        'correlation': round(r, 3),
+        'p_value': round(p, 4),
+        'scatter_data': pairs,
+        'heatmap': heatmap.to_dict(orient='records'),
+        'sample_size': len(pairs),
+    }
+
+
+def get_calendar_data(queryset, year, month):
+    """Return per-day average sentiment and note count for a given month."""
+    notes = queryset.filter(
+        created_at__year=year,
+        created_at__month=month,
+        sentiment_score__isnull=False,
+    ).values('created_at', 'sentiment_score')
+
+    if not notes:
+        return []
+
+    df = pd.DataFrame(list(notes))
+    df['date'] = pd.to_datetime(df['created_at']).dt.date
+
+    grouped = df.groupby('date').agg(
+        avg_sentiment=('sentiment_score', 'mean'),
+        count=('sentiment_score', 'count'),
+    ).reset_index()
+
+    grouped['avg_sentiment'] = grouped['avg_sentiment'].round(2)
+    grouped['date'] = grouped['date'].astype(str)
+
+    return grouped.to_dict(orient='records')
+
+
+def get_frequent_tags(queryset, lookback_days=90, top_n=10):
+    """Aggregate tag frequency from metadata.tags. Returns Recharts BarChart data."""
+    since = timezone.now() - timedelta(days=lookback_days)
+    notes = queryset.filter(created_at__gte=since).values('metadata')
+
+    tag_counts = {}
+    for note in notes:
+        meta = note.get('metadata') or {}
+        tags = meta.get('tags', [])
+        if isinstance(tags, list):
+            for tag in tags:
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+    sorted_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:top_n]
+    return [{'name': tag, 'count': count} for tag, count in sorted_tags]
+
+
+def get_stress_by_tag(queryset, lookback_days=90):
+    """Average stress index per tag for RadarChart. Returns [{tag, avg_stress, count}]."""
+    since = timezone.now() - timedelta(days=lookback_days)
+    notes = queryset.filter(
+        created_at__gte=since,
+        stress_index__isnull=False,
+    ).values('stress_index', 'metadata')
+
+    tag_stress = {}  # tag -> [stress_values]
+    for note in notes:
+        meta = note.get('metadata') or {}
+        tags = meta.get('tags', [])
+        if isinstance(tags, list):
+            for tag in tags:
+                tag_stress.setdefault(tag, []).append(note['stress_index'])
+
+    result = []
+    for tag, values in tag_stress.items():
+        result.append({
+            'tag': tag,
+            'avg_stress': round(sum(values) / len(values), 1),
+            'count': len(values),
+        })
+
+    result.sort(key=lambda x: x['count'], reverse=True)
+    return result[:10]

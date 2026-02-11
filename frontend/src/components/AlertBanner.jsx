@@ -1,0 +1,71 @@
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { getAlerts } from '../api/alerts'
+import { useLang } from '../context/LanguageContext'
+
+const SEVERITY_STYLES = {
+  high: 'bg-red-500/20 border-red-500/40 text-red-300',
+  medium: 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300',
+}
+
+export default function AlertBanner() {
+  const { t } = useLang()
+  const [alerts, setAlerts] = useState([])
+  const [dismissed, setDismissed] = useState([])
+
+  useEffect(() => {
+    getAlerts()
+      .then((res) => setAlerts(res.data.alerts || []))
+      .catch(console.error)
+  }, [])
+
+  const visibleAlerts = alerts.filter((_, i) => !dismissed.includes(i))
+  if (visibleAlerts.length === 0) return null
+
+  return (
+    <div className="space-y-2">
+      {alerts.map((alert, i) => {
+        if (dismissed.includes(i)) return null
+        const style = SEVERITY_STYLES[alert.severity] || SEVERITY_STYLES.medium
+        return (
+          <div
+            key={`${alert.type}-${i}`}
+            className={`rounded-xl border p-4 flex items-start gap-3 ${style}`}
+          >
+            <span className="text-lg mt-0.5">
+              {alert.severity === 'high' ? '🚨' : '⚠️'}
+            </span>
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                {t(`alert.${alert.type}.title`)}
+              </p>
+              <p className="text-xs opacity-80 mt-1">
+                {alert.type === 'consecutive_negative' &&
+                  t('alert.consecutive_negative.desc', { count: alert.data.count })}
+                {alert.type === 'high_stress' &&
+                  t('alert.high_stress.desc', { avg: alert.data.avg_stress })}
+                {alert.type === 'sudden_drop' &&
+                  t('alert.sudden_drop.desc', { drop: alert.data.drop })}
+              </p>
+              <div className="flex items-center gap-3 mt-2">
+                <p className="text-xs opacity-70">{t('alert.recommendation')}</p>
+                <Link
+                  to="/counselors"
+                  className="text-xs underline opacity-80 hover:opacity-100"
+                >
+                  {t('alert.findCounselor')}
+                </Link>
+              </div>
+            </div>
+            <button
+              onClick={() => setDismissed([...dismissed, i])}
+              className="text-sm opacity-50 hover:opacity-100"
+            >
+              ✕
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
