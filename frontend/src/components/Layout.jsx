@@ -63,27 +63,30 @@ export default function Layout() {
           HeartBox-心事盒
         </h1>
 
-        {/* Mobile hamburger */}
-        <button
-          onClick={() => setMobileNavOpen(!mobileNavOpen)}
-          className="md:hidden opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
-          aria-label="Toggle menu"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {mobileNavOpen ? (
-              <>
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </>
-            ) : (
-              <>
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </>
-            )}
-          </svg>
-        </button>
+        {/* Mobile: notification bell + hamburger (always visible) */}
+        <div className="md:hidden flex items-center gap-3">
+          <NotificationBell />
+          <button
+            onClick={() => setMobileNavOpen(!mobileNavOpen)}
+            className="opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+            aria-label="Toggle menu"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {mobileNavOpen ? (
+                <>
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </>
+              ) : (
+                <>
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </>
+              )}
+            </svg>
+          </button>
+        </div>
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-4 text-base">
@@ -237,7 +240,6 @@ export default function Layout() {
             </NavLink>
           )}
           <div className="border-t border-[var(--card-border)] pt-3 flex flex-wrap items-center gap-3">
-            <NotificationBell />
             <button
               onClick={() => { navigate('/settings'); setMobileNavOpen(false) }}
               className="text-sm opacity-60 hover:opacity-100"

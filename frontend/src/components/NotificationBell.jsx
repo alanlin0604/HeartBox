@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
 import { getNotifications, markNotificationsRead } from '../api/notifications'
 import { getAccessToken } from '../utils/tokenStorage'
-import EmptyState from './EmptyState'
 
 export default memo(function NotificationBell() {
   const { t } = useLang()
@@ -132,7 +131,7 @@ export default memo(function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-8 w-80 max-w-[90vw] max-h-96 overflow-y-auto rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)]">
+        <div className="absolute right-0 top-8 w-80 max-w-[calc(100vw-2rem)] max-h-96 overflow-y-auto rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--popup-bg)]">
           <div className="p-3 border-b border-[var(--card-border)] flex justify-between items-center">
             <span className="font-semibold text-sm">{t('notification.title')}</span>
             {unreadCount > 0 && (
@@ -146,16 +145,10 @@ export default memo(function NotificationBell() {
           </div>
 
           {notifications.length === 0 ? (
-            <div className="p-4">
-              <EmptyState
-                title={t('notification.empty')}
-                description={t('notification.emptyDesc')}
-                actionText={t('journal.writeFirst')}
-                onAction={() => {
-                  navigate('/')
-                  setOpen(false)
-                }}
-              />
+            <div className="p-6 text-center space-y-2">
+              <p className="text-2xl">🔔</p>
+              <p className="text-sm font-medium opacity-70">{t('notification.empty')}</p>
+              <p className="text-xs opacity-50">{t('notification.emptyDesc')}</p>
             </div>
           ) : (
             notifications.slice(0, 20).map((notif) => (
