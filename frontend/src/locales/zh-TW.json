@@ -410,5 +410,8 @@
   "search.clearHistory": "清除搜尋紀錄",
   "dashboard.longestStreak": "最長連續 {days} 天",
   "dashboard.writingFrequency": "寫作頻率",
-  "search.minExceedsMax": "最小值不可大於最大值"
+  "search.minExceedsMax": "最小值不可大於最大值",
+  "comingSoon.title": "敬請期待",
+  "comingSoon.desc": "此功能正在開發中，敬請期待！",
+  "comingSoon.home": "回到首頁"
 }

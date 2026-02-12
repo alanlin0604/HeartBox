@@ -409,5 +409,8 @@
   "search.recentSearches": "最近の検索",
   "search.clearHistory": "検索履歴を消去",
   "dashboard.longestStreak": "最長連続記録：{days}日",
-  "dashboard.writingFrequency": "記録頻度"
+  "dashboard.writingFrequency": "記録頻度",
+  "comingSoon.title": "近日公開",
+  "comingSoon.desc": "この機能は現在開発中です。お楽しみに！",
+  "comingSoon.home": "ホームへ戻る"
 }

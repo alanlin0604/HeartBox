@@ -15,7 +15,7 @@ export default function AdminPage() {
 
   useEffect(() => { document.title = `${t('admin.title')} — HeartBox` }, [t])
 
-  const TABS = [t('admin.tabOverview'), t('admin.tabUsers'), t('admin.tabCounselors')]
+  const TABS = [t('admin.tabOverview'), t('admin.tabUsers')]
 
   return (
     <div className="space-y-6">
@@ -38,7 +38,6 @@ export default function AdminPage() {
 
       {tab === 0 && <StatsTab />}
       {tab === 1 && <UsersTab />}
-      {tab === 2 && <CounselorsTab />}
     </div>
   )
 }

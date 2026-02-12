@@ -4,7 +4,6 @@ import { getNote, deleteNote, updateNote, togglePin } from '../api/notes'
 import { useLang } from '../context/LanguageContext'
 import MoodBadge from '../components/MoodBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
-import ShareNoteButton from '../components/ShareNoteButton'
 import ConfirmModal from '../components/ConfirmModal'
 import { useToast } from '../context/ToastContext'
 
@@ -135,7 +134,6 @@ export default function NoteDetailPage() {
             >
               📌
             </button>
-            <ShareNoteButton noteId={note.id} />
             <button onClick={handleStartEdit} className="btn-secondary text-xs">
               {t('noteDetail.edit')}
             </button>

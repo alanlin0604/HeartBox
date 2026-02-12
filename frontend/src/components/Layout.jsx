@@ -47,7 +47,6 @@ export default function Layout() {
   const navLinks = [
     { to: '/', label: t('nav.journal'), end: true },
     { to: '/dashboard', label: t('nav.dashboard') },
-    { to: '/counselors', label: t('nav.counselors') },
   ]
 
   return (
