@@ -1,0 +1,11 @@
+frontend/
+.git/
+.env
+*.sqlite3
+__pycache__/
+*.pyc
+node_modules/
+.claude/
+backend/chroma_db/
+backend/media/
+backend/staticfiles/
