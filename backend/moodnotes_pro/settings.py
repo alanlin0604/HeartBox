@@ -127,6 +127,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Google Cloud Storage for media (production)
+GS_BUCKET_NAME = os.getenv('GS_BUCKET_NAME', '')
+if GS_BUCKET_NAME:
+    STORAGES['default'] = {
+        'BACKEND': 'storages.backends.gcloud.GoogleCloudStorage',
+    }
+    GS_DEFAULT_ACL = 'publicRead'
+    MEDIA_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/'
+
 # CORS
 if DEBUG:
     CORS_ALLOWED_ORIGINS = [f'http://localhost:{p}' for p in range(5173, 5180)]
