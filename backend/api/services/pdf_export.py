@@ -1,5 +1,6 @@
 import io
 import os
+import re
 from datetime import datetime
 
 from reportlab.lib import colors
@@ -106,6 +107,19 @@ def _escape(text):
     return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
+def _strip_emoji(text):
+    """Remove emoji characters that CID fonts cannot render."""
+    emoji_pattern = re.compile(
+        r'[\U0001F300-\U0001F9FF'   # Misc Symbols, Emoticons, etc.
+        r'\U00002600-\U000027BF'     # Misc symbols (sun, cloud, etc.)
+        r'\U0000FE00-\U0000FE0F'     # Variation selectors
+        r'\U0000200D'                 # Zero width joiner
+        r'\U000020E3'                 # Combining enclosing keycap
+        r']+', flags=re.UNICODE
+    )
+    return emoji_pattern.sub('', text).strip()
+
+
 def _format_ai_feedback(text, style):
     """Convert AI feedback text with newlines into multiple Paragraphs."""
     paragraphs = []
@@ -149,8 +163,10 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
     notes = list(qs[:1000])  # Cap at 1000 notes per PDF to prevent memory exhaustion
 
     # --- Title ---
+    story.append(Paragraph(labels['title'], styles['CJKTitle']))
     username = user.username if user else ''
-    story.append(Paragraph(f'{labels["title"]} — {username}', styles['CJKTitle']))
+    if username:
+        story.append(Paragraph(username, styles['CJKSubtitle']))
 
     date_range_text = ''
     if date_from and date_to:
@@ -206,7 +222,7 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
             meta_parts.append(f'{labels["stress"]}: {note.stress_index}/10')
         weather = (note.metadata or {}).get('weather')
         if weather:
-            meta_parts.append(f'{labels["weather"]}: {weather}')
+            meta_parts.append(f'{labels["weather"]}: {_strip_emoji(weather)}')
         tags = (note.metadata or {}).get('tags', [])
         if tags:
             meta_parts.append(f'{labels["tags"]}: {", ".join(tags)}')
