@@ -76,6 +76,8 @@ export const uploadAttachment = (noteId, file) => {
   });
 };
 
+export const reanalyzeNote = (id) => api.post(`/notes/${id}/reanalyze/`);
+
 export const shareNote = (noteId, counselorId, isAnonymous) =>
   api.post(`/notes/${noteId}/share/`, {
     counselor_id: counselorId,

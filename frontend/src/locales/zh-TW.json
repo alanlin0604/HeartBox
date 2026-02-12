@@ -194,7 +194,7 @@
   "notification.title": "通知",
   "notification.markAllRead": "全部已讀",
   "notification.empty": "尚無通知",
-  "noteForm.attachHint": "拖曳或點擊上傳圖片/音訊檔案（最大 10MB）",
+  "noteForm.attachHint": "拖曳或點擊上傳圖片（最大 10MB）",
   "noteDetail.attachments": "附件",
   "noteCard.hasAttachments": "含附件",
   "dashboard.stressRadar": "壓力分布雷達圖",

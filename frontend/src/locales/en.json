@@ -216,7 +216,7 @@
   "notification.markAllRead": "Mark all read",
   "notification.empty": "No notifications yet",
   "notification.emptyDesc": "You'll see messages, bookings, and shares here.",
-  "noteForm.attachHint": "Drag & drop or click to upload images/audio (max 10MB)",
+  "noteForm.attachHint": "Drag & drop or click to upload images (max 10MB)",
   "noteDetail.attachments": "Attachments",
   "noteCard.hasAttachments": "Has attachments",
   "dashboard.stressRadar": "Stress Distribution Radar",

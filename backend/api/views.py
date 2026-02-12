@@ -242,6 +242,26 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         note.save(update_fields=['is_pinned'])
         return Response({'is_pinned': note.is_pinned})
 
+    @action(detail=True, methods=['post'])
+    def reanalyze(self, request, pk=None):
+        """Re-analyze note with attached images using GPT vision."""
+        note = self.get_object()
+        image_urls = [
+            att.file.url for att in note.attachments.filter(file_type='image')[:3]
+        ]
+        plaintext = note.content
+        if image_urls and plaintext:
+            try:
+                from api.services.ai_engine import ai_engine
+                result = ai_engine.analyze_with_images(plaintext, image_urls)
+                note.sentiment_score = result['sentiment_score']
+                note.stress_index = result['stress_index']
+                note.ai_feedback = result['ai_feedback']
+                note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
+            except Exception as e:
+                logger.warning('Reanalyze failed for note %s: %s', note.pk, e)
+        return Response(MoodNoteSerializer(note, context={'request': request}).data)
+
     @action(detail=False, methods=['post'])
     def batch_delete(self, request):
         ids = request.data.get('ids', [])
@@ -608,7 +628,7 @@ class NoteAttachmentUploadView(APIView):
 
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
     MAX_USER_ATTACHMENTS = 500
-    ALLOWED_TYPES = {'image', 'audio'}
+    ALLOWED_TYPES = {'image'}
 
     def post(self, request, note_id):
         try:
@@ -631,7 +651,7 @@ class NoteAttachmentUploadView(APIView):
         mime_type = file.content_type or mimetypes.guess_type(file.name)[0] or ''
         file_type = mime_type.split('/')[0]
         if file_type not in self.ALLOWED_TYPES:
-            return Response({'error': 'Only image and audio files are allowed.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Only image files are allowed.'}, status=status.HTTP_400_BAD_REQUEST)
 
         attachment = NoteAttachment.objects.create(
             note=note,

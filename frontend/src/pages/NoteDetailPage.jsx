@@ -179,25 +179,14 @@ export default function NoteDetailPage() {
           <div className="space-y-3">
             <h3 className="text-sm font-semibold opacity-60">{t('noteDetail.attachments')}</h3>
             <div className="flex flex-wrap gap-3">
-              {attachments.map((att) =>
-                att.file_type === 'image' ? (
-                  <img
-                    key={att.id}
-                    src={att.file}
-                    alt={att.original_name}
-                    className="max-w-xs rounded-xl border border-white/10"
-                  />
-                ) : (
-                  <div key={att.id} className="glass-card p-3 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 18V5l12-2v13"/>
-                      <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-                    </svg>
-                    <span className="text-xs">{att.original_name}</span>
-                    <audio controls src={att.file} className="h-8" />
-                  </div>
-                )
-              )}
+              {attachments.map((att) => (
+                <img
+                  key={att.id}
+                  src={att.file}
+                  alt={att.original_name}
+                  className="max-w-xs rounded-xl border border-white/10"
+                />
+              ))}
             </div>
           </div>
         )}

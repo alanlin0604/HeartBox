@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getNotes, createNote, uploadAttachment, batchDeleteNotes } from '../api/notes'
+import { getNotes, createNote, uploadAttachment, reanalyzeNote, batchDeleteNotes } from '../api/notes'
 import { getAnalytics } from '../api/analytics'
 import { useLang } from '../context/LanguageContext'
 import NoteForm from '../components/NoteForm'
@@ -75,11 +75,20 @@ export default function JournalPage() {
       const noteId = res.data.id
       // Upload attachments after note creation (don't block refresh on failure)
       let attachFailed = false
+      const hasImages = files.some((f) => f.type.startsWith('image/'))
       for (const file of files) {
         try {
           await uploadAttachment(noteId, file)
         } catch {
           attachFailed = true
+        }
+      }
+      // Re-analyze with images if any were uploaded successfully
+      if (hasImages && !attachFailed) {
+        try {
+          await reanalyzeNote(noteId)
+        } catch {
+          // Non-critical — text-only analysis already saved
         }
       }
       await fetchNotes(1, filters)

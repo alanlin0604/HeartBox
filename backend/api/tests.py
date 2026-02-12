@@ -546,15 +546,15 @@ class AttachmentTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(resp.data['file_type'], 'image')
 
-    def test_upload_audio(self):
+    def test_reject_audio(self):
+        """Audio uploads should be rejected — only images are allowed."""
         audio = SimpleUploadedFile('test.mp3', b'\x00' * 100, content_type='audio/mpeg')
         resp = self.client.post(
             f'/api/notes/{self.note_id}/attachments/',
             {'file': audio},
             format='multipart',
         )
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(resp.data['file_type'], 'audio')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_reject_non_media_file(self):
         txt = SimpleUploadedFile('test.txt', b'hello world', content_type='text/plain')

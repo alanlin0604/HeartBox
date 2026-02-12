@@ -250,6 +250,99 @@ class AIEngine:
                 '你並不孤單，有需要請撥打安心專線：1925（24小時免費）'
             )
 
+    # --- Vision-based analysis (with images) ---
+
+    def analyze_with_images(self, text: str, image_urls: list[str]) -> dict:
+        """
+        Re-analyze journal text together with attached images using GPT-4o-mini vision.
+        Returns dict with sentiment_score, stress_index, ai_feedback.
+        """
+        result = {
+            'sentiment_score': None,
+            'stress_index': None,
+            'ai_feedback': '',
+        }
+
+        if not settings.OPENAI_API_KEY:
+            return self.analyze(text)
+
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+            # Build multimodal content blocks (max 3 images, low detail)
+            content_blocks = [
+                {
+                    'type': 'text',
+                    'text': (
+                        '你是一位心理健康分析專家。分析以下日記內容與附件圖片的情緒狀態，'
+                        '請同時參考圖片內容來理解使用者的情緒和狀況。'
+                        '回傳 JSON 格式：{"sentiment_score": float (-1.0到1.0, 負面到正面), '
+                        '"stress_index": int (0到10, 0=平靜 10=極度壓力)}。'
+                        '只回傳 JSON，不要其他文字。\n\n'
+                        f'日記內容：{text[:1500]}'
+                    ),
+                },
+            ]
+            for url in image_urls[:3]:
+                content_blocks.append({
+                    'type': 'image_url',
+                    'image_url': {'url': url, 'detail': 'low'},
+                })
+
+            response = client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[{'role': 'user', 'content': content_blocks}],
+                temperature=0.3,
+                max_tokens=100,
+            )
+            raw = response.choices[0].message.content.strip()
+            if raw.startswith('```'):
+                raw = raw.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
+            sentiment_data = json.loads(raw)
+
+            score = float(sentiment_data.get('sentiment_score', 0))
+            stress = int(sentiment_data.get('stress_index', 5))
+            result['sentiment_score'] = max(-1.0, min(1.0, score))
+            result['stress_index'] = max(0, min(10, stress))
+
+            # Generate feedback with image context
+            feedback_blocks = [
+                {
+                    'type': 'text',
+                    'text': (
+                        '你是一位溫暖、專業的心理健康顧問。請根據以下使用者的日記內容與附件圖片，'
+                        '給出客製化的回饋。\n\n'
+                        '要求：\n'
+                        '1. 必須回應日記中提到的具體事件、人物或感受，也要提及圖片中觀察到的內容\n'
+                        '2. 用「你」稱呼使用者，語氣溫暖但不做作\n'
+                        '3. 給出 2-3 點針對日記內容與圖片的具體建議或回饋\n'
+                        '4. 回覆長度約 80-150 字\n'
+                        '5. 使用繁體中文\n\n'
+                        f'日記內容：\n「{text[:800]}」'
+                    ),
+                },
+            ]
+            for url in image_urls[:3]:
+                feedback_blocks.append({
+                    'type': 'image_url',
+                    'image_url': {'url': url, 'detail': 'low'},
+                })
+
+            feedback_response = client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[{'role': 'user', 'content': feedback_blocks}],
+                temperature=0.8,
+                max_tokens=300,
+            )
+            result['ai_feedback'] = feedback_response.choices[0].message.content.strip()
+
+        except Exception as e:
+            logger.warning(f'Vision analysis failed, falling back to text-only: {e}')
+            return self.analyze(text)
+
+        return result
+
     # --- Main entry point ---
 
     def analyze(self, text: str) -> dict:

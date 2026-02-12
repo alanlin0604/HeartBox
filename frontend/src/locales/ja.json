@@ -194,7 +194,7 @@
   "notification.title": "通知",
   "notification.markAllRead": "すべて既読にする",
   "notification.empty": "通知はまだありません",
-  "noteForm.attachHint": "ドラッグ＆ドロップまたはクリックして画像/音声をアップロード（最大10MB）",
+  "noteForm.attachHint": "ドラッグ＆ドロップまたはクリックして画像をアップロード（最大10MB）",
   "noteDetail.attachments": "添付ファイル",
   "noteCard.hasAttachments": "添付あり",
   "dashboard.stressRadar": "ストレス分布レーダー",
