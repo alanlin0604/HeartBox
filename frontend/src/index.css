@@ -21,6 +21,7 @@
   --stress-bar-bg: rgba(255, 255, 255, 0.08);
   --chart-grid: rgba(255, 255, 255, 0.1);
   --chart-axis: #9ca3af;
+  --popup-bg: rgba(30, 20, 60, 0.97);
 }
 
 /* ===== Light Theme ===== */
@@ -43,6 +44,7 @@
   --stress-bar-bg: rgba(0, 0, 0, 0.08);
   --chart-grid: rgba(0, 0, 0, 0.1);
   --chart-axis: #475569;
+  --popup-bg: rgba(255, 255, 255, 0.97);
 }
 
 body {
@@ -196,6 +198,14 @@ body {
   .glass-card:hover {
     transform: none;
   }
+}
+
+/* ===== Popup Panel (opaque, no blur-through) ===== */
+.popup-panel {
+  background: var(--popup-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 /* ===== Tooltip override for Recharts ===== */

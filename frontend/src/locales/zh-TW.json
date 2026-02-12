@@ -327,6 +327,8 @@
   "share.noSharedDesc": "使用者分享的日記內容會顯示在這裡。",
   "common.serverUnreachable": "無法連線到後端伺服器，請確認 API 是否啟動。",
   "journal.streak": "連續記錄 {days} 天",
+  "journal.todayNotes": "今日筆記",
+  "journal.weekAvgMood": "本週平均情緒",
   "noteForm.tplMorning": "晨間心情",
   "noteForm.tplMorningText": "今天早上醒來的心情是...\n今天最期待的事情是...\n給自己的一句話：",
   "noteForm.tplGratitude": "感恩日記",

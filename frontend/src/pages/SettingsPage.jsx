@@ -155,11 +155,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 mt-4 max-w-2xl mx-auto">
+    <div className="space-y-6 mt-4 max-w-2xl mx-auto overflow-x-hidden">
       <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
 
       {/* Profile Section */}
-      <form onSubmit={handleSaveProfile} className="glass p-6 space-y-4">
+      <form onSubmit={handleSaveProfile} className="glass p-4 sm:p-6 space-y-4">
         <h2 className="text-lg font-semibold">{t('settings.profile')}</h2>
 
         <div>
@@ -230,7 +230,7 @@ export default function SettingsPage() {
       </form>
 
       {/* Password Section */}
-      <form onSubmit={handleChangePassword} className="glass p-6 space-y-4">
+      <form onSubmit={handleChangePassword} className="glass p-4 sm:p-6 space-y-4">
         <h2 className="text-lg font-semibold">{t('settings.changePassword')}</h2>
 
         <div>
@@ -267,16 +267,18 @@ export default function SettingsPage() {
           />
         </div>
 
-        <button type="submit" disabled={pwSaving} className="btn-primary">
-          {pwSaving ? t('settings.saving') : t('settings.changePassword')}
-        </button>
-        <button type="button" onClick={handleLogoutOthers} disabled={logoutOthersLoading} className="btn-secondary">
-          {logoutOthersLoading ? t('common.loading') : t('settings.logoutOtherDevices')}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button type="submit" disabled={pwSaving} className="btn-primary">
+            {pwSaving ? t('settings.saving') : t('settings.changePassword')}
+          </button>
+          <button type="button" onClick={handleLogoutOthers} disabled={logoutOthersLoading} className="btn-secondary">
+            {logoutOthersLoading ? t('common.loading') : t('settings.logoutOtherDevices')}
+          </button>
+        </div>
       </form>
 
       {/* Account Info */}
-      <div className="glass p-6 space-y-3">
+      <div className="glass p-4 sm:p-6 space-y-3">
         <h2 className="text-lg font-semibold">{t('settings.accountInfo')}</h2>
         <div className="text-sm space-y-2 opacity-70">
           <p>{t('settings.joined')}: {user?.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</p>
@@ -285,7 +287,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Data Export */}
-      <div className="glass p-6 space-y-3">
+      <div className="glass p-4 sm:p-6 space-y-3">
         <h2 className="text-lg font-semibold">{t('settings.exportData')}</h2>
         <p className="text-sm opacity-60">{t('settings.exportDataDesc')}</p>
         <button onClick={handleExportData} disabled={exporting} className="btn-secondary">
@@ -294,7 +296,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Danger Zone - Delete Account */}
-      <div className="glass p-6 space-y-3 border border-red-500/20">
+      <div className="glass p-4 sm:p-6 space-y-3 border border-red-500/20">
         <h2 className="text-lg font-semibold text-red-500">{t('settings.dangerZone')}</h2>
         <p className="text-sm opacity-60">{t('settings.deleteAccountDesc')}</p>
         <button
@@ -307,8 +309,8 @@ export default function SettingsPage() {
 
       {/* Delete Account Modal */}
       {deleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="glass p-6 w-full max-w-md space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="popup-panel p-4 sm:p-6 w-full max-w-md space-y-4">
             <h2 className="text-lg font-semibold text-red-500">{t('settings.deleteAccountConfirm')}</h2>
             <p className="text-sm opacity-70">{t('settings.deleteAccountDesc')}</p>
             <input

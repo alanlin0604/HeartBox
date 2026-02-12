@@ -5,8 +5,8 @@ import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 
 const SEVERITY_STYLES = {
-  high: 'bg-red-500/20 border-red-500/40 text-red-300',
-  medium: 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300',
+  high: 'bg-red-500/25 border-red-500/50 text-red-500',
+  medium: 'bg-amber-500/25 border-amber-500/50 text-amber-500',
 }
 
 export default memo(function AlertBanner() {
@@ -44,7 +44,7 @@ export default memo(function AlertBanner() {
               <p className="text-base font-bold">
                 {t(`alert.${alert.type}.title`)}
               </p>
-              <p className="text-sm opacity-90 mt-1">
+              <p className="text-sm mt-1">
                 {alert.type === 'consecutive_negative' &&
                   t('alert.consecutive_negative.desc', { count: alert.data.count })}
                 {alert.type === 'high_stress' &&

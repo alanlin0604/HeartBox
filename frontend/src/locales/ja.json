@@ -327,6 +327,8 @@
   "share.noSharedDesc": "ユーザーから共有された日記がここに表示されます。",
   "common.serverUnreachable": "バックエンドサーバーに接続できません。APIが起動しているか確認してください。",
   "journal.streak": "{days}日連続で記録中",
+  "journal.todayNotes": "今日の日記",
+  "journal.weekAvgMood": "今週の平均気分",
   "noteForm.tplMorning": "朝の気分",
   "noteForm.tplMorningText": "今朝起きた時の気分は...\n今日楽しみなことは...\n自分への一言：",
   "noteForm.tplGratitude": "感謝日記",

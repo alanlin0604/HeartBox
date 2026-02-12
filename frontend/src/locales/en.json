@@ -327,6 +327,8 @@
   "pdf.weather": "Weather",
   "common.serverUnreachable": "Cannot connect to backend server. Check if API is running.",
   "journal.streak": "{days}-day writing streak",
+  "journal.todayNotes": "Today's Notes",
+  "journal.weekAvgMood": "Weekly Avg Mood",
   "noteForm.tplMorning": "Morning Check-in",
   "noteForm.tplMorningText": "How I feel waking up this morning...\nWhat I look forward to today...\nA word to myself:",
   "noteForm.tplGratitude": "Gratitude Journal",

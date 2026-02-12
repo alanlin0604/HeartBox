@@ -236,7 +236,7 @@ export default function Layout() {
               {t('nav.admin')}
             </NavLink>
           )}
-          <div className="border-t border-[var(--card-border)] pt-3 flex items-center gap-3">
+          <div className="border-t border-[var(--card-border)] pt-3 flex flex-wrap items-center gap-3">
             <NotificationBell />
             <button
               onClick={() => { navigate('/settings'); setMobileNavOpen(false) }}
@@ -246,10 +246,11 @@ export default function Layout() {
             </button>
             <button
               onClick={() => { toggleTheme(); setMobileNavOpen(false) }}
-              className="text-sm opacity-60 hover:opacity-100"
+              className="text-sm opacity-70 hover:opacity-100 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--card-border)] transition-colors"
               aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
             >
-              {theme === 'dark' ? '☀️' : '🌙'}
+              <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
+              <span>{theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark')}</span>
             </button>
             <button
               onClick={() => { logout(); setMobileNavOpen(false) }}

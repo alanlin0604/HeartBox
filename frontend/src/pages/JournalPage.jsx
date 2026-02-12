@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getNotes, createNote, uploadAttachment, reanalyzeNote, batchDeleteNotes } from '../api/notes'
 import { getAnalytics } from '../api/analytics'
@@ -23,6 +23,7 @@ export default function JournalPage() {
   const [page, setPage] = useState(1)
   const [hasNext, setHasNext] = useState(false)
   const [streak, setStreak] = useState(0)
+  const [weekAvgMood, setWeekAvgMood] = useState(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState(new Set())
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false)
@@ -62,11 +63,25 @@ export default function JournalPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       getAnalytics('week', 30)
-        .then((res) => setStreak(res.data.current_streak || 0))
+        .then((res) => {
+          setStreak(res.data.current_streak || 0)
+          // Compute weekly average mood from mood_trends
+          const trends = res.data.mood_trends || []
+          if (trends.length > 0) {
+            const sum = trends.reduce((acc, t) => acc + (t.avg_sentiment ?? 0), 0)
+            setWeekAvgMood((sum / trends.length).toFixed(2))
+          }
+        })
         .catch(() => {})
     }, 100)
     return () => clearTimeout(timer)
   }, [])
+
+  // Count today's notes from fetched notes list
+  const todayNoteCount = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    return notes.filter((n) => n.created_at?.slice(0, 10) === today).length
+  }, [notes])
 
   const handleCreate = async (content, metadata, files = []) => {
     setCreating(true)
@@ -136,127 +151,158 @@ export default function JournalPage() {
     }
   }
 
-  return (
-    <div className="space-y-6 mt-4">
-      <AlertBanner />
-
-      {/* Write section */}
-      <NoteForm onSubmit={handleCreate} loading={creating} />
-
+  // Sidebar content (shared between desktop aside and mobile inline)
+  const sidebarContent = (
+    <>
       {streak > 0 && (
         <div className="glass-card p-3 flex items-center gap-2 text-sm">
           <span className="text-xl">🔥</span>
           <span className="font-medium">{t('journal.streak', { days: streak })}</span>
         </div>
       )}
-
-      {/* Divider */}
-      <hr className="border-white/10" />
-
-      {/* Browse section */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-lg font-semibold">{t('journal.recentNotes')}</h2>
-        <div className="flex items-center gap-2">
-          {selectMode ? (
-            <>
-              <button
-                onClick={() => {
-                  if (selected.size === notes.length) setSelected(new Set())
-                  else setSelected(new Set(notes.map((n) => n.id)))
-                }}
-                className="btn-secondary text-xs"
-              >
-                {t('journal.selectAll')}
-              </button>
-              <button
-                onClick={() => setBatchConfirmOpen(true)}
-                disabled={selected.size === 0 || batchDeleting}
-                className="btn-danger text-xs disabled:opacity-30"
-              >
-                {batchDeleting ? t('common.loading') : t('journal.batchDelete', { count: selected.size })}
-              </button>
-              <button
-                onClick={() => { setSelectMode(false); setSelected(new Set()) }}
-                className="btn-secondary text-xs"
-              >
-                {t('journal.cancelSelect')}
-              </button>
-            </>
-          ) : (
-            <>
-              {notes.length > 0 && (
-                <button onClick={() => setSelectMode(true)} className="btn-secondary text-xs">
-                  {t('journal.selectMode')}
-                </button>
-              )}
-              <ExportPDFButton />
-            </>
-          )}
+      <div className="glass-card p-4 space-y-3">
+        <h3 className="text-sm font-semibold opacity-70">{t('journal.todayNotes')}</h3>
+        <p className="text-2xl font-bold">{todayNoteCount}</p>
+      </div>
+      {weekAvgMood !== null && (
+        <div className="glass-card p-4 space-y-3">
+          <h3 className="text-sm font-semibold opacity-70">{t('journal.weekAvgMood')}</h3>
+          <p className="text-2xl font-bold">{weekAvgMood}</p>
         </div>
+      )}
+    </>
+  )
+
+  return (
+    <div className="mt-4">
+      <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-6">
+        {/* Left column: main content */}
+        <div className="space-y-6">
+          <AlertBanner />
+
+          {/* Write section */}
+          <NoteForm onSubmit={handleCreate} loading={creating} />
+
+          {/* Mobile: streak + stats inline */}
+          <div className="lg:hidden space-y-3">
+            {sidebarContent}
+          </div>
+
+          {/* Divider */}
+          <hr className="border-white/10" />
+
+          {/* Browse section */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="text-lg font-semibold">{t('journal.recentNotes')}</h2>
+            <div className="flex items-center gap-2">
+              {selectMode ? (
+                <>
+                  <button
+                    onClick={() => {
+                      if (selected.size === notes.length) setSelected(new Set())
+                      else setSelected(new Set(notes.map((n) => n.id)))
+                    }}
+                    className="btn-secondary text-xs"
+                  >
+                    {t('journal.selectAll')}
+                  </button>
+                  <button
+                    onClick={() => setBatchConfirmOpen(true)}
+                    disabled={selected.size === 0 || batchDeleting}
+                    className="btn-danger text-xs disabled:opacity-30"
+                  >
+                    {batchDeleting ? t('common.loading') : t('journal.batchDelete', { count: selected.size })}
+                  </button>
+                  <button
+                    onClick={() => { setSelectMode(false); setSelected(new Set()) }}
+                    className="btn-secondary text-xs"
+                  >
+                    {t('journal.cancelSelect')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {notes.length > 0 && (
+                    <button onClick={() => setSelectMode(true)} className="btn-secondary text-xs">
+                      {t('journal.selectMode')}
+                    </button>
+                  )}
+                  <ExportPDFButton />
+                </>
+              )}
+            </div>
+          </div>
+
+          <SearchFilterPanel filters={filters} onFilterChange={handleFilterChange} />
+
+          <div>
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="glass-card p-4 animate-pulse space-y-3">
+                    <div className="h-4 bg-white/10 rounded w-3/4" />
+                    <div className="h-3 bg-white/10 rounded w-1/2" />
+                    <div className="h-3 bg-white/10 rounded w-1/3" />
+                  </div>
+                ))}
+              </div>
+            ) : notes.length === 0 ? (
+              <EmptyState
+                title={t('journal.empty')}
+                description={t('journal.emptyDescription')}
+                actionText={t('journal.writeFirst')}
+                onAction={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              />
+            ) : (
+              <div className="space-y-3">
+                {notes.map((note) => (
+                  <div key={note.id} className="flex items-start gap-2">
+                    {selectMode && (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(note.id)}
+                        onChange={() => toggleSelect(note.id)}
+                        className="mt-4 w-4 h-4 accent-purple-500 cursor-pointer flex-shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <NoteCard note={note} highlight={filters.search} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(page > 1 || hasNext) && (
+              <div className="flex justify-center gap-4 mt-4">
+                <button
+                  onClick={() => fetchNotes(page - 1, filters)}
+                  disabled={page <= 1}
+                  className="btn-primary text-sm disabled:opacity-30"
+                >
+                  {t('journal.prevPage')}
+                </button>
+                <span className="opacity-60 text-sm self-center">
+                  {t('journal.page', { page })}
+                </span>
+                <button
+                  onClick={() => fetchNotes(page + 1, filters)}
+                  disabled={!hasNext}
+                  className="btn-primary text-sm disabled:opacity-30"
+                >
+                  {t('journal.nextPage')}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right column: sidebar (desktop only) */}
+        <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start space-y-4">
+          {sidebarContent}
+        </aside>
       </div>
 
-      <SearchFilterPanel filters={filters} onFilterChange={handleFilterChange} />
-
-      <div>
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="glass-card p-4 animate-pulse space-y-3">
-                <div className="h-4 bg-white/10 rounded w-3/4" />
-                <div className="h-3 bg-white/10 rounded w-1/2" />
-                <div className="h-3 bg-white/10 rounded w-1/3" />
-              </div>
-            ))}
-          </div>
-        ) : notes.length === 0 ? (
-          <EmptyState
-            title={t('journal.empty')}
-            description={t('journal.emptyDescription')}
-            actionText={t('journal.writeFirst')}
-            onAction={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          />
-        ) : (
-          <div className="space-y-3">
-            {notes.map((note) => (
-              <div key={note.id} className="flex items-start gap-2">
-                {selectMode && (
-                  <input
-                    type="checkbox"
-                    checked={selected.has(note.id)}
-                    onChange={() => toggleSelect(note.id)}
-                    className="mt-4 w-4 h-4 accent-purple-500 cursor-pointer flex-shrink-0"
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  <NoteCard note={note} highlight={filters.search} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {(page > 1 || hasNext) && (
-          <div className="flex justify-center gap-4 mt-4">
-            <button
-              onClick={() => fetchNotes(page - 1, filters)}
-              disabled={page <= 1}
-              className="btn-primary text-sm disabled:opacity-30"
-            >
-              {t('journal.prevPage')}
-            </button>
-            <span className="opacity-60 text-sm self-center">
-              {t('journal.page', { page })}
-            </span>
-            <button
-              onClick={() => fetchNotes(page + 1, filters)}
-              disabled={!hasNext}
-              className="btn-primary text-sm disabled:opacity-30"
-            >
-              {t('journal.nextPage')}
-            </button>
-          </div>
-        )}
-      </div>
       <ConfirmModal
         open={batchConfirmOpen}
         title={t('journal.batchDelete', { count: selected.size })}

@@ -184,6 +184,7 @@ export default function NoteDetailPage() {
                   key={att.id}
                   src={att.file}
                   alt={att.original_name}
+                  loading="lazy"
                   className="max-w-xs rounded-xl border border-white/10"
                 />
               ))}
