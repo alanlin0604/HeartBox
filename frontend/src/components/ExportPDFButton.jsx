@@ -57,6 +57,52 @@ export default function ExportPDFButton() {
     }
   }
 
+  const panelContent = (
+    <div className="popup-panel p-4 space-y-3 w-full">
+      <h3 className="text-sm font-semibold">{t('export.title')}</h3>
+      <div>
+        <label className="text-xs opacity-60 block mb-1">{t('export.format')}</label>
+        <select
+          value={format}
+          onChange={(e) => setFormat(e.target.value)}
+          className="glass-input text-sm w-full"
+        >
+          <option value="pdf">PDF</option>
+          <option value="csv">CSV</option>
+        </select>
+      </div>
+      {format === 'pdf' && (
+        <>
+          <div>
+            <label className="text-xs opacity-60 block mb-1">{t('export.from')}</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="glass-input text-sm w-full"
+            />
+          </div>
+          <div>
+            <label className="text-xs opacity-60 block mb-1">{t('export.to')}</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="glass-input text-sm w-full"
+            />
+          </div>
+        </>
+      )}
+      <button
+        onClick={handleExport}
+        disabled={loading}
+        className="btn-primary text-sm w-full disabled:opacity-50"
+      >
+        {loading ? t('export.exporting') : (format === 'csv' ? t('export.downloadCSV') : t('export.download'))}
+      </button>
+    </div>
+  )
+
   return (
     <div className="relative inline-block" ref={panelRef}>
       <button
@@ -67,49 +113,19 @@ export default function ExportPDFButton() {
         {t('export.button')}
       </button>
 
+      {/* Desktop: dropdown */}
       {expanded && (
-        <div className="absolute right-0 top-full mt-2 popup-panel p-4 z-20 w-[calc(100vw-3rem)] sm:w-[280px] space-y-3">
-          <h3 className="text-sm font-semibold">{t('export.title')}</h3>
-          <div>
-            <label className="text-xs opacity-60 block mb-1">{t('export.format')}</label>
-            <select
-              value={format}
-              onChange={(e) => setFormat(e.target.value)}
-              className="glass-input text-sm w-full"
-            >
-              <option value="pdf">PDF</option>
-              <option value="csv">CSV</option>
-            </select>
+        <div className="hidden sm:block absolute right-0 top-full mt-2 z-20 w-[280px]">
+          {panelContent}
+        </div>
+      )}
+
+      {/* Mobile: fixed centered modal */}
+      {expanded && (
+        <div className="sm:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm">
+            {panelContent}
           </div>
-          {format === 'pdf' && (
-            <>
-              <div>
-                <label className="text-xs opacity-60 block mb-1">{t('export.from')}</label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="glass-input text-sm w-full"
-                />
-              </div>
-              <div>
-                <label className="text-xs opacity-60 block mb-1">{t('export.to')}</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="glass-input text-sm w-full"
-                />
-              </div>
-            </>
-          )}
-          <button
-            onClick={handleExport}
-            disabled={loading}
-            className="btn-primary text-sm w-full disabled:opacity-50"
-          >
-            {loading ? t('export.exporting') : (format === 'csv' ? t('export.downloadCSV') : t('export.download'))}
-          </button>
         </div>
       )}
     </div>
