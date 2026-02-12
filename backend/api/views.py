@@ -3,6 +3,7 @@ import mimetypes
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Sum
 from django.contrib.auth.tokens import default_token_generator
@@ -12,6 +13,7 @@ from django.http import FileResponse
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.db.models import Prefetch
 from rest_framework import generics, viewsets, permissions, status, filters, exceptions
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -223,6 +225,15 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
                 note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
         except Exception as e:
             logger.warning('AI analysis failed for note %s: %s', note.pk, e)
+        # Invalidate analytics/calendar caches for this user
+        cache.delete_many([
+            k for k in [
+                f'analytics_{self.request.user.id}_week_30',
+                f'analytics_{self.request.user.id}_month_30',
+                f'analytics_{self.request.user.id}_week_7',
+                f'calendar_{self.request.user.id}_{timezone.now().year}_{timezone.now().month}',
+            ]
+        ])
 
     @action(detail=True, methods=['post'])
     def toggle_pin(self, request, pk=None):
@@ -249,12 +260,17 @@ class AnalyticsView(APIView):
             lookback_days = min(max(int(request.query_params.get('lookback_days', 30)), 1), 365)
         except (ValueError, TypeError):
             lookback_days = 30
+
+        cache_key = f'analytics_{request.user.id}_{period}_{lookback_days}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         qs = MoodNote.objects.filter(user=request.user)
 
         # Calculate streaks (cap to last 366 dates for performance)
         dates = list(
-            MoodNote.objects.filter(user=request.user)
-            .values_list('created_at__date', flat=True)
+            qs.values_list('created_at__date', flat=True)
             .distinct()
             .order_by('-created_at__date')[:366]
         )
@@ -290,14 +306,16 @@ class AnalyticsView(APIView):
                     run = 1
             longest_streak = best
 
-        return Response({
+        result = {
             'mood_trends': get_mood_trends(qs, period=period, lookback_days=lookback_days),
             'weather_correlation': get_mood_weather_correlation(qs, lookback_days=lookback_days),
             'frequent_tags': get_frequent_tags(qs, lookback_days=lookback_days),
             'stress_by_tag': get_stress_by_tag(qs, lookback_days=lookback_days),
             'current_streak': current_streak,
             'longest_streak': longest_streak,
-        })
+        }
+        cache.set(cache_key, result, 60)
+        return Response(result)
 
 
 class CalendarView(APIView):
@@ -309,9 +327,17 @@ class CalendarView(APIView):
             return Response({'error': 'Invalid year or month.'}, status=status.HTTP_400_BAD_REQUEST)
         if not (1 <= month <= 12) or not (1900 <= year <= 2100):
             return Response({'error': 'Year must be 1900-2100, month must be 1-12.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cache_key = f'calendar_{request.user.id}_{year}_{month}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response(cached)
+
         qs = MoodNote.objects.filter(user=request.user)
         days = get_calendar_data(qs, year, month)
-        return Response({'year': year, 'month': month, 'days': days})
+        result = {'year': year, 'month': month, 'days': days}
+        cache.set(cache_key, result, 60)
+        return Response(result)
 
 
 class ExportPDFView(APIView):
@@ -380,7 +406,12 @@ class ConversationListView(generics.ListAPIView):
         user = self.request.user
         return Conversation.objects.filter(
             Q(user=user) | Q(counselor=user)
-        ).select_related('user', 'counselor').prefetch_related('messages')
+        ).select_related('user', 'counselor').prefetch_related(
+            Prefetch(
+                'messages',
+                queryset=Message.objects.select_related('sender').order_by('-created_at'),
+            )
+        )
 
 
 class ConversationCreateView(APIView):

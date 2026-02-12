@@ -23,6 +23,8 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState('week')
   const [lookback, setLookback] = useState(30)
 
+  useEffect(() => { document.title = `${t('nav.dashboard')} — HeartBox` }, [t])
+
   useEffect(() => {
     setLoading(true)
     getAnalytics(period, lookback)

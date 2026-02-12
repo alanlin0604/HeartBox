@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 
 const ToastContext = createContext(null)
 
@@ -23,6 +23,13 @@ export function ToastProvider({ children }) {
     error: (message) => pushToast('error', message, 3200),
     info: (message) => pushToast('info', message),
   }), [pushToast])
+
+  // Listen for global API error events from axios interceptor
+  useEffect(() => {
+    const handler = (e) => api.error(e.detail?.message || 'Server error')
+    window.addEventListener('api-error', handler)
+    return () => window.removeEventListener('api-error', handler)
+  }, [api])
 
   return (
     <ToastContext.Provider value={api}>

@@ -21,6 +21,8 @@ export default function SettingsPage() {
   // Track initial profile values for unsaved-changes detection
   const initialProfile = useRef({ email: user?.email || '', bio: user?.bio || '' })
 
+  useEffect(() => { document.title = `${t('settings.title')} — HeartBox` }, [t])
+
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       const hasUnsavedChanges =

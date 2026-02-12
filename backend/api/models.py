@@ -36,6 +36,7 @@ class MoodNote(models.Model):
         help_text='0 (calm) to 10 (extreme stress)',
     )
     ai_feedback = models.TextField(blank=True, default='')
+    search_text = models.TextField(blank=True, default='', help_text='Plaintext index (first 200 chars) for DB-level search')
     is_pinned = models.BooleanField(default=False)
     metadata = models.JSONField(default=dict, blank=True, help_text='weather, temperature, location, tags')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -46,6 +47,7 @@ class MoodNote(models.Model):
         indexes = [
             models.Index(fields=['user', '-created_at'], name='moodnote_user_created'),
             models.Index(fields=['user', 'sentiment_score'], name='moodnote_user_sentiment'),
+            models.Index(fields=['user', 'search_text'], name='moodnote_user_search'),
         ]
 
     def __str__(self):
@@ -63,6 +65,7 @@ class MoodNote(models.Model):
         if self._raw_content is not None:
             from api.services.encryption import encryption_service
             self.encrypted_content = encryption_service.encrypt(self._raw_content)
+            self.search_text = self._raw_content[:200]
             self._raw_content = None
         super().save(*args, **kwargs)
 

@@ -61,6 +61,8 @@ export default function ChatPage() {
     wsRef.current = ws
   }, [id])
 
+  useEffect(() => { document.title = `${t('chat.conversation')} — HeartBox` }, [t])
+
   useEffect(() => {
     loadConversationInfo()
     loadMessages()
@@ -136,7 +138,7 @@ export default function ChatPage() {
           {otherUser ? (
             <span className="flex items-center gap-2">
               {otherUser.avatar ? (
-                <img src={otherUser.avatar} alt={otherUser.username} className="w-7 h-7 rounded-full object-cover border border-white/20" />
+                <img src={otherUser.avatar} alt={otherUser.username} loading="lazy" className="w-7 h-7 rounded-full object-cover border border-white/20" />
               ) : (
                 <span className="w-7 h-7 rounded-full bg-purple-500/25 text-xs flex items-center justify-center">
                   {otherUser.username?.slice(0, 1).toUpperCase()}
@@ -175,7 +177,7 @@ export default function ChatPage() {
                   {!isMine && (
                     <div className="flex items-center gap-1.5 mb-1">
                       {msg.sender_avatar ? (
-                        <img src={msg.sender_avatar} alt={msg.sender_name} className="w-5 h-5 rounded-full object-cover border border-white/20" />
+                        <img src={msg.sender_avatar} alt={msg.sender_name} loading="lazy" className="w-5 h-5 rounded-full object-cover border border-white/20" />
                       ) : null}
                       <p className="text-xs font-semibold opacity-60">{msg.sender_name}</p>
                     </div>

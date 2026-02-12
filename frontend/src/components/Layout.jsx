@@ -119,7 +119,7 @@ export default function Layout() {
               className="flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
             >
               {user?.avatar ? (
-                <img src={user.avatar} alt={user.username} className="w-7 h-7 rounded-full object-cover border border-white/20" />
+                <img src={user.avatar} alt={user.username} loading="lazy" className="w-7 h-7 rounded-full object-cover border border-white/20" />
               ) : (
                 <span className="w-7 h-7 rounded-full bg-purple-500/25 text-xs flex items-center justify-center">
                   {user?.username?.slice(0, 1)?.toUpperCase()}

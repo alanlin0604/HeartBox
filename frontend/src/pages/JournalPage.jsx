@@ -53,14 +53,19 @@ export default function JournalPage() {
     }
   }
 
+  useEffect(() => { document.title = `${t('nav.journal')} — HeartBox` }, [t])
+
   useEffect(() => {
     fetchNotes(1, filters)
   }, [filters])
 
   useEffect(() => {
-    getAnalytics('week', 30)
-      .then((res) => setStreak(res.data.current_streak || 0))
-      .catch(() => {})
+    const timer = setTimeout(() => {
+      getAnalytics('week', 30)
+        .then((res) => setStreak(res.data.current_streak || 0))
+        .catch(() => {})
+    }, 100)
+    return () => clearTimeout(timer)
   }, [])
 
   const handleCreate = async (content, metadata, files = []) => {

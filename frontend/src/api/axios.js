@@ -7,20 +7,53 @@ const api = axios.create({
   baseURL: API_BASE,
 });
 
-// Attach Bearer token
+// --- GET request deduplication ---
+const pendingGets = new Map();
+
 api.interceptors.request.use((config) => {
+  // Attach Bearer token
   const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Cancel duplicate GET requests
+  if (config.method === 'get') {
+    const key = `${config.method}:${config.baseURL}${config.url}`;
+    if (pendingGets.has(key)) {
+      pendingGets.get(key).abort();
+    }
+    const controller = new AbortController();
+    config.signal = controller.signal;
+    pendingGets.set(key, controller);
+  }
   return config;
 });
 
-// Auto-refresh on 401
+// --- Response interceptors ---
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Clean up completed GET requests
+    if (res.config.method === 'get') {
+      const key = `${res.config.method}:${res.config.baseURL}${res.config.url}`;
+      pendingGets.delete(key);
+    }
+    return res;
+  },
   async (error) => {
+    // Clean up failed GET requests
+    if (error.config?.method === 'get') {
+      const key = `${error.config.method}:${error.config.baseURL}${error.config.url}`;
+      pendingGets.delete(key);
+    }
+
+    // Don't treat aborted requests as errors
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
     const original = error.config;
+
+    // Auto-refresh on 401
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       const refresh = getRefreshToken();
@@ -39,6 +72,14 @@ api.interceptors.response.use(
         }
       }
     }
+
+    // Global toast for 5xx server errors
+    if (error.response?.status >= 500) {
+      window.dispatchEvent(new CustomEvent('api-error', {
+        detail: { message: 'Server error, please try again later.' },
+      }));
+    }
+
     return Promise.reject(error);
   }
 );

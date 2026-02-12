@@ -4,7 +4,7 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: bash build.sh
-    startCommand: gunicorn moodnotes_pro.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    startCommand: daphne -b 0.0.0.0 -p $PORT moodnotes_pro.asgi:application
     envVars:
       - key: DJANGO_DEBUG
         value: "False"
@@ -21,6 +21,8 @@ services:
       - key: ENCRYPTION_KEY
         sync: false
       - key: OPENAI_API_KEY
+        sync: false
+      - key: REDIS_URL
         sync: false
       - key: FRONTEND_URL
         sync: false

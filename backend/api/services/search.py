@@ -54,16 +54,8 @@ def search_notes(queryset, search=None, tag=None,
     if tag:
         queryset = queryset.filter(metadata__tags__contains=[tag])
 
-    # Keyword search — must decrypt, so do this last on the narrowed queryset
+    # Keyword search — DB-level via search_text index
     if search:
-        keyword = search.lower()
-        matching_ids = []
-        for note in queryset.iterator():
-            try:
-                if keyword in note.content.lower():
-                    matching_ids.append(note.pk)
-            except Exception:
-                continue
-        queryset = queryset.filter(pk__in=matching_ids)
+        queryset = queryset.filter(search_text__icontains=search)
 
     return queryset

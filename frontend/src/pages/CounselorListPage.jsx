@@ -46,6 +46,8 @@ export default function CounselorListPage() {
   const [applyError, setApplyError] = useState('')
   const [applySuccess, setApplySuccess] = useState(false)
 
+  useEffect(() => { document.title = `${t('nav.counselors')} — HeartBox` }, [t])
+
   useEffect(() => {
     loadData()
   }, [])
