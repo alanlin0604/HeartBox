@@ -1,0 +1,331 @@
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
+import {
+  getAIChatSessions,
+  createAIChatSession,
+  getAIChatSession,
+  deleteAIChatSession,
+  sendAIChatMessage,
+} from '../api/aiChat'
+import EmptyState from '../components/EmptyState'
+import LoadingSpinner from '../components/LoadingSpinner'
+import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
+
+export default function AIChatPage() {
+  const { lang, t } = useLang()
+  const toast = useToast()
+
+  const [sessions, setSessions] = useState([])
+  const [activeSessionId, setActiveSessionId] = useState(null)
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(true)
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    document.title = `${t('aiChat.title')} — HeartBox`
+  }, [t])
+
+  // Load sessions on mount
+  useEffect(() => {
+    loadSessions()
+  }, [])
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const loadSessions = async () => {
+    try {
+      const res = await getAIChatSessions()
+      setSessions(res.data)
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSelectSession = async (sessionId) => {
+    setActiveSessionId(sessionId)
+    setShowSidebar(false)
+    try {
+      const res = await getAIChatSession(sessionId)
+      setMessages(res.data.messages || [])
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
+  }
+
+  const handleNewChat = async () => {
+    try {
+      const res = await createAIChatSession()
+      setSessions((prev) => [res.data, ...prev])
+      setActiveSessionId(res.data.id)
+      setMessages([])
+      setShowSidebar(false)
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
+  }
+
+  const handleDeleteSession = async (sessionId, e) => {
+    e?.stopPropagation()
+    if (!confirm(t('aiChat.deleteConfirm'))) return
+    try {
+      await deleteAIChatSession(sessionId)
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId))
+      if (activeSessionId === sessionId) {
+        setActiveSessionId(null)
+        setMessages([])
+        setShowSidebar(true)
+      }
+      toast?.success(t('aiChat.deleted'))
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
+  }
+
+  const handleSend = async (e) => {
+    e.preventDefault()
+    const content = input.trim()
+    if (!content || sending) return
+    if (content.length > 2000) {
+      toast?.error(t('aiChat.errorTooLong'))
+      return
+    }
+
+    setSending(true)
+    setInput('')
+
+    // Optimistic: add user message
+    const tempUserMsg = {
+      id: `temp-${Date.now()}`,
+      role: 'user',
+      content,
+      created_at: new Date().toISOString(),
+    }
+    setMessages((prev) => [...prev, tempUserMsg])
+
+    try {
+      const res = await sendAIChatMessage(activeSessionId, content)
+      const { user_message, ai_message } = res.data
+
+      // Replace temp with real + add AI response
+      setMessages((prev) =>
+        prev
+          .filter((m) => m.id !== tempUserMsg.id)
+          .concat([user_message, ai_message])
+      )
+
+      // Update session title in sidebar if first message
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeSessionId
+            ? { ...s, title: user_message.content.slice(0, 50), message_count: (s.message_count || 0) + 2, last_message_preview: ai_message.content.slice(0, 80) }
+            : s
+        )
+      )
+    } catch {
+      // Remove temp message on failure
+      setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id))
+      setInput(content)
+      toast?.error(t('aiChat.sendFailed'))
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleBack = () => {
+    setShowSidebar(true)
+  }
+
+  if (loading) return <LoadingSpinner />
+
+  // Mobile: show sidebar or chat
+  // Desktop: show both
+  return (
+    <div className="flex flex-1 min-h-0 gap-4">
+      {/* Sidebar - Session list */}
+      <div
+        className={`${
+          showSidebar ? 'flex' : 'hidden'
+        } md:flex flex-col w-full md:w-[280px] shrink-0`}
+      >
+        <div className="glass p-4 flex-1 flex flex-col min-h-0">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-lg">{t('aiChat.title')}</h2>
+            <button
+              onClick={handleNewChat}
+              className="btn-primary text-sm px-3 py-1.5"
+            >
+              + {t('aiChat.newChat')}
+            </button>
+          </div>
+
+          {sessions.length === 0 ? (
+            <EmptyState
+              title={t('aiChat.noSessions')}
+              description={t('aiChat.noSessionsDesc')}
+              actionText={t('aiChat.startChat')}
+              onAction={handleNewChat}
+            />
+          ) : (
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {sessions.map((session) => (
+                <div
+                  key={session.id}
+                  onClick={() => handleSelectSession(session.id)}
+                  className={`p-3 rounded-xl cursor-pointer transition-all group ${
+                    activeSessionId === session.id
+                      ? 'bg-purple-500/20 border border-purple-500/30'
+                      : 'hover:bg-[var(--card-bg)] border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{session.title}</p>
+                      {session.last_message_preview && (
+                        <p className="text-xs opacity-50 truncate mt-0.5">
+                          {session.last_message_preview}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => handleDeleteSession(session.id, e)}
+                      className="opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity text-red-500 text-xs shrink-0 cursor-pointer"
+                      title={t('aiChat.deleteSession')}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Chat area */}
+      <div
+        className={`${
+          !showSidebar ? 'flex' : 'hidden'
+        } md:flex flex-col flex-1 min-h-0`}
+      >
+        {activeSessionId ? (
+          <>
+            {/* Chat header */}
+            <div className="glass p-3 mb-3 flex items-center gap-3">
+              <button
+                onClick={handleBack}
+                className="md:hidden opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                &larr;
+              </button>
+              <span className="text-xl">🤖</span>
+              <h3 className="font-semibold">{t('aiChat.title')}</h3>
+              <span className="ml-auto text-xs opacity-40 hidden sm:inline">
+                {t('aiChat.disclaimer')}
+              </span>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto space-y-3 px-1 pb-3">
+              {messages.length === 0 ? (
+                <div className="text-center opacity-40 mt-12">
+                  <span className="text-4xl block mb-3">🤖</span>
+                  {t('aiChat.empty')}
+                </div>
+              ) : (
+                messages.map((msg) => {
+                  const isUser = msg.role === 'user'
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {!isUser && (
+                        <span className="text-lg mr-2 mt-1 shrink-0">🤖</span>
+                      )}
+                      <div
+                        className={`max-w-[75%] p-3 rounded-2xl ${
+                          isUser
+                            ? 'bg-purple-500/30 rounded-br-md'
+                            : 'glass-card rounded-bl-md'
+                        }`}
+                      >
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                          {msg.content}
+                        </p>
+                        <p className="text-xs opacity-40 mt-1 text-right">
+                          {new Date(msg.created_at).toLocaleTimeString(
+                            LOCALE_MAP[lang] || lang,
+                            {
+                              timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            }
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+              {sending && (
+                <div className="flex justify-start">
+                  <span className="text-lg mr-2 mt-1">🤖</span>
+                  <div className="glass-card p-3 rounded-2xl rounded-bl-md">
+                    <div className="flex items-center gap-1.5 text-sm opacity-60">
+                      <span className="inline-block w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="inline-block w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="inline-block w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="ml-1">{t('aiChat.typing')}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={bottomRef} />
+            </div>
+
+            {/* Input */}
+            <form onSubmit={handleSend} className="glass p-3 flex gap-3">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={t('aiChat.placeholder')}
+                className="glass-input flex-1"
+                maxLength={2000}
+                autoFocus
+              />
+              <button
+                type="submit"
+                disabled={sending || !input.trim()}
+                className="btn-primary whitespace-nowrap"
+              >
+                {sending ? t('aiChat.sending') : t('aiChat.send')}
+              </button>
+            </form>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <EmptyState
+              title={t('aiChat.noSessions')}
+              description={t('aiChat.noSessionsDesc')}
+              actionText={t('aiChat.startChat')}
+              onAction={handleNewChat}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

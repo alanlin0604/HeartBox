@@ -31,3 +31,7 @@ class BookingThrottle(UserRateThrottle):
 
 class MessageThrottle(UserRateThrottle):
     scope = 'message_send'
+
+
+class AIChatThrottle(UserRateThrottle):
+    scope = 'ai_chat'

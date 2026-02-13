@@ -24,10 +24,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import (
+    AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorProfile, Feedback, Message, MoodNote,
     NoteAttachment, Notification, SharedNote, TimeSlot,
 )
 from .serializers import (
+    AIChatMessageSerializer,
+    AIChatSessionSerializer,
     AdminCounselorSerializer,
     AdminUserSerializer,
     BookingSerializer,
@@ -53,7 +56,7 @@ from .services.alerts import check_mood_alerts
 from .services.pdf_export import generate_notes_pdf
 from .services.search import search_notes
 from .throttles import (
-    BookingThrottle, ExportThrottle, LoginRateThrottle, MessageThrottle,
+    AIChatThrottle, BookingThrottle, ExportThrottle, LoginRateThrottle, MessageThrottle,
     NoteCreateThrottle, PasswordResetRateThrottle, RegisterRateThrottle, UploadThrottle,
 )
 
@@ -987,3 +990,97 @@ class AdminFeedbackListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Feedback.objects.select_related('user').all()
+
+
+# ===== AI Chat Views =====
+
+class AIChatSessionListCreateView(APIView):
+    """List all active sessions or create a new one."""
+
+    def get(self, request):
+        sessions = AIChatSession.objects.filter(user=request.user, is_active=True)
+        return Response(AIChatSessionSerializer(sessions, many=True).data)
+
+    def post(self, request):
+        session = AIChatSession.objects.create(user=request.user)
+        return Response(AIChatSessionSerializer(session).data, status=status.HTTP_201_CREATED)
+
+
+class AIChatSessionDetailView(APIView):
+    """Get session detail with messages, or soft-delete session."""
+
+    def get(self, request, session_id):
+        try:
+            session = AIChatSession.objects.get(id=session_id, user=request.user, is_active=True)
+        except AIChatSession.DoesNotExist:
+            return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        messages = session.messages.all()
+        return Response({
+            **AIChatSessionSerializer(session).data,
+            'messages': AIChatMessageSerializer(messages, many=True).data,
+        })
+
+    def delete(self, request, session_id):
+        try:
+            session = AIChatSession.objects.get(id=session_id, user=request.user, is_active=True)
+        except AIChatSession.DoesNotExist:
+            return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        session.is_active = False
+        session.save(update_fields=['is_active'])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AIChatSendMessageView(APIView):
+    """Send a message in an AI chat session."""
+    throttle_classes = [AIChatThrottle]
+
+    def post(self, request, session_id):
+        try:
+            session = AIChatSession.objects.get(id=session_id, user=request.user, is_active=True)
+        except AIChatSession.DoesNotExist:
+            return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        content = (request.data.get('content') or '').strip()
+        if not content:
+            return Response({'error': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(content) > 2000:
+            return Response({'error': 'Message cannot exceed 2000 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Analyze sentiment locally
+        from .services.ai_chat import analyze_user_message, generate_ai_response, _get_lang
+        sentiment = analyze_user_message(content)
+
+        # Save user message
+        user_msg = AIChatMessage.objects.create(
+            session=session,
+            role='user',
+            content=content,
+            sentiment_score=sentiment['sentiment_score'],
+            stress_index=sentiment['stress_index'],
+        )
+
+        # Auto-set session title from first message
+        if session.messages.count() == 1:
+            session.title = content[:50]
+            session.save(update_fields=['title', 'updated_at'])
+        else:
+            session.save(update_fields=['updated_at'])
+
+        # Generate AI response
+        lang = _get_lang(request.headers.get('Accept-Language', ''))
+        all_messages = list(session.messages.all())
+        ai_content = generate_ai_response(all_messages, lang)
+
+        # Save assistant message
+        ai_msg = AIChatMessage.objects.create(
+            session=session,
+            role='assistant',
+            content=ai_content,
+        )
+
+        return Response({
+            'user_message': AIChatMessageSerializer(user_msg).data,
+            'ai_message': AIChatMessageSerializer(ai_msg).data,
+        }, status=status.HTTP_201_CREATED)

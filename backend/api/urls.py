@@ -1,6 +1,9 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from .views import (
+    AIChatSendMessageView,
+    AIChatSessionDetailView,
+    AIChatSessionListCreateView,
     AdminCounselorActionView,
     AdminCounselorListView,
     AdminFeedbackListView,
@@ -94,6 +97,10 @@ urlpatterns = [
     # Feedback
     path('feedback/', FeedbackCreateView.as_view(), name='feedback-create'),
     path('admin/feedback/', AdminFeedbackListView.as_view(), name='admin-feedback'),
+    # AI Chat
+    path('ai-chat/sessions/', AIChatSessionListCreateView.as_view(), name='ai-chat-sessions'),
+    path('ai-chat/sessions/<int:session_id>/', AIChatSessionDetailView.as_view(), name='ai-chat-session-detail'),
+    path('ai-chat/sessions/<int:session_id>/messages/', AIChatSendMessageView.as_view(), name='ai-chat-send-message'),
     # Notes CRUD
     path('', include(router.urls)),
 ]

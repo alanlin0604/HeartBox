@@ -19,6 +19,7 @@ const NoteDetailPage = lazy(() => import('./pages/NoteDetailPage'))
 const ComingSoonPage = lazy(() => import('./pages/ComingSoonPage'))
 const CounselorListPage = lazy(() => import('./pages/CounselorListPage'))
 const ChatPage = lazy(() => import('./pages/ChatPage'))
+const AIChatPage = lazy(() => import('./pages/AIChatPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="dashboard" element={<Suspense fallback={<LoadingSpinner />}><DashboardPage /></Suspense>} />
           <Route path="notes/:id" element={<Suspense fallback={<LoadingSpinner />}><NoteDetailPage /></Suspense>} />
           <Route path="counselors" element={<Suspense fallback={<LoadingSpinner />}><CounselorListPage /></Suspense>} />
+          <Route path="ai-chat" element={<Suspense fallback={<LoadingSpinner />}><AIChatPage /></Suspense>} />
           <Route path="chat/:id" element={<Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense>} />
           <Route path="settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
           <Route

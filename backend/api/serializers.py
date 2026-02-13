@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import (
+    AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorProfile, Feedback, Message, MoodNote,
     NoteAttachment, Notification, SharedNote, TimeSlot,
 )
@@ -253,3 +254,31 @@ class SharedNoteSerializer(serializers.ModelSerializer):
         if obj.is_anonymous:
             return None
         return obj.note.user.username
+
+
+# ===== AI Chat =====
+
+class AIChatMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AIChatMessage
+        fields = ('id', 'role', 'content', 'sentiment_score', 'stress_index', 'created_at')
+        read_only_fields = fields
+
+
+class AIChatSessionSerializer(serializers.ModelSerializer):
+    message_count = serializers.SerializerMethodField()
+    last_message_preview = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AIChatSession
+        fields = ('id', 'title', 'is_active', 'message_count', 'last_message_preview', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'created_at', 'updated_at')
+
+    def get_message_count(self, obj):
+        return obj.messages.count()
+
+    def get_last_message_preview(self, obj):
+        last_msg = obj.messages.order_by('-created_at').first()
+        if last_msg:
+            return last_msg.content[:80]
+        return None

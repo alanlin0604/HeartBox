@@ -175,6 +175,7 @@ REST_FRAMEWORK = {
         'export': '5/hour',
         'booking': '20/hour',
         'message_send': '60/hour',
+        'ai_chat': '30/hour',
     },
 }
 

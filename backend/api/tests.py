@@ -9,6 +9,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .models import (
+    AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorProfile, CustomUser, Message,
     MoodNote, NoteAttachment, Notification, SharedNote,
 )
@@ -766,3 +767,109 @@ class NotificationTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         n.refresh_from_db()
         self.assertTrue(n.is_read)
+
+
+class AIChatTests(APITestCase):
+    """Test AI chat session and messaging endpoints."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='chatuser', email='chat@test.com', password='ChatPass123!',
+        )
+        self.other_user = CustomUser.objects.create_user(
+            username='otheruser', email='other@test.com', password='OtherPass123!',
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_create_session(self):
+        resp = self.client.post('/api/ai-chat/sessions/', format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['title'], 'New Chat')
+        self.assertTrue(resp.data['is_active'])
+
+    def test_list_sessions(self):
+        AIChatSession.objects.create(user=self.user, title='Test Chat')
+        resp = self.client.get('/api/ai-chat/sessions/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data), 1)
+
+    def test_list_sessions_excludes_inactive(self):
+        AIChatSession.objects.create(user=self.user, title='Active')
+        AIChatSession.objects.create(user=self.user, title='Deleted', is_active=False)
+        resp = self.client.get('/api/ai-chat/sessions/')
+        self.assertEqual(len(resp.data), 1)
+        self.assertEqual(resp.data[0]['title'], 'Active')
+
+    def test_get_session_detail(self):
+        session = AIChatSession.objects.create(user=self.user, title='Detail Test')
+        AIChatMessage.objects.create(session=session, role='user', content='Hello')
+        resp = self.client.get(f'/api/ai-chat/sessions/{session.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['messages']), 1)
+
+    def test_delete_session_soft(self):
+        session = AIChatSession.objects.create(user=self.user)
+        resp = self.client.delete(f'/api/ai-chat/sessions/{session.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        session.refresh_from_db()
+        self.assertFalse(session.is_active)
+
+    @override_settings(OPENAI_API_KEY='')
+    def test_send_message_returns_both(self):
+        session = AIChatSession.objects.create(user=self.user)
+        resp = self.client.post(
+            f'/api/ai-chat/sessions/{session.id}/messages/',
+            {'content': '今天心情不太好'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertIn('user_message', resp.data)
+        self.assertIn('ai_message', resp.data)
+        self.assertEqual(resp.data['user_message']['role'], 'user')
+        self.assertEqual(resp.data['ai_message']['role'], 'assistant')
+
+    def test_send_empty_message_rejected(self):
+        session = AIChatSession.objects.create(user=self.user)
+        resp = self.client.post(
+            f'/api/ai-chat/sessions/{session.id}/messages/',
+            {'content': ''},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_send_too_long_message_rejected(self):
+        session = AIChatSession.objects.create(user=self.user)
+        resp = self.client.post(
+            f'/api/ai-chat/sessions/{session.id}/messages/',
+            {'content': 'x' * 2001},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(OPENAI_API_KEY='')
+    def test_first_message_sets_title(self):
+        session = AIChatSession.objects.create(user=self.user)
+        self.client.post(
+            f'/api/ai-chat/sessions/{session.id}/messages/',
+            {'content': '我今天在公司遇到了一些煩心事'},
+            format='json',
+        )
+        session.refresh_from_db()
+        self.assertEqual(session.title, '我今天在公司遇到了一些煩心事')
+
+    def test_other_user_cannot_access_session(self):
+        session = AIChatSession.objects.create(user=self.user)
+        self.client.force_authenticate(user=self.other_user)
+        resp = self.client.get(f'/api/ai-chat/sessions/{session.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    @override_settings(OPENAI_API_KEY='')
+    def test_user_message_has_sentiment(self):
+        session = AIChatSession.objects.create(user=self.user)
+        resp = self.client.post(
+            f'/api/ai-chat/sessions/{session.id}/messages/',
+            {'content': '今天很開心，做了很多有趣的事'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertIsNotNone(resp.data['user_message']['sentiment_score'])

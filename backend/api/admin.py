@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils import timezone
 
-from .models import Conversation, CounselorProfile, CustomUser, Message, MoodNote
+from .models import AIChatMessage, AIChatSession, Conversation, CounselorProfile, CustomUser, Message, MoodNote
 
 
 @admin.register(CustomUser)
@@ -55,4 +55,20 @@ class MessageAdmin(admin.ModelAdmin):
     list_display = ('id', 'conversation', 'sender', 'is_read', 'created_at')
     list_filter = ('is_read',)
     search_fields = ('sender__username', 'content')
+    list_per_page = 50
+
+
+@admin.register(AIChatSession)
+class AIChatSessionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'title', 'is_active', 'created_at', 'updated_at')
+    list_filter = ('is_active',)
+    search_fields = ('user__username', 'title')
+    list_per_page = 50
+
+
+@admin.register(AIChatMessage)
+class AIChatMessageAdmin(admin.ModelAdmin):
+    list_display = ('id', 'session', 'role', 'sentiment_score', 'created_at')
+    list_filter = ('role',)
+    search_fields = ('content',)
     list_per_page = 50
