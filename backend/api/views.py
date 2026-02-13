@@ -24,7 +24,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import (
-    Booking, Conversation, CounselorProfile, Message, MoodNote,
+    Booking, Conversation, CounselorProfile, Feedback, Message, MoodNote,
     NoteAttachment, Notification, SharedNote, TimeSlot,
 )
 from .serializers import (
@@ -34,6 +34,7 @@ from .serializers import (
     ConversationSerializer,
     CounselorListSerializer,
     CounselorProfileSerializer,
+    FeedbackSerializer,
     MessageSerializer,
     MoodNoteListSerializer,
     MoodNoteSerializer,
@@ -969,3 +970,20 @@ class ExportCSVView(APIView):
         response = HttpResponse(buf.getvalue(), content_type='text/csv; charset=utf-8-sig')
         response['Content-Disposition'] = f'attachment; filename="heartbox_export_{user.username}.csv"'
         return response
+
+
+# ===== Feedback =====
+
+class FeedbackCreateView(generics.CreateAPIView):
+    serializer_class = FeedbackSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class AdminFeedbackListView(generics.ListAPIView):
+    serializer_class = FeedbackSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    def get_queryset(self):
+        return Feedback.objects.select_related('user').all()

@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import (
-    Booking, Conversation, CounselorProfile, Message, MoodNote,
+    Booking, Conversation, CounselorProfile, Feedback, Message, MoodNote,
     NoteAttachment, Notification, SharedNote, TimeSlot,
 )
 
@@ -221,6 +221,17 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = ('id', 'user', 'user_name', 'counselor', 'counselor_name',
                   'date', 'start_time', 'end_time', 'status', 'created_at')
         read_only_fields = ('id', 'user', 'counselor', 'status', 'created_at')
+
+
+# ===== Feedback =====
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = Feedback
+        fields = ('id', 'username', 'rating', 'content', 'created_at')
+        read_only_fields = ('id', 'username', 'created_at')
 
 
 # ===== Shared Notes =====

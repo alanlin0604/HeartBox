@@ -282,6 +282,28 @@ class Booking(models.Model):
         return f'{self.user.username} → {self.counselor.username} {self.date} {self.start_time}'
 
 
+class Feedback(models.Model):
+    RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='feedbacks',
+    )
+    rating = models.IntegerField(
+        choices=RATING_CHOICES,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+    content = models.TextField(help_text='User feedback text')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user.username} — {self.rating}★ ({self.created_at:%Y-%m-%d})'
+
+
 class SharedNote(models.Model):
     note = models.ForeignKey(
         MoodNote,

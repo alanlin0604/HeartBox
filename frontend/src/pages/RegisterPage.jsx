@@ -33,9 +33,27 @@ export default function RegisterPage() {
     } catch (err) {
       const data = err.response?.data
       if (data) {
-        const messages = Object.values(data).flat().join(', ')
-        setError(messages || t('register.failed'))
-        toast?.error(messages || t('register.failed'))
+        // Map Django field errors to i18n keys
+        const errorMap = {
+          username: { 'already exists': 'register.usernameTaken' },
+          password: {
+            'too short': 'register.passwordTooShort',
+            'too common': 'register.passwordTooCommon',
+            'entirely numeric': 'register.passwordAllNumeric',
+          },
+          email: { 'valid email': 'register.emailInvalid' },
+        }
+        const translated = []
+        for (const [field, msgs] of Object.entries(data)) {
+          for (const msg of [msgs].flat()) {
+            const fieldMap = errorMap[field] || {}
+            const key = Object.entries(fieldMap).find(([k]) => msg.toLowerCase().includes(k))?.[1]
+            translated.push(key ? t(key) : msg)
+          }
+        }
+        const message = translated.join(', ') || t('register.failed')
+        setError(message)
+        toast?.error(message)
       } else {
         setError(t('common.serverUnreachable'))
         toast?.error(t('common.serverUnreachable'))

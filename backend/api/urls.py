@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     AdminCounselorActionView,
     AdminCounselorListView,
+    AdminFeedbackListView,
     AdminStatsView,
     AdminUserDetailView,
     AdminUserListView,
@@ -22,6 +23,7 @@ from .views import (
     ExportCSVView,
     ExportDataView,
     ExportPDFView,
+    FeedbackCreateView,
     MessageListView,
     MoodNoteViewSet,
     NoteAttachmentUploadView,
@@ -89,6 +91,9 @@ urlpatterns = [
     # Sharing
     path('notes/<int:note_id>/share/', ShareNoteView.as_view(), name='share-note'),
     path('shared-notes/', SharedNotesReceivedView.as_view(), name='shared-notes'),
+    # Feedback
+    path('feedback/', FeedbackCreateView.as_view(), name='feedback-create'),
+    path('admin/feedback/', AdminFeedbackListView.as_view(), name='admin-feedback'),
     # Notes CRUD
     path('', include(router.urls)),
 ]

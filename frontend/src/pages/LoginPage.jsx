@@ -33,7 +33,7 @@ export default function LoginPage() {
       await login(username, password, rememberMe)
       toast?.success(t('login.success'))
     } catch (err) {
-      const message = err.response?.data?.detail || (!err.response ? t('common.serverUnreachable') : t('login.failed'))
+      const message = !err.response ? t('common.serverUnreachable') : t('login.failed')
       setError(message)
       toast?.error(message)
     } finally {

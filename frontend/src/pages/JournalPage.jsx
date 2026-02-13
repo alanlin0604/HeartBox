@@ -12,6 +12,7 @@ import AlertBanner from '../components/AlertBanner'
 import EmptyState from '../components/EmptyState'
 import ConfirmModal from '../components/ConfirmModal'
 import { useToast } from '../context/ToastContext'
+import FeedbackWidget from '../components/FeedbackWidget'
 
 export default function JournalPage() {
   const { t } = useLang()
@@ -186,6 +187,7 @@ export default function JournalPage() {
           {/* Mobile: streak + stats inline */}
           <div className="lg:hidden space-y-3">
             {sidebarContent}
+            <FeedbackWidget />
           </div>
 
           {/* Divider */}
@@ -300,6 +302,7 @@ export default function JournalPage() {
         {/* Right column: sidebar (desktop only) */}
         <aside className="hidden lg:block lg:sticky lg:top-24 lg:self-start space-y-4">
           {sidebarContent}
+          <FeedbackWidget />
         </aside>
       </div>
 
