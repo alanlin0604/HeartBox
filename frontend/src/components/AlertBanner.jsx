@@ -5,7 +5,7 @@ import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 
 const SEVERITY_STYLES = {
-  high: 'bg-red-500/25 border-red-500/50 text-red-500',
+  high: 'bg-red-500/25 border-red-500/50 text-[var(--text-primary)]',
   medium: 'bg-amber-500/25 border-amber-500/50 text-amber-500',
 }
 

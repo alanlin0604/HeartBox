@@ -122,8 +122,11 @@ export default function ExportPDFButton() {
 
       {/* Mobile: fixed centered modal */}
       {expanded && (
-        <div className="sm:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm">
+        <div
+          className="sm:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+          onClick={() => setExpanded(false)}
+        >
+          <div className="w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
             {panelContent}
           </div>
         </div>
