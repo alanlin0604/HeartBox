@@ -3,7 +3,15 @@ import { useLang } from '../context/LanguageContext'
 import { getAvailableSlots, createBooking } from '../api/schedule'
 import { useToast } from '../context/ToastContext'
 
-export default function BookingPanel({ counselorId, counselorName, onClose }) {
+function formatPrice(amount, currency = 'TWD') {
+  const num = Number(amount)
+  if (isNaN(num)) return ''
+  const symbols = { TWD: 'NT$', USD: '$', JPY: '\u00A5' }
+  const prefix = symbols[currency] || currency + ' '
+  return `${prefix} ${num.toLocaleString()}`
+}
+
+export default function BookingPanel({ counselorId, counselorName, hourlyRate, currency, onClose }) {
   const { t } = useLang()
   const toast = useToast()
   const [date, setDate] = useState('')
@@ -79,6 +87,14 @@ export default function BookingPanel({ counselorId, counselorName, onClose }) {
           </div>
         ) : (
           <>
+            {hourlyRate && (
+              <div className="glass-card p-3 text-center">
+                <p className="text-sm opacity-60">{t('pricing.sessionFee')}</p>
+                <p className="text-lg font-bold text-purple-500">
+                  {formatPrice(hourlyRate, currency)} / {t('pricing.perHour')}
+                </p>
+              </div>
+            )}
             <div>
               <label className="text-sm opacity-60 block mb-1">{t('booking.selectDate')}</label>
               <input

@@ -103,6 +103,8 @@ class CounselorProfile(models.Model):
     license_number = models.CharField(max_length=50, help_text='諮商師執照號碼')
     specialty = models.CharField(max_length=200, help_text='專長領域')
     introduction = models.TextField(help_text='自我介紹')
+    hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3, default='TWD')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -270,6 +272,8 @@ class Booking(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    payment_note = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -369,3 +373,20 @@ class AIChatMessage(models.Model):
 
     def __str__(self):
         return f'{self.role}: {self.content[:50]}'
+
+
+class UserAchievement(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='achievements',
+    )
+    achievement_id = models.CharField(max_length=50)
+    unlocked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['user', 'achievement_id']
+        ordering = ['-unlocked_at']
+
+    def __str__(self):
+        return f'{self.user.username} — {self.achievement_id}'

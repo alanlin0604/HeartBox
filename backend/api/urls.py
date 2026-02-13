@@ -1,6 +1,8 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from .views import (
+    AchievementCheckView,
+    AchievementsView,
     AIChatSendMessageView,
     AIChatSessionDetailView,
     AIChatSessionListCreateView,
@@ -62,6 +64,9 @@ urlpatterns = [
     # Analytics
     path('analytics/', AnalyticsView.as_view(), name='analytics'),
     path('analytics/calendar/', CalendarView.as_view(), name='analytics-calendar'),
+    # Achievements
+    path('achievements/', AchievementsView.as_view(), name='achievements'),
+    path('achievements/check/', AchievementCheckView.as_view(), name='achievements-check'),
     # Alerts
     path('alerts/', AlertsView.as_view(), name='alerts'),
     # PDF Export (must be before router.urls so it matches before notes/<pk>/)

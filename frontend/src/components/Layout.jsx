@@ -48,6 +48,7 @@ export default function Layout() {
     { to: '/', label: t('nav.journal'), end: true },
     { to: '/dashboard', label: t('nav.dashboard') },
     { to: '/ai-chat', label: t('nav.aiChat') },
+    { to: '/achievements', label: t('nav.achievements') },
     { to: '/counselors', label: t('nav.counselors') },
   ]
 

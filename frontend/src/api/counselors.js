@@ -26,7 +26,7 @@ export const getMyCounselorProfile = () => {
 
 export const updateMyCounselorProfile = (data) => {
   invalidate('myProfile')
-  return api.put('/counselors/me/', data)
+  return api.patch('/counselors/me/', data)
 }
 
 export const getConversations = () => {

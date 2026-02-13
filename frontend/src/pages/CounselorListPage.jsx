@@ -4,6 +4,7 @@ import {
   getCounselors,
   applyCounselor,
   getMyCounselorProfile,
+  updateMyCounselorProfile,
   createConversation,
   getConversations,
 } from '../api/counselors'
@@ -16,6 +17,14 @@ import ScheduleManager from '../components/ScheduleManager'
 import EmptyState from '../components/EmptyState'
 import { useToast } from '../context/ToastContext'
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
+
+function formatPrice(amount, currency = 'TWD') {
+  const num = Number(amount)
+  if (isNaN(num)) return ''
+  const symbols = { TWD: 'NT$', USD: '$', JPY: '\u00A5' }
+  const prefix = symbols[currency] || currency + ' '
+  return `${prefix} ${num.toLocaleString()}`
+}
 
 export default function CounselorListPage() {
   const navigate = useNavigate()
@@ -45,6 +54,11 @@ export default function CounselorListPage() {
   const [applyLoading, setApplyLoading] = useState(false)
   const [applyError, setApplyError] = useState('')
   const [applySuccess, setApplySuccess] = useState(false)
+
+  // Pricing form state
+  const [pricingRate, setPricingRate] = useState('')
+  const [pricingCurrency, setPricingCurrency] = useState('TWD')
+  const [pricingSaving, setPricingSaving] = useState(false)
 
   useEffect(() => { document.title = `${t('nav.counselors')} — HeartBox` }, [t])
 
@@ -76,6 +90,8 @@ export default function CounselorListPage() {
       try {
         const profileRes = await getMyCounselorProfile()
         setMyProfile(profileRes.data)
+        setPricingRate(profileRes.data.hourly_rate || '')
+        setPricingCurrency(profileRes.data.currency || 'TWD')
         // If counselor, load shared notes
         const sharedRes = await getSharedNotes()
         setSharedNotes(sharedRes.data.results || sharedRes.data)
@@ -132,6 +148,23 @@ export default function CounselorListPage() {
       toast?.success(t('booking.actionSuccess'))
     } catch (err) {
       toast?.error(err.response?.data?.error || t('booking.actionFailed'))
+    }
+  }
+
+  const handleSavePricing = async (e) => {
+    e.preventDefault()
+    setPricingSaving(true)
+    try {
+      const res = await updateMyCounselorProfile({
+        hourly_rate: pricingRate || null,
+        currency: pricingCurrency,
+      })
+      setMyProfile(res.data)
+      toast?.success(t('settings.saveSuccess'))
+    } catch {
+      toast?.error(t('settings.saveFailed'))
+    } finally {
+      setPricingSaving(false)
     }
   }
 
@@ -198,6 +231,16 @@ export default function CounselorListPage() {
         )}
         {isCounselor && (
           <button
+            onClick={() => setTab('pricing')}
+            className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
+              tab === 'pricing' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+            }`}
+          >
+            {t('pricing.tab')}
+          </button>
+        )}
+        {isCounselor && (
+          <button
             onClick={() => setTab('shared')}
             className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
               tab === 'shared' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
@@ -257,6 +300,15 @@ export default function CounselorListPage() {
                     </div>
                   </div>
                   <p className="text-sm leading-relaxed opacity-80">{c.introduction}</p>
+                  <div className="text-sm font-medium">
+                    {c.hourly_rate ? (
+                      <span className="text-purple-500">
+                        {formatPrice(c.hourly_rate, c.currency)} / {t('pricing.perHour')}
+                      </span>
+                    ) : (
+                      <span className="opacity-50">{t('pricing.notSet')}</span>
+                    )}
+                  </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleStartChat(c.id)}
@@ -265,7 +317,7 @@ export default function CounselorListPage() {
                       {t('counselor.startChat')}
                     </button>
                     <button
-                      onClick={() => setBookingTarget({ id: c.id, username: c.username })}
+                      onClick={() => setBookingTarget({ id: c.id, username: c.username, hourly_rate: c.hourly_rate, currency: c.currency })}
                       className="btn-secondary text-sm"
                     >
                       {t('booking.book')}
@@ -434,6 +486,42 @@ export default function CounselorListPage() {
         </div>
       )}
 
+      {/* Pricing Tab (counselors only) */}
+      {tab === 'pricing' && isCounselor && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">{t('pricing.title')}</h2>
+          <form onSubmit={handleSavePricing} className="glass p-6 space-y-4 max-w-md">
+            <div>
+              <label className="text-sm opacity-60 block mb-1">{t('pricing.hourlyRate')}</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={pricingRate}
+                onChange={(e) => setPricingRate(e.target.value)}
+                placeholder="1500"
+                className="glass-input"
+              />
+            </div>
+            <div>
+              <label className="text-sm opacity-60 block mb-1">{t('pricing.currency')}</label>
+              <select
+                value={pricingCurrency}
+                onChange={(e) => setPricingCurrency(e.target.value)}
+                className="glass-input"
+              >
+                <option value="TWD">TWD (NT$)</option>
+                <option value="USD">USD ($)</option>
+                <option value="JPY">JPY (\u00A5)</option>
+              </select>
+            </div>
+            <button type="submit" disabled={pricingSaving} className="btn-primary">
+              {pricingSaving ? t('settings.saving') : t('settings.save')}
+            </button>
+          </form>
+        </div>
+      )}
+
       {/* Apply Tab */}
       {tab === 'apply' && (
         <div className="space-y-4">
@@ -526,6 +614,8 @@ export default function CounselorListPage() {
         <BookingPanel
           counselorId={bookingTarget.id}
           counselorName={bookingTarget.username}
+          hourlyRate={bookingTarget.hourly_rate}
+          currency={bookingTarget.currency}
           onClose={() => { setBookingTarget(null); loadData() }}
         />
       )}

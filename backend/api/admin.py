@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils import timezone
 
-from .models import AIChatMessage, AIChatSession, Conversation, CounselorProfile, CustomUser, Message, MoodNote
+from .models import AIChatMessage, AIChatSession, Conversation, CounselorProfile, CustomUser, Message, MoodNote, UserAchievement
 
 
 @admin.register(CustomUser)
@@ -71,4 +71,12 @@ class AIChatMessageAdmin(admin.ModelAdmin):
     list_display = ('id', 'session', 'role', 'sentiment_score', 'created_at')
     list_filter = ('role',)
     search_fields = ('content',)
+    list_per_page = 50
+
+
+@admin.register(UserAchievement)
+class UserAchievementAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'achievement_id', 'unlocked_at')
+    list_filter = ('achievement_id',)
+    search_fields = ('user__username', 'achievement_id')
     list_per_page = 50

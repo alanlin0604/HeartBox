@@ -4,7 +4,7 @@ from rest_framework import serializers
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorProfile, Feedback, Message, MoodNote,
-    NoteAttachment, Notification, SharedNote, TimeSlot,
+    NoteAttachment, Notification, SharedNote, TimeSlot, UserAchievement,
 )
 
 User = get_user_model()
@@ -89,7 +89,8 @@ class CounselorProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CounselorProfile
-        fields = ('id', 'username', 'license_number', 'specialty', 'introduction', 'status', 'created_at')
+        fields = ('id', 'username', 'license_number', 'specialty', 'introduction',
+                  'hourly_rate', 'currency', 'status', 'created_at')
         read_only_fields = ('id', 'status', 'created_at')
 
 
@@ -100,7 +101,7 @@ class CounselorListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CounselorProfile
-        fields = ('id', 'username', 'avatar', 'specialty', 'introduction')
+        fields = ('id', 'username', 'avatar', 'specialty', 'introduction', 'hourly_rate', 'currency')
 
 
 # ===== Messaging =====
@@ -220,8 +221,9 @@ class BookingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = ('id', 'user', 'user_name', 'counselor', 'counselor_name',
-                  'date', 'start_time', 'end_time', 'status', 'created_at')
-        read_only_fields = ('id', 'user', 'counselor', 'status', 'created_at')
+                  'date', 'start_time', 'end_time', 'status',
+                  'price', 'payment_note', 'created_at')
+        read_only_fields = ('id', 'user', 'counselor', 'status', 'price', 'payment_note', 'created_at')
 
 
 # ===== Feedback =====
@@ -282,3 +284,10 @@ class AIChatSessionSerializer(serializers.ModelSerializer):
         if last_msg:
             return last_msg.content[:80]
         return None
+
+
+class UserAchievementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAchievement
+        fields = ('achievement_id', 'unlocked_at')
+        read_only_fields = fields

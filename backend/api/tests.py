@@ -11,7 +11,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorProfile, CustomUser, Message,
-    MoodNote, NoteAttachment, Notification, SharedNote,
+    MoodNote, NoteAttachment, Notification, SharedNote, UserAchievement,
 )
 
 # Disable throttling for all non-throttle tests
@@ -873,3 +873,178 @@ class AIChatTests(APITestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertIsNotNone(resp.data['user_message']['sentiment_score'])
+
+
+class AchievementTests(APITestCase):
+    """Test achievement system."""
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.user = CustomUser.objects.create_user(
+            username='achieveuser', email='achieve@test.com', password='AchievePass123!',
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_first_note_unlocks_achievement(self):
+        """Writing the first note should auto-unlock 'first_note' via perform_create."""
+        resp = self.client.post('/api/notes/', {'content': 'My first note!'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        # Auto-check in perform_create should have unlocked it
+        self.assertTrue(
+            UserAchievement.objects.filter(user=self.user, achievement_id='first_note').exists()
+        )
+
+    def test_get_achievements_returns_progress(self):
+        """GET /achievements/ should return all 19 achievements with progress."""
+        resp = self.client.get('/api/achievements/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resp.data), 19)
+        # Check structure of first item
+        item = resp.data[0]
+        self.assertIn('id', item)
+        self.assertIn('category', item)
+        self.assertIn('threshold', item)
+        self.assertIn('current', item)
+        self.assertIn('unlocked', item)
+
+    def test_no_duplicate_unlock(self):
+        """Checking achievements twice should not create duplicates."""
+        self.client.post('/api/notes/', {'content': 'Note for dup test'}, format='json')
+        # first_note already unlocked by auto-check, manual check should return empty
+        resp = self.client.post('/api/achievements/check/')
+        self.assertNotIn('first_note', resp.data['newly_unlocked'])
+        # Only one DB record
+        self.assertEqual(
+            UserAchievement.objects.filter(user=self.user, achievement_id='first_note').count(),
+            1,
+        )
+
+    def test_auto_check_on_note_create(self):
+        """Creating a note should auto-check achievements (X-New-Achievements header)."""
+        resp = self.client.post('/api/notes/', {'content': 'Auto check test'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        header = resp.get('X-New-Achievements', '')
+        self.assertIn('first_note', header)
+
+    def test_unauthenticated_rejected(self):
+        """Unauthenticated requests should be rejected."""
+        self.client.force_authenticate(user=None)
+        resp = self.client.get('/api/achievements/')
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_pin_master_achievement(self):
+        """Pinning 5 notes should unlock pin_master."""
+        for i in range(5):
+            r = self.client.post('/api/notes/', {'content': f'Pin note {i}'}, format='json')
+            self.client.post(f'/api/notes/{r.data["id"]}/toggle_pin/')
+        resp = self.client.post('/api/achievements/check/')
+        self.assertIn('pin_master', resp.data['newly_unlocked'])
+
+    def test_achievements_progress_after_notes(self):
+        """Progress should reflect note count for notes_10."""
+        for i in range(3):
+            self.client.post('/api/notes/', {'content': f'Progress note {i}'}, format='json')
+        resp = self.client.get('/api/achievements/')
+        notes_10 = next(a for a in resp.data if a['id'] == 'notes_10')
+        self.assertEqual(notes_10['current'], 3)
+        self.assertFalse(notes_10['unlocked'])
+
+    def test_ai_chat_achievement(self):
+        """Creating an AI chat session should allow first_ai_chat unlock."""
+        from api.models import AIChatSession
+        AIChatSession.objects.create(user=self.user)
+        resp = self.client.post('/api/achievements/check/')
+        self.assertIn('first_ai_chat', resp.data['newly_unlocked'])
+
+    def tearDown(self):
+        from django.core.cache import cache
+        cache.clear()
+
+
+class CounselorPricingTests(APITestCase):
+    """Test counselor pricing features."""
+
+    def setUp(self):
+        self.admin = CustomUser.objects.create_user(
+            username='pricingadmin', email='pa@test.com', password='AdminPass123!', is_staff=True,
+        )
+        self.counselor_user = CustomUser.objects.create_user(
+            username='pricecounselor', email='pc@test.com', password='CounselorPass123!',
+        )
+        self.user = CustomUser.objects.create_user(
+            username='priceuser', email='pu@test.com', password='UserPass123!',
+        )
+        self.profile = CounselorProfile.objects.create(
+            user=self.counselor_user, license_number='PR-001',
+            specialty='Pricing', introduction='Test pricing',
+            status='approved', hourly_rate=1500, currency='TWD',
+        )
+
+    def test_set_hourly_rate(self):
+        """Counselor should be able to update their hourly rate."""
+        self.client.force_authenticate(user=self.counselor_user)
+        resp = self.client.patch('/api/counselors/me/', {
+            'hourly_rate': '2000.00',
+            'currency': 'USD',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.hourly_rate, 2000)
+        self.assertEqual(self.profile.currency, 'USD')
+
+    def test_counselor_list_shows_pricing(self):
+        """Counselor listing should include hourly_rate and currency."""
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.get('/api/counselors/')
+        results = resp.data.get('results', resp.data)
+        self.assertGreaterEqual(len(results), 1)
+        c = results[0]
+        self.assertIn('hourly_rate', c)
+        self.assertIn('currency', c)
+        self.assertEqual(c['hourly_rate'], '1500.00')
+
+    def test_booking_auto_fills_price(self):
+        """Creating a booking should auto-fill price from counselor's hourly_rate."""
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.post('/api/bookings/create/', {
+            'counselor_id': self.profile.id,
+            'date': '2026-07-01',
+            'start_time': '10:00',
+            'end_time': '11:00',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['price'], '1500.00')
+
+    def test_price_is_read_only_in_booking(self):
+        """Users should not be able to override price in booking."""
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.post('/api/bookings/create/', {
+            'counselor_id': self.profile.id,
+            'date': '2026-07-02',
+            'start_time': '11:00',
+            'end_time': '12:00',
+        }, format='json')
+        self.assertEqual(resp.data['price'], '1500.00')
+
+    def test_null_rate_results_in_null_price(self):
+        """If counselor has no rate, booking price should be null."""
+        self.profile.hourly_rate = None
+        self.profile.save(update_fields=['hourly_rate'])
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.post('/api/bookings/create/', {
+            'counselor_id': self.profile.id,
+            'date': '2026-07-03',
+            'start_time': '13:00',
+            'end_time': '14:00',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(resp.data['price'])
+
+    def test_profile_shows_pricing(self):
+        """Counselor's own profile should show hourly_rate and currency."""
+        self.client.force_authenticate(user=self.counselor_user)
+        resp = self.client.get('/api/counselors/me/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['hourly_rate'], '1500.00')
+        self.assertEqual(resp.data['currency'], 'TWD')

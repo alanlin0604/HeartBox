@@ -26,7 +26,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorProfile, Feedback, Message, MoodNote,
-    NoteAttachment, Notification, SharedNote, TimeSlot,
+    NoteAttachment, Notification, SharedNote, TimeSlot, UserAchievement,
 )
 from .serializers import (
     AIChatMessageSerializer,
@@ -45,6 +45,7 @@ from .serializers import (
     NotificationSerializer,
     SharedNoteSerializer,
     TimeSlotSerializer,
+    UserAchievementSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
 )
@@ -238,6 +239,21 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
                 f'calendar_{self.request.user.id}_{timezone.now().year}_{timezone.now().month}',
             ]
         ])
+        # Auto-check achievements
+        try:
+            from api.services.achievements import check_achievements
+            new_achievements = check_achievements(self.request.user)
+            if new_achievements:
+                self._new_achievements = new_achievements
+        except Exception as e:
+            logger.warning('Achievement check failed for user %s: %s', self.request.user.pk, e)
+
+    def create(self, request, *args, **kwargs):
+        self._new_achievements = []
+        response = super().create(request, *args, **kwargs)
+        if self._new_achievements:
+            response['X-New-Achievements'] = ','.join(self._new_achievements)
+        return response
 
     @action(detail=True, methods=['post'])
     def toggle_pin(self, request, pk=None):
@@ -388,6 +404,22 @@ class AlertsView(APIView):
         qs = MoodNote.objects.filter(user=request.user)
         alerts = check_mood_alerts(qs)
         return Response({'alerts': alerts})
+
+
+# ===== Achievement Views =====
+
+class AchievementsView(APIView):
+    def get(self, request):
+        from api.services.achievements import get_user_achievements_with_progress
+        data = get_user_achievements_with_progress(request.user)
+        return Response(data)
+
+
+class AchievementCheckView(APIView):
+    def post(self, request):
+        from api.services.achievements import check_achievements
+        newly_unlocked = check_achievements(request.user)
+        return Response({'newly_unlocked': newly_unlocked})
 
 
 # ===== Counselor Views =====
@@ -783,6 +815,7 @@ class BookingCreateView(APIView):
             date=target_date,
             start_time=start_time,
             end_time=end_time,
+            price=profile.hourly_rate,
         )
 
         # Notify counselor
