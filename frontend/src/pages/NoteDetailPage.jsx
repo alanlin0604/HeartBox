@@ -25,7 +25,7 @@ export default function NoteDetailPage() {
   const [editTags, setEditTags] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { document.title = `${t('nav.journal')} — HeartBox` }, [t])
+  useEffect(() => { document.title = `${t('nav.journal')} — ${t('app.name')}` }, [t])
 
   useEffect(() => {
     getNote(id)

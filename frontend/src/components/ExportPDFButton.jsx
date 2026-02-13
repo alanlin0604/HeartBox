@@ -108,7 +108,7 @@ export default function ExportPDFButton() {
       <button
         onClick={() => setExpanded(!expanded)}
         className="btn-primary text-sm px-4"
-        aria-label="Export notes"
+        aria-label={t('aria.exportNotes')}
       >
         {t('export.button')}
       </button>

@@ -1048,3 +1048,54 @@ class CounselorPricingTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data['hourly_rate'], '1500.00')
         self.assertEqual(resp.data['currency'], 'TWD')
+
+
+class AIChatPinRenameTests(APITestCase):
+    """Test AI chat session PATCH for rename and pin."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='pinuser', email='pin@test.com', password='PinPass123!',
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_rename_session(self):
+        session = AIChatSession.objects.create(user=self.user, title='Old Title')
+        resp = self.client.patch(
+            f'/api/ai-chat/sessions/{session.id}/',
+            {'title': 'New Title'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['title'], 'New Title')
+        session.refresh_from_db()
+        self.assertEqual(session.title, 'New Title')
+
+    def test_pin_session(self):
+        session = AIChatSession.objects.create(user=self.user)
+        resp = self.client.patch(
+            f'/api/ai-chat/sessions/{session.id}/',
+            {'is_pinned': True},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(resp.data['is_pinned'])
+        session.refresh_from_db()
+        self.assertTrue(session.is_pinned)
+
+    def test_pinned_order(self):
+        """Pinned sessions should appear before unpinned ones."""
+        s1 = AIChatSession.objects.create(user=self.user, title='Unpinned')
+        s2 = AIChatSession.objects.create(user=self.user, title='Pinned', is_pinned=True)
+        resp = self.client.get('/api/ai-chat/sessions/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data[0]['title'], 'Pinned')
+        self.assertEqual(resp.data[1]['title'], 'Unpinned')
+
+    def test_patch_nonexistent(self):
+        resp = self.client.patch(
+            '/api/ai-chat/sessions/99999/',
+            {'title': 'Ghost'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)

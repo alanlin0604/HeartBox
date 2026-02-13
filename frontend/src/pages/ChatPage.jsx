@@ -61,7 +61,7 @@ export default function ChatPage() {
     wsRef.current = ws
   }, [id])
 
-  useEffect(() => { document.title = `${t('chat.conversation')} — HeartBox` }, [t])
+  useEffect(() => { document.title = `${t('chat.conversation')} — ${t('app.name')}` }, [t])
 
   useEffect(() => {
     loadConversationInfo()

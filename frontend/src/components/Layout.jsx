@@ -63,7 +63,7 @@ export default function Layout() {
 
       <nav className="glass sticky top-0 z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-          HeartBox-心事盒
+          {t('app.displayName')}
         </h1>
 
         {/* Mobile: notification bell + hamburger (always visible) */}
@@ -72,7 +72,7 @@ export default function Layout() {
           <button
             onClick={() => setMobileNavOpen(!mobileNavOpen)}
             className="opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
-            aria-label="Toggle menu"
+            aria-label={t('aria.toggleMenu')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               {mobileNavOpen ? (
@@ -165,7 +165,7 @@ export default function Layout() {
                 <button
                   onClick={() => { toggleTheme(); setMenuOpen(false) }}
                   className="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer flex items-center gap-2"
-                  aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                  aria-label={theme === 'dark' ? t('aria.switchToLight') : t('aria.switchToDark')}
                 >
                   <span className="text-base w-4 text-center">{theme === 'dark' ? '☀️' : '🌙'}</span>
                   {theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark')}

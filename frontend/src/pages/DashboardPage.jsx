@@ -23,7 +23,7 @@ export default function DashboardPage() {
   const [period, setPeriod] = useState('week')
   const [lookback, setLookback] = useState(30)
 
-  useEffect(() => { document.title = `${t('nav.dashboard')} — HeartBox` }, [t])
+  useEffect(() => { document.title = `${t('nav.dashboard')} — ${t('app.name')}` }, [t])
 
   useEffect(() => {
     setLoading(true)

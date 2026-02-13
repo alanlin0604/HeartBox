@@ -13,7 +13,7 @@ export default function AdminPage() {
   const { t } = useLang()
   const [tab, setTab] = useState(0)
 
-  useEffect(() => { document.title = `${t('admin.title')} — HeartBox` }, [t])
+  useEffect(() => { document.title = `${t('admin.title')} — ${t('app.name')}` }, [t])
 
   const TABS = [t('admin.tabOverview'), t('admin.tabUsers'), t('admin.tabCounselors')]
 

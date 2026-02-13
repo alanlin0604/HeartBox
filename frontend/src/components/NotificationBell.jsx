@@ -4,6 +4,13 @@ import { useLang } from '../context/LanguageContext'
 import { getNotifications, markNotificationsRead } from '../api/notifications'
 import { getAccessToken } from '../utils/tokenStorage'
 
+const NOTIF_TYPE_KEYS = {
+  message: 'notification.type.message',
+  booking: 'notification.type.booking',
+  bookingStatus: 'notification.type.bookingStatus',
+  share: 'notification.type.share',
+}
+
 export default memo(function NotificationBell() {
   const { t } = useLang()
   const navigate = useNavigate()
@@ -117,7 +124,7 @@ export default memo(function NotificationBell() {
         onClick={handleOpen}
         className="relative opacity-70 hover:opacity-100 transition-opacity cursor-pointer text-lg"
         title={t('notification.title')}
-        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
+        aria-label={unreadCount > 0 ? t('aria.notificationsUnread', { count: unreadCount }) : t('aria.notifications')}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -164,7 +171,7 @@ export default memo(function NotificationBell() {
                     <span className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{notif.title}</p>
+                    <p className="text-sm font-medium truncate">{NOTIF_TYPE_KEYS[notif.type] ? t(NOTIF_TYPE_KEYS[notif.type]) : notif.title}</p>
                     <p className="text-xs opacity-60 truncate">{notif.message}</p>
                     <p className="text-xs opacity-40 mt-1">
                       {new Date(notif.created_at).toLocaleString()}

@@ -1054,6 +1054,24 @@ class AIChatSessionDetailView(APIView):
             'messages': AIChatMessageSerializer(messages, many=True).data,
         })
 
+    def patch(self, request, session_id):
+        try:
+            session = AIChatSession.objects.get(id=session_id, user=request.user, is_active=True)
+        except AIChatSession.DoesNotExist:
+            return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        update_fields = []
+        if 'title' in request.data:
+            session.title = str(request.data['title'])[:100]
+            update_fields.append('title')
+        if 'is_pinned' in request.data:
+            session.is_pinned = bool(request.data['is_pinned'])
+            update_fields.append('is_pinned')
+
+        if update_fields:
+            session.save(update_fields=update_fields)
+        return Response(AIChatSessionSerializer(session).data)
+
     def delete(self, request, session_id):
         try:
             session = AIChatSession.objects.get(id=session_id, user=request.user, is_active=True)

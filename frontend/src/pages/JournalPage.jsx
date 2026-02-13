@@ -55,7 +55,7 @@ export default function JournalPage() {
     }
   }
 
-  useEffect(() => { document.title = `${t('nav.journal')} — HeartBox` }, [t])
+  useEffect(() => { document.title = `${t('nav.journal')} — ${t('app.name')}` }, [t])
 
   useEffect(() => {
     fetchNotes(1, filters)

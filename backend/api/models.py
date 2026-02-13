@@ -338,13 +338,14 @@ class AIChatSession(models.Model):
     )
     title = models.CharField(max_length=100, default='New Chat')
     is_active = models.BooleanField(default=True)
+    is_pinned = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-updated_at']
+        ordering = ['-is_pinned', '-updated_at']
         indexes = [
-            models.Index(fields=['user', '-updated_at'], name='aichat_user_updated'),
+            models.Index(fields=['user', '-is_pinned', '-updated_at'], name='aichat_user_pin_upd'),
         ]
 
     def __str__(self):

@@ -1,9 +1,14 @@
 import { Component } from 'react'
+import zhTW from '../locales/zh-TW.json'
+import en from '../locales/en.json'
+import ja from '../locales/ja.json'
 
-const TEXTS = {
-  'zh-TW': { title: '發生了一些問題', desc: '應用程式遇到了未預期的錯誤，請嘗試重新整理頁面。', reload: '重新整理', home: '回首頁' },
-  en: { title: 'Something went wrong', desc: 'The app encountered an unexpected error. Please try refreshing.', reload: 'Refresh', home: 'Go Home' },
-  ja: { title: '問題が発生しました', desc: 'アプリで予期しないエラーが発生しました。ページを更新してみてください。', reload: '更新する', home: 'ホームへ' },
+const LOCALES = { 'zh-TW': zhTW, en, ja }
+
+function getLocaleText(key) {
+  const lang = localStorage.getItem('language') || 'zh-TW'
+  const locale = LOCALES[lang] || LOCALES['zh-TW']
+  return locale[key] || LOCALES['zh-TW'][key] || key
 }
 
 export default class ErrorBoundary extends Component {
@@ -22,21 +27,18 @@ export default class ErrorBoundary extends Component {
 
   render() {
     if (this.state.hasError) {
-      const lang = localStorage.getItem('language') || 'zh-TW'
-      const txt = TEXTS[lang] || TEXTS['zh-TW']
-
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
           <div className="glass p-8 w-full max-w-md text-center space-y-4">
             <div className="text-4xl">😢</div>
-            <h1 className="text-xl font-bold">{txt.title}</h1>
-            <p className="text-sm opacity-60">{txt.desc}</p>
+            <h1 className="text-xl font-bold">{getLocaleText('errorBoundary.title')}</h1>
+            <p className="text-sm opacity-60">{getLocaleText('errorBoundary.desc')}</p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => window.location.reload()}
                 className="btn-primary"
               >
-                {txt.reload}
+                {getLocaleText('errorBoundary.reload')}
               </button>
               <button
                 onClick={() => {
@@ -45,7 +47,7 @@ export default class ErrorBoundary extends Component {
                 }}
                 className="btn-secondary"
               >
-                {txt.home}
+                {getLocaleText('errorBoundary.home')}
               </button>
             </div>
           </div>

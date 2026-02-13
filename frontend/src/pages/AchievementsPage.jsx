@@ -15,7 +15,7 @@ export default function AchievementsPage() {
   const [checking, setChecking] = useState(false)
 
   useEffect(() => {
-    document.title = `${t('achievement.title')} — HeartBox`
+    document.title = `${t('achievement.title')} — ${t('app.name')}`
   }, [t])
 
   useEffect(() => {

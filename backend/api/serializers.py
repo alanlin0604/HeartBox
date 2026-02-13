@@ -273,7 +273,7 @@ class AIChatSessionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AIChatSession
-        fields = ('id', 'title', 'is_active', 'message_count', 'last_message_preview', 'created_at', 'updated_at')
+        fields = ('id', 'title', 'is_active', 'is_pinned', 'message_count', 'last_message_preview', 'created_at', 'updated_at')
         read_only_fields = ('id', 'created_at', 'updated_at')
 
     def get_message_count(self, obj):

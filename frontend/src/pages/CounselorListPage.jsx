@@ -55,12 +55,18 @@ export default function CounselorListPage() {
   const [applyError, setApplyError] = useState('')
   const [applySuccess, setApplySuccess] = useState(false)
 
-  // Pricing form state
+  // Apply form optional pricing
+  const [applyRate, setApplyRate] = useState('')
+  const [applyCurrency, setApplyCurrency] = useState('TWD')
+
+  // Edit profile form state (pricing tab upgrade)
+  const [editSpecialty, setEditSpecialty] = useState('')
+  const [editIntroduction, setEditIntroduction] = useState('')
   const [pricingRate, setPricingRate] = useState('')
   const [pricingCurrency, setPricingCurrency] = useState('TWD')
   const [pricingSaving, setPricingSaving] = useState(false)
 
-  useEffect(() => { document.title = `${t('nav.counselors')} — HeartBox` }, [t])
+  useEffect(() => { document.title = `${t('nav.counselors')} — ${t('app.name')}` }, [t])
 
   useEffect(() => {
     loadData()
@@ -90,6 +96,8 @@ export default function CounselorListPage() {
       try {
         const profileRes = await getMyCounselorProfile()
         setMyProfile(profileRes.data)
+        setEditSpecialty(profileRes.data.specialty || '')
+        setEditIntroduction(profileRes.data.introduction || '')
         setPricingRate(profileRes.data.hourly_rate || '')
         setPricingCurrency(profileRes.data.currency || 'TWD')
         // If counselor, load shared notes
@@ -112,11 +120,14 @@ export default function CounselorListPage() {
     setApplyLoading(true)
     setApplyError('')
     try {
-      const res = await applyCounselor({
+      const payload = {
         license_number: licenseNumber,
         specialty,
         introduction,
-      })
+      }
+      if (applyRate) payload.hourly_rate = applyRate
+      if (applyRate) payload.currency = applyCurrency
+      const res = await applyCounselor(payload)
       setMyProfile(res.data)
       setApplySuccess(true)
     } catch (err) {
@@ -151,16 +162,18 @@ export default function CounselorListPage() {
     }
   }
 
-  const handleSavePricing = async (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault()
     setPricingSaving(true)
     try {
       const res = await updateMyCounselorProfile({
+        specialty: editSpecialty,
+        introduction: editIntroduction,
         hourly_rate: pricingRate || null,
         currency: pricingCurrency,
       })
       setMyProfile(res.data)
-      toast?.success(t('settings.saveSuccess'))
+      toast?.success(t('counselor.editSuccess'))
     } catch {
       toast?.error(t('settings.saveFailed'))
     } finally {
@@ -236,7 +249,7 @@ export default function CounselorListPage() {
               tab === 'pricing' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
             }`}
           >
-            {t('pricing.tab')}
+            {t('counselor.editProfile')}
           </button>
         )}
         {isCounselor && (
@@ -299,7 +312,7 @@ export default function CounselorListPage() {
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm leading-relaxed opacity-80">{c.introduction}</p>
+                  <p className="text-sm leading-relaxed opacity-80 whitespace-pre-line">{c.introduction}</p>
                   <div className="text-sm font-medium">
                     {c.hourly_rate ? (
                       <span className="text-purple-500">
@@ -486,11 +499,31 @@ export default function CounselorListPage() {
         </div>
       )}
 
-      {/* Pricing Tab (counselors only) */}
+      {/* Edit Profile Tab (counselors only) */}
       {tab === 'pricing' && isCounselor && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">{t('pricing.title')}</h2>
-          <form onSubmit={handleSavePricing} className="glass p-6 space-y-4 max-w-md">
+          <h2 className="text-xl font-semibold">{t('counselor.editProfile')}</h2>
+          <p className="text-sm opacity-60">{t('counselor.editProfileDesc')}</p>
+          <form onSubmit={handleSaveProfile} className="glass p-6 space-y-4 max-w-lg">
+            <div>
+              <label className="text-sm opacity-60 block mb-1">{t('counselor.specialtyLabel')}</label>
+              <input
+                type="text"
+                value={editSpecialty}
+                onChange={(e) => setEditSpecialty(e.target.value)}
+                placeholder={t('counselor.specialtyPlaceholder')}
+                className="glass-input"
+              />
+            </div>
+            <div>
+              <label className="text-sm opacity-60 block mb-1">{t('counselor.introPlaceholder')}</label>
+              <textarea
+                value={editIntroduction}
+                onChange={(e) => setEditIntroduction(e.target.value)}
+                placeholder={t('counselor.introPlaceholder')}
+                className="glass-input min-h-[120px] resize-y"
+              />
+            </div>
             <div>
               <label className="text-sm opacity-60 block mb-1">{t('pricing.hourlyRate')}</label>
               <input
@@ -512,7 +545,7 @@ export default function CounselorListPage() {
               >
                 <option value="TWD">TWD (NT$)</option>
                 <option value="USD">USD ($)</option>
-                <option value="JPY">JPY (\u00A5)</option>
+                <option value="JPY">JPY ({'\u00A5'})</option>
               </select>
             </div>
             <button type="submit" disabled={pricingSaving} className="btn-primary">
@@ -601,6 +634,32 @@ export default function CounselorListPage() {
                 className="glass-input min-h-[120px] resize-y"
                 required
               />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm opacity-60 block mb-1">{t('pricing.hourlyRate')} ({t('pricing.optional')})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={applyRate}
+                    onChange={(e) => setApplyRate(e.target.value)}
+                    placeholder="1500"
+                    className="glass-input"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm opacity-60 block mb-1">{t('pricing.currency')}</label>
+                  <select
+                    value={applyCurrency}
+                    onChange={(e) => setApplyCurrency(e.target.value)}
+                    className="glass-input"
+                  >
+                    <option value="TWD">TWD (NT$)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="JPY">JPY ({'\u00A5'})</option>
+                  </select>
+                </div>
+              </div>
               <button type="submit" disabled={applyLoading} className="btn-primary">
                 {applyLoading ? t('counselor.submitting') : t('counselor.submitApply')}
               </button>

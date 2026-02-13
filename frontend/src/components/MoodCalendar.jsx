@@ -70,11 +70,11 @@ export default memo(function MoodCalendar() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">{t('calendar.title')}</h2>
         <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="btn-primary text-sm px-2 py-1" aria-label="Previous month">◀</button>
+          <button onClick={prevMonth} className="btn-primary text-sm px-2 py-1" aria-label={t('aria.previousMonth')}>◀</button>
           <span className="text-sm font-medium min-w-[100px] text-center">
             {year} / {String(month).padStart(2, '0')}
           </span>
-          <button onClick={nextMonth} className="btn-primary text-sm px-2 py-1" aria-label="Next month">▶</button>
+          <button onClick={nextMonth} className="btn-primary text-sm px-2 py-1" aria-label={t('aria.nextMonth')}>▶</button>
         </div>
       </div>
 

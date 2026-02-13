@@ -27,6 +27,11 @@ export function deleteAIChatSession(sessionId) {
   return api.delete(`/ai-chat/sessions/${sessionId}/`)
 }
 
+export function updateAIChatSession(sessionId, data) {
+  invalidate(CACHE_KEY)
+  return api.patch(`/ai-chat/sessions/${sessionId}/`, data)
+}
+
 export function sendAIChatMessage(sessionId, content) {
   return api.post(`/ai-chat/sessions/${sessionId}/messages/`, { content })
 }

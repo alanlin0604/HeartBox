@@ -125,7 +125,7 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
           onClick={() => setExpanded(!expanded)}
           className="btn-primary text-sm px-3 opacity-70"
           title={t('search.filters')}
-          aria-label={expanded ? 'Collapse filters' : 'Expand filters'}
+          aria-label={expanded ? t('aria.collapseFilters') : t('aria.expandFilters')}
           aria-expanded={expanded}
         >
           {expanded ? '▲' : '▼'}

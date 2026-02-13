@@ -82,7 +82,7 @@ export default function RegisterPage() {
           ))}
         </div>
         <h1 className="text-2xl font-bold text-center mb-2 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-          HeartBox-心事盒
+          {t('app.displayName')}
         </h1>
         <p className="text-center opacity-60 text-sm mb-6">{t('register.title')}</p>
 

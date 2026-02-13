@@ -21,7 +21,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => { document.title = `${t('login.title')} — HeartBox` }, [t])
+  useEffect(() => { document.title = `${t('login.title')} — ${t('app.name')}` }, [t])
 
   if (user) return <Navigate to="/" />
 
@@ -60,7 +60,7 @@ export default function LoginPage() {
           ))}
         </div>
         <h1 className="text-2xl font-bold text-center mb-2 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-          HeartBox-心事盒
+          {t('app.displayName')}
         </h1>
         <p className="text-center opacity-60 text-sm mb-6">{t('login.title')}</p>
 

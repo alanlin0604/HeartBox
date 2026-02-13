@@ -6,6 +6,7 @@ import {
   createAIChatSession,
   getAIChatSession,
   deleteAIChatSession,
+  updateAIChatSession,
   sendAIChatMessage,
 } from '../api/aiChat'
 import EmptyState from '../components/EmptyState'
@@ -25,8 +26,14 @@ export default function AIChatPage() {
   const [showSidebar, setShowSidebar] = useState(true)
   const bottomRef = useRef(null)
 
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState(null) // { x, y, sessionId }
+  // Rename modal state
+  const [renameModalId, setRenameModalId] = useState(null)
+  const [renameValue, setRenameValue] = useState('')
+
   useEffect(() => {
-    document.title = `${t('aiChat.title')} — HeartBox`
+    document.title = `${t('aiChat.title')} — ${t('app.name')}`
   }, [t])
 
   // Load sessions on mount
@@ -38,6 +45,14 @@ export default function AIChatPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Close context menu on click anywhere
+  useEffect(() => {
+    if (!contextMenu) return
+    const handler = () => setContextMenu(null)
+    window.addEventListener('click', handler)
+    return () => window.removeEventListener('click', handler)
+  }, [contextMenu])
 
   const loadSessions = async () => {
     try {
@@ -73,8 +88,7 @@ export default function AIChatPage() {
     }
   }
 
-  const handleDeleteSession = async (sessionId, e) => {
-    e?.stopPropagation()
+  const handleDeleteSession = async (sessionId) => {
     if (!confirm(t('aiChat.deleteConfirm'))) return
     try {
       await deleteAIChatSession(sessionId)
@@ -85,6 +99,52 @@ export default function AIChatPage() {
         setShowSidebar(true)
       }
       toast?.success(t('aiChat.deleted'))
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
+  }
+
+  const handleContextMenu = (e, sessionId) => {
+    e.preventDefault()
+    e.stopPropagation()
+    // Position menu, clamping to viewport
+    const x = Math.min(e.clientX, window.innerWidth - 180)
+    const y = Math.min(e.clientY, window.innerHeight - 140)
+    setContextMenu({ x, y, sessionId })
+  }
+
+  const handleRenameStart = (sessionId) => {
+    const session = sessions.find((s) => s.id === sessionId)
+    setRenameValue(session?.title || '')
+    setRenameModalId(sessionId)
+    setContextMenu(null)
+  }
+
+  const handleRenameConfirm = async () => {
+    if (!renameValue.trim() || !renameModalId) return
+    try {
+      const res = await updateAIChatSession(renameModalId, { title: renameValue.trim() })
+      setSessions((prev) => prev.map((s) => (s.id === renameModalId ? { ...s, ...res.data } : s)))
+      setRenameModalId(null)
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
+  }
+
+  const handleTogglePin = async (sessionId) => {
+    setContextMenu(null)
+    const session = sessions.find((s) => s.id === sessionId)
+    if (!session) return
+    try {
+      const res = await updateAIChatSession(sessionId, { is_pinned: !session.is_pinned })
+      setSessions((prev) => {
+        const updated = prev.map((s) => (s.id === sessionId ? { ...s, ...res.data } : s))
+        // Re-sort: pinned first, then by updated_at desc
+        return updated.sort((a, b) => {
+          if (a.is_pinned !== b.is_pinned) return b.is_pinned ? 1 : -1
+          return new Date(b.updated_at) - new Date(a.updated_at)
+        })
+      })
     } catch {
       toast?.error(t('common.operationFailed'))
     }
@@ -180,6 +240,7 @@ export default function AIChatPage() {
                 <div
                   key={session.id}
                   onClick={() => handleSelectSession(session.id)}
+                  onContextMenu={(e) => handleContextMenu(e, session.id)}
                   className={`p-3 rounded-xl cursor-pointer transition-all group ${
                     activeSessionId === session.id
                       ? 'bg-purple-500/20 border border-purple-500/30'
@@ -188,7 +249,10 @@ export default function AIChatPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm truncate">{session.title}</p>
+                      <p className="font-medium text-sm truncate">
+                        {session.is_pinned && <span className="mr-1 opacity-70" title={t('aiChat.pinned')}>📌</span>}
+                        {session.title}
+                      </p>
                       {session.last_message_preview && (
                         <p className="text-xs opacity-50 truncate mt-0.5">
                           {session.last_message_preview}
@@ -196,7 +260,7 @@ export default function AIChatPage() {
                       )}
                     </div>
                     <button
-                      onClick={(e) => handleDeleteSession(session.id, e)}
+                      onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id) }}
                       className="opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity text-red-500 text-xs shrink-0 cursor-pointer"
                       title={t('aiChat.deleteSession')}
                     >
@@ -326,6 +390,70 @@ export default function AIChatPage() {
           </div>
         )}
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 glass-card py-1 rounded-xl shadow-xl min-w-[160px] border border-white/10"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors cursor-pointer"
+            onClick={() => handleRenameStart(contextMenu.sessionId)}
+          >
+            {t('aiChat.rename')}
+          </button>
+          <button
+            className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors cursor-pointer"
+            onClick={() => handleTogglePin(contextMenu.sessionId)}
+          >
+            {sessions.find((s) => s.id === contextMenu.sessionId)?.is_pinned
+              ? t('aiChat.unpin')
+              : t('aiChat.pin')}
+          </button>
+          <button
+            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-white/10 transition-colors cursor-pointer"
+            onClick={() => { setContextMenu(null); handleDeleteSession(contextMenu.sessionId) }}
+          >
+            {t('aiChat.deleteSession')}
+          </button>
+        </div>
+      )}
+
+      {/* Rename Modal */}
+      {renameModalId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="popup-panel p-6 w-full max-w-sm space-y-4">
+            <h2 className="text-lg font-semibold">{t('aiChat.renameTitle')}</h2>
+            <input
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              placeholder={t('aiChat.renamePlaceholder')}
+              className="glass-input"
+              maxLength={100}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') handleRenameConfirm() }}
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setRenameModalId(null)}
+                className="btn-secondary"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleRenameConfirm}
+                disabled={!renameValue.trim()}
+                className="btn-primary"
+              >
+                {t('settings.save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
