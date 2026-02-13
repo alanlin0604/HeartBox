@@ -232,16 +232,14 @@ export default function CounselorListPage() {
         >
           {t('booking.myBookings')}
         </button>
-        {isCounselor && (
-          <button
-            onClick={() => setTab('schedule')}
-            className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-              tab === 'schedule' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
-            }`}
-          >
-            {t('schedule.tab')}
-          </button>
-        )}
+        <button
+          onClick={() => setTab('apply')}
+          className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
+            tab === 'apply' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+          }`}
+        >
+          {t('counselor.applyTab')}
+        </button>
         {isCounselor && (
           <button
             onClick={() => setTab('pricing')}
@@ -254,6 +252,16 @@ export default function CounselorListPage() {
         )}
         {isCounselor && (
           <button
+            onClick={() => setTab('schedule')}
+            className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
+              tab === 'schedule' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+            }`}
+          >
+            {t('schedule.tab')}
+          </button>
+        )}
+        {isCounselor && (
+          <button
             onClick={() => setTab('shared')}
             className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
               tab === 'shared' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
@@ -262,14 +270,6 @@ export default function CounselorListPage() {
             {t('share.receivedTab')} {sharedNotes.length > 0 && `(${sharedNotes.length})`}
           </button>
         )}
-        <button
-          onClick={() => setTab('apply')}
-          className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-            tab === 'apply' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
-          }`}
-        >
-          {t('counselor.applyTab')}
-        </button>
       </div>
 
       {/* Counselor List Tab */}

@@ -11,6 +11,7 @@ import {
 } from '../api/aiChat'
 import EmptyState from '../components/EmptyState'
 import LoadingSpinner from '../components/LoadingSpinner'
+import ConfirmModal from '../components/ConfirmModal'
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
 
 export default function AIChatPage() {
@@ -31,6 +32,9 @@ export default function AIChatPage() {
   // Rename modal state
   const [renameModalId, setRenameModalId] = useState(null)
   const [renameValue, setRenameValue] = useState('')
+  // Delete confirm modal state
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     document.title = `${t('aiChat.title')} — ${t('app.name')}`
@@ -89,7 +93,7 @@ export default function AIChatPage() {
   }
 
   const handleDeleteSession = async (sessionId) => {
-    if (!confirm(t('aiChat.deleteConfirm'))) return
+    setDeleteLoading(true)
     try {
       await deleteAIChatSession(sessionId)
       setSessions((prev) => prev.filter((s) => s.id !== sessionId))
@@ -101,6 +105,9 @@ export default function AIChatPage() {
       toast?.success(t('aiChat.deleted'))
     } catch {
       toast?.error(t('common.operationFailed'))
+    } finally {
+      setDeleteLoading(false)
+      setDeleteConfirmId(null)
     }
   }
 
@@ -260,7 +267,7 @@ export default function AIChatPage() {
                       )}
                     </div>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id) }}
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(session.id) }}
                       className="opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity text-red-500 text-xs shrink-0 cursor-pointer"
                       title={t('aiChat.deleteSession')}
                     >
@@ -414,12 +421,24 @@ export default function AIChatPage() {
           </button>
           <button
             className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-white/10 transition-colors cursor-pointer"
-            onClick={() => { setContextMenu(null); handleDeleteSession(contextMenu.sessionId) }}
+            onClick={() => { setContextMenu(null); setDeleteConfirmId(contextMenu.sessionId) }}
           >
             {t('aiChat.deleteSession')}
           </button>
         </div>
       )}
+
+      {/* Delete Confirm Modal */}
+      <ConfirmModal
+        open={!!deleteConfirmId}
+        title={t('aiChat.deleteSession')}
+        message={t('aiChat.deleteConfirm')}
+        confirmText={t('noteDetail.delete')}
+        cancelText={t('common.cancel')}
+        loading={deleteLoading}
+        onConfirm={() => handleDeleteSession(deleteConfirmId)}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
 
       {/* Rename Modal */}
       {renameModalId && (
