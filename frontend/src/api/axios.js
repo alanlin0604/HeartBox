@@ -16,6 +16,9 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Send user language so Django returns translated error messages
+  const lang = localStorage.getItem('language') || 'zh-TW';
+  config.headers['Accept-Language'] = lang;
   // Cancel duplicate GET requests
   if (config.method === 'get') {
     const key = `${config.method}:${config.baseURL}${config.url}`;
