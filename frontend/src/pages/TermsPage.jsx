@@ -20,7 +20,7 @@ export default function TermsPage() {
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">{t('terms.s2Title')}</h2>
-          <p className="text-sm opacity-80 leading-relaxed font-medium text-yellow-500/90">
+          <p className="text-sm leading-relaxed font-bold text-red-500">
             {t('terms.s2Body')}
           </p>
         </section>
