@@ -28,6 +28,9 @@ function getLocalizedMessage(notif, t) {
     }
   }
   if (notif.type === 'message' && d.sender_name) {
+    if (d.message_type === 'quote') {
+      return t('notification.quote.from', { name: d.sender_name })
+    }
     return t('notification.message.from', { name: d.sender_name })
   }
   if (notif.type === 'share' && d.author_name) {

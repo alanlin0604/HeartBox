@@ -600,16 +600,19 @@ class MessageListView(APIView):
 
         # Create notification for the other party
         recipient_id = conv.counselor_id if conv.user_id == request.user.id else conv.user_id
+        notif_data = {
+            'conversation_id': conv.id,
+            'message_id': msg.id,
+            'sender_name': request.user.username,
+        }
+        if message_type == 'quote':
+            notif_data['message_type'] = 'quote'
         notif = Notification.objects.create(
             user_id=recipient_id,
             type='message',
             title='New message',
             message=msg.content[:100],
-            data={
-                'conversation_id': conv.id,
-                'message_id': msg.id,
-                'sender_name': request.user.username,
-            },
+            data=notif_data,
         )
 
         # Push via WebSocket

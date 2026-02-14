@@ -545,6 +545,7 @@
   "notification.booking.cancelled": "Your booking with {counselor} is cancelled",
   "notification.booking.completed": "Your booking with {counselor} is completed",
   "notification.message.from": "{name} sent a message",
+  "notification.quote.from": "{name} sent a quote",
   "notification.share.from": "{name} shared a note with you",
   "admin.tabFeedback": "Feedback",
   "admin.feedbackEmpty": "No feedback yet",

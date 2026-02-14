@@ -545,6 +545,7 @@
   "notification.booking.cancelled": "您與 {counselor} 的預約已取消",
   "notification.booking.completed": "您與 {counselor} 的預約已完成",
   "notification.message.from": "{name} 傳送了訊息",
+  "notification.quote.from": "{name} 傳送了一份報價",
   "notification.share.from": "{name} 分享了一篇日記給您",
   "admin.tabFeedback": "使用回饋",
   "admin.feedbackEmpty": "尚無使用回饋",

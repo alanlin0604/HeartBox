@@ -545,6 +545,7 @@
   "notification.booking.cancelled": "{counselor} との予約がキャンセルされました",
   "notification.booking.completed": "{counselor} との予約が完了しました",
   "notification.message.from": "{name} がメッセージを送信しました",
+  "notification.quote.from": "{name} が見積もりを送信しました",
   "notification.share.from": "{name} が日記を共有しました",
   "admin.tabFeedback": "フィードバック",
   "admin.feedbackEmpty": "フィードバックはまだありません",
