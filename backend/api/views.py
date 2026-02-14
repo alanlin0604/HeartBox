@@ -564,13 +564,38 @@ class MessageListView(APIView):
         except Conversation.DoesNotExist:
             return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        content = strip_tags(request.data.get('content', '')).strip()
-        if not content:
-            return Response({'error': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
-        if len(content) > 5000:
-            return Response({'error': 'Message cannot exceed 5000 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+        message_type = request.data.get('message_type', 'text')
 
-        msg = Message.objects.create(conversation=conv, sender=request.user, content=content[:5000])
+        if message_type == 'quote':
+            # Only approved counselors can send quotes
+            if not hasattr(request.user, 'counselor_profile') or not request.user.counselor_profile.is_approved:
+                return Response({'error': 'Only approved counselors can send quotes.'},
+                                status=status.HTTP_403_FORBIDDEN)
+            description = strip_tags(request.data.get('description', '')).strip()
+            if not description:
+                return Response({'error': 'Quote description is required.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            try:
+                price = float(request.data.get('price', 0))
+            except (ValueError, TypeError):
+                return Response({'error': 'Invalid price.'}, status=status.HTTP_400_BAD_REQUEST)
+            if price < 0:
+                return Response({'error': 'Price cannot be negative.'}, status=status.HTTP_400_BAD_REQUEST)
+            currency = request.data.get('currency', 'TWD')
+            metadata = {'description': description, 'price': price, 'currency': currency}
+            content = f'[Quote] {description} — {currency} {price}'
+            msg = Message.objects.create(
+                conversation=conv, sender=request.user,
+                content=content, message_type='quote', metadata=metadata,
+            )
+        else:
+            content = strip_tags(request.data.get('content', '')).strip()
+            if not content:
+                return Response({'error': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+            if len(content) > 5000:
+                return Response({'error': 'Message cannot exceed 5000 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+            msg = Message.objects.create(conversation=conv, sender=request.user, content=content[:5000])
+
         conv.save()  # update updated_at
 
         # Create notification for the other party
@@ -579,8 +604,12 @@ class MessageListView(APIView):
             user_id=recipient_id,
             type='message',
             title='New message',
-            message=content[:100],
-            data={'conversation_id': conv.id, 'message_id': msg.id},
+            message=msg.content[:100],
+            data={
+                'conversation_id': conv.id,
+                'message_id': msg.id,
+                'sender_name': request.user.username,
+            },
         )
 
         # Push via WebSocket
@@ -870,7 +899,13 @@ class BookingCreateView(APIView):
             type='booking',
             title='New booking',
             message=f'{request.user.username} booked {date_str} {start_time}',
-            data={'booking_id': booking.id},
+            data={
+                'booking_id': booking.id,
+                'action': 'new',
+                'username': request.user.username,
+                'date': date_str,
+                'time': str(start_time),
+            },
         )
 
         return Response(BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
@@ -901,7 +936,11 @@ class BookingActionView(APIView):
             type='booking',
             title=f'Booking {booking.status}',
             message=f'Your booking with {booking.counselor.username} is now {booking.status}.',
-            data={'booking_id': booking.id},
+            data={
+                'booking_id': booking.id,
+                'action': booking.status,
+                'counselor_name': booking.counselor.username,
+            },
         )
 
         return Response(BookingSerializer(booking).data)
@@ -948,7 +987,11 @@ class ShareNoteView(APIView):
             type='share',
             title='Note shared with you',
             message=f'{author_name} shared a note with you.',
-            data={'shared_note_id': shared.id, 'note_id': note.id},
+            data={
+                'shared_note_id': shared.id,
+                'note_id': note.id,
+                'author_name': author_name,
+            },
         )
 
         return Response(SharedNoteSerializer(shared).data, status=status.HTTP_201_CREATED)

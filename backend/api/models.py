@@ -149,6 +149,11 @@ class Conversation(models.Model):
 class Message(models.Model):
     """A message in a conversation."""
 
+    MESSAGE_TYPE_CHOICES = [
+        ('text', 'Text'),
+        ('quote', 'Quote'),
+    ]
+
     conversation = models.ForeignKey(
         Conversation,
         on_delete=models.CASCADE,
@@ -160,6 +165,8 @@ class Message(models.Model):
         related_name='sent_messages',
     )
     content = models.TextField()
+    message_type = models.CharField(max_length=10, choices=MESSAGE_TYPE_CHOICES, default='text')
+    metadata = models.JSONField(default=dict, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

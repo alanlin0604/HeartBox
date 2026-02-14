@@ -11,6 +11,32 @@ const NOTIF_TYPE_KEYS = {
   share: 'notification.type.share',
 }
 
+function getLocalizedMessage(notif, t) {
+  const d = notif.data || {}
+  if (notif.type === 'booking' && d.action) {
+    if (d.action === 'new') {
+      return t('notification.booking.new', { username: d.username, date: d.date, time: d.time })
+    }
+    if (d.action === 'confirmed') {
+      return t('notification.booking.confirmed', { counselor: d.counselor_name })
+    }
+    if (d.action === 'cancelled') {
+      return t('notification.booking.cancelled', { counselor: d.counselor_name })
+    }
+    if (d.action === 'completed') {
+      return t('notification.booking.completed', { counselor: d.counselor_name })
+    }
+  }
+  if (notif.type === 'message' && d.sender_name) {
+    return t('notification.message.from', { name: d.sender_name })
+  }
+  if (notif.type === 'share' && d.author_name) {
+    return t('notification.share.from', { name: d.author_name })
+  }
+  // Fallback for old notifications without enriched data
+  return notif.message
+}
+
 export default memo(function NotificationBell() {
   const { t } = useLang()
   const navigate = useNavigate()
@@ -187,7 +213,7 @@ export default memo(function NotificationBell() {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{NOTIF_TYPE_KEYS[notif.type] ? t(NOTIF_TYPE_KEYS[notif.type]) : notif.title}</p>
-                    <p className="text-xs opacity-60 truncate">{notif.message}</p>
+                    <p className="text-xs opacity-60 truncate">{getLocalizedMessage(notif, t)}</p>
                     <p className="text-xs opacity-40 mt-1">
                       {new Date(notif.created_at).toLocaleString()}
                     </p>

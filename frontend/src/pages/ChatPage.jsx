@@ -2,12 +2,33 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
-import { getMessages, getConversations, sendMessage } from '../api/counselors'
+import { getMessages, getConversations, sendMessage, sendQuote } from '../api/counselors'
 import { useToast } from '../context/ToastContext'
 import { getAccessToken } from '../utils/tokenStorage'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
+
+function QuoteCard({ metadata, t }) {
+  const { description, price, currency } = metadata || {}
+  const formatted = new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: currency || 'TWD',
+    minimumFractionDigits: 0,
+  }).format(price || 0)
+
+  return (
+    <div className="border-2 border-purple-500/50 rounded-xl p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">
+          {t('chat.quoteLabel')}
+        </span>
+      </div>
+      <p className="text-sm">{description}</p>
+      <p className="text-lg font-bold text-purple-400">{formatted}</p>
+    </div>
+  )
+}
 
 export default function ChatPage() {
   const { id } = useParams()
@@ -21,6 +42,9 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [wsConnected, setWsConnected] = useState(false)
+  const [showQuoteForm, setShowQuoteForm] = useState(false)
+  const [quoteData, setQuoteData] = useState({ description: '', price: '', currency: 'TWD' })
+  const [sendingQuote, setSendingQuote] = useState(false)
   const bottomRef = useRef(null)
   const wsRef = useRef(null)
   const reconnectTimer = useRef(null)
@@ -137,6 +161,23 @@ export default function ChatPage() {
     }
   }
 
+  const handleSendQuote = async (e) => {
+    e.preventDefault()
+    if (!quoteData.description.trim() || sendingQuote) return
+    setSendingQuote(true)
+    try {
+      const res = await sendQuote(id, quoteData)
+      setMessages((prev) => [...prev, res.data])
+      setQuoteData({ description: '', price: '', currency: 'TWD' })
+      setShowQuoteForm(false)
+      toast?.success(t('chat.quoteSent'))
+    } catch {
+      toast?.error(t('chat.quoteFailed'))
+    } finally {
+      setSendingQuote(false)
+    }
+  }
+
   if (loading) return <LoadingSpinner />
 
   return (
@@ -197,7 +238,11 @@ export default function ChatPage() {
                       <p className="text-xs font-semibold opacity-60">{msg.sender_name}</p>
                     </div>
                   )}
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  {msg.message_type === 'quote' ? (
+                    <QuoteCard metadata={msg.metadata} t={t} />
+                  ) : (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  )}
                   <p className="text-xs opacity-40 mt-1 text-right">
                     {new Date(msg.created_at).toLocaleTimeString(LOCALE_MAP[lang] || lang, {
                       timeZone: TZ_MAP[lang] || 'Asia/Taipei',
@@ -213,8 +258,72 @@ export default function ChatPage() {
         <div ref={bottomRef} />
       </div>
 
+      {/* Quote Form */}
+      {showQuoteForm && (
+        <form onSubmit={handleSendQuote} className="glass p-3 space-y-2 border-t border-purple-500/30">
+          <div className="flex items-center gap-2 text-sm font-medium text-purple-400">
+            <span>{t('chat.quoteLabel')}</span>
+          </div>
+          <textarea
+            value={quoteData.description}
+            onChange={(e) => setQuoteData({ ...quoteData, description: e.target.value })}
+            placeholder={t('chat.quoteDescPlaceholder')}
+            className="glass-input w-full resize-none"
+            rows={2}
+          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={quoteData.price}
+              onChange={(e) => setQuoteData({ ...quoteData, price: e.target.value })}
+              placeholder={t('chat.quotePrice')}
+              className="glass-input flex-1"
+            />
+            <select
+              value={quoteData.currency}
+              onChange={(e) => setQuoteData({ ...quoteData, currency: e.target.value })}
+              className="glass-input w-24"
+            >
+              <option value="TWD">TWD</option>
+              <option value="USD">USD</option>
+              <option value="JPY">JPY</option>
+            </select>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => setShowQuoteForm(false)}
+              className="px-3 py-1.5 rounded-lg text-sm glass opacity-70 hover:opacity-100 cursor-pointer"
+            >
+              {t('chat.quoteCancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={sendingQuote || !quoteData.description.trim()}
+              className="btn-primary text-sm"
+            >
+              {sendingQuote ? t('chat.sending') : t('chat.sendQuote')}
+            </button>
+          </div>
+        </form>
+      )}
+
       {/* Input */}
       <form onSubmit={handleSend} className="glass p-3 flex gap-3">
+        {user?.is_counselor && (
+          <button
+            type="button"
+            onClick={() => setShowQuoteForm(!showQuoteForm)}
+            className={`px-2 py-1 rounded-lg text-lg cursor-pointer transition-colors ${
+              showQuoteForm ? 'text-purple-400 bg-purple-500/20' : 'opacity-60 hover:opacity-100'
+            }`}
+            title={t('chat.sendQuote')}
+          >
+            $
+          </button>
+        )}
         <input
           type="text"
           value={newMsg}

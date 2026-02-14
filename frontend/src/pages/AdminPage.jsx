@@ -5,6 +5,7 @@ import {
   updateUser,
   getCounselors,
   counselorAction,
+  getFeedback,
 } from '../api/admin'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
@@ -15,12 +16,12 @@ export default function AdminPage() {
 
   useEffect(() => { document.title = `${t('admin.title')} — ${t('app.name')}` }, [t])
 
-  const TABS = [t('admin.tabOverview'), t('admin.tabUsers'), t('admin.tabCounselors')]
+  const TABS = [t('admin.tabOverview'), t('admin.tabUsers'), t('admin.tabCounselors'), t('admin.tabFeedback')]
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">{t('admin.title')}</h2>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {TABS.map((label, i) => (
           <button
             key={label}
@@ -39,6 +40,7 @@ export default function AdminPage() {
       {tab === 0 && <StatsTab />}
       {tab === 1 && <UsersTab />}
       {tab === 2 && <CounselorsTab />}
+      {tab === 3 && <FeedbackTab />}
     </div>
   )
 }
@@ -327,6 +329,66 @@ function CounselorsTab() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+/* ==================== Tab 4: Feedback ==================== */
+
+function FeedbackTab() {
+  const { t } = useLang()
+  const toast = useToast()
+  const [feedbacks, setFeedbacks] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getFeedback()
+      .then((r) => setFeedbacks(r.data.results ?? r.data))
+      .catch(() => toast?.error(t('common.operationFailed')))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <p className="opacity-60">{t('common.loading')}</p>
+
+  if (feedbacks.length === 0) {
+    return <p className="text-center py-8 opacity-50">{t('admin.feedbackEmpty')}</p>
+  }
+
+  const avg = (feedbacks.reduce((s, f) => s + f.rating, 0) / feedbacks.length).toFixed(1)
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-4 flex-wrap">
+        <div className="glass p-5 rounded-xl">
+          <p className="text-sm opacity-60 mb-1">{t('admin.feedbackAvg')}</p>
+          <p className="text-3xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+            {avg} <span className="text-lg">/ 5</span>
+          </p>
+        </div>
+        <div className="glass p-5 rounded-xl">
+          <p className="text-sm opacity-60 mb-1">{t('admin.feedbackTotal', { count: feedbacks.length })}</p>
+          <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-indigo-500 bg-clip-text text-transparent">
+            {feedbacks.length}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {feedbacks.map((f) => (
+          <div key={f.id} className="glass p-4 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{f.username}</span>
+                <span className="text-amber-400">
+                  {'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}
+                </span>
+              </div>
+              <span className="text-xs opacity-50">{new Date(f.created_at).toLocaleDateString()}</span>
+            </div>
+            <p className="text-sm opacity-80">{f.content}</p>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

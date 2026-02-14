@@ -14,3 +14,5 @@ export const getCounselors = (status = '') =>
 
 export const counselorAction = (id, action) =>
   api.post(`/admin/counselors/${id}/action/`, { action });
+
+export const getFeedback = () => api.get('/admin/feedback/');

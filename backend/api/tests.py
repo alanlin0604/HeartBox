@@ -1254,3 +1254,75 @@ class AIChatPaginationTests(APITestCase):
         )
         resp = self.client.get(f'/api/ai-chat/sessions/{self.session.id}/')
         self.assertFalse(resp.data['has_more'])
+
+
+@override_settings(REST_FRAMEWORK=NO_THROTTLE)
+class QuoteMessageTests(APITestCase):
+    """Test counselor quote message feature."""
+
+    def setUp(self):
+        self.counselor_user = CustomUser.objects.create_user(
+            username='quotecounselor', email='qc@test.com', password='CounselorPass123!',
+        )
+        self.profile = CounselorProfile.objects.create(
+            user=self.counselor_user, license_number='QT-001',
+            specialty='Quote Test', introduction='Test quotes',
+            status='approved',
+        )
+        self.regular_user = CustomUser.objects.create_user(
+            username='quoteuser', email='qu@test.com', password='UserPass123!',
+        )
+        self.conv = Conversation.objects.create(
+            user=self.regular_user, counselor=self.counselor_user,
+        )
+
+    def test_counselor_can_send_quote(self):
+        self.client.force_authenticate(user=self.counselor_user)
+        resp = self.client.post(f'/api/conversations/{self.conv.id}/messages/', {
+            'message_type': 'quote',
+            'description': 'Initial consultation',
+            'price': 1500,
+            'currency': 'TWD',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['message_type'], 'quote')
+        self.assertEqual(resp.data['metadata']['price'], 1500)
+
+    def test_user_cannot_send_quote(self):
+        self.client.force_authenticate(user=self.regular_user)
+        resp = self.client.post(f'/api/conversations/{self.conv.id}/messages/', {
+            'message_type': 'quote',
+            'description': 'Trying to send quote',
+            'price': 100,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_regular_text_still_works(self):
+        self.client.force_authenticate(user=self.regular_user)
+        resp = self.client.post(f'/api/conversations/{self.conv.id}/messages/', {
+            'content': 'Hello counselor!',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['message_type'], 'text')
+
+    def test_quote_requires_description(self):
+        self.client.force_authenticate(user=self.counselor_user)
+        resp = self.client.post(f'/api/conversations/{self.conv.id}/messages/', {
+            'message_type': 'quote',
+            'price': 1000,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_quote_in_message_list(self):
+        self.client.force_authenticate(user=self.counselor_user)
+        self.client.post(f'/api/conversations/{self.conv.id}/messages/', {
+            'message_type': 'quote',
+            'description': 'Visible quote',
+            'price': 2000,
+            'currency': 'USD',
+        }, format='json')
+        resp = self.client.get(f'/api/conversations/{self.conv.id}/messages/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        quotes = [m for m in resp.data if m['message_type'] == 'quote']
+        self.assertEqual(len(quotes), 1)
+        self.assertEqual(quotes[0]['metadata']['currency'], 'USD')

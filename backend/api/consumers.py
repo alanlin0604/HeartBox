@@ -151,7 +151,11 @@ class ChatConsumer(HeartbeatMixin, AuthMixin, AsyncJsonWebsocketConsumer):
             type='message',
             title='New message',
             message=content[:100],
-            data={'conversation_id': conv.id, 'message_id': msg.id},
+            data={
+                'conversation_id': conv.id,
+                'message_id': msg.id,
+                'sender_name': msg.sender.username,
+            },
         )
 
         # Push notification via channel layer (fire-and-forget from sync context)
@@ -180,6 +184,8 @@ class ChatConsumer(HeartbeatMixin, AuthMixin, AsyncJsonWebsocketConsumer):
             'sender_name': msg.sender.username,
             'sender_avatar': msg.sender.avatar.url if getattr(msg.sender, 'avatar', None) else None,
             'content': msg.content,
+            'message_type': msg.message_type,
+            'metadata': msg.metadata,
             'is_read': msg.is_read,
             'created_at': msg.created_at.isoformat(),
         }
