@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
@@ -16,6 +16,8 @@ export default function Layout() {
   const { theme, toggleTheme } = useTheme()
   const { lang, setLang, t } = useLang()
   const navigate = useNavigate()
+  const location = useLocation()
+  const isChatRoute = location.pathname.startsWith('/chat/') || location.pathname === '/ai-chat'
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
@@ -53,7 +55,7 @@ export default function Layout() {
   ]
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={`flex flex-col ${isChatRoute ? 'h-dvh overflow-hidden' : 'min-h-screen'}`}>
       {/* Skip to main content link for accessibility */}
       <a
         href="#main-content"
@@ -275,7 +277,7 @@ export default function Layout() {
         </div>
       )}
 
-      <main id="main-content" className="flex-1 flex flex-col p-4 max-w-6xl mx-auto w-full">
+      <main id="main-content" className={`flex-1 flex flex-col p-4 max-w-6xl mx-auto w-full ${isChatRoute ? 'min-h-0' : ''}`}>
         <Outlet />
       </main>
 
