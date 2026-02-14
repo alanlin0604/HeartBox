@@ -32,17 +32,32 @@ export default function ChatPage() {
 
     const wsBase = import.meta.env.VITE_WS_URL
     const wsUrl = wsBase
-      ? `${wsBase}/ws/chat/${id}/?token=${token}`
-      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/chat/${id}/?token=${token}`
+      ? `${wsBase}/ws/chat/${id}/`
+      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/chat/${id}/`
     const ws = new WebSocket(wsUrl)
 
     ws.onopen = () => {
-      setWsConnected(true)
-      reconnectDelay.current = 3000 // Reset on success
+      // Send JWT via first message instead of query string
+      ws.send(JSON.stringify({ type: 'auth', token }))
     }
 
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data)
+      // Handle auth response
+      if (data.type === 'auth_ok') {
+        setWsConnected(true)
+        reconnectDelay.current = 3000
+        return
+      }
+      // Respond to server heartbeat pings
+      if (data.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong' }))
+        return
+      }
+      if (data.error) {
+        console.error('WebSocket error:', data.error)
+        return
+      }
       setMessages((prev) => {
         // Prevent duplicates
         if (prev.some((m) => m.id === data.id)) return prev

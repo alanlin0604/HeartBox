@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getNotes, createNote, uploadAttachment, reanalyzeNote, batchDeleteNotes } from '../api/notes'
+import { getNotes, createNote, uploadAttachment, reanalyzeNote, batchDeleteNotes, getTrashNotes, restoreNote, permanentDeleteNote } from '../api/notes'
 import { getAnalytics } from '../api/analytics'
 import { useLang } from '../context/LanguageContext'
 import NoteForm from '../components/NoteForm'
 import NoteCard from '../components/NoteCard'
-import LoadingSpinner from '../components/LoadingSpinner'
+import SkeletonCard from '../components/SkeletonCard'
 import SearchFilterPanel from '../components/SearchFilterPanel'
 import ExportPDFButton from '../components/ExportPDFButton'
 import AlertBanner from '../components/AlertBanner'
@@ -29,6 +29,9 @@ export default function JournalPage() {
   const [selected, setSelected] = useState(new Set())
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
+  const [showTrash, setShowTrash] = useState(false)
+  const [trashNotes, setTrashNotes] = useState([])
+  const [trashLoading, setTrashLoading] = useState(false)
 
   // Initialize filters from URL query params (for calendar click-through)
   const [filters, setFilters] = useState(() => {
@@ -53,6 +56,31 @@ export default function JournalPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadTrash = async () => {
+    setTrashLoading(true)
+    try {
+      const { data } = await getTrashNotes()
+      setTrashNotes(data)
+    } catch { setTrashNotes([]) }
+    finally { setTrashLoading(false) }
+  }
+
+  const handleRestore = async (id) => {
+    try {
+      await restoreNote(id)
+      setTrashNotes((prev) => prev.filter((n) => n.id !== id))
+      toast?.success(t('journal.restore'))
+      fetchNotes(page, filters)
+    } catch { toast?.error(t('common.operationFailed')) }
+  }
+
+  const handlePermanentDelete = async (id) => {
+    try {
+      await permanentDeleteNote(id)
+      setTrashNotes((prev) => prev.filter((n) => n.id !== id))
+    } catch { toast?.error(t('common.operationFailed')) }
   }
 
   useEffect(() => { document.title = `${t('nav.journal')} — ${t('app.name')}` }, [t])
@@ -195,7 +223,15 @@ export default function JournalPage() {
 
           {/* Browse section */}
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className="text-lg font-semibold">{t('journal.recentNotes')}</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold">{showTrash ? t('journal.trash') : t('journal.recentNotes')}</h2>
+              <button
+                onClick={() => { setShowTrash(!showTrash); if (!showTrash) loadTrash() }}
+                className={`text-xs px-2 py-1 rounded border transition-colors ${showTrash ? 'border-purple-500 text-purple-500' : 'border-[var(--card-border)] opacity-50 hover:opacity-100'}`}
+              >
+                {showTrash ? t('journal.recentNotes') : t('journal.trash')}
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               {selectMode ? (
                 <>
@@ -235,18 +271,36 @@ export default function JournalPage() {
             </div>
           </div>
 
-          <SearchFilterPanel filters={filters} onFilterChange={handleFilterChange} />
+          {!showTrash && <SearchFilterPanel filters={filters} onFilterChange={handleFilterChange} />}
 
+          {showTrash ? (
+            <div>
+              {trashLoading ? (
+                <div className="space-y-3">{[1, 2].map((i) => <SkeletonCard key={i} />)}</div>
+              ) : trashNotes.length === 0 ? (
+                <EmptyState title={t('journal.trashEmpty')} description={t('journal.trashEmptyDesc')} />
+              ) : (
+                <div className="space-y-3">
+                  {trashNotes.map((note) => (
+                    <div key={note.id} className="glass-card p-4 opacity-70">
+                      <p className="text-sm mb-2">{note.content_preview}</p>
+                      <div className="flex items-center justify-between text-xs opacity-60">
+                        <span>{t('journal.deletedAt')}: {new Date(note.created_at).toLocaleDateString()}</span>
+                        <div className="flex gap-2">
+                          <button onClick={() => handleRestore(note.id)} className="text-purple-500 hover:text-purple-400">{t('journal.restore')}</button>
+                          <button onClick={() => handlePermanentDelete(note.id)} className="text-red-500 hover:text-red-400">{t('journal.permanentDelete')}</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
           <div>
             {loading ? (
               <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="glass-card p-4 animate-pulse space-y-3">
-                    <div className="h-4 bg-white/10 rounded w-3/4" />
-                    <div className="h-3 bg-white/10 rounded w-1/2" />
-                    <div className="h-3 bg-white/10 rounded w-1/3" />
-                  </div>
-                ))}
+                {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
               </div>
             ) : notes.length === 0 ? (
               <EmptyState
@@ -297,6 +351,7 @@ export default function JournalPage() {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Right column: sidebar (desktop only) */}

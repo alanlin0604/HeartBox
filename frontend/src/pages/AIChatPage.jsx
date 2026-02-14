@@ -401,18 +401,34 @@ export default function AIChatPage() {
       {/* Context Menu */}
       {contextMenu && (
         <div
+          role="menu"
           className="fixed z-50 glass-card py-1 rounded-xl shadow-xl min-w-[160px] border border-white/10"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setContextMenu(null)
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+              e.preventDefault()
+              const items = e.currentTarget.querySelectorAll('[role="menuitem"]')
+              const idx = Array.from(items).indexOf(document.activeElement)
+              const next = e.key === 'ArrowDown' ? (idx + 1) % items.length : (idx - 1 + items.length) % items.length
+              items[next]?.focus()
+            }
+          }}
+          ref={(el) => el?.querySelector('[role="menuitem"]')?.focus()}
         >
           <button
-            className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors cursor-pointer"
+            role="menuitem"
+            tabIndex={0}
+            className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors cursor-pointer focus:bg-white/10 outline-none"
             onClick={() => handleRenameStart(contextMenu.sessionId)}
           >
             {t('aiChat.rename')}
           </button>
           <button
-            className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors cursor-pointer"
+            role="menuitem"
+            tabIndex={0}
+            className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors cursor-pointer focus:bg-white/10 outline-none"
             onClick={() => handleTogglePin(contextMenu.sessionId)}
           >
             {sessions.find((s) => s.id === contextMenu.sessionId)?.is_pinned
@@ -420,7 +436,9 @@ export default function AIChatPage() {
               : t('aiChat.pin')}
           </button>
           <button
-            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-white/10 transition-colors cursor-pointer"
+            role="menuitem"
+            tabIndex={0}
+            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-white/10 transition-colors cursor-pointer focus:bg-white/10 outline-none"
             onClick={() => { setContextMenu(null); setDeleteConfirmId(contextMenu.sessionId) }}
           >
             {t('aiChat.deleteSession')}

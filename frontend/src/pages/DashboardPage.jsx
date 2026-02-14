@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -8,7 +8,41 @@ import { getAnalytics } from '../api/analytics'
 import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
-import LoadingSpinner from '../components/LoadingSpinner'
+import SkeletonCard from '../components/SkeletonCard'
+
+function downloadChartAsPNG(containerRef, filename = 'chart.png') {
+  const svg = containerRef.current?.querySelector('svg')
+  if (!svg) return
+  const svgData = new XMLSerializer().serializeToString(svg)
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  const img = new Image()
+  img.onload = () => {
+    canvas.width = img.width * 2
+    canvas.height = img.height * 2
+    ctx.scale(2, 2)
+    ctx.fillStyle = '#1e1b4b'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(img, 0, 0)
+    const a = document.createElement('a')
+    a.download = filename
+    a.href = canvas.toDataURL('image/png')
+    a.click()
+  }
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)))
+}
+
+function downloadDataAsCSV(data, columns, filename = 'data.csv') {
+  const header = columns.map(c => c.label).join(',')
+  const rows = data.map(row => columns.map(c => row[c.key] ?? '').join(','))
+  const csv = [header, ...rows].join('\n')
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
+  const a = document.createElement('a')
+  a.download = filename
+  a.href = URL.createObjectURL(blob)
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
 import MoodCalendar from '../components/MoodCalendar'
 import StressRadarChart from '../components/StressRadarChart'
 import EmptyState from '../components/EmptyState'
@@ -22,6 +56,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState('week')
   const [lookback, setLookback] = useState(30)
+  const trendsRef = useRef(null)
+  const tagsRef = useRef(null)
 
   useEffect(() => { document.title = `${t('nav.dashboard')} — ${t('app.name')}` }, [t])
 
@@ -51,7 +87,16 @@ export default function DashboardPage() {
     color: theme === 'dark' ? '#e2e8f0' : '#1e293b',
   }), [theme])
 
-  if (loading && !data) return <LoadingSpinner />
+  if (loading && !data) return (
+    <div className="space-y-6 mt-4">
+      <SkeletonCard lines={2} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <SkeletonCard lines={6} />
+        <SkeletonCard lines={6} />
+      </div>
+      <SkeletonCard lines={4} />
+    </div>
+  )
 
   return (
     <div className="space-y-6 mt-4">
@@ -103,8 +148,32 @@ export default function DashboardPage() {
       </div>
 
       {/* Mood Trends */}
-      <div className="glass p-6">
-        <h2 className="text-lg font-semibold mb-4">{t('dashboard.moodTrends')}</h2>
+      <div className="glass p-6" ref={trendsRef}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">{t('dashboard.moodTrends')}</h2>
+          {trends.length > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => downloadChartAsPNG(trendsRef, 'mood_trends.png')}
+                className="text-xs opacity-50 hover:opacity-100 transition-opacity px-2 py-1 rounded border border-[var(--card-border)]"
+                title="PNG"
+              >
+                PNG
+              </button>
+              <button
+                onClick={() => downloadDataAsCSV(trends, [
+                  { key: 'name', label: 'Period' },
+                  { key: 'avg_sentiment', label: 'Avg Sentiment' },
+                  { key: 'avg_stress', label: 'Avg Stress' },
+                ], 'mood_trends.csv')}
+                className="text-xs opacity-50 hover:opacity-100 transition-opacity px-2 py-1 rounded border border-[var(--card-border)]"
+                title="CSV"
+              >
+                CSV
+              </button>
+            </div>
+          )}
+        </div>
         {trends.length === 0 ? (
           <EmptyState
             title={t('dashboard.noTrends')}
@@ -160,8 +229,31 @@ export default function DashboardPage() {
       </div>
 
       {/* Frequent Tags */}
-      <div className="glass p-6">
-        <h2 className="text-lg font-semibold mb-4">{t('dashboard.frequentTags')}</h2>
+      <div className="glass p-6" ref={tagsRef}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">{t('dashboard.frequentTags')}</h2>
+          {tags.length > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => downloadChartAsPNG(tagsRef, 'frequent_tags.png')}
+                className="text-xs opacity-50 hover:opacity-100 transition-opacity px-2 py-1 rounded border border-[var(--card-border)]"
+                title="PNG"
+              >
+                PNG
+              </button>
+              <button
+                onClick={() => downloadDataAsCSV(tags, [
+                  { key: 'name', label: 'Tag' },
+                  { key: 'count', label: 'Count' },
+                ], 'frequent_tags.csv')}
+                className="text-xs opacity-50 hover:opacity-100 transition-opacity px-2 py-1 rounded border border-[var(--card-border)]"
+                title="CSV"
+              >
+                CSV
+              </button>
+            </div>
+          )}
+        </div>
         {tags.length === 0 ? (
           <EmptyState
             title={t('dashboard.noTags')}

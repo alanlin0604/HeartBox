@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import {
   getCounselors,
   applyCounselor,
@@ -11,7 +11,7 @@ import {
 import { getSharedNotes } from '../api/notes'
 import { getBookings, bookingAction } from '../api/schedule'
 import { useLang } from '../context/LanguageContext'
-import LoadingSpinner from '../components/LoadingSpinner'
+import SkeletonCard from '../components/SkeletonCard'
 import BookingPanel from '../components/BookingPanel'
 import ScheduleManager from '../components/ScheduleManager'
 import EmptyState from '../components/EmptyState'
@@ -29,6 +29,7 @@ function formatPrice(amount, currency = 'TWD') {
 export default function CounselorListPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { lang, t } = useLang()
   const toast = useToast()
   const [counselors, setCounselors] = useState([])
@@ -36,7 +37,7 @@ export default function CounselorListPage() {
   const [myProfile, setMyProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState('list')
+  const [tab, setTab] = useState(() => searchParams.get('tab') || 'list')
 
   // Booking panel state
   const [bookingTarget, setBookingTarget] = useState(null)
@@ -72,13 +73,25 @@ export default function CounselorListPage() {
     loadData()
   }, [])
 
-  // Accept tab from notification navigation
+  // Sync tab state with URL search params
   useEffect(() => {
     if (location.state?.tab) {
       const tabMap = { bookings: 'bookings', received: 'shared' }
-      setTab(tabMap[location.state.tab] || location.state.tab)
+      const newTab = tabMap[location.state.tab] || location.state.tab
+      setTab(newTab)
+      setSearchParams({ tab: newTab }, { replace: true })
     }
   }, [location.state])
+
+  // Update URL when tab changes
+  useEffect(() => {
+    const current = searchParams.get('tab')
+    if (tab !== 'list' && current !== tab) {
+      setSearchParams({ tab }, { replace: true })
+    } else if (tab === 'list' && current) {
+      setSearchParams({}, { replace: true })
+    }
+  }, [tab])
 
   const loadData = async () => {
     setLoading(true)
@@ -181,7 +194,11 @@ export default function CounselorListPage() {
     }
   }
 
-  if (loading) return <LoadingSpinner />
+  if (loading) return (
+    <div className="space-y-4 mt-4">
+      {[1, 2, 3].map((i) => <SkeletonCard key={i} lines={3} showAvatar />)}
+    </div>
+  )
 
   const STATUS_MAP = {
     pending: t('counselor.statusPending'),

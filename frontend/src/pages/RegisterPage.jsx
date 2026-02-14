@@ -20,6 +20,8 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [emailTouched, setEmailTouched] = useState(false)
+  const emailValid = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
   if (user) return <Navigate to="/" />
 
@@ -101,14 +103,20 @@ export default function RegisterPage() {
             className="glass-input"
             required
           />
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={t('register.email')}
-            className="glass-input"
-            required
-          />
+          <div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setEmailTouched(true)}
+              placeholder={t('register.email')}
+              className={`glass-input ${emailTouched && !emailValid ? 'border-red-500/60' : ''}`}
+              required
+            />
+            {emailTouched && !emailValid && (
+              <p className="text-xs text-red-500 mt-1">{t('register.emailInvalid')}</p>
+            )}
+          </div>
           <PasswordField
             value={password}
             onChange={(e) => setPassword(e.target.value)}

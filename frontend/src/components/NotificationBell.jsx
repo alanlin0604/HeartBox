@@ -50,16 +50,31 @@ export default memo(function NotificationBell() {
 
     const wsBase = import.meta.env.VITE_WS_URL
     const wsUrl = wsBase
-      ? `${wsBase}/ws/notifications/?token=${token}`
-      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/notifications/?token=${token}`
+      ? `${wsBase}/ws/notifications/`
+      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws/notifications/`
     const ws = new WebSocket(wsUrl)
 
     ws.onopen = () => {
-      reconnectDelay.current = 3000 // Reset on success
+      // Send JWT via first message instead of query string
+      ws.send(JSON.stringify({ type: 'auth', token }))
     }
 
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data)
+      // Handle auth response
+      if (data.type === 'auth_ok') {
+        reconnectDelay.current = 3000
+        return
+      }
+      // Respond to server heartbeat pings
+      if (data.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong' }))
+        return
+      }
+      if (data.error) {
+        console.error('WebSocket error:', data.error)
+        return
+      }
       setNotifications((prev) => [data, ...prev])
       setUnreadCount((c) => c + 1)
     }

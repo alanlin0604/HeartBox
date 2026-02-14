@@ -16,7 +16,6 @@ import NotFoundPage from './pages/NotFoundPage'
 const JournalPage = lazy(() => import('./pages/JournalPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const NoteDetailPage = lazy(() => import('./pages/NoteDetailPage'))
-const ComingSoonPage = lazy(() => import('./pages/ComingSoonPage'))
 const CounselorListPage = lazy(() => import('./pages/CounselorListPage'))
 const ChatPage = lazy(() => import('./pages/ChatPage'))
 const AIChatPage = lazy(() => import('./pages/AIChatPage'))

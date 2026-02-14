@@ -198,7 +198,9 @@ class BatchDeleteTests(APITestCase):
         resp = self.client.post('/api/notes/batch_delete/', {'ids': ids}, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp.data['deleted'], 3)
-        self.assertEqual(MoodNote.objects.filter(user=self.user).count(), 0)
+        # Soft delete: notes still exist but are marked as deleted
+        self.assertEqual(MoodNote.objects.filter(user=self.user, is_deleted=True).count(), 3)
+        self.assertEqual(MoodNote.objects.filter(user=self.user, is_deleted=False).count(), 0)
 
     def test_batch_delete_empty_ids(self):
         resp = self.client.post('/api/notes/batch_delete/', {'ids': []}, format='json')
@@ -1099,3 +1101,156 @@ class AIChatPinRenameTests(APITestCase):
             format='json',
         )
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+
+@override_settings(REST_FRAMEWORK=NO_THROTTLE)
+class SoftDeleteTests(APITestCase):
+    """Test soft-delete, trash, restore, and permanent delete."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='trashuser', email='trash@test.com', password='TrashPass123!',
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def _create_note(self, content='Test note'):
+        note = MoodNote(user=self.user)
+        note.set_content(content)
+        note.save()
+        return note.id
+
+    def test_delete_is_soft(self):
+        """DELETE /api/notes/<id>/ should soft-delete, not hard-delete."""
+        note_id = self._create_note('Soft delete me')
+        resp = self.client.delete(f'/api/notes/{note_id}/')
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        note = MoodNote.objects.get(pk=note_id)
+        self.assertTrue(note.is_deleted)
+        self.assertIsNotNone(note.deleted_at)
+
+    def test_deleted_note_excluded_from_list(self):
+        """Soft-deleted notes should not appear in normal list."""
+        note_id = self._create_note('Hidden note')
+        self.client.delete(f'/api/notes/{note_id}/')
+        resp = self.client.get('/api/notes/')
+        ids = [n['id'] for n in resp.data.get('results', resp.data)]
+        self.assertNotIn(note_id, ids)
+
+    def test_trash_endpoint(self):
+        """GET /api/notes/trash/ should list soft-deleted notes."""
+        note_id = self._create_note('Trash me')
+        self.client.delete(f'/api/notes/{note_id}/')
+        resp = self.client.get('/api/notes/trash/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        ids = [n['id'] for n in resp.data]
+        self.assertIn(note_id, ids)
+
+    def test_restore(self):
+        """POST /api/notes/<id>/restore/ should un-delete a note."""
+        note_id = self._create_note('Restore me')
+        self.client.delete(f'/api/notes/{note_id}/')
+        resp = self.client.post(f'/api/notes/{note_id}/restore/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        note = MoodNote.objects.get(pk=note_id)
+        self.assertFalse(note.is_deleted)
+        self.assertIsNone(note.deleted_at)
+
+    def test_permanent_delete(self):
+        """DELETE /api/notes/<id>/permanent-delete/ should hard-delete from trash."""
+        note_id = self._create_note('Gone forever')
+        self.client.delete(f'/api/notes/{note_id}/')
+        resp = self.client.delete(f'/api/notes/{note_id}/permanent-delete/')
+        self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(MoodNote.objects.filter(pk=note_id).exists())
+
+    def test_permanent_delete_non_trashed_404(self):
+        """Cannot permanently delete a note that is not in trash."""
+        note_id = self._create_note('Still alive')
+        resp = self.client.delete(f'/api/notes/{note_id}/permanent-delete/')
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_restore_non_trashed_404(self):
+        """Cannot restore a note that is not in trash."""
+        note_id = self._create_note('Not trashed')
+        resp = self.client.post(f'/api/notes/{note_id}/restore/')
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+
+@override_settings(REST_FRAMEWORK=NO_THROTTLE)
+class AuditLogTests(APITestCase):
+    """Test that audit log entries are created for key actions."""
+
+    def setUp(self):
+        from .models import AuditLog
+        self.AuditLog = AuditLog
+        self.user = CustomUser.objects.create_user(
+            username='audituser', email='audit@test.com', password='AuditPass123!',
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def _create_note(self, content='Test note'):
+        note = MoodNote(user=self.user)
+        note.set_content(content)
+        note.save()
+        return note.id
+
+    def test_note_delete_creates_audit(self):
+        note_id = self._create_note('Audit this')
+        self.client.delete(f'/api/notes/{note_id}/')
+        entry = self.AuditLog.objects.filter(
+            user=self.user, action='note_delete', target_type='MoodNote', target_id=note_id
+        )
+        self.assertTrue(entry.exists())
+
+    def test_note_restore_creates_audit(self):
+        note_id = self._create_note('Audit restore')
+        self.client.delete(f'/api/notes/{note_id}/')
+        self.client.post(f'/api/notes/{note_id}/restore/')
+        entry = self.AuditLog.objects.filter(
+            user=self.user, action='note_restore', target_type='MoodNote', target_id=note_id
+        )
+        self.assertTrue(entry.exists())
+
+
+class AIChatPaginationTests(APITestCase):
+    """Test AI chat message pagination."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            username='chatpageuser', email='chatpage@test.com', password='ChatPass123!',
+        )
+        self.client.force_authenticate(user=self.user)
+        self.session = AIChatSession.objects.create(user=self.user, title='Pagination Test')
+
+    def test_messages_limited_to_50(self):
+        """Should return at most 50 messages."""
+        for i in range(55):
+            AIChatMessage.objects.create(
+                session=self.session, role='user', content=f'msg {i}'
+            )
+        resp = self.client.get(f'/api/ai-chat/sessions/{self.session.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertLessEqual(len(resp.data['messages']), 50)
+        self.assertTrue(resp.data['has_more'])
+
+    def test_before_param(self):
+        """?before=<id> should return messages before that ID."""
+        msgs = []
+        for i in range(10):
+            m = AIChatMessage.objects.create(
+                session=self.session, role='user', content=f'msg {i}'
+            )
+            msgs.append(m)
+        mid = msgs[5].id
+        resp = self.client.get(f'/api/ai-chat/sessions/{self.session.id}/?before={mid}')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        for m in resp.data['messages']:
+            self.assertLess(m['id'], mid)
+
+    def test_no_has_more_when_few(self):
+        """has_more should be False when fewer than 50 messages."""
+        AIChatMessage.objects.create(
+            session=self.session, role='user', content='only one'
+        )
+        resp = self.client.get(f'/api/ai-chat/sessions/{self.session.id}/')
+        self.assertFalse(resp.data['has_more'])

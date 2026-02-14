@@ -54,6 +54,14 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Skip to main content link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-purple-600 focus:text-white focus:rounded-lg focus:text-sm"
+      >
+        {t('aria.skipToContent')}
+      </a>
+
       {/* Offline banner */}
       {isOffline && (
         <div className="bg-yellow-500/90 text-black text-center text-sm py-1.5 px-4 font-medium">
@@ -252,7 +260,7 @@ export default function Layout() {
             <button
               onClick={() => { toggleTheme(); setMobileNavOpen(false) }}
               className="text-sm opacity-70 hover:opacity-100 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--card-border)] transition-colors"
-              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              aria-label={theme === 'dark' ? t('aria.switchToLight') : t('aria.switchToDark')}
             >
               <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
               <span>{theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark')}</span>
@@ -267,7 +275,7 @@ export default function Layout() {
         </div>
       )}
 
-      <main className="flex-1 flex flex-col p-4 max-w-6xl mx-auto w-full">
+      <main id="main-content" className="flex-1 flex flex-col p-4 max-w-6xl mx-auto w-full">
         <Outlet />
       </main>
 

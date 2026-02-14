@@ -11,6 +11,32 @@ function getLocaleText(key) {
   return locale[key] || LOCALES['zh-TW'][key] || key
 }
 
+function reportError(error, errorInfo) {
+  try {
+    const payload = {
+      message: error?.message || String(error),
+      stack: error?.stack?.slice(0, 2000),
+      componentStack: errorInfo?.componentStack?.slice(0, 2000),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      timestamp: new Date().toISOString(),
+    }
+    // Send to backend error reporting endpoint (fire-and-forget)
+    const apiBase = import.meta.env.VITE_API_URL || ''
+    if (apiBase) {
+      fetch(`${apiBase}/api/error-report/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => {})
+    }
+    // Always log structured error for monitoring
+    console.error('[ErrorBoundary]', payload)
+  } catch {
+    // Silently ignore reporting failures
+  }
+}
+
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props)
@@ -23,6 +49,7 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo)
+    reportError(error, errorInfo)
   }
 
   render() {

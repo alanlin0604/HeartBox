@@ -102,3 +102,12 @@ export const batchDeleteNotes = (ids) => {
 
 export const exportNotesCSV = () =>
   api.get('/auth/export/csv/', { responseType: 'blob' });
+
+// Trash (soft delete)
+export const getTrashNotes = () => api.get('/notes/trash/');
+export const restoreNote = (id) => {
+  invalidate('notes');
+  return api.post(`/notes/${id}/restore/`);
+};
+export const permanentDeleteNote = (id) =>
+  api.delete(`/notes/${id}/permanent-delete/`);

@@ -176,6 +176,7 @@ REST_FRAMEWORK = {
         'booking': '20/hour',
         'message_send': '60/hour',
         'ai_chat': '30/hour',
+        'delete_account': '5/hour',
     },
 }
 
@@ -262,4 +263,5 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

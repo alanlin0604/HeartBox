@@ -21,7 +21,13 @@ def get_user_from_token(token_str):
 
 
 class JWTAuthMiddleware(BaseMiddleware):
-    """Authenticate WebSocket connections via ?token=<JWT> query string."""
+    """Authenticate WebSocket connections.
+
+    Supports two methods (in priority order):
+    1. First-message auth: client sends {"type": "auth", "token": "<JWT>"}
+       as the first message after connecting (recommended — avoids token in URL).
+    2. Query-string fallback: ?token=<JWT> (kept for backward compatibility).
+    """
 
     async def __call__(self, scope, receive, send):
         qs = parse_qs(scope.get('query_string', b'').decode())
@@ -29,5 +35,6 @@ class JWTAuthMiddleware(BaseMiddleware):
         if token_list:
             scope['user'] = await get_user_from_token(token_list[0])
         else:
+            # Allow anonymous connection; consumer will wait for auth message
             scope['user'] = AnonymousUser()
         return await super().__call__(scope, receive, send)

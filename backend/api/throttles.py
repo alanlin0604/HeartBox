@@ -35,3 +35,7 @@ class MessageThrottle(UserRateThrottle):
 
 class AIChatThrottle(UserRateThrottle):
     scope = 'ai_chat'
+
+
+class DeleteAccountThrottle(UserRateThrottle):
+    scope = 'delete_account'

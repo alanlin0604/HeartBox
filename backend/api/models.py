@@ -36,8 +36,10 @@ class MoodNote(models.Model):
         help_text='0 (calm) to 10 (extreme stress)',
     )
     ai_feedback = models.TextField(blank=True, default='')
-    search_text = models.TextField(blank=True, default='', help_text='Plaintext index (first 200 chars) for DB-level search')
+    search_text = models.TextField(blank=True, default='', help_text='Plaintext index (first 500 chars) for DB-level search')
     is_pinned = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     metadata = models.JSONField(default=dict, blank=True, help_text='weather, temperature, location, tags')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -65,7 +67,7 @@ class MoodNote(models.Model):
         if self._raw_content is not None:
             from api.services.encryption import encryption_service
             self.encrypted_content = encryption_service.encrypt(self._raw_content)
-            self.search_text = self._raw_content[:200]
+            self.search_text = self._raw_content[:500]
             self._raw_content = None
         super().save(*args, **kwargs)
 
@@ -391,3 +393,42 @@ class UserAchievement(models.Model):
 
     def __str__(self):
         return f'{self.user.username} — {self.achievement_id}'
+
+
+class AuditLog(models.Model):
+    """Tracks important user actions for compliance and security auditing."""
+
+    ACTION_CHOICES = [
+        ('login', 'Login'),
+        ('password_change', 'Password Change'),
+        ('password_reset', 'Password Reset'),
+        ('note_create', 'Note Created'),
+        ('note_update', 'Note Updated'),
+        ('note_delete', 'Note Deleted'),
+        ('note_restore', 'Note Restored'),
+        ('account_delete', 'Account Deleted'),
+        ('export_data', 'Data Exported'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='audit_logs',
+    )
+    action = models.CharField(max_length=30, choices=ACTION_CHOICES)
+    target_type = models.CharField(max_length=50, blank=True, default='')
+    target_id = models.IntegerField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at'], name='audit_user_created'),
+            models.Index(fields=['action', '-created_at'], name='audit_action_created'),
+        ]
+
+    def __str__(self):
+        return f'{self.user} — {self.action} @ {self.created_at:%Y-%m-%d %H:%M}'

@@ -12,6 +12,7 @@ from django.db.models import Q
 from django.http import FileResponse
 from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
+from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.db.models import Prefetch
 from rest_framework import generics, viewsets, permissions, status, filters, exceptions
@@ -54,11 +55,13 @@ from .services.analytics import (
     get_calendar_data, get_stress_by_tag,
 )
 from .services.alerts import check_mood_alerts
+from .services.audit import log_action
 from .services.pdf_export import generate_notes_pdf
 from .services.search import search_notes
 from .throttles import (
-    AIChatThrottle, BookingThrottle, ExportThrottle, LoginRateThrottle, MessageThrottle,
-    NoteCreateThrottle, PasswordResetRateThrottle, RegisterRateThrottle, UploadThrottle,
+    AIChatThrottle, BookingThrottle, DeleteAccountThrottle, ExportThrottle,
+    LoginRateThrottle, MessageThrottle, NoteCreateThrottle,
+    PasswordResetRateThrottle, RegisterRateThrottle, UploadThrottle,
 )
 
 User = get_user_model()
@@ -152,7 +155,10 @@ class ResetPasswordView(APIView):
         if not default_token_generator.check_token(user, token):
             return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
         user.set_password(new_password)
-        user.save(update_fields=['password'])
+        # Rotate token_version to invalidate all existing JWT sessions
+        user.token_version += 1
+        user.save(update_fields=['password', 'token_version'])
+        log_action(user, 'password_reset', request)
         return Response({'status': 'ok'})
 
 
@@ -175,6 +181,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
             # Invalidate all other device tokens
             user.token_version = user.token_version + 1
             user.save(update_fields=['password', 'token_version'])
+            log_action(user, 'password_change', request)
             return Response(_issue_tokens(user))
         return super().update(request, *args, **kwargs)
 
@@ -199,7 +206,7 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         return MoodNoteSerializer
 
     def get_queryset(self):
-        qs = MoodNote.objects.filter(user=self.request.user)
+        qs = MoodNote.objects.filter(user=self.request.user, is_deleted=False)
         if self.action == 'list':
             params = self.request.query_params
             qs = search_notes(
@@ -282,6 +289,13 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
                 logger.warning('Reanalyze failed for note %s: %s', note.pk, e)
         return Response(MoodNoteSerializer(note, context={'request': request}).data)
 
+    def perform_destroy(self, instance):
+        """Soft delete: mark as deleted instead of permanent removal."""
+        instance.is_deleted = True
+        instance.deleted_at = timezone.now()
+        instance.save(update_fields=['is_deleted', 'deleted_at'])
+        log_action(self.request.user, 'note_delete', self.request, 'MoodNote', instance.pk)
+
     @action(detail=False, methods=['post'])
     def batch_delete(self, request):
         ids = request.data.get('ids', [])
@@ -289,8 +303,40 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Please provide a list of note IDs to delete.'}, status=status.HTTP_400_BAD_REQUEST)
         if len(ids) > 50:
             return Response({'error': 'Cannot delete more than 50 notes at once.'}, status=status.HTTP_400_BAD_REQUEST)
-        deleted, _ = MoodNote.objects.filter(user=request.user, id__in=ids).delete()
-        return Response({'deleted': deleted})
+        updated = MoodNote.objects.filter(user=request.user, id__in=ids, is_deleted=False).update(
+            is_deleted=True, deleted_at=timezone.now()
+        )
+        return Response({'deleted': updated})
+
+    @action(detail=False, methods=['get'])
+    def trash(self, request):
+        """List soft-deleted notes."""
+        qs = MoodNote.objects.filter(user=request.user, is_deleted=True).order_by('-deleted_at')
+        serializer = MoodNoteListSerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        """Restore a soft-deleted note."""
+        try:
+            note = MoodNote.objects.get(pk=pk, user=request.user, is_deleted=True)
+        except MoodNote.DoesNotExist:
+            return Response({'error': 'Note not found in trash.'}, status=status.HTTP_404_NOT_FOUND)
+        note.is_deleted = False
+        note.deleted_at = None
+        note.save(update_fields=['is_deleted', 'deleted_at'])
+        log_action(request.user, 'note_restore', request, 'MoodNote', note.pk)
+        return Response(MoodNoteSerializer(note, context={'request': request}).data)
+
+    @action(detail=True, methods=['delete'], url_path='permanent-delete')
+    def permanent_delete(self, request, pk=None):
+        """Permanently delete a trashed note."""
+        try:
+            note = MoodNote.objects.get(pk=pk, user=request.user, is_deleted=True)
+        except MoodNote.DoesNotExist:
+            return Response({'error': 'Note not found in trash.'}, status=status.HTTP_404_NOT_FOUND)
+        note.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AnalyticsView(APIView):
@@ -354,7 +400,7 @@ class AnalyticsView(APIView):
             'current_streak': current_streak,
             'longest_streak': longest_streak,
         }
-        cache.set(cache_key, result, 60)
+        cache.set(cache_key, result, 300)
         return Response(result)
 
 
@@ -376,7 +422,7 @@ class CalendarView(APIView):
         qs = MoodNote.objects.filter(user=request.user)
         days = get_calendar_data(qs, year, month)
         result = {'year': year, 'month': month, 'days': days}
-        cache.set(cache_key, result, 60)
+        cache.set(cache_key, result, 300)
         return Response(result)
 
 
@@ -518,7 +564,7 @@ class MessageListView(APIView):
         except Conversation.DoesNotExist:
             return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        content = request.data.get('content', '').strip()
+        content = strip_tags(request.data.get('content', '')).strip()
         if not content:
             return Response({'error': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
         if len(content) > 5000:
@@ -919,6 +965,7 @@ class SharedNotesReceivedView(generics.ListAPIView):
 
 class DeleteAccountView(APIView):
     """Permanently delete user account and all related data."""
+    throttle_classes = [DeleteAccountThrottle]
 
     def post(self, request):
         password = request.data.get('password', '')
@@ -926,6 +973,7 @@ class DeleteAccountView(APIView):
             return Response({'error': 'Password is required.'}, status=status.HTTP_400_BAD_REQUEST)
         if not request.user.check_password(password):
             return Response({'error': 'Incorrect password.'}, status=status.HTTP_400_BAD_REQUEST)
+        log_action(request.user, 'account_delete', request)
         request.user.delete()
         return Response({'status': 'ok'}, status=status.HTTP_200_OK)
 
@@ -1049,9 +1097,17 @@ class AIChatSessionDetailView(APIView):
             return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         messages = session.messages.all()
+        # Pagination: return last 50 by default, support ?before=<msg_id>
+        before = request.query_params.get('before')
+        if before:
+            messages = messages.filter(id__lt=before)
+        total = messages.count()
+        messages = messages.order_by('-created_at')[:50]
+        msg_list = list(reversed(messages))
         return Response({
             **AIChatSessionSerializer(session).data,
-            'messages': AIChatMessageSerializer(messages, many=True).data,
+            'messages': AIChatMessageSerializer(msg_list, many=True).data,
+            'has_more': total > 50,
         })
 
     def patch(self, request, session_id):
