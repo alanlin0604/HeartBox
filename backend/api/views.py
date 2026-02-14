@@ -897,7 +897,7 @@ class BookingCreateView(APIView):
         )
 
         # Notify counselor
-        Notification.objects.create(
+        notif = Notification.objects.create(
             user_id=counselor_user_id,
             type='booking',
             title='New booking',
@@ -910,6 +910,29 @@ class BookingCreateView(APIView):
                 'time': str(start_time),
             },
         )
+
+        # Push via WebSocket
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'notifications_{counselor_user_id}',
+                {
+                    'type': 'notify',
+                    'data': {
+                        'id': notif.id,
+                        'type': notif.type,
+                        'title': notif.title,
+                        'message': notif.message,
+                        'data': notif.data,
+                        'is_read': False,
+                        'created_at': notif.created_at.isoformat(),
+                    },
+                },
+            )
+        except Exception as e:
+            logger.debug('Channel layer push failed: %s', e)
 
         return Response(BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
 
@@ -934,7 +957,7 @@ class BookingActionView(APIView):
         booking.save(update_fields=['status'])
 
         # Notify user
-        Notification.objects.create(
+        notif = Notification.objects.create(
             user=booking.user,
             type='booking',
             title=f'Booking {booking.status}',
@@ -945,6 +968,29 @@ class BookingActionView(APIView):
                 'counselor_name': booking.counselor.username,
             },
         )
+
+        # Push via WebSocket
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'notifications_{booking.user_id}',
+                {
+                    'type': 'notify',
+                    'data': {
+                        'id': notif.id,
+                        'type': notif.type,
+                        'title': notif.title,
+                        'message': notif.message,
+                        'data': notif.data,
+                        'is_read': False,
+                        'created_at': notif.created_at.isoformat(),
+                    },
+                },
+            )
+        except Exception as e:
+            logger.debug('Channel layer push failed: %s', e)
 
         return Response(BookingSerializer(booking).data)
 

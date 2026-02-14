@@ -279,12 +279,14 @@ export default function ChatPage() {
               value={quoteData.price}
               onChange={(e) => setQuoteData({ ...quoteData, price: e.target.value })}
               placeholder={t('chat.quotePrice')}
-              className="glass-input flex-[3]"
+              className="glass-input"
+              style={{ width: 'auto', flex: '1 1 0%' }}
             />
             <select
               value={quoteData.currency}
               onChange={(e) => setQuoteData({ ...quoteData, currency: e.target.value })}
-              className="glass-input w-20"
+              className="glass-input"
+              style={{ width: '5rem', flex: 'none' }}
             >
               <option value="TWD">TWD</option>
               <option value="USD">USD</option>
