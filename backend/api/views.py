@@ -286,6 +286,26 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.warning('Achievement check failed for user %s: %s', self.request.user.pk, e)
 
+    def perform_update(self, serializer):
+        note = serializer.save()
+        try:
+            from api.services.ai_engine import ai_engine
+            plaintext = note.content
+            if plaintext:
+                result = ai_engine.analyze(plaintext)
+                note.sentiment_score = result['sentiment_score']
+                note.stress_index = result['stress_index']
+                note.ai_feedback = result['ai_feedback']
+                note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
+        except Exception as e:
+            logger.warning('AI re-analysis failed for note %s: %s', note.pk, e)
+        cache.delete_many([
+            f'analytics_{self.request.user.id}_week_30',
+            f'analytics_{self.request.user.id}_month_30',
+            f'analytics_{self.request.user.id}_week_7',
+            f'calendar_{self.request.user.id}_{timezone.now().year}_{timezone.now().month}',
+        ])
+
     def create(self, request, *args, **kwargs):
         self._new_achievements = []
         response = super().create(request, *args, **kwargs)
