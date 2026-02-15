@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, memo } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 import {
@@ -13,6 +13,38 @@ import EmptyState from '../components/EmptyState'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ConfirmModal from '../components/ConfirmModal'
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
+
+const AIChatMessage = memo(function AIChatMessage({ msg, lang }) {
+  const isUser = msg.role === 'user'
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+      {!isUser && (
+        <span className="text-lg mr-2 mt-1 shrink-0">🤖</span>
+      )}
+      <div
+        className={`max-w-[75%] p-3 rounded-2xl ${
+          isUser
+            ? 'bg-purple-500/30 rounded-br-md'
+            : 'glass-card rounded-bl-md'
+        }`}
+      >
+        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+          {msg.content}
+        </p>
+        <p className="text-xs opacity-40 mt-1 text-right">
+          {new Date(msg.created_at).toLocaleTimeString(
+            LOCALE_MAP[lang] || lang,
+            {
+              timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+              hour: '2-digit',
+              minute: '2-digit',
+            }
+          )}
+        </p>
+      </div>
+    </div>
+  )
+})
 
 export default function AIChatPage() {
   const { lang, t } = useLang()
@@ -315,40 +347,9 @@ export default function AIChatPage() {
                   {t('aiChat.empty')}
                 </div>
               ) : (
-                messages.map((msg) => {
-                  const isUser = msg.role === 'user'
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {!isUser && (
-                        <span className="text-lg mr-2 mt-1 shrink-0">🤖</span>
-                      )}
-                      <div
-                        className={`max-w-[75%] p-3 rounded-2xl ${
-                          isUser
-                            ? 'bg-purple-500/30 rounded-br-md'
-                            : 'glass-card rounded-bl-md'
-                        }`}
-                      >
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                          {msg.content}
-                        </p>
-                        <p className="text-xs opacity-40 mt-1 text-right">
-                          {new Date(msg.created_at).toLocaleTimeString(
-                            LOCALE_MAP[lang] || lang,
-                            {
-                              timeZone: TZ_MAP[lang] || 'Asia/Taipei',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            }
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })
+                messages.map((msg) => (
+                  <AIChatMessage key={msg.id} msg={msg} lang={lang} />
+                ))
               )}
               {sending && (
                 <div className="flex justify-start">
@@ -402,7 +403,7 @@ export default function AIChatPage() {
       {contextMenu && (
         <div
           role="menu"
-          className="fixed z-50 glass-card py-1 rounded-xl shadow-xl min-w-[160px] border border-white/10"
+          className="fixed z-50 popup-panel py-1 min-w-[160px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => {
@@ -420,7 +421,7 @@ export default function AIChatPage() {
           <button
             role="menuitem"
             tabIndex={0}
-            className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors cursor-pointer focus:bg-white/10 outline-none"
+            className="w-full text-left px-4 py-2 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer focus:bg-purple-500/10 outline-none"
             onClick={() => handleRenameStart(contextMenu.sessionId)}
           >
             {t('aiChat.rename')}
@@ -428,7 +429,7 @@ export default function AIChatPage() {
           <button
             role="menuitem"
             tabIndex={0}
-            className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors cursor-pointer focus:bg-white/10 outline-none"
+            className="w-full text-left px-4 py-2 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer focus:bg-purple-500/10 outline-none"
             onClick={() => handleTogglePin(contextMenu.sessionId)}
           >
             {sessions.find((s) => s.id === contextMenu.sessionId)?.is_pinned
@@ -438,7 +439,7 @@ export default function AIChatPage() {
           <button
             role="menuitem"
             tabIndex={0}
-            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-white/10 transition-colors cursor-pointer focus:bg-white/10 outline-none"
+            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-purple-500/10 transition-colors cursor-pointer focus:bg-purple-500/10 outline-none"
             onClick={() => { setContextMenu(null); setDeleteConfirmId(contextMenu.sessionId) }}
           >
             {t('aiChat.deleteSession')}

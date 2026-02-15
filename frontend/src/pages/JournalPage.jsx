@@ -431,14 +431,14 @@ export default function JournalPage() {
       {contextMenu && (
         <div
           role="menu"
-          className="fixed z-50 glass-card py-1 rounded-xl shadow-xl min-w-[160px] border border-white/10"
+          className="fixed z-50 popup-panel py-1 min-w-[160px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             role="menuitem"
             tabIndex={0}
-            className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors cursor-pointer focus:bg-white/10 outline-none"
+            className="w-full text-left px-4 py-2 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer focus:bg-purple-500/10 outline-none"
             onClick={() => handleTogglePin(contextMenu.noteId)}
           >
             {notes.find((n) => n.id === contextMenu.noteId)?.is_pinned
@@ -448,7 +448,7 @@ export default function JournalPage() {
           <button
             role="menuitem"
             tabIndex={0}
-            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-white/10 transition-colors cursor-pointer focus:bg-white/10 outline-none"
+            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-purple-500/10 transition-colors cursor-pointer focus:bg-purple-500/10 outline-none"
             onClick={() => { setContextMenu(null); setDeleteConfirmId(contextMenu.noteId) }}
           >
             {t('noteDetail.delete')}

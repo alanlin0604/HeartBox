@@ -18,6 +18,7 @@ export default defineConfig({
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-recharts': ['recharts'],
+          'vendor-axios': ['axios'],
         },
       },
     },

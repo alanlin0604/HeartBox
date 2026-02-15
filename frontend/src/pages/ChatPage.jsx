@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, memo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
@@ -8,6 +8,54 @@ import { getAccessToken } from '../utils/tokenStorage'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
+
+const MessageItem = memo(function MessageItem({ msg, user, lang, t, onQuoteAction }) {
+  const isMine = msg.sender === user?.id
+  return (
+    <div className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+      <div
+        className={`max-w-[70%] p-3 rounded-2xl ${
+          isMine
+            ? 'bg-purple-500/30 rounded-br-md'
+            : 'glass-card rounded-bl-md'
+        }`}
+      >
+        {!isMine && (
+          <div className="flex items-center gap-1.5 mb-1">
+            {msg.sender_avatar ? (
+              <img src={msg.sender_avatar} alt={msg.sender_name} loading="lazy" decoding="async" className="w-5 h-5 rounded-full object-cover border border-white/20" />
+            ) : null}
+            <p className="text-xs font-semibold opacity-60">{msg.sender_name}</p>
+          </div>
+        )}
+        {msg.message_type === 'quote' ? (
+          <QuoteCard
+            metadata={msg.metadata}
+            t={t}
+            isMine={isMine}
+            onAction={(action) => onQuoteAction(msg.id, action)}
+          />
+        ) : (
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+        )}
+        <p className="text-xs opacity-40 mt-1 text-right flex items-center justify-end gap-1">
+          <span>
+            {new Date(msg.created_at).toLocaleTimeString(LOCALE_MAP[lang] || lang, {
+              timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
+          {isMine && (
+            <span title={msg.is_read ? t('chat.read') : t('chat.sent')}>
+              {msg.is_read ? '✓✓' : '✓'}
+            </span>
+          )}
+        </p>
+      </div>
+    </div>
+  )
+})
 
 function QuoteCard({ metadata, t, isMine, onAction }) {
   const { description, price, currency, status: quoteStatus } = metadata || {}
@@ -230,7 +278,7 @@ export default function ChatPage() {
           {otherUser ? (
             <span className="flex items-center gap-2">
               {otherUser.avatar ? (
-                <img src={otherUser.avatar} alt={otherUser.username} loading="lazy" className="w-7 h-7 rounded-full object-cover border border-white/20" />
+                <img src={otherUser.avatar} alt={otherUser.username} loading="lazy" decoding="async" className="w-7 h-7 rounded-full object-cover border border-white/20" />
               ) : (
                 <span className="w-7 h-7 rounded-full bg-purple-500/25 text-xs flex items-center justify-center">
                   {otherUser.username?.slice(0, 1).toUpperCase()}
@@ -252,56 +300,9 @@ export default function ChatPage() {
             {t('chat.empty')}
           </div>
         ) : (
-          messages.map((msg) => {
-            const isMine = msg.sender === user?.id
-            return (
-              <div
-                key={msg.id}
-                className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[70%] p-3 rounded-2xl ${
-                    isMine
-                      ? 'bg-purple-500/30 rounded-br-md'
-                      : 'glass-card rounded-bl-md'
-                  }`}
-                >
-                  {!isMine && (
-                    <div className="flex items-center gap-1.5 mb-1">
-                      {msg.sender_avatar ? (
-                        <img src={msg.sender_avatar} alt={msg.sender_name} loading="lazy" className="w-5 h-5 rounded-full object-cover border border-white/20" />
-                      ) : null}
-                      <p className="text-xs font-semibold opacity-60">{msg.sender_name}</p>
-                    </div>
-                  )}
-                  {msg.message_type === 'quote' ? (
-                    <QuoteCard
-                      metadata={msg.metadata}
-                      t={t}
-                      isMine={isMine}
-                      onAction={(action) => handleQuoteAction(msg.id, action)}
-                    />
-                  ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  )}
-                  <p className="text-xs opacity-40 mt-1 text-right flex items-center justify-end gap-1">
-                    <span>
-                      {new Date(msg.created_at).toLocaleTimeString(LOCALE_MAP[lang] || lang, {
-                        timeZone: TZ_MAP[lang] || 'Asia/Taipei',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                    {isMine && (
-                      <span title={msg.is_read ? t('chat.read') : t('chat.sent')}>
-                        {msg.is_read ? '✓✓' : '✓'}
-                      </span>
-                    )}
-                  </p>
-                </div>
-              </div>
-            )
-          })
+          messages.map((msg) => (
+            <MessageItem key={msg.id} msg={msg} user={user} lang={lang} t={t} onQuoteAction={handleQuoteAction} />
+          ))
         )}
         <div ref={bottomRef} />
       </div>

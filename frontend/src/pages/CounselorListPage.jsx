@@ -311,6 +311,7 @@ export default function CounselorListPage() {
                           src={c.avatar}
                           alt={c.username}
                           loading="lazy"
+                          decoding="async"
                           className="w-10 h-10 rounded-full object-cover border border-white/20"
                           onError={(e) => {
                             e.target.style.display = 'none'

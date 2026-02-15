@@ -4,7 +4,7 @@ import { getAchievements, checkAchievements } from '../api/achievements'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { useToast } from '../context/ToastContext'
 
-const CATEGORIES = ['all', 'writing', 'consistency', 'mood', 'social', 'explore']
+const CATEGORIES = ['all', 'writing', 'consistency', 'mood', 'social', 'explore', 'wellness']
 
 export default function AchievementsPage() {
   const { t } = useLang()
@@ -180,6 +180,17 @@ function getIcon(iconName) {
     moon: '\u{1F319}',
     sunrise: '\u{1F305}',
     pin: '\u{1F4CC}',
+    medal: '\u{1F3C5}',
+    camera: '\u{1F4F7}',
+    sparkles: '\u{2728}',
+    calendar_star: '\u{1F31F}',
+    leaf: '\u{1F33F}',
+    rainbow: '\u{1F308}',
+    handshake: '\u{1F91D}',
+    mailbox: '\u{1F4EC}',
+    tags: '\u{1F3F7}\u{FE0F}',
+    cloud_sun: '\u{26C5}',
+    heart: '\u{2764}\u{FE0F}',
   }
   return icons[iconName] || '\u{2B50}'
 }

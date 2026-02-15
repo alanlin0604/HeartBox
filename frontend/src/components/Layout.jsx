@@ -11,6 +11,16 @@ const LANG_OPTIONS = [
   { code: 'ja', label: 'JA' },
 ]
 
+const ROUTE_PRELOADS = {
+  '/': () => import('../pages/JournalPage'),
+  '/dashboard': () => import('../pages/DashboardPage'),
+  '/counselors': () => import('../pages/CounselorListPage'),
+  '/ai-chat': () => import('../pages/AIChatPage'),
+  '/achievements': () => import('../pages/AchievementsPage'),
+  '/admin': () => import('../pages/AdminPage'),
+  '/settings': () => import('../pages/SettingsPage'),
+}
+
 export default function Layout() {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
@@ -73,7 +83,7 @@ export default function Layout() {
 
       <nav className="glass sticky top-0 z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent flex items-center gap-2">
-          <img src="/logo.png" alt="HeartBox" className="w-8 h-8 object-contain" />
+          <img src="/logo.png" alt="HeartBox" decoding="async" className="w-8 h-8 object-contain" />
           {t('app.displayName')}
         </h1>
 
@@ -109,6 +119,7 @@ export default function Layout() {
               key={link.to}
               to={link.to}
               end={link.end}
+              onMouseEnter={() => ROUTE_PRELOADS[link.to]?.()}
               className={({ isActive }) =>
                 `font-medium transition-colors ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
               }
@@ -135,7 +146,7 @@ export default function Layout() {
               className="flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
             >
               {user?.avatar ? (
-                <img src={user.avatar} alt={user.username} loading="lazy" className="w-7 h-7 rounded-full object-cover border border-white/20" />
+                <img src={user.avatar} alt={user.username} loading="lazy" decoding="async" className="w-7 h-7 rounded-full object-cover border border-white/20" />
               ) : (
                 <span className="w-7 h-7 rounded-full bg-purple-500/25 text-xs flex items-center justify-center">
                   {user?.username?.slice(0, 1)?.toUpperCase()}

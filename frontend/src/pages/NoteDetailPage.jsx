@@ -188,6 +188,7 @@ export default function NoteDetailPage() {
                   src={att.file}
                   alt={att.original_name}
                   loading="lazy"
+                  decoding="async"
                   className="max-w-xs rounded-xl border border-white/10"
                 />
               ))}

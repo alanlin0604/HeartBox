@@ -2,7 +2,8 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 from api.models import (
-    AIChatSession, Booking, MoodNote, SharedNote, UserAchievement,
+    AIChatSession, Booking, Conversation, Feedback, Message, MoodNote,
+    NoteAttachment, SharedNote, UserAchievement,
 )
 
 ACHIEVEMENT_DEFINITIONS = {
@@ -144,6 +145,84 @@ ACHIEVEMENT_DEFINITIONS = {
         'name_key': 'achievement.pin_master',
         'desc_key': 'achievement.pin_master_desc',
     },
+    # ===== New Achievements =====
+    'notes_200': {
+        'category': 'writing',
+        'icon': 'medal',
+        'threshold': 200,
+        'name_key': 'achievement.notes_200',
+        'desc_key': 'achievement.notes_200_desc',
+    },
+    'first_image': {
+        'category': 'writing',
+        'icon': 'camera',
+        'threshold': 1,
+        'name_key': 'achievement.first_image',
+        'desc_key': 'achievement.first_image_desc',
+    },
+    'weekend_warrior': {
+        'category': 'consistency',
+        'icon': 'sparkles',
+        'threshold': 1,
+        'name_key': 'achievement.weekend_warrior',
+        'desc_key': 'achievement.weekend_warrior_desc',
+    },
+    'dedicated_months_3': {
+        'category': 'consistency',
+        'icon': 'calendar_star',
+        'threshold': 3,
+        'name_key': 'achievement.dedicated_months_3',
+        'desc_key': 'achievement.dedicated_months_3_desc',
+    },
+    'stress_manager': {
+        'category': 'mood',
+        'icon': 'leaf',
+        'threshold': 5,
+        'name_key': 'achievement.stress_manager',
+        'desc_key': 'achievement.stress_manager_desc',
+    },
+    'emotional_range': {
+        'category': 'mood',
+        'icon': 'rainbow',
+        'threshold': 2,
+        'name_key': 'achievement.emotional_range',
+        'desc_key': 'achievement.emotional_range_desc',
+    },
+    'conversation_starter': {
+        'category': 'social',
+        'icon': 'handshake',
+        'threshold': 1,
+        'name_key': 'achievement.conversation_starter',
+        'desc_key': 'achievement.conversation_starter_desc',
+    },
+    'messages_50': {
+        'category': 'social',
+        'icon': 'mailbox',
+        'threshold': 50,
+        'name_key': 'achievement.messages_50',
+        'desc_key': 'achievement.messages_50_desc',
+    },
+    'tag_collector': {
+        'category': 'explore',
+        'icon': 'tags',
+        'threshold': 10,
+        'name_key': 'achievement.tag_collector',
+        'desc_key': 'achievement.tag_collector_desc',
+    },
+    'weather_logger': {
+        'category': 'explore',
+        'icon': 'cloud_sun',
+        'threshold': 5,
+        'name_key': 'achievement.weather_logger',
+        'desc_key': 'achievement.weather_logger_desc',
+    },
+    'feedback_giver': {
+        'category': 'wellness',
+        'icon': 'heart',
+        'threshold': 1,
+        'name_key': 'achievement.feedback_giver',
+        'desc_key': 'achievement.feedback_giver_desc',
+    },
 }
 
 
@@ -233,6 +312,42 @@ def _get_ai_analyzed_count(user):
     return MoodNote.objects.filter(user=user, ai_feedback__gt='').count()
 
 
+def _has_weekend_pair(user):
+    """Check if the user has written notes on both Saturday and Sunday of the same week."""
+    dates = list(
+        MoodNote.objects.filter(user=user)
+        .values_list('created_at__date', flat=True)
+        .distinct()
+        .order_by('created_at__date')
+    )
+    # Group by ISO week
+    weeks = {}
+    for d in dates:
+        key = (d.isocalendar()[0], d.isocalendar()[1])
+        weeks.setdefault(key, set()).add(d.isoweekday())
+    # isoweekday: 6=Saturday, 7=Sunday
+    return any(6 in days and 7 in days for days in weeks.values())
+
+
+def _get_distinct_tag_count(user):
+    """Count distinct tags across all notes."""
+    tags = set()
+    for meta in MoodNote.objects.filter(user=user).values_list('metadata', flat=True):
+        if meta and isinstance(meta, dict):
+            for tag in (meta.get('tags') or []):
+                tags.add(tag)
+    return len(tags)
+
+
+def _get_weather_note_count(user):
+    """Count notes that have a non-empty weather field."""
+    count = 0
+    for meta in MoodNote.objects.filter(user=user).values_list('metadata', flat=True):
+        if meta and isinstance(meta, dict) and meta.get('weather'):
+            count += 1
+    return count
+
+
 def _get_progress(user):
     """Calculate progress for all achievements. Returns dict of achievement_id -> current value."""
     note_count = _get_note_count(user)
@@ -247,6 +362,23 @@ def _get_progress(user):
     # Time-based: check any note written at night/early
     has_night = MoodNote.objects.filter(user=user, created_at__hour__gte=0, created_at__hour__lt=5).exists()
     has_early = MoodNote.objects.filter(user=user, created_at__hour__gte=5, created_at__hour__lt=7).exists()
+
+    # New achievement metrics
+    image_count = NoteAttachment.objects.filter(note__user=user, file_type='image').count()
+    has_weekend = _has_weekend_pair(user)
+    distinct_months = MoodNote.objects.filter(user=user).dates('created_at', 'month').count()
+    low_stress_count = MoodNote.objects.filter(user=user, stress_index__isnull=False, stress_index__lte=3).count()
+
+    # Emotional range: has both >0.6 and <-0.6
+    has_high = MoodNote.objects.filter(user=user, sentiment_score__gt=0.6).exists()
+    has_low = MoodNote.objects.filter(user=user, sentiment_score__lt=-0.6).exists()
+    emotional_range = (1 if has_high else 0) + (1 if has_low else 0)
+
+    conversation_count = Conversation.objects.filter(user=user).count()
+    message_count = Message.objects.filter(sender=user).count()
+    tag_count = _get_distinct_tag_count(user)
+    weather_count = _get_weather_note_count(user)
+    feedback_count = Feedback.objects.filter(user=user).count()
 
     return {
         'first_note': note_count,
@@ -268,6 +400,18 @@ def _get_progress(user):
         'night_owl': 1 if has_night else 0,
         'early_bird': 1 if has_early else 0,
         'pin_master': pinned_count,
+        # New achievements
+        'notes_200': note_count,
+        'first_image': image_count,
+        'weekend_warrior': 1 if has_weekend else 0,
+        'dedicated_months_3': distinct_months,
+        'stress_manager': low_stress_count,
+        'emotional_range': emotional_range,
+        'conversation_starter': conversation_count,
+        'messages_50': message_count,
+        'tag_collector': tag_count,
+        'weather_logger': weather_count,
+        'feedback_giver': feedback_count,
     }
 
 
