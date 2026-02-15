@@ -1326,3 +1326,171 @@ class QuoteMessageTests(APITestCase):
         quotes = [m for m in resp.data if m['message_type'] == 'quote']
         self.assertEqual(len(quotes), 1)
         self.assertEqual(quotes[0]['metadata']['currency'], 'USD')
+
+
+# ===== Item 12: WebSocket / Consumer-adjacent tests =====
+
+@override_settings(REST_FRAMEWORK={**NO_THROTTLE})
+class NotificationWebSocketPushTests(APITestCase):
+    """Test that views create notifications that consumers would push."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(username='wsuser', password='pass1234')
+        self.counselor_user = CustomUser.objects.create_user(
+            username='wscounselor', password='pass1234',
+        )
+        self.profile = CounselorProfile.objects.create(
+            user=self.counselor_user,
+            license_number='WS001',
+            specialty='test',
+            introduction='test',
+            status='approved',
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_booking_creates_notification_for_counselor(self):
+        """Booking should create a notification for the counselor."""
+        resp = self.client.post('/api/bookings/create/', {
+            'counselor_id': self.profile.id,
+            'date': '2026-06-20',
+            'start_time': '10:00',
+            'end_time': '11:00',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        notifs = Notification.objects.filter(user=self.counselor_user, type='booking')
+        self.assertTrue(notifs.exists())
+        self.assertIn('action', notifs.first().data)
+
+    def test_message_creates_notification_with_data(self):
+        """Sending a message should create notification with sender_name in data."""
+        conv = Conversation.objects.create(user=self.user, counselor=self.counselor_user)
+        resp = self.client.post(f'/api/conversations/{conv.id}/messages/', {
+            'content': 'Hello counselor',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        notifs = Notification.objects.filter(user=self.counselor_user, type='message')
+        self.assertTrue(notifs.exists())
+        self.assertIn('sender_name', notifs.first().data)
+
+    def test_booking_action_creates_notification_with_data(self):
+        """Confirming a booking should notify user with counselor_name data."""
+        conv = Conversation.objects.create(user=self.user, counselor=self.counselor_user)
+        booking = Booking.objects.create(
+            user=self.user, counselor=self.counselor_user,
+            date='2030-01-15', start_time='10:00', end_time='11:00',
+            status='pending',
+        )
+        self.client.force_authenticate(user=self.counselor_user)
+        resp = self.client.post(f'/api/bookings/{booking.id}/action/', {
+            'action': 'confirm',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        notifs = Notification.objects.filter(user=self.user, type='booking')
+        self.assertTrue(notifs.exists())
+        self.assertIn('counselor_name', notifs.first().data)
+
+
+# ===== Item 14: AI service tests =====
+
+@override_settings(REST_FRAMEWORK={**NO_THROTTLE})
+class AISentimentTests(APITestCase):
+    """Test AI analysis fallback behavior."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(username='aitest', password='pass1234')
+        self.client.force_authenticate(user=self.user)
+
+    def test_note_analysis_graceful_degradation(self):
+        """Note creation should succeed even if AI analysis fails."""
+        resp = self.client.post('/api/notes/', {'content': 'I feel good today.'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        # Note should exist regardless of AI
+        note = MoodNote.objects.get(id=resp.data['id'])
+        self.assertTrue(note.encrypted_content)
+
+    def test_ai_chat_fallback(self):
+        """AI chat should return a fallback response when OpenAI key is missing."""
+        session_resp = self.client.post('/api/ai-chat/sessions/')
+        session_id = session_resp.data['id']
+        resp = self.client.post(f'/api/ai-chat/sessions/{session_id}/messages/', {
+            'content': 'I feel anxious today',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertIn('ai_message', resp.data)
+
+
+# ===== Item 15: Concurrency tests =====
+
+@override_settings(REST_FRAMEWORK={**NO_THROTTLE})
+class ConcurrencyTests(APITestCase):
+    """Test race condition protections."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(username='raceuser', password='pass1234')
+        self.counselor = CustomUser.objects.create_user(
+            username='racecounselor', password='pass1234',
+        )
+        self.profile = CounselorProfile.objects.create(
+            user=self.counselor, license_number='R001',
+            specialty='test', introduction='test', status='approved',
+        )
+
+    def test_double_booking_conflict(self):
+        """Two bookings at the same time should conflict."""
+        self.client.force_authenticate(user=self.user)
+        data = {
+            'counselor_id': self.profile.id,
+            'date': '2026-07-20',
+            'start_time': '10:00',
+            'end_time': '11:00',
+        }
+        resp1 = self.client.post('/api/bookings/create/', data, format='json')
+        self.assertEqual(resp1.status_code, status.HTTP_201_CREATED)
+
+        # Second user tries same slot
+        user2 = CustomUser.objects.create_user(username='raceuser2', password='pass1234')
+        self.client.force_authenticate(user=user2)
+        resp2 = self.client.post('/api/bookings/create/', data, format='json')
+        self.assertEqual(resp2.status_code, status.HTTP_409_CONFLICT)
+
+    def test_conversation_duplicate(self):
+        """Creating duplicate conversation returns existing one."""
+        self.client.force_authenticate(user=self.user)
+        resp1 = self.client.post('/api/conversations/create/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        self.assertIn(resp1.status_code, [status.HTTP_200_OK, status.HTTP_201_CREATED])
+        conv_id = resp1.data['id']
+
+        resp2 = self.client.post('/api/conversations/create/', {
+            'counselor_id': self.profile.id,
+        }, format='json')
+        self.assertEqual(resp2.data['id'], conv_id)
+
+
+# ===== Health check test =====
+
+class HealthCheckTests(APITestCase):
+    def test_health_check_ok(self):
+        resp = self.client.get('/healthz/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['status'], 'ok')
+
+
+# ===== CSP header test =====
+
+@override_settings(REST_FRAMEWORK={**NO_THROTTLE})
+class SecurityHeaderTests(APITestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(username='secuser', password='pass1234')
+        self.client.force_authenticate(user=self.user)
+
+    def test_csp_header_present(self):
+        resp = self.client.get('/api/auth/profile/')
+        self.assertIn('Content-Security-Policy', resp)
+        self.assertIn('default-src', resp['Content-Security-Policy'])
+
+    def test_refresh_throttle_class_applied(self):
+        """Verify RefreshView has throttle classes."""
+        from api.views import RefreshView
+        self.assertTrue(len(RefreshView.throttle_classes) > 0)

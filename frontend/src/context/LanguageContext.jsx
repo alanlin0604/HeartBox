@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import zhTW from '../locales/zh-TW.json'
 import en from '../locales/en.json'
 import ja from '../locales/ja.json'
@@ -34,8 +34,10 @@ export function LanguageProvider({ children }) {
     [lang],
   )
 
+  const value = useMemo(() => ({ lang, setLang, t }), [lang, t])
+
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   )

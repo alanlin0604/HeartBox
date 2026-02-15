@@ -63,7 +63,10 @@ def get_mood_weather_correlation(queryset, lookback_days=90):
         return {'correlation': None, 'p_value': None, 'scatter_data': pairs, 'sample_size': len(pairs)}
 
     df = pd.DataFrame(pairs)
-    r, p = stats.pearsonr(df['sentiment'], df['temperature'])
+    try:
+        r, p = stats.pearsonr(df['sentiment'], df['temperature'])
+    except Exception:
+        return {'correlation': None, 'p_value': None, 'scatter_data': pairs, 'sample_size': len(pairs)}
 
     # Heatmap buckets (temp ranges × sentiment ranges)
     temp_bins = pd.cut(df['temperature'], bins=5, labels=False)

@@ -30,7 +30,10 @@ export default function NoteDetailPage() {
   useEffect(() => {
     getNote(id)
       .then((res) => setNote(res.data))
-      .catch(() => navigate('/'))
+      .catch(() => {
+        toast?.error(t('common.operationFailed'))
+        navigate('/')
+      })
       .finally(() => setLoading(false))
   }, [id, navigate])
 

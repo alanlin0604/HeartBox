@@ -301,7 +301,7 @@ export default function CounselorListPage() {
               onAction={() => navigate('/')}
             />
           ) : (
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {counselors.map((c) => (
                 <div key={c.id} className="glass-card p-5 space-y-3">
                   <div className="flex justify-between items-start">
@@ -310,6 +310,7 @@ export default function CounselorListPage() {
                         <img
                           src={c.avatar}
                           alt={c.username}
+                          loading="lazy"
                           className="w-10 h-10 rounded-full object-cover border border-white/20"
                           onError={(e) => {
                             e.target.style.display = 'none'

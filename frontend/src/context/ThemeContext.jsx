@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react'
 
 const ThemeContext = createContext(null)
 
@@ -32,13 +32,15 @@ export function ThemeProvider({ children }) {
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     localStorage.setItem('theme_manual', '1')
     setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
-  }
+  }, [])
+
+  const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme])
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   )

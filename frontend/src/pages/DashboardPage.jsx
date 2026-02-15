@@ -54,6 +54,7 @@ export default function DashboardPage() {
   const toast = useToast()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [period, setPeriod] = useState('week')
   const [lookback, setLookback] = useState(30)
   const trendsRef = useRef(null)
@@ -63,10 +64,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setLoading(true)
+    setError(false)
     getAnalytics(period, lookback)
       .then((res) => setData(res.data))
       .catch((err) => {
         console.error(err)
+        setError(true)
         toast?.error(t('common.operationFailed'))
       })
       .finally(() => setLoading(false))
@@ -95,6 +98,15 @@ export default function DashboardPage() {
         <SkeletonCard lines={6} />
       </div>
       <SkeletonCard lines={4} />
+    </div>
+  )
+
+  if (error && !data) return (
+    <div className="flex flex-col items-center justify-center py-20 opacity-60">
+      <p className="text-lg mb-4">{t('common.operationFailed')}</p>
+      <button className="btn-primary" onClick={() => { setError(false); setLoading(true); getAnalytics(period, lookback).then((res) => setData(res.data)).catch(() => setError(true)).finally(() => setLoading(false)) }}>
+        {t('common.retry')}
+      </button>
     </div>
   )
 
@@ -182,17 +194,26 @@ export default function DashboardPage() {
             onAction={() => navigate('/')}
           />
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={trends}>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-              <XAxis dataKey="name" stroke={axisStroke} fontSize={12} />
-              <YAxis stroke={axisStroke} fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend />
-              <Line type="monotone" dataKey="avg_sentiment" stroke="#a78bfa" name={t('dashboard.avgSentiment')} strokeWidth={2} />
-              <Line type="monotone" dataKey="avg_stress" stroke="#f87171" name={t('dashboard.avgStress')} strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+          <>
+            <div role="img" aria-label={t('dashboard.moodTrends')}>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={trends}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis dataKey="name" stroke={axisStroke} fontSize={12} />
+                  <YAxis stroke={axisStroke} fontSize={12} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Legend />
+                  <Line type="monotone" dataKey="avg_sentiment" stroke="#a78bfa" name={t('dashboard.avgSentiment')} strokeWidth={2} />
+                  <Line type="monotone" dataKey="avg_stress" stroke="#f87171" name={t('dashboard.avgStress')} strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <table className="sr-only">
+              <caption>{t('dashboard.moodTrends')}</caption>
+              <thead><tr><th>Period</th><th>{t('dashboard.avgSentiment')}</th><th>{t('dashboard.avgStress')}</th></tr></thead>
+              <tbody>{trends.map((r, i) => <tr key={i}><td>{r.name}</td><td>{r.avg_sentiment}</td><td>{r.avg_stress}</td></tr>)}</tbody>
+            </table>
+          </>
         )}
       </div>
 
@@ -262,15 +283,17 @@ export default function DashboardPage() {
             onAction={() => navigate('/')}
           />
         ) : (
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={tags}>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-              <XAxis dataKey="name" stroke={axisStroke} fontSize={12} />
-              <YAxis stroke={axisStroke} fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="count" name={t('dashboard.tagCount')} fill="#7c3aed" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div role="img" aria-label={t('dashboard.frequentTags')}>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={tags}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                <XAxis dataKey="name" stroke={axisStroke} fontSize={12} />
+                <YAxis stroke={axisStroke} fontSize={12} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="count" name={t('dashboard.tagCount')} fill="#7c3aed" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
 

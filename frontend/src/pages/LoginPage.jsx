@@ -59,6 +59,9 @@ export default function LoginPage() {
             </button>
           ))}
         </div>
+        <div className="flex justify-center mb-3">
+          <img src="/logo.png" alt="HeartBox" className="w-20 h-20 object-contain" />
+        </div>
         <h1 className="text-2xl font-bold text-center mb-2 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
           {t('app.displayName')}
         </h1>
@@ -71,18 +74,26 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder={t('login.username')}
-            className="glass-input"
-            required
-          />
+          <div>
+            <label htmlFor="login-username" className="sr-only">{t('login.username')}</label>
+            <input
+              id="login-username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder={t('login.username')}
+              className="glass-input"
+              autoComplete="username"
+              required
+            />
+          </div>
           <PasswordField
+            id="login-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder={t('login.password')}
+            label={t('login.password')}
+            autoComplete="current-password"
             required
           />
           <label className="flex items-center gap-2 text-sm opacity-75">

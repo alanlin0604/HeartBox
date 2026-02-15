@@ -83,6 +83,9 @@ export default function RegisterPage() {
             </button>
           ))}
         </div>
+        <div className="flex justify-center mb-3">
+          <img src="/logo.png" alt="HeartBox" className="w-20 h-20 object-contain" />
+        </div>
         <h1 className="text-2xl font-bold text-center mb-2 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
           {t('app.displayName')}
         </h1>
@@ -95,22 +98,30 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder={t('register.username')}
-            className="glass-input"
-            required
-          />
           <div>
+            <label htmlFor="register-username" className="sr-only">{t('register.username')}</label>
             <input
+              id="register-username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder={t('register.username')}
+              className="glass-input"
+              autoComplete="username"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="register-email" className="sr-only">{t('register.email')}</label>
+            <input
+              id="register-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setEmailTouched(true)}
               placeholder={t('register.email')}
               className={`glass-input ${emailTouched && !emailValid ? 'border-red-500/60' : ''}`}
+              autoComplete="email"
               required
             />
             {emailTouched && !emailValid && (

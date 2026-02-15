@@ -9,15 +9,14 @@ export const getNotes = (page = 1, filters = {}) => {
     }
   });
   const url = `/notes/?${params.toString()}`;
-  const hasFilters = Object.keys(filters).some(
-    k => filters[k] !== undefined && filters[k] !== null && filters[k] !== ''
-  );
-  if (hasFilters) return api.get(url);
   const key = `notes:${url}`;
   const cached = getCached(key);
   if (cached) return Promise.resolve(cached);
+  const hasFilters = Object.keys(filters).some(
+    k => filters[k] !== undefined && filters[k] !== null && filters[k] !== ''
+  );
   return api.get(url).then(res => {
-    setCache(key, res, 60_000);
+    setCache(key, res, hasFilters ? 30_000 : 60_000);
     return res;
   });
 };

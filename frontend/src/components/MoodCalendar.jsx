@@ -80,6 +80,8 @@ export default memo(function MoodCalendar() {
 
       {loading ? (
         <div className="text-center opacity-60 py-8">{t('common.loading')}</div>
+      ) : days.length === 0 ? (
+        <div className="text-center opacity-40 py-8 text-sm">{t('calendar.noData')}</div>
       ) : (
         <div className="grid grid-cols-7 gap-1">
           {WEEKDAY_KEYS.map((key) => (

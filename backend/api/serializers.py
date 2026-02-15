@@ -168,10 +168,10 @@ class ConversationSerializer(serializers.ModelSerializer):
         return {'id': other.id, 'username': other.username, 'avatar': avatar}
 
     def get_last_message(self, obj):
-        # Use prefetched messages to avoid N+1
+        # Prefetch ordered by -created_at, so first element is latest
         msgs = obj.messages.all()
         if msgs:
-            msg = max(msgs, key=lambda m: m.created_at)
+            msg = msgs[0]
             return {'content': msg.content[:80], 'created_at': msg.created_at, 'sender_name': msg.sender.username}
         return None
 

@@ -3,12 +3,15 @@ import { evaluatePasswordStrength } from '../utils/passwordStrength'
 import { useLang } from '../context/LanguageContext'
 
 export default function PasswordField({
+  id,
   value,
   onChange,
   placeholder,
+  label,
   required = false,
   minLength,
   showStrength = false,
+  autoComplete,
   className = 'glass-input',
 }) {
   const { t } = useLang()
@@ -23,8 +26,10 @@ export default function PasswordField({
 
   return (
     <div className="space-y-2">
+      {label && <label htmlFor={id} className="sr-only">{label}</label>}
       <div className="relative">
         <input
+          id={id}
           type={visible ? 'text' : 'password'}
           value={value}
           onChange={onChange}
@@ -32,6 +37,7 @@ export default function PasswordField({
           className={`${className} pr-12`}
           required={required}
           minLength={minLength}
+          autoComplete={autoComplete}
         />
         <button
           type="button"

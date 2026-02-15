@@ -21,6 +21,7 @@ from .views import (
     CalendarView,
     ConversationCreateView,
     ConversationListView,
+    QuoteActionView,
     CounselorApplyView,
     CounselorListView,
     CounselorMyProfileView,
@@ -79,6 +80,7 @@ urlpatterns = [
     path('conversations/', ConversationListView.as_view(), name='conversation-list'),
     path('conversations/create/', ConversationCreateView.as_view(), name='conversation-create'),
     path('conversations/<int:conv_id>/messages/', MessageListView.as_view(), name='message-list'),
+    path('conversations/<int:conv_id>/messages/<int:msg_id>/quote-action/', QuoteActionView.as_view(), name='quote-action'),
     # Admin
     path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
     path('admin/users/', AdminUserListView.as_view(), name='admin-users'),

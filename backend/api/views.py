@@ -1,5 +1,6 @@
 import logging
 import mimetypes
+import time
 from datetime import datetime
 
 from django.contrib.auth import get_user_model
@@ -15,6 +16,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.db.models import Prefetch
+import rest_framework.pagination
 from rest_framework import generics, viewsets, permissions, status, filters, exceptions
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -61,7 +63,7 @@ from .services.search import search_notes
 from .throttles import (
     AIChatThrottle, BookingThrottle, DeleteAccountThrottle, ExportThrottle,
     LoginRateThrottle, MessageThrottle, NoteCreateThrottle,
-    PasswordResetRateThrottle, RegisterRateThrottle, UploadThrottle,
+    PasswordResetRateThrottle, RefreshTokenThrottle, RegisterRateThrottle, UploadThrottle,
 )
 
 User = get_user_model()
@@ -109,6 +111,7 @@ class LoginView(TokenObtainPairView):
 
 class RefreshView(TokenRefreshView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [RefreshTokenThrottle]
     serializer_class = VersionedTokenRefreshSerializer
 
 
@@ -117,6 +120,7 @@ class ForgotPasswordView(APIView):
     throttle_classes = [PasswordResetRateThrottle]
 
     def post(self, request):
+        start = time.monotonic()
         email = (request.data.get('email') or '').strip()
         user = User.objects.filter(email__iexact=email).first()
         if user:
@@ -125,15 +129,42 @@ class ForgotPasswordView(APIView):
             from django.conf import settings
             frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
             reset_url = f'{frontend_url.rstrip("/")}/reset-password?uid={uid}&token={token}'
+            plain_message = (
+                f'Hi {user.username},\n\n'
+                f'Use this link to reset your HeartBox password:\n{reset_url}\n\n'
+                f'This link expires in 15 minutes.\n'
+                f'If you did not request this, please ignore this email.\n\n'
+                f'— HeartBox Team'
+            )
+            html_message = (
+                f'<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">'
+                f'<h2 style="color:#7c3aed">HeartBox</h2>'
+                f'<p>Hi {user.username},</p>'
+                f'<p>We received a request to reset your password. Click the button below:</p>'
+                f'<p style="text-align:center;margin:28px 0">'
+                f'<a href="{reset_url}" style="background:#7c3aed;color:#fff;padding:12px 32px;'
+                f'border-radius:8px;text-decoration:none;font-weight:600">Reset Password</a></p>'
+                f'<p style="color:#888;font-size:13px">This link expires in 15 minutes. '
+                f'If you did not request this, please ignore this email.</p>'
+                f'<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
+                f'<p style="color:#aaa;font-size:12px">HeartBox — Your Mental Health Companion</p>'
+                f'</div>'
+            )
             try:
                 send_mail(
-                    'HeartBox Password Reset',
-                    f'Use this link to reset your password: {reset_url}',
-                    getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@moodnotes.local'),
+                    'HeartBox — Reset Your Password',
+                    plain_message,
+                    getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@heartbox.local'),
                     [user.email],
+                    html_message=html_message,
                 )
             except Exception as e:
                 logger.error('Failed to send password reset email to %s: %s', user.email, e)
+        # Normalize response time to prevent email enumeration via timing
+        elapsed = time.monotonic() - start
+        min_time = 1.0
+        if elapsed < min_time:
+            time.sleep(min_time - elapsed)
         return Response({'status': 'ok'})
 
 
@@ -335,6 +366,7 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
             note = MoodNote.objects.get(pk=pk, user=request.user, is_deleted=True)
         except MoodNote.DoesNotExist:
             return Response({'error': 'Note not found in trash.'}, status=status.HTTP_404_NOT_FOUND)
+        log_action(request.user, 'note_permanent_delete', request, 'MoodNote', note.pk)
         note.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -495,14 +527,19 @@ class CounselorListView(generics.ListAPIView):
     serializer_class = CounselorListSerializer
 
     def get_queryset(self):
-        return CounselorProfile.objects.filter(status='approved').exclude(user=self.request.user)
+        return CounselorProfile.objects.filter(status='approved').exclude(user=self.request.user).select_related('user')
 
 
 # ===== Messaging Views =====
 
+class ConversationPagination(rest_framework.pagination.PageNumberPagination):
+    page_size = 30
+
+
 class ConversationListView(generics.ListAPIView):
     """List all conversations for the current user."""
     serializer_class = ConversationSerializer
+    pagination_class = ConversationPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -641,6 +678,35 @@ class MessageListView(APIView):
         return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
 
 
+class QuoteActionView(APIView):
+    """Accept or reject a quote message."""
+
+    def post(self, request, conv_id, msg_id):
+        action = request.data.get('action')
+        if action not in ('accept', 'reject'):
+            return Response({'error': 'Action must be accept or reject.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        try:
+            conv = Conversation.objects.get(
+                Q(id=conv_id) & (Q(user=request.user) | Q(counselor=request.user))
+            )
+        except Conversation.DoesNotExist:
+            return Response({'error': 'Conversation not found.'},
+                            status=status.HTTP_404_NOT_FOUND)
+        try:
+            msg = conv.messages.get(id=msg_id, message_type='quote')
+        except Message.DoesNotExist:
+            return Response({'error': 'Quote not found.'},
+                            status=status.HTTP_404_NOT_FOUND)
+        # Only the non-sender can accept/reject
+        if msg.sender == request.user:
+            return Response({'error': 'Cannot act on your own quote.'},
+                            status=status.HTTP_403_FORBIDDEN)
+        msg.metadata['status'] = 'accepted' if action == 'accept' else 'rejected'
+        msg.save(update_fields=['metadata'])
+        return Response(MessageSerializer(msg).data)
+
+
 # ===== Admin Views =====
 
 class IsAdminUser(permissions.BasePermission):
@@ -718,10 +784,9 @@ class AdminCounselorActionView(APIView):
 
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
-    pagination_class = None  # Use custom limit
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user).order_by('-created_at')[:100]
+        return Notification.objects.filter(user=self.request.user).order_by('-created_at')
 
 
 class NotificationReadView(APIView):
@@ -743,10 +808,19 @@ class NoteAttachmentUploadView(APIView):
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
     MAX_USER_ATTACHMENTS = 500
     ALLOWED_TYPES = {'image'}
+    # Magic number signatures for allowed image formats
+    IMAGE_SIGNATURES = [
+        (b'\xff\xd8\xff', 'image/jpeg'),
+        (b'\x89PNG\r\n\x1a\n', 'image/png'),
+        (b'GIF87a', 'image/gif'),
+        (b'GIF89a', 'image/gif'),
+        (b'BM', 'image/bmp'),
+    ]
 
+    @transaction.atomic
     def post(self, request, note_id):
         try:
-            note = MoodNote.objects.get(id=note_id, user=request.user)
+            note = MoodNote.objects.select_for_update().get(id=note_id, user=request.user)
         except MoodNote.DoesNotExist:
             return Response({'error': 'Note not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -757,7 +831,7 @@ class NoteAttachmentUploadView(APIView):
         if file.size > self.MAX_FILE_SIZE:
             return Response({'error': 'File size cannot exceed 10MB.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Check attachment count quota
+        # Check attachment count quota (select_for_update prevents race condition)
         existing_count = NoteAttachment.objects.filter(note__user=request.user).count()
         if existing_count >= self.MAX_USER_ATTACHMENTS:
             return Response({'error': 'Attachment limit reached (500).'}, status=status.HTTP_400_BAD_REQUEST)
@@ -766,6 +840,13 @@ class NoteAttachmentUploadView(APIView):
         file_type = mime_type.split('/')[0]
         if file_type not in self.ALLOWED_TYPES:
             return Response({'error': 'Only image files are allowed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate file content via magic number (prevent MIME spoofing)
+        header = file.read(16)
+        file.seek(0)
+        is_webp = header[:4] == b'RIFF' and header[8:12] == b'WEBP'
+        if not is_webp and not any(header.startswith(sig) for sig, _ in self.IMAGE_SIGNATURES):
+            return Response({'error': 'File content does not match an image format.'}, status=status.HTTP_400_BAD_REQUEST)
 
         attachment = NoteAttachment.objects.create(
             note=note,
@@ -856,6 +937,7 @@ class BookingListView(APIView):
 class BookingCreateView(APIView):
     throttle_classes = [BookingThrottle]
 
+    @transaction.atomic
     def post(self, request):
         counselor_id = request.data.get('counselor_id')
         date_str = request.data.get('date')
@@ -872,12 +954,20 @@ class BookingCreateView(APIView):
             return Response({'error': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
         counselor_user_id = profile.user_id
 
-        # Check for conflicts (overlapping time ranges)
+        # Prevent self-booking
+        if counselor_user_id == request.user.id:
+            return Response({'error': 'You cannot book yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate date
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except (ValueError, TypeError):
             return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
-        conflict = Booking.objects.filter(
+        if target_date < timezone.now().date():
+            return Response({'error': 'Cannot book a past date.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check for conflicts with row-level locking to prevent race condition
+        conflict = Booking.objects.select_for_update().filter(
             counselor_id=counselor_user_id,
             date=target_date,
             start_time__lt=end_time,
@@ -1059,6 +1149,7 @@ class DeleteAccountView(APIView):
     """Permanently delete user account and all related data."""
     throttle_classes = [DeleteAccountThrottle]
 
+    @transaction.atomic
     def post(self, request):
         password = request.data.get('password', '')
         if not password:
@@ -1073,13 +1164,14 @@ class DeleteAccountView(APIView):
 class ExportDataView(APIView):
     """Export all user data as JSON (GDPR compliance)."""
     throttle_classes = [ExportThrottle]
+    MAX_EXPORT_NOTES = 5000
 
     def get(self, request):
         import json
         from django.http import HttpResponse
 
         user = request.user
-        notes = MoodNote.objects.filter(user=user).order_by('-created_at')
+        notes = MoodNote.objects.filter(user=user).order_by('-created_at')[:self.MAX_EXPORT_NOTES]
 
         data = {
             'user': {
@@ -1116,6 +1208,7 @@ class ExportDataView(APIView):
 class ExportCSVView(APIView):
     """Export all user notes as CSV."""
     throttle_classes = [ExportThrottle]
+    MAX_EXPORT_NOTES = 5000
 
     def get(self, request):
         import csv
@@ -1123,7 +1216,7 @@ class ExportCSVView(APIView):
         from django.http import HttpResponse
 
         user = request.user
-        notes = MoodNote.objects.filter(user=user).order_by('-created_at')
+        notes = MoodNote.objects.filter(user=user).order_by('-created_at')[:self.MAX_EXPORT_NOTES]
 
         buf = io.StringIO()
         writer = csv.writer(buf)

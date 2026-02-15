@@ -2,20 +2,25 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
-import { getMessages, getConversations, sendMessage, sendQuote } from '../api/counselors'
+import { getMessages, getConversations, sendMessage, sendQuote, quoteAction } from '../api/counselors'
 import { useToast } from '../context/ToastContext'
 import { getAccessToken } from '../utils/tokenStorage'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
 
-function QuoteCard({ metadata, t }) {
-  const { description, price, currency } = metadata || {}
+function QuoteCard({ metadata, t, isMine, onAction }) {
+  const { description, price, currency, status: quoteStatus } = metadata || {}
   const formatted = new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: currency || 'TWD',
     minimumFractionDigits: 0,
   }).format(price || 0)
+
+  const statusColors = {
+    accepted: 'bg-green-500/20 text-green-400',
+    rejected: 'bg-red-500/20 text-red-400',
+  }
 
   return (
     <div className="border-2 border-purple-500/50 rounded-xl p-3 space-y-2">
@@ -23,9 +28,30 @@ function QuoteCard({ metadata, t }) {
         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">
           {t('chat.quoteLabel')}
         </span>
+        {quoteStatus && (
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${statusColors[quoteStatus] || ''}`}>
+            {t(`chat.quote${quoteStatus.charAt(0).toUpperCase() + quoteStatus.slice(1)}`)}
+          </span>
+        )}
       </div>
       <p className="text-sm">{description}</p>
       <p className="text-lg font-bold text-purple-400">{formatted}</p>
+      {!isMine && !quoteStatus && onAction && (
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={() => onAction('accept')}
+            className="px-3 py-1 rounded-lg text-xs font-medium bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors cursor-pointer"
+          >
+            {t('chat.quoteAccept')}
+          </button>
+          <button
+            onClick={() => onAction('reject')}
+            className="px-3 py-1 rounded-lg text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors cursor-pointer"
+          >
+            {t('chat.quoteReject')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -178,6 +204,16 @@ export default function ChatPage() {
     }
   }
 
+  const handleQuoteAction = async (msgId, action) => {
+    try {
+      const res = await quoteAction(id, msgId, action)
+      setMessages((prev) => prev.map((m) => m.id === msgId ? { ...m, metadata: res.data.metadata } : m))
+      toast?.success(action === 'accept' ? t('chat.quoteAccepted') : t('chat.quoteRejected'))
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
+  }
+
   if (loading) return <LoadingSpinner />
 
   return (
@@ -239,16 +275,28 @@ export default function ChatPage() {
                     </div>
                   )}
                   {msg.message_type === 'quote' ? (
-                    <QuoteCard metadata={msg.metadata} t={t} />
+                    <QuoteCard
+                      metadata={msg.metadata}
+                      t={t}
+                      isMine={isMine}
+                      onAction={(action) => handleQuoteAction(msg.id, action)}
+                    />
                   ) : (
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   )}
-                  <p className="text-xs opacity-40 mt-1 text-right">
-                    {new Date(msg.created_at).toLocaleTimeString(LOCALE_MAP[lang] || lang, {
-                      timeZone: TZ_MAP[lang] || 'Asia/Taipei',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                  <p className="text-xs opacity-40 mt-1 text-right flex items-center justify-end gap-1">
+                    <span>
+                      {new Date(msg.created_at).toLocaleTimeString(LOCALE_MAP[lang] || lang, {
+                        timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                    {isMine && (
+                      <span title={msg.is_read ? t('chat.read') : t('chat.sent')}>
+                        {msg.is_read ? '✓✓' : '✓'}
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -286,11 +334,11 @@ export default function ChatPage() {
               value={quoteData.currency}
               onChange={(e) => setQuoteData({ ...quoteData, currency: e.target.value })}
               className="glass-input"
-              style={{ width: '5rem', flex: 'none' }}
+              style={{ width: '10rem', flex: 'none' }}
             >
-              <option value="TWD">TWD</option>
-              <option value="USD">USD</option>
-              <option value="JPY">JPY</option>
+              <option value="TWD">TWD 新台幣</option>
+              <option value="USD">USD 美元</option>
+              <option value="JPY">JPY 日圓</option>
             </select>
           </div>
           <div className="flex gap-2 justify-end">

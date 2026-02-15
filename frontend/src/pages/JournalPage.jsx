@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getNotes, createNote, uploadAttachment, reanalyzeNote, batchDeleteNotes, getTrashNotes, restoreNote, permanentDeleteNote } from '../api/notes'
+import { getNotes, createNote, uploadAttachment, reanalyzeNote, batchDeleteNotes, getTrashNotes, restoreNote, permanentDeleteNote, togglePin, deleteNote } from '../api/notes'
 import { getAnalytics } from '../api/analytics'
 import { useLang } from '../context/LanguageContext'
 import NoteForm from '../components/NoteForm'
@@ -23,6 +23,7 @@ export default function JournalPage() {
   const [creating, setCreating] = useState(false)
   const [page, setPage] = useState(1)
   const [hasNext, setHasNext] = useState(false)
+  const [totalCount, setTotalCount] = useState(0)
   const [streak, setStreak] = useState(0)
   const [weekAvgMood, setWeekAvgMood] = useState(null)
   const [selectMode, setSelectMode] = useState(false)
@@ -32,6 +33,46 @@ export default function JournalPage() {
   const [showTrash, setShowTrash] = useState(false)
   const [trashNotes, setTrashNotes] = useState([])
   const [trashLoading, setTrashLoading] = useState(false)
+  const [contextMenu, setContextMenu] = useState(null) // { x, y, noteId }
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+
+  // Close context menu on click anywhere
+  useEffect(() => {
+    if (!contextMenu) return
+    const handler = () => setContextMenu(null)
+    window.addEventListener('click', handler)
+    return () => window.removeEventListener('click', handler)
+  }, [contextMenu])
+
+  const handleContextMenu = useCallback((e, noteId) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const x = Math.min(e.clientX, window.innerWidth - 180)
+    const y = Math.min(e.clientY, window.innerHeight - 140)
+    setContextMenu({ x, y, noteId })
+  }, [])
+
+  const handleTogglePin = async (noteId) => {
+    setContextMenu(null)
+    try {
+      const { data } = await togglePin(noteId)
+      setNotes((prev) => prev.map((n) => n.id === noteId ? { ...n, is_pinned: data.is_pinned } : n))
+      toast?.success(data.is_pinned ? t('journal.pinned') : t('journal.unpinned'))
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
+  }
+
+  const handleDeleteNote = async (noteId) => {
+    setDeleteConfirmId(null)
+    try {
+      await deleteNote(noteId)
+      setNotes((prev) => prev.filter((n) => n.id !== noteId))
+      toast?.success(t('journal.noteDeleted'))
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
+  }
 
   // Initialize filters from URL query params (for calendar click-through)
   const [filters, setFilters] = useState(() => {
@@ -49,6 +90,7 @@ export default function JournalPage() {
       const { data } = await getNotes(p, f)
       setNotes(data.results || [])
       setHasNext(!!data.next)
+      setTotalCount(data.count || 0)
       setPage(p)
     } catch (err) {
       console.error('Failed to fetch notes:', err)
@@ -321,7 +363,10 @@ export default function JournalPage() {
                         className="mt-4 w-4 h-4 accent-purple-500 cursor-pointer flex-shrink-0"
                       />
                     )}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 relative" onContextMenu={(e) => handleContextMenu(e, note.id)}>
+                      {note.is_pinned && (
+                        <span className="absolute top-2 right-2 z-10 text-xs opacity-60" title={t('noteDetail.pin')}>📌</span>
+                      )}
                       <NoteCard note={note} highlight={filters.search} />
                     </div>
                   </div>
@@ -339,7 +384,7 @@ export default function JournalPage() {
                   {t('journal.prevPage')}
                 </button>
                 <span className="opacity-60 text-sm self-center">
-                  {t('journal.page', { page })}
+                  {t('journal.page', { page, total: Math.ceil(totalCount / 20) || 1 })}
                 </span>
                 <button
                   onClick={() => fetchNotes(page + 1, filters)}
@@ -371,6 +416,45 @@ export default function JournalPage() {
         onConfirm={handleBatchDelete}
         onCancel={() => setBatchConfirmOpen(false)}
       />
+
+      <ConfirmModal
+        open={!!deleteConfirmId}
+        title={t('noteDetail.delete')}
+        message={t('journal.deleteConfirm')}
+        confirmText={t('noteDetail.delete')}
+        cancelText={t('common.cancel')}
+        onConfirm={() => handleDeleteNote(deleteConfirmId)}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
+
+      {/* Right-click context menu */}
+      {contextMenu && (
+        <div
+          role="menu"
+          className="fixed z-50 glass-card py-1 rounded-xl shadow-xl min-w-[160px] border border-white/10"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            role="menuitem"
+            tabIndex={0}
+            className="w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition-colors cursor-pointer focus:bg-white/10 outline-none"
+            onClick={() => handleTogglePin(contextMenu.noteId)}
+          >
+            {notes.find((n) => n.id === contextMenu.noteId)?.is_pinned
+              ? t('noteDetail.unpin')
+              : t('noteDetail.pin')}
+          </button>
+          <button
+            role="menuitem"
+            tabIndex={0}
+            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-white/10 transition-colors cursor-pointer focus:bg-white/10 outline-none"
+            onClick={() => { setContextMenu(null); setDeleteConfirmId(contextMenu.noteId) }}
+          >
+            {t('noteDetail.delete')}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

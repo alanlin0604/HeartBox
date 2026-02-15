@@ -45,6 +45,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'api.middleware.ContentSecurityPolicyMiddleware',
 ]
 
 ROOT_URLCONF = 'moodnotes_pro.urls'
@@ -177,6 +178,7 @@ REST_FRAMEWORK = {
         'message_send': '60/hour',
         'ai_chat': '30/hour',
         'delete_account': '5/hour',
+        'token_refresh': '30/hour',
     },
 }
 
@@ -191,6 +193,14 @@ SIMPLE_JWT = {
 
 # Encryption
 ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '')
+if ENCRYPTION_KEY:
+    import base64
+    try:
+        decoded = base64.urlsafe_b64decode(ENCRYPTION_KEY)
+        if len(decoded) != 32:
+            raise ValueError('Key must be 32 url-safe base64-encoded bytes')
+    except Exception as e:
+        raise RuntimeError(f'Invalid ENCRYPTION_KEY: {e}. Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"')
 
 # OpenAI
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
@@ -208,6 +218,7 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@heartbox.local')
+PASSWORD_RESET_TIMEOUT = 900  # 15 minutes
 
 # WhiteNoise immutable file caching (files have content hashes)
 WHITENOISE_MAX_AGE = 31536000
@@ -265,3 +276,23 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Content Security Policy (via SecurityMiddleware headers)
+CSP_DEFAULT_SRC = ("'self'",)
+CSP_SCRIPT_SRC = ("'self'",)
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
+CSP_IMG_SRC = ("'self'", "data:", "blob:", "https://storage.googleapis.com")
+CSP_CONNECT_SRC = ("'self'", "wss:", "https:")
+CSP_FONT_SRC = ("'self'",)
+CSP_FRAME_ANCESTORS = ("'none'",)
+
+# Sentry error tracking (set SENTRY_DSN in .env to activate)
+SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+if SENTRY_DSN:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        profiles_sample_rate=0.1,
+        send_default_pii=False,
+    )

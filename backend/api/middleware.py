@@ -2,6 +2,7 @@ from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -38,3 +39,37 @@ class JWTAuthMiddleware(BaseMiddleware):
             # Allow anonymous connection; consumer will wait for auth message
             scope['user'] = AnonymousUser()
         return await super().__call__(scope, receive, send)
+
+
+class ContentSecurityPolicyMiddleware:
+    """Injects Content-Security-Policy header from CSP_* settings."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.csp_header = self._build_header()
+
+    @staticmethod
+    def _build_header():
+        directives = []
+        mapping = {
+            'CSP_DEFAULT_SRC': 'default-src',
+            'CSP_SCRIPT_SRC': 'script-src',
+            'CSP_STYLE_SRC': 'style-src',
+            'CSP_IMG_SRC': 'img-src',
+            'CSP_CONNECT_SRC': 'connect-src',
+            'CSP_FONT_SRC': 'font-src',
+            'CSP_FRAME_ANCESTORS': 'frame-ancestors',
+        }
+        for setting_name, directive in mapping.items():
+            values = getattr(settings, setting_name, None)
+            if values:
+                directives.append(f"{directive} {' '.join(values)}")
+        return '; '.join(directives) if directives else None
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if self.csp_header:
+            response['Content-Security-Policy'] = self.csp_header
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+        return response

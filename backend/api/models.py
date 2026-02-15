@@ -50,6 +50,7 @@ class MoodNote(models.Model):
             models.Index(fields=['user', '-created_at'], name='moodnote_user_created'),
             models.Index(fields=['user', 'sentiment_score'], name='moodnote_user_sentiment'),
             models.Index(fields=['user', 'search_text'], name='moodnote_user_search'),
+            models.Index(fields=['user', 'is_deleted'], name='moodnote_user_deleted'),
         ]
 
     def __str__(self):
@@ -102,7 +103,7 @@ class CounselorProfile(models.Model):
         on_delete=models.CASCADE,
         related_name='counselor_profile',
     )
-    license_number = models.CharField(max_length=50, help_text='諮商師執照號碼')
+    license_number = models.CharField(max_length=50, unique=True, help_text='諮商師執照號碼')
     specialty = models.CharField(max_length=200, help_text='專長領域')
     introduction = models.TextField(help_text='自我介紹')
     hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
@@ -141,6 +142,9 @@ class Conversation(models.Model):
     class Meta:
         ordering = ['-updated_at']
         unique_together = ['user', 'counselor']
+        indexes = [
+            models.Index(fields=['-updated_at'], name='conv_updated_at'),
+        ]
 
     def __str__(self):
         return f'{self.user.username} <-> {self.counselor.username}'
@@ -334,6 +338,9 @@ class SharedNote(models.Model):
     class Meta:
         ordering = ['-shared_at']
         unique_together = ['note', 'shared_with']
+        indexes = [
+            models.Index(fields=['shared_with', '-shared_at'], name='sharednote_user_date'),
+        ]
 
     def __str__(self):
         return f'Note #{self.note_id} → {self.shared_with.username}'

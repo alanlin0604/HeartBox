@@ -21,3 +21,4 @@ gunicorn==23.0.0
 whitenoise==6.8.2
 django-storages[google]==1.14.4
 Pillow==11.1.0
+sentry-sdk[django]==2.19.2

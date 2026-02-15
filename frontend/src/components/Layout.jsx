@@ -72,7 +72,8 @@ export default function Layout() {
       )}
 
       <nav className="glass sticky top-0 z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent flex items-center gap-2">
+          <img src="/logo.png" alt="HeartBox" className="w-8 h-8 object-contain" />
           {t('app.displayName')}
         </h1>
 

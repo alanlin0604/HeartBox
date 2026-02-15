@@ -48,3 +48,6 @@ export const sendMessage = (convId, content) =>
 
 export const sendQuote = (convId, data) =>
   api.post(`/conversations/${convId}/messages/`, { message_type: 'quote', ...data })
+
+export const quoteAction = (convId, msgId, action) =>
+  api.post(`/conversations/${convId}/messages/${msgId}/quote-action/`, { action })

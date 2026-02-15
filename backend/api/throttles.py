@@ -39,3 +39,7 @@ class AIChatThrottle(UserRateThrottle):
 
 class DeleteAccountThrottle(UserRateThrottle):
     scope = 'delete_account'
+
+
+class RefreshTokenThrottle(AnonRateThrottle):
+    scope = 'token_refresh'
