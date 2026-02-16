@@ -20,6 +20,7 @@ export default defineConfig({
           'vendor-recharts': ['recharts'],
           'vendor-axios': ['axios'],
           'vendor-tiptap': ['@tiptap/react', '@tiptap/starter-kit'],
+          'vendor-dompurify': ['dompurify'],
         },
       },
     },

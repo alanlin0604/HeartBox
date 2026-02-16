@@ -111,6 +111,13 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     setIsRecording(true)
   }, [isRecording, lang, editor])
 
+  // Stop speech recognition on unmount
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop()
+    }
+  }, [])
+
   // Fetch frequent tags for autocomplete suggestions
   useEffect(() => {
     getAnalytics('week', 90)

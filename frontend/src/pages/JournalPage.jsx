@@ -4,6 +4,7 @@ import { getNotes, createNote, uploadAttachment, reanalyzeNote, batchDeleteNotes
 import { getAnalytics } from '../api/analytics'
 import { useLang } from '../context/LanguageContext'
 import { getDailyPrompt } from '../api/wellness'
+import { LOCALE_MAP } from '../utils/locales'
 import NoteForm from '../components/NoteForm'
 import NoteCard from '../components/NoteCard'
 import SkeletonCard from '../components/SkeletonCard'
@@ -16,7 +17,7 @@ import { useToast } from '../context/ToastContext'
 import FeedbackWidget from '../components/FeedbackWidget'
 
 export default function JournalPage() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const toast = useToast()
   const [searchParams] = useSearchParams()
   const [notes, setNotes] = useState([])
@@ -355,7 +356,7 @@ export default function JournalPage() {
                     <div key={note.id} className="glass-card p-4 opacity-70">
                       <p className="text-sm mb-2">{note.content_preview}</p>
                       <div className="flex items-center justify-between text-xs opacity-60">
-                        <span>{t('journal.deletedAt')}: {new Date(note.created_at).toLocaleDateString()}</span>
+                        <span>{t('journal.deletedAt')}: {new Date(note.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
                         <div className="flex gap-2">
                           <button onClick={() => handleRestore(note.id)} className="text-purple-500 hover:text-purple-400">{t('journal.restore')}</button>
                           <button onClick={() => handlePermanentDelete(note.id)} className="text-red-500 hover:text-red-400">{t('journal.permanentDelete')}</button>

@@ -123,11 +123,13 @@ export default function ChatPage() {
   const wsRef = useRef(null)
   const reconnectTimer = useRef(null)
   const reconnectDelay = useRef(3000)
+  const closedIntentionally = useRef(false)
 
   const connectWs = useCallback(() => {
     const token = getAccessToken()
     if (!token) return
 
+    closedIntentionally.current = false
     const wsBase = import.meta.env.VITE_WS_URL
     const wsUrl = wsBase
       ? `${wsBase}/ws/chat/${id}/`
@@ -165,8 +167,10 @@ export default function ChatPage() {
 
     ws.onclose = () => {
       setWsConnected(false)
-      reconnectTimer.current = setTimeout(connectWs, reconnectDelay.current)
-      reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30000)
+      if (!closedIntentionally.current) {
+        reconnectTimer.current = setTimeout(connectWs, reconnectDelay.current)
+        reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30000)
+      }
     }
 
     ws.onerror = () => ws.close()
@@ -182,6 +186,7 @@ export default function ChatPage() {
     connectWs()
 
     return () => {
+      closedIntentionally.current = true
       clearTimeout(reconnectTimer.current)
       if (wsRef.current) wsRef.current.close()
     }

@@ -4,6 +4,7 @@ import { getAssessments, createAssessment } from '../api/wellness'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
+import { LOCALE_MAP } from '../utils/locales'
 
 const SCORE_LABELS = {
   phq9: [
@@ -42,7 +43,7 @@ function getScoreColor(type, score) {
 }
 
 export default function AssessmentsPage() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const { theme } = useTheme()
   const toast = useToast()
   const [tab, setTab] = useState('phq9')
@@ -102,7 +103,7 @@ export default function AssessmentsPage() {
   }
 
   const chartData = [...history].reverse().map((item) => ({
-    date: new Date(item.created_at).toLocaleDateString(),
+    date: new Date(item.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang),
     score: item.total_score,
   }))
 

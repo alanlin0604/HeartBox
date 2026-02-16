@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
+import { LOCALE_MAP } from '../utils/locales'
 import { logoutOtherDevices, updateProfile, deleteAccount, exportData } from '../api/auth'
 import PasswordField from '../components/PasswordField'
 import { useToast } from '../context/ToastContext'
@@ -9,7 +10,7 @@ import { isRememberedLogin, setAuthTokens } from '../utils/tokenStorage'
 
 export default function SettingsPage() {
   const { user } = useAuth()
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const { theme } = useTheme()
   const toast = useToast()
 
@@ -312,7 +313,7 @@ export default function SettingsPage() {
       <div className="glass p-4 sm:p-6 space-y-3">
         <h2 className="text-lg font-semibold">{t('settings.accountInfo')}</h2>
         <div className="text-sm space-y-2 opacity-70">
-          <p>{t('settings.joined')}: {user?.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</p>
+          <p>{t('settings.joined')}: {user?.created_at ? new Date(user.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang) : '-'}</p>
           <p>{t('settings.theme')}: {theme === 'dark' ? t('settings.themeDark') : t('settings.themeLight')}</p>
         </div>
       </div>

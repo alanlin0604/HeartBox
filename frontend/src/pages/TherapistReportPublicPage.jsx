@@ -4,6 +4,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { getPublicReport } from '../api/wellness'
 import LoadingSpinner from '../components/LoadingSpinner'
 
+const REPORT_LOCALE = navigator.language || 'zh-TW'
+
 export default function TherapistReportPublicPage() {
   const { token } = useParams()
   const [report, setReport] = useState(null)
@@ -35,7 +37,7 @@ export default function TherapistReportPublicPage() {
   if (!report) return null
 
   const moodData = (report.report_data?.mood_trends || []).map((item) => ({
-    date: new Date(item.created_at).toLocaleDateString(),
+    date: new Date(item.created_at).toLocaleDateString(REPORT_LOCALE),
     sentiment: item.sentiment_score,
     stress: item.stress_index,
   }))
@@ -48,7 +50,7 @@ export default function TherapistReportPublicPage() {
           {report.period_start} — {report.period_end}
         </p>
         <p className="text-xs opacity-40 mt-1">
-          Generated: {new Date(report.created_at).toLocaleDateString()}
+          Generated: {new Date(report.created_at).toLocaleDateString(REPORT_LOCALE)}
         </p>
       </div>
 
@@ -94,7 +96,7 @@ export default function TherapistReportPublicPage() {
               <div key={i} className="glass-card p-3 flex items-center justify-between text-sm">
                 <span>{a.assessment_type.toUpperCase()}</span>
                 <span className="font-bold">{a.total_score}</span>
-                <span className="text-xs opacity-60">{new Date(a.created_at).toLocaleDateString()}</span>
+                <span className="text-xs opacity-60">{new Date(a.created_at).toLocaleDateString(REPORT_LOCALE)}</span>
               </div>
             ))}
           </div>

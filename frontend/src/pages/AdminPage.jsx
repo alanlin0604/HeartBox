@@ -9,6 +9,7 @@ import {
 } from '../api/admin'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
+import { LOCALE_MAP } from '../utils/locales'
 
 export default function AdminPage() {
   const { t } = useLang()
@@ -86,7 +87,7 @@ function StatsTab() {
 /* ==================== Tab 2: Users ==================== */
 
 function UsersTab() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const toast = useToast()
   const [users, setUsers] = useState([])
   const [search, setSearch] = useState('')
@@ -161,7 +162,7 @@ function UsersTab() {
                       {u.is_active ? t('admin.statusActive') : t('admin.statusInactive')}
                     </span>
                   </td>
-                  <td className="py-2 pr-4 opacity-70">{new Date(u.date_joined).toLocaleDateString()}</td>
+                  <td className="py-2 pr-4 opacity-70">{new Date(u.date_joined).toLocaleDateString(LOCALE_MAP[lang] || lang)}</td>
                   <td className="py-2 space-x-2">
                     {!u.is_superuser && (
                       <>
@@ -200,7 +201,7 @@ function UsersTab() {
                 <span className={`px-2 py-0.5 rounded-full ${u.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                   {u.is_active ? t('admin.statusActive') : t('admin.statusInactive')}
                 </span>
-                <span className="opacity-50">{new Date(u.date_joined).toLocaleDateString()}</span>
+                <span className="opacity-50">{new Date(u.date_joined).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
               </div>
               {!u.is_superuser && (
                 <div className="flex gap-2 pt-1">
@@ -231,7 +232,7 @@ function UsersTab() {
 /* ==================== Tab 3: Counselors ==================== */
 
 function CounselorsTab() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const toast = useToast()
   const [counselors, setCounselors] = useState([])
   const [filter, setFilter] = useState('')
@@ -307,7 +308,7 @@ function CounselorsTab() {
                 <p><span className="opacity-60">{t('admin.licenseNumber')}</span>{c.license_number}</p>
                 <p><span className="opacity-60">{t('admin.specialty')}</span>{c.specialty}</p>
                 <p><span className="opacity-60">{t('admin.introduction')}</span>{c.introduction}</p>
-                <p><span className="opacity-60">{t('admin.appliedDate')}</span>{new Date(c.created_at).toLocaleDateString()}</p>
+                <p><span className="opacity-60">{t('admin.appliedDate')}</span>{new Date(c.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</p>
               </div>
               {c.status === 'pending' && (
                 <div className="flex gap-2 pt-1">
@@ -336,7 +337,7 @@ function CounselorsTab() {
 /* ==================== Tab 4: Feedback ==================== */
 
 function FeedbackTab() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const toast = useToast()
   const [feedbacks, setFeedbacks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -383,7 +384,7 @@ function FeedbackTab() {
                   {'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}
                 </span>
               </div>
-              <span className="text-xs opacity-50">{new Date(f.created_at).toLocaleDateString()}</span>
+              <span className="text-xs opacity-50">{new Date(f.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
             </div>
             <p className="text-sm opacity-80">{f.content}</p>
           </div>

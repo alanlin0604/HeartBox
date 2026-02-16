@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
 import { getNotifications, markNotificationsRead } from '../api/notifications'
 import { getAccessToken } from '../utils/tokenStorage'
+import { LOCALE_MAP } from '../utils/locales'
 
 const NOTIF_TYPE_KEYS = {
   message: 'notification.type.message',
@@ -41,7 +42,7 @@ function getLocalizedMessage(notif, t) {
 }
 
 export default memo(function NotificationBell() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -49,6 +50,7 @@ export default memo(function NotificationBell() {
   const wsRef = useRef(null)
   const reconnectTimer = useRef(null)
   const reconnectDelay = useRef(3000)
+  const closedIntentionally = useRef(false)
   const panelRef = useRef(null)
 
   // Load initial notifications
@@ -57,6 +59,7 @@ export default memo(function NotificationBell() {
     connectWs()
 
     return () => {
+      closedIntentionally.current = true
       clearTimeout(reconnectTimer.current)
       if (wsRef.current) wsRef.current.close()
     }
@@ -77,6 +80,7 @@ export default memo(function NotificationBell() {
     const token = getAccessToken()
     if (!token) return
 
+    closedIntentionally.current = false
     const wsBase = import.meta.env.VITE_WS_URL
     const wsUrl = wsBase
       ? `${wsBase}/ws/notifications/`
@@ -109,8 +113,10 @@ export default memo(function NotificationBell() {
     }
 
     ws.onclose = () => {
-      reconnectTimer.current = setTimeout(connectWs, reconnectDelay.current)
-      reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30000)
+      if (!closedIntentionally.current) {
+        reconnectTimer.current = setTimeout(connectWs, reconnectDelay.current)
+        reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30000)
+      }
     }
 
     ws.onerror = () => ws.close()
@@ -218,7 +224,7 @@ export default memo(function NotificationBell() {
                     <p className="text-sm font-medium truncate">{NOTIF_TYPE_KEYS[notif.type] ? t(NOTIF_TYPE_KEYS[notif.type]) : notif.title}</p>
                     <p className="text-xs opacity-60 truncate">{getLocalizedMessage(notif, t)}</p>
                     <p className="text-xs opacity-40 mt-1">
-                      {new Date(notif.created_at).toLocaleString()}
+                      {new Date(notif.created_at).toLocaleString(LOCALE_MAP[lang] || lang)}
                     </p>
                   </div>
                 </div>

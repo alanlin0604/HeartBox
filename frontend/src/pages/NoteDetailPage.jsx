@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import { getNote, deleteNote, updateNote, togglePin } from '../api/notes'
 import { useLang } from '../context/LanguageContext'
 import MoodBadge from '../components/MoodBadge'
@@ -112,6 +113,10 @@ export default function NoteDetailPage() {
     minute: '2-digit',
   })
 
+  const sanitizedContent = useMemo(
+    () => DOMPurify.sanitize(note.decrypted_content || ''),
+    [note.decrypted_content]
+  )
   const tags = note.metadata?.tags || []
   const attachments = note.attachments || []
 
@@ -170,7 +175,7 @@ export default function NoteDetailPage() {
           </div>
         ) : (
           <div className="glass-card p-4 prose prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: note.decrypted_content }}
+            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
           />
         )}
 

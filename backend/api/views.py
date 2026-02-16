@@ -1416,8 +1416,15 @@ class YearPixelsView(APIView):
             year = int(request.query_params.get('year', timezone.now().year))
         except (ValueError, TypeError):
             year = timezone.now().year
+
+        cache_key = f'year_pixels_{request.user.id}_{year}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return Response({'year': year, 'pixels': cached})
+
         qs = MoodNote.objects.filter(user=request.user, is_deleted=False)
         pixels = get_year_pixels(qs, year)
+        cache.set(cache_key, pixels, 3600)  # 1 hour
         return Response({'year': year, 'pixels': pixels})
 
 
@@ -1517,6 +1524,7 @@ class DailyPromptView(APIView):
                     }],
                     max_tokens=60,
                     temperature=0.8,
+                    timeout=15,
                 )
                 prompt_text = resp.choices[0].message.content.strip()
         except Exception as e:
@@ -1618,6 +1626,7 @@ class WeeklySummaryView(APIView):
                     }],
                     max_tokens=300,
                     temperature=0.7,
+                    timeout=20,
                 )
                 ai_summary = resp.choices[0].message.content.strip()
         except Exception as e:

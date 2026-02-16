@@ -3,11 +3,12 @@ import { useLang } from '../context/LanguageContext'
 import { getAchievements, checkAchievements } from '../api/achievements'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { useToast } from '../context/ToastContext'
+import { LOCALE_MAP } from '../utils/locales'
 
 const CATEGORIES = ['all', 'writing', 'consistency', 'mood', 'social', 'explore', 'wellness']
 
 export default function AchievementsPage() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const toast = useToast()
   const [achievements, setAchievements] = useState([])
   const [loading, setLoading] = useState(true)
@@ -132,7 +133,7 @@ export default function AchievementsPage() {
               <div className="flex justify-between text-xs opacity-50 mb-1">
                 <span>{a.current}/{a.threshold}</span>
                 {a.unlocked && a.unlocked_at && (
-                  <span>{new Date(a.unlocked_at).toLocaleDateString()}</span>
+                  <span>{new Date(a.unlocked_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
                 )}
               </div>
               <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
