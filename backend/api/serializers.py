@@ -358,4 +358,4 @@ class PsychoArticleSerializer(serializers.ModelSerializer):
         model = PsychoArticle
         fields = ('id', 'title_zh', 'title_en', 'title_ja',
                   'content_zh', 'content_en', 'content_ja',
-                  'category', 'reading_time', 'order', 'created_at')
+                  'category', 'reading_time', 'source', 'order', 'created_at')

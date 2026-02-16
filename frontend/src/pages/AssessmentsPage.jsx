@@ -145,6 +145,7 @@ export default function AssessmentsPage() {
           {tab === 'phq9' ? t('assessment.phq9Title') : t('assessment.gad7Title')}
         </h2>
         <p className="text-sm opacity-60">{t('assessment.instructions')}</p>
+        <p className="text-xs opacity-50 italic">{t('assessment.disclaimer')}</p>
 
         {Array.from({ length: questionCount }, (_, i) => (
           <div key={i} className="space-y-2">

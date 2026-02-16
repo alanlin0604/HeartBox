@@ -88,6 +88,11 @@ export default function PsychoContentPage() {
                     <div className="border-t border-[var(--card-border)] pt-4 prose prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap opacity-80">
                       {content}
                     </div>
+                    {article.source && (
+                      <p className="text-xs opacity-40 mt-3 pt-2 border-t border-[var(--card-border)]">
+                        {t('learn.source')}: {article.source}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

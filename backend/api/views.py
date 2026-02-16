@@ -1423,18 +1423,50 @@ class YearPixelsView(APIView):
 
 # ===== Daily Prompt View =====
 
-DEFAULT_PROMPTS = [
-    "What made you smile today?",
-    "Describe a moment of peace you experienced recently.",
-    "What are three things you're grateful for right now?",
-    "How did you handle a challenge today?",
-    "What would you tell your younger self right now?",
-    "Describe how your body feels right now.",
-    "What emotion has been strongest today? Why?",
-    "Write about someone who made a positive impact on your day.",
-    "What is one small thing you can do for yourself tonight?",
-    "Reflect on a recent achievement, no matter how small.",
+DEFAULT_PROMPTS_ZH = [
+    "今天的心情如何？",
+    "最近有什麼讓你開心的小事嗎？",
+    "今天最想對自己說的一句話是什麼？",
+    "此刻你的身體感覺如何？",
+    "今天有什麼讓你印象深刻的事？",
+    "最近有什麼讓你感到感恩的事嗎？",
+    "今天遇到了什麼挑戰？你怎麼面對的？",
+    "現在最想做的一件事是什麼？",
+    "今天和誰有了愉快的互動？",
+    "用三個詞形容你現在的狀態。",
 ]
+
+DEFAULT_PROMPTS_EN = [
+    "How are you feeling right now?",
+    "What's something small that made you happy recently?",
+    "What would you say to yourself today?",
+    "How does your body feel at this moment?",
+    "What stood out to you today?",
+    "What's something you feel grateful for recently?",
+    "What challenge did you face today? How did you handle it?",
+    "What's one thing you'd like to do for yourself right now?",
+    "Who did you enjoy spending time with today?",
+    "Describe your current state in three words.",
+]
+
+DEFAULT_PROMPTS_JA = [
+    "今日の気分はどうですか？",
+    "最近、嬉しかった小さなことはありますか？",
+    "今日、自分に言いたい一言は？",
+    "今、体はどんな感じですか？",
+    "今日、印象に残ったことは何ですか？",
+    "最近、感謝していることはありますか？",
+    "今日どんな挑戦がありましたか？どう対処しましたか？",
+    "今一番やりたいことは何ですか？",
+    "今日、誰と楽しい時間を過ごしましたか？",
+    "今の状態を三つの言葉で表すと？",
+]
+
+DEFAULT_PROMPTS_MAP = {
+    'zh-TW': DEFAULT_PROMPTS_ZH,
+    'en': DEFAULT_PROMPTS_EN,
+    'ja': DEFAULT_PROMPTS_JA,
+}
 
 
 class DailyPromptView(APIView):
@@ -1477,11 +1509,13 @@ class DailyPromptView(APIView):
                         'role': 'system',
                         'content': (
                             f'You are a gentle journaling coach. {mood_ctx}'
-                            f'Generate one warm, thoughtful journaling prompt in {lang_name}. '
-                            f'Keep it to 1-2 sentences. No quotes or labels.'
+                            f'Generate one short, open-ended journaling prompt in {lang_name}. '
+                            f'Keep it to ONE simple question (under 20 words). '
+                            f'The prompt should be easy to start writing from directly. '
+                            f'Avoid long instructions or multi-part questions. No quotes or labels.'
                         ),
                     }],
-                    max_tokens=100,
+                    max_tokens=60,
                     temperature=0.8,
                 )
                 prompt_text = resp.choices[0].message.content.strip()
@@ -1489,7 +1523,9 @@ class DailyPromptView(APIView):
             logger.warning('Daily prompt generation failed: %s', e)
 
         if not prompt_text:
-            prompt_text = random.choice(DEFAULT_PROMPTS)
+            lang = request.headers.get('Accept-Language', 'zh-TW')
+            prompts = DEFAULT_PROMPTS_MAP.get(lang, DEFAULT_PROMPTS_ZH)
+            prompt_text = random.choice(prompts)
 
         cache.set(cache_key, prompt_text, 86400)  # 24 hours
         return Response({'prompt': prompt_text})
