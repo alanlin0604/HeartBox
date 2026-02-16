@@ -22,6 +22,10 @@ const AIChatPage = lazy(() => import('./pages/AIChatPage'))
 const AchievementsPage = lazy(() => import('./pages/AchievementsPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const AssessmentsPage = lazy(() => import('./pages/AssessmentsPage'))
+const WeeklySummaryPage = lazy(() => import('./pages/WeeklySummaryPage'))
+const PsychoContentPage = lazy(() => import('./pages/PsychoContentPage'))
+const TherapistReportPublicPage = lazy(() => import('./pages/TherapistReportPublicPage'))
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -46,6 +50,8 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        {/* Public therapist report (no auth required) */}
+        <Route path="/report/:token" element={<Suspense fallback={<LoadingSpinner />}><TherapistReportPublicPage /></Suspense>} />
         <Route
           path="/"
           element={
@@ -62,6 +68,9 @@ export default function App() {
           <Route path="achievements" element={<Suspense fallback={<LoadingSpinner />}><AchievementsPage /></Suspense>} />
           <Route path="chat/:id" element={<Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense>} />
           <Route path="settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
+          <Route path="assessments" element={<Suspense fallback={<LoadingSpinner />}><AssessmentsPage /></Suspense>} />
+          <Route path="weekly-summary" element={<Suspense fallback={<LoadingSpinner />}><WeeklySummaryPage /></Suspense>} />
+          <Route path="learn" element={<Suspense fallback={<LoadingSpinner />}><PsychoContentPage /></Suspense>} />
           <Route
             path="admin"
             element={

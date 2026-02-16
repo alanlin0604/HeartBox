@@ -21,6 +21,7 @@ from .views import (
     CalendarView,
     ConversationCreateView,
     ConversationListView,
+    DailyPromptView,
     QuoteActionView,
     CounselorApplyView,
     CounselorListView,
@@ -36,15 +37,23 @@ from .views import (
     NotificationListView,
     NotificationReadView,
     ProfileView,
+    PsychoArticleListView,
     RefreshView,
     RegisterView,
     ForgotPasswordView,
     LoginView,
     LogoutOtherDevicesView,
     ResetPasswordView,
+    SelfAssessmentListCreateView,
     ShareNoteView,
     SharedNotesReceivedView,
+    TherapistReportCreateView,
+    TherapistReportListView,
+    TherapistReportPublicView,
     TimeSlotListView,
+    WeeklySummaryListView,
+    WeeklySummaryView,
+    YearPixelsView,
 )
 
 router = DefaultRouter()
@@ -65,6 +74,7 @@ urlpatterns = [
     # Analytics
     path('analytics/', AnalyticsView.as_view(), name='analytics'),
     path('analytics/calendar/', CalendarView.as_view(), name='analytics-calendar'),
+    path('analytics/year-pixels/', YearPixelsView.as_view(), name='year-pixels'),
     # Achievements
     path('achievements/', AchievementsView.as_view(), name='achievements'),
     path('achievements/check/', AchievementCheckView.as_view(), name='achievements-check'),
@@ -108,6 +118,19 @@ urlpatterns = [
     path('ai-chat/sessions/', AIChatSessionListCreateView.as_view(), name='ai-chat-sessions'),
     path('ai-chat/sessions/<int:session_id>/', AIChatSessionDetailView.as_view(), name='ai-chat-session-detail'),
     path('ai-chat/sessions/<int:session_id>/messages/', AIChatSendMessageView.as_view(), name='ai-chat-send-message'),
+    # Daily Prompt
+    path('daily-prompt/', DailyPromptView.as_view(), name='daily-prompt'),
+    # Assessments
+    path('assessments/', SelfAssessmentListCreateView.as_view(), name='assessments'),
+    # Weekly Summary
+    path('weekly-summary/', WeeklySummaryView.as_view(), name='weekly-summary'),
+    path('weekly-summary/list/', WeeklySummaryListView.as_view(), name='weekly-summary-list'),
+    # Therapist Reports
+    path('reports/', TherapistReportCreateView.as_view(), name='report-create'),
+    path('reports/list/', TherapistReportListView.as_view(), name='report-list'),
+    path('reports/public/<uuid:token>/', TherapistReportPublicView.as_view(), name='report-public'),
+    # Psycho Education
+    path('articles/', PsychoArticleListView.as_view(), name='articles'),
     # Notes CRUD
     path('', include(router.urls)),
 ]

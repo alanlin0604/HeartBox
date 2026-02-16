@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { getNotes, createNote, uploadAttachment, reanalyzeNote, batchDeleteNotes, getTrashNotes, restoreNote, permanentDeleteNote, togglePin, deleteNote } from '../api/notes'
 import { getAnalytics } from '../api/analytics'
 import { useLang } from '../context/LanguageContext'
+import { getDailyPrompt } from '../api/wellness'
 import NoteForm from '../components/NoteForm'
 import NoteCard from '../components/NoteCard'
 import SkeletonCard from '../components/SkeletonCard'
@@ -35,6 +36,8 @@ export default function JournalPage() {
   const [trashLoading, setTrashLoading] = useState(false)
   const [contextMenu, setContextMenu] = useState(null) // { x, y, noteId }
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const [dailyPrompt, setDailyPrompt] = useState('')
+  const [promptContent, setPromptContent] = useState(null)
 
   // Close context menu on click anywhere
   useEffect(() => {
@@ -126,6 +129,13 @@ export default function JournalPage() {
   }
 
   useEffect(() => { document.title = `${t('nav.journal')} — ${t('app.name')}` }, [t])
+
+  // Fetch daily AI prompt
+  useEffect(() => {
+    getDailyPrompt()
+      .then((res) => setDailyPrompt(res.data.prompt || ''))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     fetchNotes(1, filters)
@@ -251,8 +261,26 @@ export default function JournalPage() {
         <div className="space-y-6">
           <AlertBanner />
 
+          {/* Daily AI Prompt */}
+          {dailyPrompt && (
+            <div className="glass-card p-4 border-l-4 border-purple-500/50">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-purple-400 mb-1">{t('journal.dailyPrompt')}</h3>
+                  <p className="text-sm opacity-80">{dailyPrompt}</p>
+                </div>
+                <button
+                  onClick={() => setPromptContent(dailyPrompt)}
+                  className="text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 hover:bg-purple-500/25 transition-colors cursor-pointer whitespace-nowrap flex-shrink-0"
+                >
+                  {t('journal.usePrompt')}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Write section */}
-          <NoteForm onSubmit={handleCreate} loading={creating} />
+          <NoteForm onSubmit={handleCreate} loading={creating} initialPrompt={promptContent} />
 
           {/* Mobile: streak + stats inline */}
           <div className="lg:hidden space-y-3">

@@ -44,6 +44,7 @@ function downloadDataAsCSV(data, columns, filename = 'data.csv') {
   URL.revokeObjectURL(a.href)
 }
 import MoodCalendar from '../components/MoodCalendar'
+import YearInPixels from '../components/YearInPixels'
 import StressRadarChart from '../components/StressRadarChart'
 import EmptyState from '../components/EmptyState'
 
@@ -79,6 +80,8 @@ export default function DashboardPage() {
   const correlation = useMemo(() => data?.weather_correlation || {}, [data])
   const tags = useMemo(() => data?.frequent_tags || [], [data])
   const stressByTag = useMemo(() => data?.stress_by_tag || [], [data])
+  const activityCorrelation = useMemo(() => data?.activity_correlation || [], [data])
+  const sleepCorrelation = useMemo(() => data?.sleep_correlation || {}, [data])
 
   // Theme-aware chart colors
   const gridStroke = useMemo(() => theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', [theme])
@@ -113,6 +116,9 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 mt-4">
       <MoodCalendar />
+
+      {/* Year in Pixels */}
+      <YearInPixels />
 
       {/* Streak stats */}
       {(data?.current_streak > 0 || data?.longest_streak > 0) && (
@@ -296,6 +302,47 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Activity-Mood Correlation */}
+      {activityCorrelation.length > 0 && (
+        <div className="glass p-6">
+          <h2 className="text-lg font-semibold mb-4">{t('dashboard.activityCorrelation')}</h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={activityCorrelation}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+              <XAxis dataKey="name" stroke={axisStroke} fontSize={11} />
+              <YAxis stroke={axisStroke} fontSize={12} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="avg_sentiment" name={t('dashboard.avgSentiment')} fill="#a78bfa" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Sleep-Mood Correlation */}
+      {sleepCorrelation.scatter_data?.length > 0 && (
+        <div className="glass p-6">
+          <h2 className="text-lg font-semibold mb-2">{t('dashboard.sleepCorrelation')}</h2>
+          {sleepCorrelation.hours_correlation != null && (
+            <p className="text-sm opacity-60 mb-4">
+              {t('dashboard.pearson', {
+                r: sleepCorrelation.hours_correlation,
+                p: sleepCorrelation.hours_p_value,
+                n: sleepCorrelation.sample_size,
+              })}
+            </p>
+          )}
+          <ResponsiveContainer width="100%" height={250}>
+            <ScatterChart>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+              <XAxis dataKey="sleep_hours" name={t('dashboard.sleepHoursLabel')} unit="h" stroke={axisStroke} fontSize={12} />
+              <YAxis dataKey="sentiment" name={t('dashboard.sentimentLabel')} stroke={axisStroke} fontSize={12} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Scatter data={sleepCorrelation.scatter_data} fill="#60a5fa" />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Stress Radar Chart */}
       <StressRadarChart data={stressByTag} />

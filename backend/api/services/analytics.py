@@ -151,3 +151,93 @@ def get_stress_by_tag(queryset, lookback_days=90):
 
     result.sort(key=lambda x: x['count'], reverse=True)
     return result[:10]
+
+
+def get_activity_mood_correlation(queryset, lookback_days=90):
+    """Stats per activity: avg sentiment and count. Returns [{name, avg_sentiment, count}]."""
+    since = timezone.now() - timedelta(days=lookback_days)
+    notes = queryset.filter(
+        created_at__gte=since,
+        sentiment_score__isnull=False,
+    ).values('sentiment_score', 'metadata')
+
+    activity_data = {}  # activity_name -> [sentiment_values]
+    for note in notes:
+        meta = note.get('metadata') or {}
+        activities = meta.get('activities', [])
+        if isinstance(activities, list):
+            for act in activities:
+                activity_data.setdefault(act, []).append(note['sentiment_score'])
+
+    result = []
+    for name, values in activity_data.items():
+        result.append({
+            'name': name,
+            'avg_sentiment': round(sum(values) / len(values), 2),
+            'count': len(values),
+        })
+    result.sort(key=lambda x: x['count'], reverse=True)
+    return result
+
+
+def get_sleep_mood_correlation(queryset, lookback_days=90):
+    """Pearson correlation between sleep hours/quality and sentiment."""
+    since = timezone.now() - timedelta(days=lookback_days)
+    notes = queryset.filter(
+        created_at__gte=since,
+        sentiment_score__isnull=False,
+    ).values('sentiment_score', 'metadata')
+
+    pairs = []
+    for note in notes:
+        meta = note.get('metadata') or {}
+        sleep_hours = meta.get('sleep_hours')
+        sleep_quality = meta.get('sleep_quality')
+        if sleep_hours is not None:
+            try:
+                pairs.append({
+                    'sentiment': note['sentiment_score'],
+                    'sleep_hours': float(sleep_hours),
+                    'sleep_quality': int(sleep_quality) if sleep_quality is not None else None,
+                })
+            except (ValueError, TypeError):
+                continue
+
+    if len(pairs) < 3:
+        return {'hours_correlation': None, 'scatter_data': pairs, 'sample_size': len(pairs)}
+
+    df = pd.DataFrame(pairs)
+    result = {'scatter_data': pairs, 'sample_size': len(pairs)}
+    try:
+        r, p = stats.pearsonr(df['sentiment'], df['sleep_hours'])
+        result['hours_correlation'] = round(r, 3)
+        result['hours_p_value'] = round(p, 4)
+    except Exception:
+        result['hours_correlation'] = None
+
+    quality_pairs = df.dropna(subset=['sleep_quality'])
+    if len(quality_pairs) >= 3:
+        try:
+            r, p = stats.pearsonr(quality_pairs['sentiment'], quality_pairs['sleep_quality'])
+            result['quality_correlation'] = round(r, 3)
+            result['quality_p_value'] = round(p, 4)
+        except Exception:
+            result['quality_correlation'] = None
+    return result
+
+
+def get_year_pixels(queryset, year):
+    """Per-day average sentiment for the entire year. Returns {date_str: avg_sentiment}."""
+    notes = queryset.filter(
+        created_at__year=year,
+        sentiment_score__isnull=False,
+    ).values('created_at', 'sentiment_score')
+
+    if not notes:
+        return {}
+
+    df = pd.DataFrame(list(notes))
+    df['date'] = pd.to_datetime(df['created_at']).dt.date
+
+    grouped = df.groupby('date')['sentiment_score'].mean().round(2)
+    return {str(date): float(val) for date, val in grouped.items()}

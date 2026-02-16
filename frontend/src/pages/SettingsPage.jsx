@@ -277,6 +277,37 @@ export default function SettingsPage() {
         </div>
       </form>
 
+      {/* Font Size */}
+      <div className="glass p-4 sm:p-6 space-y-3">
+        <h2 className="text-lg font-semibold">{t('settings.fontSize')}</h2>
+        <div className="flex gap-3">
+          {[
+            { label: t('settings.fontSmall'), scale: 0.875 },
+            { label: t('settings.fontMedium'), scale: 1 },
+            { label: t('settings.fontLarge'), scale: 1.125 },
+          ].map((opt) => {
+            const current = parseFloat(localStorage.getItem('heartbox_font_scale') || '1')
+            return (
+              <button
+                key={opt.scale}
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('heartbox_font_scale', String(opt.scale))
+                  document.documentElement.style.fontSize = opt.scale * 16 + 'px'
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  current === opt.scale
+                    ? 'bg-purple-500/30 text-purple-400'
+                    : 'opacity-60 hover:opacity-100 border border-[var(--card-border)]'
+                }`}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Account Info */}
       <div className="glass p-4 sm:p-6 space-y-3">
         <h2 className="text-lg font-semibold">{t('settings.accountInfo')}</h2>

@@ -1,7 +1,10 @@
+import uuid
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils.html import strip_tags
 
 
 class CustomUser(AbstractUser):
@@ -68,7 +71,7 @@ class MoodNote(models.Model):
         if self._raw_content is not None:
             from api.services.encryption import encryption_service
             self.encrypted_content = encryption_service.encrypt(self._raw_content)
-            self.search_text = self._raw_content[:500]
+            self.search_text = strip_tags(self._raw_content)[:500]
             self._raw_content = None
         super().save(*args, **kwargs)
 
@@ -82,8 +85,8 @@ class MoodNote(models.Model):
 
     @property
     def content_preview(self) -> str:
-        """Decrypted first 100 chars for list views."""
-        full = self.content
+        """Decrypted first 100 chars for list views (HTML stripped)."""
+        full = strip_tags(self.content)
         if len(full) <= 100:
             return full
         return full[:100] + '...'
@@ -446,3 +449,97 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f'{self.user} — {self.action} @ {self.created_at:%Y-%m-%d %H:%M}'
+
+
+class SelfAssessment(models.Model):
+    TYPE_CHOICES = [('phq9', 'PHQ-9'), ('gad7', 'GAD-7')]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='assessments',
+    )
+    assessment_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    responses = models.JSONField()  # list of ints 0-3
+    total_score = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'assessment_type', '-created_at'], name='assess_user_type_date'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} {self.assessment_type} = {self.total_score} ({self.created_at:%Y-%m-%d})'
+
+
+class WeeklySummary(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='weekly_summaries',
+    )
+    week_start = models.DateField()
+    mood_avg = models.FloatField(null=True, blank=True)
+    stress_avg = models.FloatField(null=True, blank=True)
+    note_count = models.IntegerField(default=0)
+    top_activities = models.JSONField(default=list, blank=True)
+    ai_summary = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['user', 'week_start']
+        ordering = ['-week_start']
+
+    def __str__(self):
+        return f'{self.user.username} week {self.week_start}'
+
+
+class TherapistReport(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='therapist_reports',
+    )
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    title = models.CharField(max_length=200)
+    period_start = models.DateField()
+    period_end = models.DateField()
+    report_data = models.JSONField()
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.user.username} report: {self.title}'
+
+
+class PsychoArticle(models.Model):
+    CATEGORY_CHOICES = [
+        ('cbt', 'CBT'),
+        ('mindfulness', 'Mindfulness'),
+        ('emotion', 'Emotion'),
+        ('stress', 'Stress'),
+        ('sleep', 'Sleep'),
+    ]
+
+    title_zh = models.CharField(max_length=200)
+    title_en = models.CharField(max_length=200)
+    title_ja = models.CharField(max_length=200)
+    content_zh = models.TextField()
+    content_en = models.TextField()
+    content_ja = models.TextField()
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    reading_time = models.IntegerField(default=5)
+    is_published = models.BooleanField(default=True)
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
+    def __str__(self):
+        return self.title_en

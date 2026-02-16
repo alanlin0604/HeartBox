@@ -169,12 +169,9 @@ export default function NoteDetailPage() {
             </div>
           </div>
         ) : (
-          <div className="glass-card p-4">
-            {/* Safe: React auto-escapes text content in JSX — no dangerouslySetInnerHTML needed */}
-            <p className="leading-relaxed whitespace-pre-wrap">
-              {note.decrypted_content}
-            </p>
-          </div>
+          <div className="glass-card p-4 prose prose-invert max-w-none"
+            dangerouslySetInnerHTML={{ __html: note.decrypted_content }}
+          />
         )}
 
         {/* Attachments */}

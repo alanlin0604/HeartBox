@@ -17,6 +17,9 @@ const ROUTE_PRELOADS = {
   '/counselors': () => import('../pages/CounselorListPage'),
   '/ai-chat': () => import('../pages/AIChatPage'),
   '/achievements': () => import('../pages/AchievementsPage'),
+  '/assessments': () => import('../pages/AssessmentsPage'),
+  '/weekly-summary': () => import('../pages/WeeklySummaryPage'),
+  '/learn': () => import('../pages/PsychoContentPage'),
   '/admin': () => import('../pages/AdminPage'),
   '/settings': () => import('../pages/SettingsPage'),
 }
@@ -56,9 +59,18 @@ export default function Layout() {
     }
   }, [])
 
+  // Font scale from localStorage
+  useEffect(() => {
+    const scale = localStorage.getItem('heartbox_font_scale') || '1'
+    document.documentElement.style.fontSize = parseFloat(scale) * 16 + 'px'
+  }, [])
+
   const navLinks = [
     { to: '/', label: t('nav.journal'), end: true },
     { to: '/dashboard', label: t('nav.dashboard') },
+    { to: '/assessments', label: t('nav.assessments') },
+    { to: '/weekly-summary', label: t('nav.weeklySummary') },
+    { to: '/learn', label: t('nav.learn') },
     { to: '/counselors', label: t('nav.counselors') },
     { to: '/ai-chat', label: t('nav.aiChat') },
     { to: '/achievements', label: t('nav.achievements') },

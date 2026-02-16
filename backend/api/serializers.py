@@ -4,7 +4,8 @@ from rest_framework import serializers
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorProfile, Feedback, Message, MoodNote,
-    NoteAttachment, Notification, SharedNote, TimeSlot, UserAchievement,
+    NoteAttachment, Notification, PsychoArticle, SelfAssessment, SharedNote,
+    TherapistReport, TimeSlot, UserAchievement, WeeklySummary,
 )
 
 User = get_user_model()
@@ -292,3 +293,66 @@ class UserAchievementSerializer(serializers.ModelSerializer):
         model = UserAchievement
         fields = ('achievement_id', 'unlocked_at')
         read_only_fields = fields
+
+
+# ===== Wellness Features =====
+
+class SelfAssessmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SelfAssessment
+        fields = ('id', 'assessment_type', 'responses', 'total_score', 'created_at')
+        read_only_fields = ('id', 'total_score', 'created_at')
+
+    def validate(self, data):
+        atype = data.get('assessment_type')
+        responses = data.get('responses')
+        expected_len = 9 if atype == 'phq9' else 7
+        if not isinstance(responses, list) or len(responses) != expected_len:
+            raise serializers.ValidationError({
+                'responses': f'Must be a list of {expected_len} integers.'
+            })
+        for val in responses:
+            if not isinstance(val, int) or val < 0 or val > 3:
+                raise serializers.ValidationError({
+                    'responses': 'Each response must be an integer from 0 to 3.'
+                })
+        data['total_score'] = sum(responses)
+        return data
+
+
+class WeeklySummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WeeklySummary
+        fields = ('id', 'week_start', 'mood_avg', 'stress_avg', 'note_count',
+                  'top_activities', 'ai_summary', 'created_at')
+        read_only_fields = fields
+
+
+class TherapistReportSerializer(serializers.ModelSerializer):
+    share_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TherapistReport
+        fields = ('id', 'token', 'title', 'period_start', 'period_end',
+                  'report_data', 'expires_at', 'share_url', 'created_at')
+        read_only_fields = ('id', 'token', 'report_data', 'expires_at', 'share_url', 'created_at')
+
+    def get_share_url(self, obj):
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(f'/api/reports/public/{obj.token}/')
+        return f'/api/reports/public/{obj.token}/'
+
+
+class TherapistReportPublicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TherapistReport
+        fields = ('title', 'period_start', 'period_end', 'report_data', 'created_at')
+
+
+class PsychoArticleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PsychoArticle
+        fields = ('id', 'title_zh', 'title_en', 'title_ja',
+                  'content_zh', 'content_en', 'content_ja',
+                  'category', 'reading_time', 'order', 'created_at')

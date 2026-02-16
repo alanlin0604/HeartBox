@@ -1,12 +1,13 @@
 import logging
 import mimetypes
+import random
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Avg, Sum
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db.models import Q
@@ -29,7 +30,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorProfile, Feedback, Message, MoodNote,
-    NoteAttachment, Notification, SharedNote, TimeSlot, UserAchievement,
+    NoteAttachment, Notification, PsychoArticle, SelfAssessment, SharedNote,
+    TherapistReport, TimeSlot, UserAchievement, WeeklySummary,
 )
 from .serializers import (
     AIChatMessageSerializer,
@@ -46,15 +48,21 @@ from .serializers import (
     MoodNoteSerializer,
     NoteAttachmentSerializer,
     NotificationSerializer,
+    PsychoArticleSerializer,
+    SelfAssessmentSerializer,
     SharedNoteSerializer,
+    TherapistReportPublicSerializer,
+    TherapistReportSerializer,
     TimeSlotSerializer,
     UserAchievementSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
+    WeeklySummarySerializer,
 )
 from .services.analytics import (
-    get_mood_trends, get_mood_weather_correlation, get_frequent_tags,
-    get_calendar_data, get_stress_by_tag,
+    get_activity_mood_correlation, get_calendar_data, get_frequent_tags,
+    get_mood_trends, get_mood_weather_correlation, get_sleep_mood_correlation,
+    get_stress_by_tag, get_year_pixels,
 )
 from .services.alerts import check_mood_alerts
 from .services.audit import log_action
@@ -449,6 +457,8 @@ class AnalyticsView(APIView):
             'weather_correlation': get_mood_weather_correlation(qs, lookback_days=lookback_days),
             'frequent_tags': get_frequent_tags(qs, lookback_days=lookback_days),
             'stress_by_tag': get_stress_by_tag(qs, lookback_days=lookback_days),
+            'activity_correlation': get_activity_mood_correlation(qs, lookback_days=lookback_days),
+            'sleep_correlation': get_sleep_mood_correlation(qs, lookback_days=lookback_days),
             'current_streak': current_streak,
             'longest_streak': longest_streak,
         }
@@ -1396,3 +1406,279 @@ class AIChatSendMessageView(APIView):
             'user_message': AIChatMessageSerializer(user_msg).data,
             'ai_message': AIChatMessageSerializer(ai_msg).data,
         }, status=status.HTTP_201_CREATED)
+
+
+# ===== Year Pixels View =====
+
+class YearPixelsView(APIView):
+    def get(self, request):
+        try:
+            year = int(request.query_params.get('year', timezone.now().year))
+        except (ValueError, TypeError):
+            year = timezone.now().year
+        qs = MoodNote.objects.filter(user=request.user)
+        pixels = get_year_pixels(qs, year)
+        return Response({'year': year, 'pixels': pixels})
+
+
+# ===== Daily Prompt View =====
+
+DEFAULT_PROMPTS = [
+    "What made you smile today?",
+    "Describe a moment of peace you experienced recently.",
+    "What are three things you're grateful for right now?",
+    "How did you handle a challenge today?",
+    "What would you tell your younger self right now?",
+    "Describe how your body feels right now.",
+    "What emotion has been strongest today? Why?",
+    "Write about someone who made a positive impact on your day.",
+    "What is one small thing you can do for yourself tonight?",
+    "Reflect on a recent achievement, no matter how small.",
+]
+
+
+class DailyPromptView(APIView):
+    def get(self, request):
+        today = timezone.now().date().isoformat()
+        cache_key = f'daily_prompt_{request.user.id}_{today}'
+        cached = cache.get(cache_key)
+        if cached:
+            return Response({'prompt': cached})
+
+        # Generate prompt based on recent mood
+        prompt_text = None
+        try:
+            recent = MoodNote.objects.filter(
+                user=request.user,
+                sentiment_score__isnull=False,
+                created_at__gte=timezone.now() - timedelta(days=7),
+            ).aggregate(avg_s=Avg('sentiment_score'), avg_st=Avg('stress_index'))
+
+            avg_s = recent['avg_s']
+            avg_st = recent['avg_st']
+
+            from openai import OpenAI
+            from django.conf import settings as django_settings
+            api_key = getattr(django_settings, 'OPENAI_API_KEY', '')
+            if api_key:
+                client = OpenAI(api_key=api_key)
+                lang = request.headers.get('Accept-Language', 'zh-TW')
+                lang_map = {'zh-TW': 'Traditional Chinese', 'en': 'English', 'ja': 'Japanese'}
+                lang_name = lang_map.get(lang, 'Traditional Chinese')
+                mood_ctx = ''
+                if avg_s is not None:
+                    mood_ctx = f"The user's average mood score this week is {avg_s:.2f} (scale -1 to 1). "
+                if avg_st is not None:
+                    mood_ctx += f"Average stress level is {avg_st:.1f}/10. "
+
+                resp = client.chat.completions.create(
+                    model='gpt-4o-mini',
+                    messages=[{
+                        'role': 'system',
+                        'content': (
+                            f'You are a gentle journaling coach. {mood_ctx}'
+                            f'Generate one warm, thoughtful journaling prompt in {lang_name}. '
+                            f'Keep it to 1-2 sentences. No quotes or labels.'
+                        ),
+                    }],
+                    max_tokens=100,
+                    temperature=0.8,
+                )
+                prompt_text = resp.choices[0].message.content.strip()
+        except Exception as e:
+            logger.warning('Daily prompt generation failed: %s', e)
+
+        if not prompt_text:
+            prompt_text = random.choice(DEFAULT_PROMPTS)
+
+        cache.set(cache_key, prompt_text, 86400)  # 24 hours
+        return Response({'prompt': prompt_text})
+
+
+# ===== Self Assessment Views =====
+
+class SelfAssessmentListCreateView(generics.ListCreateAPIView):
+    serializer_class = SelfAssessmentSerializer
+
+    def get_queryset(self):
+        qs = SelfAssessment.objects.filter(user=self.request.user)
+        atype = self.request.query_params.get('type')
+        if atype in ('phq9', 'gad7'):
+            qs = qs.filter(assessment_type=atype)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+# ===== Weekly Summary Views =====
+
+class WeeklySummaryView(APIView):
+    def get(self, request):
+        week_start_str = request.query_params.get('week_start')
+        if not week_start_str:
+            return Response({'error': 'week_start parameter required (YYYY-MM-DD).'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({'error': 'Invalid date format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Try to find existing
+        summary = WeeklySummary.objects.filter(user=request.user, week_start=week_start).first()
+        if summary:
+            return Response(WeeklySummarySerializer(summary).data)
+
+        # Generate new summary
+        week_end = week_start + timedelta(days=6)
+        notes = MoodNote.objects.filter(
+            user=request.user,
+            is_deleted=False,
+            created_at__date__gte=week_start,
+            created_at__date__lte=week_end,
+        )
+        note_count = notes.count()
+        if note_count == 0:
+            return Response({'error': 'No notes found for this week.'}, status=status.HTTP_404_NOT_FOUND)
+
+        agg = notes.aggregate(avg_s=Avg('sentiment_score'), avg_st=Avg('stress_index'))
+
+        # Count activities
+        activity_counts = {}
+        for note in notes.values('metadata'):
+            meta = note.get('metadata') or {}
+            for act in meta.get('activities', []):
+                activity_counts[act] = activity_counts.get(act, 0) + 1
+        top_activities = sorted(
+            [{'name': k, 'count': v} for k, v in activity_counts.items()],
+            key=lambda x: x['count'], reverse=True,
+        )[:5]
+
+        # Generate AI summary
+        ai_summary = ''
+        try:
+            from openai import OpenAI
+            from django.conf import settings as django_settings
+            api_key = getattr(django_settings, 'OPENAI_API_KEY', '')
+            if api_key:
+                client = OpenAI(api_key=api_key)
+                lang = request.headers.get('Accept-Language', 'zh-TW')
+                lang_map = {'zh-TW': 'Traditional Chinese', 'en': 'English', 'ja': 'Japanese'}
+                lang_name = lang_map.get(lang, 'Traditional Chinese')
+                resp = client.chat.completions.create(
+                    model='gpt-4o-mini',
+                    messages=[{
+                        'role': 'system',
+                        'content': (
+                            f'Generate a brief weekly mental health summary in {lang_name}. '
+                            f'Data: {note_count} journal entries, avg mood {agg["avg_s"]:.2f} (-1 to 1), '
+                            f'avg stress {agg["avg_st"]:.1f}/10, top activities: {top_activities}. '
+                            f'Give 2-3 observations and 1-2 suggestions. Keep it warm and supportive. Max 200 words.'
+                        ),
+                    }],
+                    max_tokens=300,
+                    temperature=0.7,
+                )
+                ai_summary = resp.choices[0].message.content.strip()
+        except Exception as e:
+            logger.warning('Weekly summary AI generation failed: %s', e)
+
+        summary = WeeklySummary.objects.create(
+            user=request.user,
+            week_start=week_start,
+            mood_avg=round(agg['avg_s'], 2) if agg['avg_s'] is not None else None,
+            stress_avg=round(agg['avg_st'], 1) if agg['avg_st'] is not None else None,
+            note_count=note_count,
+            top_activities=top_activities,
+            ai_summary=ai_summary,
+        )
+        return Response(WeeklySummarySerializer(summary).data)
+
+
+class WeeklySummaryListView(generics.ListAPIView):
+    serializer_class = WeeklySummarySerializer
+
+    def get_queryset(self):
+        return WeeklySummary.objects.filter(user=self.request.user)
+
+
+# ===== Therapist Report Views =====
+
+class TherapistReportCreateView(generics.CreateAPIView):
+    serializer_class = TherapistReportSerializer
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        period_start = serializer.validated_data['period_start']
+        period_end = serializer.validated_data['period_end']
+
+        notes = MoodNote.objects.filter(
+            user=user, is_deleted=False,
+            created_at__date__gte=period_start,
+            created_at__date__lte=period_end,
+            sentiment_score__isnull=False,
+        )
+
+        # Build report data snapshot
+        mood_data = list(notes.values('created_at', 'sentiment_score', 'stress_index'))
+        for item in mood_data:
+            item['created_at'] = item['created_at'].isoformat()
+
+        agg = notes.aggregate(avg_s=Avg('sentiment_score'), avg_st=Avg('stress_index'))
+
+        # Recent assessments
+        assessments = list(
+            SelfAssessment.objects.filter(
+                user=user,
+                created_at__date__gte=period_start,
+                created_at__date__lte=period_end,
+            ).values('assessment_type', 'total_score', 'created_at')
+        )
+        for a in assessments:
+            a['created_at'] = a['created_at'].isoformat()
+
+        report_data = {
+            'mood_trends': mood_data,
+            'mood_avg': round(agg['avg_s'], 2) if agg['avg_s'] else None,
+            'stress_avg': round(agg['avg_st'], 1) if agg['avg_st'] else None,
+            'note_count': notes.count(),
+            'assessments': assessments,
+        }
+
+        serializer.save(
+            user=user,
+            report_data=report_data,
+            expires_at=timezone.now() + timedelta(days=30),
+        )
+
+
+class TherapistReportListView(generics.ListAPIView):
+    serializer_class = TherapistReportSerializer
+
+    def get_queryset(self):
+        return TherapistReport.objects.filter(user=self.request.user)
+
+
+class TherapistReportPublicView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, token):
+        try:
+            report = TherapistReport.objects.get(token=token)
+        except TherapistReport.DoesNotExist:
+            return Response({'error': 'Report not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if timezone.now() > report.expires_at:
+            return Response({'error': 'This report has expired.'}, status=status.HTTP_410_GONE)
+        return Response(TherapistReportPublicSerializer(report).data)
+
+
+# ===== Psycho Education Views =====
+
+class PsychoArticleListView(generics.ListAPIView):
+    serializer_class = PsychoArticleSerializer
+
+    def get_queryset(self):
+        qs = PsychoArticle.objects.filter(is_published=True)
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(category=category)
+        return qs

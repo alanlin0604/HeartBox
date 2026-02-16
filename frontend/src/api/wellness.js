@@ -1,0 +1,37 @@
+import api from './axios'
+
+// Year Pixels
+export const getYearPixels = (year) =>
+  api.get(`/analytics/year-pixels/?year=${year}`)
+
+// Daily Prompt
+export const getDailyPrompt = () =>
+  api.get('/daily-prompt/')
+
+// Self Assessments
+export const getAssessments = (type) =>
+  api.get(`/assessments/${type ? `?type=${type}` : ''}`)
+
+export const createAssessment = (data) =>
+  api.post('/assessments/', data)
+
+// Weekly Summary
+export const getWeeklySummary = (weekStart) =>
+  api.get(`/weekly-summary/?week_start=${weekStart}`)
+
+export const getWeeklySummaryList = () =>
+  api.get('/weekly-summary/list/')
+
+// Therapist Reports
+export const createTherapistReport = (data) =>
+  api.post('/reports/', data)
+
+export const getTherapistReports = () =>
+  api.get('/reports/list/')
+
+export const getPublicReport = (token) =>
+  api.get(`/reports/public/${token}/`)
+
+// Psycho Education Articles
+export const getArticles = (category) =>
+  api.get(`/articles/${category ? `?category=${category}` : ''}`)
