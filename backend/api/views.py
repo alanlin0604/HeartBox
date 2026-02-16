@@ -1416,7 +1416,7 @@ class YearPixelsView(APIView):
             year = int(request.query_params.get('year', timezone.now().year))
         except (ValueError, TypeError):
             year = timezone.now().year
-        qs = MoodNote.objects.filter(user=request.user)
+        qs = MoodNote.objects.filter(user=request.user, is_deleted=False)
         pixels = get_year_pixels(qs, year)
         return Response({'year': year, 'pixels': pixels})
 
@@ -1522,6 +1522,11 @@ class WeeklySummaryView(APIView):
             week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
         except ValueError:
             return Response({'error': 'Invalid date format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Auto-adjust to Monday of the given week
+        weekday = week_start.weekday()  # 0=Monday, 6=Sunday
+        if weekday != 0:
+            week_start = week_start - timedelta(days=weekday)
 
         # Try to find existing
         summary = WeeklySummary.objects.filter(user=request.user, week_start=week_start).first()

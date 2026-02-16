@@ -75,7 +75,7 @@ export default function WeeklySummaryPage() {
         <input
           type="date"
           value={selectedWeek}
-          onChange={(e) => setSelectedWeek(e.target.value)}
+          onChange={(e) => setSelectedWeek(getMonday(new Date(e.target.value)))}
           className="glass-input w-auto"
         />
         <button onClick={handleGenerate} disabled={loading} className="btn-primary text-sm">

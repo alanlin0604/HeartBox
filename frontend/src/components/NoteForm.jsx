@@ -51,8 +51,6 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const [files, setFiles] = useState([])
   const [tagSuggestions, setTagSuggestions] = useState([])
   const [selectedActivities, setSelectedActivities] = useState([])
-  const [sleepHours, setSleepHours] = useState('')
-  const [sleepQuality, setSleepQuality] = useState(0)
   const [isRecording, setIsRecording] = useState(false)
   const fileInputRef = useRef(null)
   const recognitionRef = useRef(null)
@@ -147,8 +145,6 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     if (selectedActivities.length > 0) {
       metadata.activities = selectedActivities
     }
-    if (sleepHours) metadata.sleep_hours = parseFloat(sleepHours)
-    if (sleepQuality > 0) metadata.sleep_quality = sleepQuality
 
     onSubmit(content, metadata, files)
     try { localStorage.removeItem('heartbox_draft') } catch { /* ignore */ }
@@ -158,9 +154,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     setTagsInput('')
     setFiles([])
     setSelectedActivities([])
-    setSleepHours('')
-    setSleepQuality(0)
-  }, [editor, weather, temperature, tagsInput, files, selectedActivities, sleepHours, sleepQuality, onSubmit])
+  }, [editor, weather, temperature, tagsInput, files, selectedActivities, onSubmit])
 
   const handleFileChange = useCallback((e) => {
     const selected = Array.from(e.target.files)
@@ -210,19 +204,13 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
       {/* Rich text editor toolbar + editor */}
       <div className="glass-card rounded-xl overflow-hidden">
         {editor && (
-          <div className="flex flex-wrap items-center gap-1 px-3 py-2 border-b border-[var(--card-border)]">
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--card-border)]">
             <button type="button" onClick={() => editor.chain().focus().toggleBold().run()}
               className={`p-1.5 rounded text-sm font-bold transition-colors ${editor.isActive('bold') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>B</button>
             <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()}
               className={`p-1.5 rounded text-sm italic transition-colors ${editor.isActive('italic') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>I</button>
-            <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-              className={`p-1.5 rounded text-sm font-bold transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>H2</button>
             <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()}
               className={`p-1.5 rounded text-sm transition-colors ${editor.isActive('bulletList') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>&#8226;</button>
-            <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()}
-              className={`p-1.5 rounded text-sm transition-colors ${editor.isActive('orderedList') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>1.</button>
-            <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()}
-              className={`p-1.5 rounded text-sm transition-colors ${editor.isActive('blockquote') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>&ldquo;</button>
             <div className="w-px h-5 bg-[var(--card-border)] mx-1" />
             <button type="button" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}
               className="p-1.5 rounded text-sm opacity-50 hover:opacity-100 disabled:opacity-20">&larr;</button>
@@ -261,38 +249,6 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
               {act.emoji} {t(act.labelKey)}
             </button>
           ))}
-        </div>
-      </div>
-
-      {/* Sleep tracking */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium opacity-60 mb-1">{t('noteForm.sleepHours')}</label>
-          <input
-            type="number"
-            min="0"
-            max="24"
-            step="0.5"
-            value={sleepHours}
-            onChange={(e) => setSleepHours(e.target.value)}
-            placeholder="0-24"
-            className="glass-input"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium opacity-60 mb-1">{t('noteForm.sleepQuality')}</label>
-          <div className="flex gap-1 mt-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                onClick={() => setSleepQuality(sleepQuality === star ? 0 : star)}
-                className={`text-xl transition-colors ${star <= sleepQuality ? 'text-yellow-400' : 'text-gray-500/30'}`}
-              >
-                &#9733;
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 

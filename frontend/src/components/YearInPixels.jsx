@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { getYearPixels } from '../api/wellness'
 import { useLang } from '../context/LanguageContext'
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTH_KEYS = [
+  'months.jan', 'months.feb', 'months.mar', 'months.apr',
+  'months.may', 'months.jun', 'months.jul', 'months.aug',
+  'months.sep', 'months.oct', 'months.nov', 'months.dec',
+]
 
 function getSentimentColor(score) {
   if (score == null) return 'bg-gray-500/20'
@@ -43,7 +47,7 @@ export default function YearInPixels() {
           days.push({ date: dateStr, score: pixels[dateStr] ?? null })
         }
       }
-      rows.push({ month: MONTHS[m], days })
+      rows.push({ monthKey: MONTH_KEYS[m], days })
     }
     return rows
   }, [year, pixels])
@@ -92,8 +96,8 @@ export default function YearInPixels() {
                 ))}
               </div>
               {grid.map((row) => (
-                <div key={row.month} className="flex items-center gap-px mb-px">
-                  <div className="w-8 text-xs opacity-50 text-right pr-1">{row.month}</div>
+                <div key={row.monthKey} className="flex items-center gap-px mb-px">
+                  <div className="w-8 text-xs opacity-50 text-right pr-1">{t(row.monthKey)}</div>
                   {row.days.map((cell, idx) => (
                     <div
                       key={idx}

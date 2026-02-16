@@ -316,8 +316,11 @@ class SelfAssessmentSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({
                     'responses': 'Each response must be an integer from 0 to 3.'
                 })
-        data['total_score'] = sum(responses)
         return data
+
+    def create(self, validated_data):
+        validated_data['total_score'] = sum(validated_data.get('responses', []))
+        return super().create(validated_data)
 
 
 class WeeklySummarySerializer(serializers.ModelSerializer):
