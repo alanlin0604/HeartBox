@@ -60,4 +60,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: frontend
-          wranglerVersion: "4"
+          wranglerVersion: "4.66.0"
