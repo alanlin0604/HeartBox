@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt
+      - run: pip install -r ../requirements.txt
       - run: python manage.py test api.tests -v2 --settings=moodnotes_pro.test_settings
 
   frontend-build:
