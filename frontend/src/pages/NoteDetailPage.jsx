@@ -100,6 +100,11 @@ export default function NoteDetailPage() {
     }
   }
 
+  const sanitizedContent = useMemo(
+    () => note ? DOMPurify.sanitize(note.decrypted_content || '') : '',
+    [note?.decrypted_content]
+  )
+
   if (loading) return <LoadingSpinner />
   if (!note) return null
 
@@ -113,10 +118,6 @@ export default function NoteDetailPage() {
     minute: '2-digit',
   })
 
-  const sanitizedContent = useMemo(
-    () => DOMPurify.sanitize(note.decrypted_content || ''),
-    [note.decrypted_content]
-  )
   const tags = note.metadata?.tags || []
   const attachments = note.attachments || []
 

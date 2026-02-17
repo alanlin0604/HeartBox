@@ -213,16 +213,16 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
         {editor && (
           <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--card-border)]">
             <button type="button" onClick={() => editor.chain().focus().toggleBold().run()}
-              className={`px-2 py-1 rounded text-xs font-bold transition-colors ${editor.isActive('bold') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>{t('noteForm.bold')}</button>
+              className={`px-2 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${editor.isActive('bold') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>{t('noteForm.bold')}</button>
             <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()}
-              className={`px-2 py-1 rounded text-xs italic transition-colors ${editor.isActive('italic') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>{t('noteForm.italic')}</button>
+              className={`px-2 py-1 rounded text-xs italic transition-colors cursor-pointer ${editor.isActive('italic') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>{t('noteForm.italic')}</button>
             <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()}
-              className={`px-2 py-1 rounded text-xs transition-colors ${editor.isActive('bulletList') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>{t('noteForm.list')}</button>
+              className={`px-2 py-1 rounded text-xs transition-colors cursor-pointer ${editor.isActive('bulletList') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>{t('noteForm.list')}</button>
             <div className="w-px h-5 bg-[var(--card-border)] mx-1" />
             <button type="button" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}
-              className="px-2 py-1 rounded text-xs opacity-50 hover:opacity-100 disabled:opacity-20">{t('noteForm.undo')}</button>
+              className="px-2 py-1 rounded text-xs opacity-50 hover:opacity-100 disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed">{t('noteForm.undo')}</button>
             <button type="button" onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()}
-              className="px-2 py-1 rounded text-xs opacity-50 hover:opacity-100 disabled:opacity-20">{t('noteForm.redo')}</button>
+              className="px-2 py-1 rounded text-xs opacity-50 hover:opacity-100 disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed">{t('noteForm.redo')}</button>
             {speechSupported && (
               <>
                 <div className="w-px h-5 bg-[var(--card-border)] mx-1" />
