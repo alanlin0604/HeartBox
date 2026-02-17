@@ -12,6 +12,9 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      DJANGO_SECRET_KEY: ci-test-secret-key-not-for-production
+      ENCRYPTION_KEY: IYRRmEUTFlRiFfq_-GCdJUN9NqTvfkG6e5s5KTpfpBk=
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
