@@ -8,3 +8,6 @@ DATABASES = {
         'NAME': Path(__file__).resolve().parent.parent / 'test_db.sqlite3',
     }
 }
+
+# Disable production security settings for testing
+SECURE_SSL_REDIRECT = False
