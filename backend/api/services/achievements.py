@@ -252,12 +252,14 @@ def _get_longest_streak(user):
 
 
 def _get_max_note_length(user):
-    """Get max character count of any note (plaintext)."""
-    notes = MoodNote.objects.filter(user=user).only('encrypted_content')[:200]
+    """Get max character count of any note (plaintext, HTML tags stripped)."""
+    from django.utils.html import strip_tags
+    notes = MoodNote.objects.filter(user=user).only('encrypted_content')
     max_len = 0
     for note in notes:
         try:
-            max_len = max(max_len, len(note.content))
+            plaintext = strip_tags(note.content)
+            max_len = max(max_len, len(plaintext))
         except Exception:
             pass
     return max_len

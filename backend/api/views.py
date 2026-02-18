@@ -423,7 +423,7 @@ class AnalyticsView(APIView):
         current_streak = 0
         longest_streak = 0
         if dates:
-            today = timezone.now().date()
+            today = timezone.localdate()
             # Current streak: count consecutive days from today/yesterday
             streak = 0
             expected = today

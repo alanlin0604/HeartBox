@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo, useReducer } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -54,6 +54,8 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const [isRecording, setIsRecording] = useState(false)
   const fileInputRef = useRef(null)
   const recognitionRef = useRef(null)
+  // Force toolbar re-render on every editor transaction (for undo/redo disabled state)
+  const [, forceUpdate] = useReducer((x) => x + 1, 0)
 
   // Tiptap editor
   const editor = useEditor({
@@ -66,6 +68,9 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     })(),
     onUpdate: ({ editor }) => {
       try { localStorage.setItem('heartbox_draft', editor.getHTML()) } catch { /* quota */ }
+    },
+    onTransaction: () => {
+      forceUpdate()
     },
   })
 
