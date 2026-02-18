@@ -101,7 +101,8 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   // Set initial prompt content if provided
   useEffect(() => {
     if (initialPrompt && editor) {
-      editor.commands.setContent(initialPrompt)
+      editor.commands.setContent(`<p>${initialPrompt}</p>`)
+      editor.commands.focus('end')
     }
   }, [initialPrompt, editor])
 
@@ -230,7 +231,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
             <div key={tpl.id} className="group relative">
               <button
                 type="button"
-                onClick={() => editor?.commands.setContent(tpl.content)}
+                onClick={() => { editor?.commands.setContent(tpl.content); editor?.commands.focus('end') }}
                 className="text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 hover:bg-purple-500/25 transition-colors cursor-pointer pr-7"
               >
                 {tpl.name}

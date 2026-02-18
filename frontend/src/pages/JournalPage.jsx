@@ -354,7 +354,7 @@ export default function JournalPage() {
                 <div className="space-y-3">
                   {trashNotes.map((note) => (
                     <div key={note.id} className="glass-card p-4 opacity-70">
-                      <p className="text-sm mb-2">{note.content_preview}</p>
+                      <p className="text-sm mb-2">{(note.content_preview || '').replace(/<[^>]*>/g, '')}</p>
                       <div className="flex items-center justify-between text-xs opacity-60">
                         <span>{t('journal.deletedAt')}: {new Date(note.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
                         <div className="flex gap-2">

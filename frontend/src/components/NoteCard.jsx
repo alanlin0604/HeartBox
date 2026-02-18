@@ -5,6 +5,9 @@ import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
 import MoodBadge from './MoodBadge'
 import HighlightText from './HighlightText'
 
+// Strip any residual HTML tags from content_preview (safety net)
+const stripHtml = (str) => str ? str.replace(/<[^>]*>/g, '').replace(/&lt;|&gt;|&amp;|&quot;|&#39;/g, m => ({ '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" })[m] || m) : ''
+
 export default memo(function NoteCard({ note, highlight }) {
   const { lang, t } = useLang()
 
@@ -36,7 +39,7 @@ export default memo(function NoteCard({ note, highlight }) {
           <MoodBadge score={note.sentiment_score} />
         </div>
         <p className="text-sm leading-relaxed mb-3 opacity-80">
-          <HighlightText text={note.content_preview || '...'} keyword={highlight} />
+          <HighlightText text={stripHtml(note.content_preview) || '...'} keyword={highlight} />
         </p>
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">

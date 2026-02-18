@@ -1701,6 +1701,8 @@ class TherapistReportCreateView(generics.CreateAPIView):
         user = self.request.user
         period_start = serializer.validated_data['period_start']
         period_end = serializer.validated_data['period_end']
+        if period_end < period_start:
+            raise exceptions.ValidationError({'error': 'period_end must be >= period_start.'})
 
         notes = MoodNote.objects.filter(
             user=user, is_deleted=False,

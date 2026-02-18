@@ -17,17 +17,34 @@ import EmptyState from '../components/EmptyState'
 function downloadChartAsPNG(containerRef, filename = 'chart.png') {
   const svg = containerRef.current?.querySelector('svg')
   if (!svg) return
-  const svgData = new XMLSerializer().serializeToString(svg)
+  const clone = svg.cloneNode(true)
+  // Inline all computed styles so the exported image renders correctly
+  const original = svg.querySelectorAll('*')
+  const cloned = clone.querySelectorAll('*')
+  for (let i = 0; i < original.length; i++) {
+    const computed = window.getComputedStyle(original[i])
+    const style = cloned[i].style
+    for (let j = 0; j < computed.length; j++) {
+      const prop = computed[j]
+      style.setProperty(prop, computed.getPropertyValue(prop))
+    }
+  }
+  // Set explicit dimensions on the SVG
+  const { width, height } = svg.getBoundingClientRect()
+  clone.setAttribute('width', width)
+  clone.setAttribute('height', height)
+  const svgData = new XMLSerializer().serializeToString(clone)
   const canvas = document.createElement('canvas')
+  const scale = 2
+  canvas.width = width * scale
+  canvas.height = height * scale
   const ctx = canvas.getContext('2d')
+  ctx.scale(scale, scale)
+  ctx.fillStyle = '#1e1b4b'
+  ctx.fillRect(0, 0, width, height)
   const img = new Image()
   img.onload = () => {
-    canvas.width = img.width * 2
-    canvas.height = img.height * 2
-    ctx.scale(2, 2)
-    ctx.fillStyle = '#1e1b4b'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.drawImage(img, 0, 0)
+    ctx.drawImage(img, 0, 0, width, height)
     const a = document.createElement('a')
     a.download = filename
     a.href = canvas.toDataURL('image/png')

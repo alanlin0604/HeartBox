@@ -1,7 +1,29 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import DOMPurify from 'dompurify'
 import { getArticles } from '../api/wellness'
 import { useLang } from '../context/LanguageContext'
 import LoadingSpinner from '../components/LoadingSpinner'
+
+/** Minimal markdown → HTML: headings, bold, bullet lists, paragraphs */
+function mdToHtml(md) {
+  if (!md) return ''
+  return md
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/\n/g, '<br/>')
+    .replace(/^/, '<p>')
+    .replace(/$/, '</p>')
+    .replace(/<p><h([123])>/g, '<h$1>')
+    .replace(/<\/h([123])><\/p>/g, '</h$1>')
+    .replace(/<p><ul>/g, '<ul>')
+    .replace(/<\/ul><\/p>/g, '</ul>')
+    .replace(/<p><\/p>/g, '')
+}
 
 const CATEGORIES = [
   { value: '', labelKey: 'learn.allCategories' },
@@ -85,9 +107,10 @@ export default function PsychoContentPage() {
 
                 {isExpanded && (
                   <div className="px-4 pb-4 pt-0">
-                    <div className="border-t border-[var(--card-border)] pt-4 prose prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap opacity-80">
-                      {content}
-                    </div>
+                    <div
+                      className="border-t border-[var(--card-border)] pt-4 prose prose-invert max-w-none text-sm leading-relaxed opacity-80"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mdToHtml(content)) }}
+                    />
                     {article.source && (
                       <p className="text-xs opacity-40 mt-3 pt-2 border-t border-[var(--card-border)]">
                         {t('learn.source')}: {article.source}
