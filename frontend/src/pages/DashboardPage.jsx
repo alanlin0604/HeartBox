@@ -80,7 +80,12 @@ export default function DashboardPage() {
   const correlation = useMemo(() => data?.weather_correlation || {}, [data])
   const tags = useMemo(() => data?.frequent_tags || [], [data])
   const stressByTag = useMemo(() => data?.stress_by_tag || [], [data])
-  const activityCorrelation = useMemo(() => data?.activity_correlation || [], [data])
+  const activityCorrelation = useMemo(() =>
+    (data?.activity_correlation || []).map(item => ({
+      ...item,
+      name: t(`activities.${item.name}`) !== `activities.${item.name}` ? t(`activities.${item.name}`) : item.name,
+    })),
+  [data, t])
   const sleepCorrelation = useMemo(() => data?.sleep_correlation || {}, [data])
 
   // Theme-aware chart colors

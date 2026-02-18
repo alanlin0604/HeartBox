@@ -342,9 +342,9 @@ export default function ChatPage() {
               className="glass-input"
               style={{ width: '10rem', flex: 'none' }}
             >
-              <option value="TWD">TWD 新台幣</option>
-              <option value="USD">USD 美元</option>
-              <option value="JPY">JPY 日圓</option>
+              <option value="TWD">TWD (NT$)</option>
+              <option value="USD">USD ($)</option>
+              <option value="JPY">JPY (¥)</option>
             </select>
           </div>
           <div className="flex gap-2 justify-end">

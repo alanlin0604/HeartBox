@@ -39,11 +39,35 @@ const LANG_SPEECH_MAP = { 'zh-TW': 'zh-TW', en: 'en-US', ja: 'ja-JP' }
 export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const { t, lang } = useLang()
 
-  const TEMPLATES = [
-    { key: 'morning', emoji: '\u{1F305}', labelKey: 'noteForm.tplMorning', textKey: 'noteForm.tplMorningText' },
-    { key: 'gratitude', emoji: '\u{1F64F}', labelKey: 'noteForm.tplGratitude', textKey: 'noteForm.tplGratitudeText' },
-    { key: 'stress', emoji: '\u{1F486}', labelKey: 'noteForm.tplStress', textKey: 'noteForm.tplStressText' },
-  ]
+  const TEMPLATES_KEY = 'heartbox_custom_templates'
+
+  const loadTemplates = () => {
+    try {
+      return JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]')
+    } catch { return [] }
+  }
+
+  const [customTemplates, setCustomTemplates] = useState(loadTemplates)
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+
+  const saveTemplate = () => {
+    const content = editor?.getHTML() || ''
+    if (!content.trim() || content === '<p></p>') return
+    if (!templateName.trim()) return
+    const newTpl = { id: Date.now().toString(), name: templateName.trim(), content }
+    const updated = [...customTemplates, newTpl]
+    setCustomTemplates(updated)
+    try { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updated)) } catch {}
+    setTemplateName('')
+    setShowSaveTemplate(false)
+  }
+
+  const deleteTemplate = (id) => {
+    const updated = customTemplates.filter((tpl) => tpl.id !== id)
+    setCustomTemplates(updated)
+    try { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updated)) } catch {}
+  }
 
   const [weather, setWeather] = useState('')
   const [temperature, setTemperature] = useState('')
@@ -200,17 +224,51 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   return (
     <form onSubmit={handleSubmit} className="glass p-6 space-y-4">
       <h2 className="text-lg font-semibold">{t('noteForm.title')}</h2>
-      <div className="flex flex-wrap gap-2">
-        {TEMPLATES.map((tpl) => (
-          <button
-            key={tpl.key}
-            type="button"
-            onClick={() => editor?.commands.setContent(t(tpl.textKey))}
-            className="text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 hover:bg-purple-500/25 transition-colors cursor-pointer"
-          >
-            {tpl.emoji} {t(tpl.labelKey)}
-          </button>
-        ))}
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {customTemplates.map((tpl) => (
+            <div key={tpl.id} className="group relative">
+              <button
+                type="button"
+                onClick={() => editor?.commands.setContent(tpl.content)}
+                className="text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 hover:bg-purple-500/25 transition-colors cursor-pointer pr-7"
+              >
+                {tpl.name}
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteTemplate(tpl.id)}
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer w-4 h-4 flex items-center justify-center"
+                title={t('noteForm.deleteTemplate')}
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+          {!showSaveTemplate ? (
+            <button
+              type="button"
+              onClick={() => setShowSaveTemplate(true)}
+              className="text-xs px-3 py-1.5 rounded-full border border-dashed border-[var(--card-border)] opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              + {t('noteForm.saveTemplate')}
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder={t('noteForm.templateNamePlaceholder')}
+                className="glass-input text-xs py-1 px-2 w-36"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveTemplate() } }}
+              />
+              <button type="button" onClick={saveTemplate} className="text-xs text-purple-400 hover:text-purple-300 cursor-pointer">{t('common.save')}</button>
+              <button type="button" onClick={() => { setShowSaveTemplate(false); setTemplateName('') }} className="text-xs opacity-50 hover:opacity-100 cursor-pointer">{t('common.cancel')}</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Rich text editor toolbar + editor */}

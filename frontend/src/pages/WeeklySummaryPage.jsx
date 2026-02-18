@@ -108,11 +108,14 @@ export default function WeeklySummaryPage() {
             <div>
               <h3 className="text-sm font-semibold opacity-60 mb-2">{t('weeklySummary.topActivities')}</h3>
               <div className="flex flex-wrap gap-2">
-                {detail.top_activities.map((act) => (
-                  <span key={act.name} className="text-xs px-3 py-1 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
-                    {act.name} ({act.count})
-                  </span>
-                ))}
+                {detail.top_activities.map((act) => {
+                  const label = t(`activities.${act.name}`) !== `activities.${act.name}` ? t(`activities.${act.name}`) : act.name
+                  return (
+                    <span key={act.name} className="text-xs px-3 py-1 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                      {label} ({act.count})
+                    </span>
+                  )
+                })}
               </div>
             </div>
           )}
