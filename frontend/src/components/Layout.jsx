@@ -95,7 +95,7 @@ export default function Layout() {
 
       <nav className="glass sticky top-0 z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between">
         <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent flex items-center gap-2">
-          <img src="/logo.png" alt="HeartBox" decoding="async" className="w-10 h-10 object-contain" />
+          <img src="/logo.png" alt="HeartBox" decoding="async" className="w-12 h-12 object-contain" />
           {t('app.displayName')}
         </h1>
 
