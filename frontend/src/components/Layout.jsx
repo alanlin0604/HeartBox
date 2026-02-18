@@ -62,7 +62,7 @@ export default function Layout() {
   // Font scale from localStorage
   useEffect(() => {
     const scale = localStorage.getItem('heartbox_font_scale') || '1'
-    document.documentElement.style.fontSize = parseFloat(scale) * 17 + 'px'
+    document.documentElement.style.fontSize = parseFloat(scale) * 16 + 'px'
   }, [])
 
   const navLinks = [

@@ -97,7 +97,7 @@ class AuthSecurityTests(APITestCase):
         self.user.save(update_fields=['token_version'])
 
         refresh_resp = self.client.post('/api/auth/refresh/', {'refresh': refresh}, format='json')
-        self.assertEqual(refresh_resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(refresh_resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class NoteCRUDTests(APITestCase):

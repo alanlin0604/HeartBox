@@ -2,27 +2,31 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getPublicReport } from '../api/wellness'
+import { useLang } from '../context/LanguageContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 
-const REPORT_LOCALE = navigator.language || 'zh-TW'
+import { LOCALE_MAP } from '../utils/locales'
 
 export default function TherapistReportPublicPage() {
   const { token } = useParams()
+  const { lang, t } = useLang()
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const locale = LOCALE_MAP[lang] || lang
+
   useEffect(() => {
-    document.title = 'Therapist Report — HeartBox'
+    document.title = `${t('publicReport.title')} — ${t('app.name')}`
     getPublicReport(token)
       .then((res) => setReport(res.data))
       .catch((err) => {
-        if (err.response?.status === 404) setError('Report not found.')
-        else if (err.response?.status === 410) setError('This report has expired.')
-        else setError('Failed to load report.')
+        if (err.response?.status === 404) setError(t('publicReport.notFound'))
+        else if (err.response?.status === 410) setError(t('publicReport.expired'))
+        else setError(t('common.operationFailed'))
       })
       .finally(() => setLoading(false))
-  }, [token])
+  }, [token, t])
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner /></div>
 
@@ -37,7 +41,7 @@ export default function TherapistReportPublicPage() {
   if (!report) return null
 
   const moodData = (report.report_data?.mood_trends || []).map((item) => ({
-    date: new Date(item.created_at).toLocaleDateString(REPORT_LOCALE),
+    date: new Date(item.created_at).toLocaleDateString(locale),
     sentiment: item.sentiment_score,
     stress: item.stress_index,
   }))
@@ -50,22 +54,22 @@ export default function TherapistReportPublicPage() {
           {report.period_start} — {report.period_end}
         </p>
         <p className="text-xs opacity-40 mt-1">
-          Generated: {new Date(report.created_at).toLocaleDateString(REPORT_LOCALE)}
+          {t('publicReport.generated')}: {new Date(report.created_at).toLocaleDateString(locale)}
         </p>
       </div>
 
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="glass p-4 text-center">
-          <p className="text-xs opacity-60">Notes</p>
+          <p className="text-xs opacity-60">{t('publicReport.notes')}</p>
           <p className="text-2xl font-bold">{report.report_data?.note_count ?? '-'}</p>
         </div>
         <div className="glass p-4 text-center">
-          <p className="text-xs opacity-60">Avg Mood</p>
+          <p className="text-xs opacity-60">{t('publicReport.avgMood')}</p>
           <p className="text-2xl font-bold">{report.report_data?.mood_avg ?? '-'}</p>
         </div>
         <div className="glass p-4 text-center">
-          <p className="text-xs opacity-60">Avg Stress</p>
+          <p className="text-xs opacity-60">{t('publicReport.avgStress')}</p>
           <p className="text-2xl font-bold">{report.report_data?.stress_avg ?? '-'}</p>
         </div>
       </div>
@@ -73,15 +77,15 @@ export default function TherapistReportPublicPage() {
       {/* Mood trends chart */}
       {moodData.length > 1 && (
         <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4">Mood Trends</h2>
+          <h2 className="text-lg font-semibold mb-4">{t('publicReport.moodTrends')}</h2>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={moodData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
               <YAxis stroke="#9ca3af" fontSize={12} />
               <Tooltip />
-              <Line type="monotone" dataKey="sentiment" stroke="#a78bfa" strokeWidth={2} name="Sentiment" />
-              <Line type="monotone" dataKey="stress" stroke="#f87171" strokeWidth={2} name="Stress" />
+              <Line type="monotone" dataKey="sentiment" stroke="#a78bfa" strokeWidth={2} name={t('publicReport.sentiment')} />
+              <Line type="monotone" dataKey="stress" stroke="#f87171" strokeWidth={2} name={t('publicReport.stress')} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -90,13 +94,13 @@ export default function TherapistReportPublicPage() {
       {/* Assessments */}
       {report.report_data?.assessments?.length > 0 && (
         <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4">Self-Assessment Scores</h2>
+          <h2 className="text-lg font-semibold mb-4">{t('publicReport.assessments')}</h2>
           <div className="space-y-2">
             {report.report_data.assessments.map((a, i) => (
               <div key={i} className="glass-card p-3 flex items-center justify-between text-sm">
                 <span>{a.assessment_type.toUpperCase()}</span>
                 <span className="font-bold">{a.total_score}</span>
-                <span className="text-xs opacity-60">{new Date(a.created_at).toLocaleDateString(REPORT_LOCALE)}</span>
+                <span className="text-xs opacity-60">{new Date(a.created_at).toLocaleDateString(locale)}</span>
               </div>
             ))}
           </div>
@@ -104,7 +108,7 @@ export default function TherapistReportPublicPage() {
       )}
 
       <div className="text-center text-xs opacity-30 py-4">
-        Shared via HeartBox
+        {t('publicReport.sharedVia')}
       </div>
     </div>
   )

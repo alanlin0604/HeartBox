@@ -423,6 +423,7 @@ class AuditLog(models.Model):
         ('note_update', 'Note Updated'),
         ('note_delete', 'Note Deleted'),
         ('note_restore', 'Note Restored'),
+        ('note_permanent_delete', 'Note Permanently Deleted'),
         ('account_delete', 'Account Deleted'),
         ('export_data', 'Data Exported'),
     ]

@@ -50,7 +50,6 @@ export default function ExportPDFButton() {
       }
       setExpanded(false)
     } catch (err) {
-      console.error('Export failed:', err)
       toast?.error(t('common.operationFailed'))
     } finally {
       setLoading(false)

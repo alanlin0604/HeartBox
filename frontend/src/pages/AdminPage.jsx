@@ -10,6 +10,7 @@ import {
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 import { LOCALE_MAP } from '../utils/locales'
+import ConfirmModal from '../components/ConfirmModal'
 
 export default function AdminPage() {
   const { t } = useLang()
@@ -92,6 +93,7 @@ function UsersTab() {
   const [users, setUsers] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
+  const [confirmAction, setConfirmAction] = useState(null)
 
   const fetchUsers = useCallback(() => {
     setLoading(true)
@@ -106,12 +108,23 @@ function UsersTab() {
     return () => clearTimeout(timer)
   }, [fetchUsers])
 
-  const toggle = async (user, field) => {
+  const requestToggle = (user, field) => {
+    const label = field === 'is_active'
+      ? (user.is_active ? t('admin.actionDeactivate') : t('admin.actionActivate'))
+      : (user.is_staff ? t('admin.actionRemoveAdmin') : t('admin.actionMakeAdmin'))
+    setConfirmAction({ user, field, label })
+  }
+
+  const executeToggle = async () => {
+    if (!confirmAction) return
+    const { user, field } = confirmAction
     try {
       await updateUser(user.id, { [field]: !user[field] })
       fetchUsers()
     } catch {
       toast?.error(t('common.operationFailed'))
+    } finally {
+      setConfirmAction(null)
     }
   }
 
@@ -167,13 +180,13 @@ function UsersTab() {
                     {!u.is_superuser && (
                       <>
                         <button
-                          onClick={() => toggle(u, 'is_active')}
+                          onClick={() => requestToggle(u, 'is_active')}
                           className={`px-2 py-1 rounded text-xs cursor-pointer ${u.is_active ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'}`}
                         >
                           {u.is_active ? t('admin.actionDeactivate') : t('admin.actionActivate')}
                         </button>
                         <button
-                          onClick={() => toggle(u, 'is_staff')}
+                          onClick={() => requestToggle(u, 'is_staff')}
                           className={`px-2 py-1 rounded text-xs cursor-pointer ${u.is_staff ? 'bg-gray-500/20 opacity-70 hover:bg-gray-500/30' : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'}`}
                         >
                           {u.is_staff ? t('admin.actionRemoveAdmin') : t('admin.actionMakeAdmin')}
@@ -206,13 +219,13 @@ function UsersTab() {
               {!u.is_superuser && (
                 <div className="flex gap-2 pt-1">
                   <button
-                    onClick={() => toggle(u, 'is_active')}
+                    onClick={() => requestToggle(u, 'is_active')}
                     className={`px-2 py-1 rounded text-xs cursor-pointer ${u.is_active ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}
                   >
                     {u.is_active ? t('admin.actionDeactivate') : t('admin.actionActivate')}
                   </button>
                   <button
-                    onClick={() => toggle(u, 'is_staff')}
+                    onClick={() => requestToggle(u, 'is_staff')}
                     className={`px-2 py-1 rounded text-xs cursor-pointer ${u.is_staff ? 'bg-gray-500/20 opacity-70' : 'bg-purple-500/20 text-purple-400'}`}
                   >
                     {u.is_staff ? t('admin.actionRemoveAdmin') : t('admin.actionMakeAdmin')}
@@ -225,6 +238,15 @@ function UsersTab() {
         </div>
         </>
       )}
+      <ConfirmModal
+        open={!!confirmAction}
+        title={confirmAction?.label || ''}
+        message={`${confirmAction?.label} ${confirmAction?.user?.username}?`}
+        confirmText={t('common.confirm')}
+        cancelText={t('common.cancel')}
+        onConfirm={executeToggle}
+        onCancel={() => setConfirmAction(null)}
+      />
     </div>
   )
 }
@@ -255,8 +277,12 @@ function CounselorsTab() {
   useEffect(() => { fetchCounselors() }, [fetchCounselors])
 
   const handleAction = async (id, action) => {
-    await counselorAction(id, action)
-    fetchCounselors()
+    try {
+      await counselorAction(id, action)
+      fetchCounselors()
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
   }
 
   const statusBadge = (s) => {

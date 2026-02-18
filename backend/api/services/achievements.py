@@ -1,4 +1,3 @@
-from django.db.models import Count, Q
 from django.utils import timezone
 
 from api.models import (
@@ -227,12 +226,12 @@ ACHIEVEMENT_DEFINITIONS = {
 
 
 def _get_note_count(user):
-    return MoodNote.objects.filter(user=user).count()
+    return MoodNote.objects.filter(user=user, is_deleted=False).count()
 
 
 def _get_longest_streak(user):
     dates = list(
-        MoodNote.objects.filter(user=user)
+        MoodNote.objects.filter(user=user, is_deleted=False)
         .values_list('created_at__date', flat=True)
         .distinct()
         .order_by('-created_at__date')[:366]
@@ -252,17 +251,17 @@ def _get_longest_streak(user):
 
 
 def _get_max_note_length(user):
-    """Get max character count of any note (plaintext, HTML tags stripped)."""
-    from django.utils.html import strip_tags
-    notes = MoodNote.objects.filter(user=user).only('encrypted_content')
-    max_len = 0
-    for note in notes:
-        try:
-            plaintext = strip_tags(note.content)
-            max_len = max(max_len, len(plaintext))
-        except Exception:
-            pass
-    return max_len
+    """Get max character count of any note using search_text (plaintext, up to 500 chars)."""
+    from django.db.models.functions import Length
+    result = (
+        MoodNote.objects.filter(user=user, is_deleted=False)
+        .exclude(search_text='')
+        .annotate(text_len=Length('search_text'))
+        .order_by('-text_len')
+        .values_list('text_len', flat=True)
+        .first()
+    )
+    return result or 0
 
 
 def _get_distinct_mood_buckets(user):
@@ -317,7 +316,7 @@ def _get_ai_analyzed_count(user):
 def _has_weekend_pair(user):
     """Check if the user has written notes on both Saturday and Sunday of the same week."""
     dates = list(
-        MoodNote.objects.filter(user=user)
+        MoodNote.objects.filter(user=user, is_deleted=False)
         .values_list('created_at__date', flat=True)
         .distinct()
         .order_by('created_at__date')
@@ -332,9 +331,9 @@ def _has_weekend_pair(user):
 
 
 def _get_distinct_tag_count(user):
-    """Count distinct tags across all notes."""
+    """Count distinct tags across all notes (only recent 500 for performance)."""
     tags = set()
-    for meta in MoodNote.objects.filter(user=user).values_list('metadata', flat=True):
+    for meta in MoodNote.objects.filter(user=user, is_deleted=False).order_by('-created_at').values_list('metadata', flat=True)[:500]:
         if meta and isinstance(meta, dict):
             for tag in (meta.get('tags') or []):
                 tags.add(tag)
@@ -344,7 +343,7 @@ def _get_distinct_tag_count(user):
 def _get_weather_note_count(user):
     """Count notes that have a non-empty weather field."""
     count = 0
-    for meta in MoodNote.objects.filter(user=user).values_list('metadata', flat=True):
+    for meta in MoodNote.objects.filter(user=user, is_deleted=False).order_by('-created_at').values_list('metadata', flat=True)[:500]:
         if meta and isinstance(meta, dict) and meta.get('weather'):
             count += 1
     return count
@@ -368,7 +367,7 @@ def _get_progress(user):
     # New achievement metrics
     image_count = NoteAttachment.objects.filter(note__user=user, file_type='image').count()
     has_weekend = _has_weekend_pair(user)
-    distinct_months = MoodNote.objects.filter(user=user).dates('created_at', 'month').count()
+    distinct_months = MoodNote.objects.filter(user=user, is_deleted=False).dates('created_at', 'month').count()
     low_stress_count = MoodNote.objects.filter(user=user, stress_index__isnull=False, stress_index__lte=3).count()
 
     # Emotional range: has both >0.6 and <-0.6

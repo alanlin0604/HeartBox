@@ -32,7 +32,6 @@ export default memo(function MoodCalendar() {
     getCalendarData(year, month)
       .then((res) => setDays(res.data.days || []))
       .catch((err) => {
-        console.error(err)
         toast?.error(t('common.operationFailed'))
       })
       .finally(() => setLoading(false))

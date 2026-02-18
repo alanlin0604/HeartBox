@@ -142,7 +142,8 @@ export default function ChatPage() {
     }
 
     ws.onmessage = (e) => {
-      const data = JSON.parse(e.data)
+      let data
+      try { data = JSON.parse(e.data) } catch { return }
       // Handle auth response
       if (data.type === 'auth_ok') {
         setWsConnected(true)
@@ -155,7 +156,6 @@ export default function ChatPage() {
         return
       }
       if (data.error) {
-        console.error('WebSocket error:', data.error)
         return
       }
       setMessages((prev) => {
@@ -203,7 +203,6 @@ export default function ChatPage() {
       const conv = convList.find((c) => c.id === parseInt(id))
       if (conv) setOtherUser(conv.other_user)
     } catch (err) {
-      console.error('Failed to load conversation info', err)
       toast?.error(t('common.operationFailed'))
     }
   }
@@ -213,7 +212,6 @@ export default function ChatPage() {
       const res = await getMessages(id)
       setMessages(res.data)
     } catch (err) {
-      console.error('Failed to load messages', err)
       toast?.error(t('common.operationFailed'))
     } finally {
       setLoading(false)

@@ -462,8 +462,8 @@ export default function AIChatPage() {
       {/* Rename Modal */}
       {renameModalId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onKeyDown={(e) => { if (e.key === 'Escape') setRenameModalId(null) }}>
-          <div className="popup-panel p-6 w-full max-w-sm space-y-4" role="dialog" aria-modal="true">
-            <h2 className="text-lg font-semibold">{t('aiChat.renameTitle')}</h2>
+          <div className="popup-panel p-6 w-full max-w-sm space-y-4" role="dialog" aria-modal="true" aria-labelledby="rename-modal-title">
+            <h2 id="rename-modal-title" className="text-lg font-semibold">{t('aiChat.renameTitle')}</h2>
             <input
               type="text"
               value={renameValue}

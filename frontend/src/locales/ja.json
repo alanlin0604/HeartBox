@@ -700,5 +700,21 @@
   "settings.fontSize": "文字サイズ",
   "settings.fontSmall": "小",
   "settings.fontMedium": "中",
-  "settings.fontLarge": "大"
+  "settings.fontLarge": "大",
+  "common.confirm": "確認",
+  "common.serverError": "サーバーエラーが発生しました。後でもう一度お試しください",
+  "schedule.deleteConfirm": "このタイムスロットを削除しますか？この操作は元に戻せません。",
+  "journal.permanentDeleteConfirm": "この日記を完全に削除しますか？この操作は元に戻せません。",
+  "publicReport.title": "セラピストレポート",
+  "publicReport.notFound": "レポートが見つかりません",
+  "publicReport.expired": "このレポートは期限切れです",
+  "publicReport.generated": "作成日",
+  "publicReport.notes": "日記数",
+  "publicReport.avgMood": "平均気分",
+  "publicReport.avgStress": "平均ストレス",
+  "publicReport.moodTrends": "気分の推移",
+  "publicReport.sentiment": "感情スコア",
+  "publicReport.stress": "ストレス指数",
+  "publicReport.assessments": "自己評価スコア",
+  "publicReport.sharedVia": "HeartBox で共有"
 }

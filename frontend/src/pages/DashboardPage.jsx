@@ -9,6 +9,10 @@ import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 import SkeletonCard from '../components/SkeletonCard'
+import MoodCalendar from '../components/MoodCalendar'
+import YearInPixels from '../components/YearInPixels'
+import StressRadarChart from '../components/StressRadarChart'
+import EmptyState from '../components/EmptyState'
 
 function downloadChartAsPNG(containerRef, filename = 'chart.png') {
   const svg = containerRef.current?.querySelector('svg')
@@ -43,10 +47,6 @@ function downloadDataAsCSV(data, columns, filename = 'data.csv') {
   a.click()
   URL.revokeObjectURL(a.href)
 }
-import MoodCalendar from '../components/MoodCalendar'
-import YearInPixels from '../components/YearInPixels'
-import StressRadarChart from '../components/StressRadarChart'
-import EmptyState from '../components/EmptyState'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -69,7 +69,6 @@ export default function DashboardPage() {
     getAnalytics(period, lookback)
       .then((res) => setData(res.data))
       .catch((err) => {
-        console.error(err)
         setError(true)
         toast?.error(t('common.operationFailed'))
       })

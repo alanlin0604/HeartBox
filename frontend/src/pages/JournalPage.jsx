@@ -37,6 +37,7 @@ export default function JournalPage() {
   const [trashLoading, setTrashLoading] = useState(false)
   const [contextMenu, setContextMenu] = useState(null) // { x, y, noteId }
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const [permanentDeleteId, setPermanentDeleteId] = useState(null)
   const [dailyPrompt, setDailyPrompt] = useState('')
   const [promptContent, setPromptContent] = useState(null)
 
@@ -97,7 +98,6 @@ export default function JournalPage() {
       setTotalCount(data.count || 0)
       setPage(p)
     } catch (err) {
-      console.error('Failed to fetch notes:', err)
       toast?.error(t('common.operationFailed'))
     } finally {
       setLoading(false)
@@ -127,6 +127,7 @@ export default function JournalPage() {
       await permanentDeleteNote(id)
       setTrashNotes((prev) => prev.filter((n) => n.id !== id))
     } catch { toast?.error(t('common.operationFailed')) }
+    finally { setPermanentDeleteId(null) }
   }
 
   useEffect(() => { document.title = `${t('nav.journal')} — ${t('app.name')}` }, [t])
@@ -195,7 +196,6 @@ export default function JournalPage() {
         toast?.success(t('noteForm.saved'))
       }
     } catch (err) {
-      console.error('Failed to create note:', err)
       toast?.error(t('noteForm.saveFailed'))
     } finally {
       setCreating(false)
@@ -359,7 +359,7 @@ export default function JournalPage() {
                         <span>{t('journal.deletedAt')}: {new Date(note.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
                         <div className="flex gap-2">
                           <button onClick={() => handleRestore(note.id)} className="text-purple-500 hover:text-purple-400">{t('journal.restore')}</button>
-                          <button onClick={() => handlePermanentDelete(note.id)} className="text-red-500 hover:text-red-400">{t('journal.permanentDelete')}</button>
+                          <button onClick={() => setPermanentDeleteId(note.id)} className="text-red-500 hover:text-red-400">{t('journal.permanentDelete')}</button>
                         </div>
                       </div>
                     </div>
@@ -454,6 +454,16 @@ export default function JournalPage() {
         cancelText={t('common.cancel')}
         onConfirm={() => handleDeleteNote(deleteConfirmId)}
         onCancel={() => setDeleteConfirmId(null)}
+      />
+
+      <ConfirmModal
+        open={!!permanentDeleteId}
+        title={t('journal.permanentDelete')}
+        message={t('journal.permanentDeleteConfirm')}
+        confirmText={t('journal.permanentDelete')}
+        cancelText={t('common.cancel')}
+        onConfirm={() => handlePermanentDelete(permanentDeleteId)}
+        onCancel={() => setPermanentDeleteId(null)}
       />
 
       {/* Right-click context menu */}

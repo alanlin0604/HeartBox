@@ -79,7 +79,7 @@ api.interceptors.response.use(
     // Global toast for 5xx server errors
     if (error.response?.status >= 500) {
       window.dispatchEvent(new CustomEvent('api-error', {
-        detail: { message: 'Server error, please try again later.' },
+        detail: { messageKey: 'common.serverError' },
       }));
     }
 

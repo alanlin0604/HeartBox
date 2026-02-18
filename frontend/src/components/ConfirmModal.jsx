@@ -54,8 +54,8 @@ export default function ConfirmModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div ref={modalRef} className="popup-panel w-full max-w-md rounded-xl p-6 space-y-4" role="dialog" aria-modal="true">
-        <h3 className="text-lg font-semibold">{title}</h3>
+      <div ref={modalRef} className="popup-panel w-full max-w-md rounded-xl p-6 space-y-4" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+        <h3 id="confirm-modal-title" className="text-lg font-semibold">{title}</h3>
         <p className="text-sm opacity-75">{message}</p>
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onCancel} className="btn-secondary" disabled={loading}>

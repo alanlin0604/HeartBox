@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 import { getMySchedule, createTimeSlot, deleteTimeSlot } from '../api/schedule'
+import ConfirmModal from './ConfirmModal'
 
 const DAY_KEYS = [
   'schedule.mon', 'schedule.tue', 'schedule.wed', 'schedule.thu',
@@ -17,6 +18,7 @@ export default function ScheduleManager() {
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('10:00')
   const [saving, setSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
     loadSlots()
@@ -27,7 +29,6 @@ export default function ScheduleManager() {
       const res = await getMySchedule()
       setSlots(res.data)
     } catch (err) {
-      console.error('Failed to load schedule', err)
       toast?.error(t('common.operationFailed'))
     } finally {
       setLoading(false)
@@ -49,20 +50,21 @@ export default function ScheduleManager() {
       })
       setSlots((prev) => [...prev, res.data])
     } catch (err) {
-      console.error('Failed to add slot', err)
       toast?.error(t('common.operationFailed'))
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return
     try {
-      await deleteTimeSlot(id)
-      setSlots((prev) => prev.filter((s) => s.id !== id))
-    } catch (err) {
-      console.error('Failed to delete slot', err)
+      await deleteTimeSlot(deleteTarget)
+      setSlots((prev) => prev.filter((s) => s.id !== deleteTarget))
+    } catch {
       toast?.error(t('common.operationFailed'))
+    } finally {
+      setDeleteTarget(null)
     }
   }
 
@@ -126,7 +128,7 @@ export default function ScheduleManager() {
                 </span>
               </div>
               <button
-                onClick={() => handleDelete(slot.id)}
+                onClick={() => setDeleteTarget(slot.id)}
                 className="text-red-500 text-xs hover:text-red-400 cursor-pointer"
               >
                 {t('schedule.delete')}
@@ -135,6 +137,15 @@ export default function ScheduleManager() {
           ))}
         </div>
       )}
+      <ConfirmModal
+        open={!!deleteTarget}
+        title={t('schedule.delete')}
+        message={t('schedule.deleteConfirm')}
+        confirmText={t('schedule.delete')}
+        cancelText={t('common.cancel')}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

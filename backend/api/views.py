@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import Avg, Sum
+from django.db.models import Avg
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db.models import Q
@@ -105,9 +105,9 @@ class VersionedTokenRefreshSerializer(TokenRefreshSerializer):
         token = RefreshToken(attrs['refresh'])
         user = User.objects.filter(id=token.get('user_id')).first()
         if not user:
-            raise exceptions.PermissionDenied('User not found')
+            raise exceptions.AuthenticationFailed('User not found')
         if int(token.get('token_version', -1)) != int(user.token_version):
-            raise exceptions.PermissionDenied('Token no longer valid')
+            raise exceptions.AuthenticationFailed('Token no longer valid')
         return super().validate(attrs)
 
 
@@ -193,6 +193,13 @@ class ResetPasswordView(APIView):
             return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
         if not default_token_generator.check_token(user, token):
             return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
+        # Run Django password validators
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
+        try:
+            validate_password(new_password, user=user)
+        except ValidationError as e:
+            return Response({'error': e.messages}, status=status.HTTP_400_BAD_REQUEST)
         user.set_password(new_password)
         # Rotate token_version to invalidate all existing JWT sessions
         user.token_version += 1
@@ -216,6 +223,13 @@ class ProfileView(generics.RetrieveUpdateAPIView):
             user = request.user
             if not user.check_password(old_pw):
                 return Response({'old_password': ['OLD_PASSWORD_INCORRECT']}, status=status.HTTP_400_BAD_REQUEST)
+            # Run Django password validators
+            from django.contrib.auth.password_validation import validate_password
+            from django.core.exceptions import ValidationError
+            try:
+                validate_password(new_pw, user=user)
+            except ValidationError as e:
+                return Response({'new_password': e.messages}, status=status.HTTP_400_BAD_REQUEST)
             user.set_password(new_pw)
             # Invalidate all other device tokens
             user.token_version = user.token_version + 1
@@ -369,8 +383,8 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def trash(self, request):
-        """List soft-deleted notes."""
-        qs = MoodNote.objects.filter(user=request.user, is_deleted=True).order_by('-deleted_at')
+        """List soft-deleted notes (capped at 200)."""
+        qs = MoodNote.objects.filter(user=request.user, is_deleted=True).order_by('-deleted_at')[:200]
         serializer = MoodNoteListSerializer(qs, many=True)
         return Response(serializer.data)
 
@@ -412,7 +426,7 @@ class AnalyticsView(APIView):
         if cached is not None:
             return Response(cached)
 
-        qs = MoodNote.objects.filter(user=request.user)
+        qs = MoodNote.objects.filter(user=request.user, is_deleted=False)
 
         # Calculate streaks (cap to last 366 dates for performance)
         dates = list(
@@ -433,7 +447,6 @@ class AnalyticsView(APIView):
                     expected = d - timezone.timedelta(days=1)
                 elif d == today - timezone.timedelta(days=1) and streak == 0:
                     # Allow starting from yesterday if no entry today
-                    expected = d
                     streak = 1
                     expected = d - timezone.timedelta(days=1)
                 else:
@@ -481,7 +494,7 @@ class CalendarView(APIView):
         if cached is not None:
             return Response(cached)
 
-        qs = MoodNote.objects.filter(user=request.user)
+        qs = MoodNote.objects.filter(user=request.user, is_deleted=False)
         days = get_calendar_data(qs, year, month)
         result = {'year': year, 'month': month, 'days': days}
         cache.set(cache_key, result, 300)
@@ -497,7 +510,7 @@ class ExportPDFView(APIView):
         if date_from and date_to and date_from > date_to:
             return Response({'error': 'date_from must be before date_to.'}, status=status.HTTP_400_BAD_REQUEST)
         lang = request.query_params.get('lang', 'zh-TW')
-        qs = MoodNote.objects.filter(user=request.user)
+        qs = MoodNote.objects.filter(user=request.user, is_deleted=False)
         buf = generate_notes_pdf(qs, date_from=date_from, date_to=date_to, user=request.user, lang=lang)
         return FileResponse(
             buf,
@@ -509,7 +522,7 @@ class ExportPDFView(APIView):
 
 class AlertsView(APIView):
     def get(self, request):
-        qs = MoodNote.objects.filter(user=request.user)
+        qs = MoodNote.objects.filter(user=request.user, is_deleted=False)
         alerts = check_mood_alerts(qs)
         return Response({'alerts': alerts})
 
@@ -537,6 +550,8 @@ class CounselorApplyView(generics.CreateAPIView):
     serializer_class = CounselorProfileSerializer
 
     def perform_create(self, serializer):
+        if CounselorProfile.objects.filter(user=self.request.user).exists():
+            raise exceptions.ValidationError({'error': 'You have already applied as a counselor.'})
         serializer.save(user=self.request.user)
 
 
@@ -751,10 +766,10 @@ class AdminStatsView(APIView):
         today = timezone.now().date()
         return Response({
             'total_users': User.objects.count(),
-            'total_notes': MoodNote.objects.count(),
+            'total_notes': MoodNote.objects.filter(is_deleted=False).count(),
             'pending_counselors': CounselorProfile.objects.filter(status='pending').count(),
             'today_new_users': User.objects.filter(date_joined__date=today).count(),
-            'today_new_notes': MoodNote.objects.filter(created_at__date=today).count(),
+            'today_new_notes': MoodNote.objects.filter(created_at__date=today, is_deleted=False).count(),
             'active_users': User.objects.filter(is_active=True).count(),
         })
 
@@ -773,6 +788,14 @@ class AdminUserDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = AdminUserSerializer
     queryset = User.objects.all()
+
+    def perform_update(self, serializer):
+        target = serializer.instance
+        # Prevent admin from demoting themselves
+        if target.pk == self.request.user.pk and 'is_staff' in serializer.validated_data:
+            if not serializer.validated_data['is_staff']:
+                raise exceptions.ValidationError({'error': 'You cannot remove your own admin privileges.'})
+        serializer.save()
 
 
 class AdminCounselorListView(generics.ListAPIView):
@@ -812,8 +835,13 @@ class AdminCounselorActionView(APIView):
 
 # ===== Notification Views =====
 
+class NotificationPagination(rest_framework.pagination.PageNumberPagination):
+    page_size = 50
+
+
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
+    pagination_class = NotificationPagination
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user).order_by('-created_at')
@@ -976,6 +1004,18 @@ class BookingCreateView(APIView):
 
         if not all([counselor_id, date_str, start_time, end_time]):
             return Response({'error': 'All required fields must be provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate time format (HH:MM or HH:MM:SS)
+        from datetime import time as dt_time
+        try:
+            parts = str(start_time).split(':')
+            start_t = dt_time(int(parts[0]), int(parts[1]))
+            parts = str(end_time).split(':')
+            end_t = dt_time(int(parts[0]), int(parts[1]))
+        except (ValueError, IndexError):
+            return Response({'error': 'Invalid time format. Use HH:MM.'}, status=status.HTTP_400_BAD_REQUEST)
+        if start_t >= end_t:
+            return Response({'error': 'Start time must be before end time.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Resolve CounselorProfile.pk → User.pk
         try:
@@ -1201,7 +1241,7 @@ class ExportDataView(APIView):
         from django.http import HttpResponse
 
         user = request.user
-        notes = MoodNote.objects.filter(user=user).order_by('-created_at')[:self.MAX_EXPORT_NOTES]
+        notes = MoodNote.objects.filter(user=user, is_deleted=False).order_by('-created_at')[:self.MAX_EXPORT_NOTES]
 
         data = {
             'user': {
@@ -1246,7 +1286,7 @@ class ExportCSVView(APIView):
         from django.http import HttpResponse
 
         user = request.user
-        notes = MoodNote.objects.filter(user=user).order_by('-created_at')[:self.MAX_EXPORT_NOTES]
+        notes = MoodNote.objects.filter(user=user, is_deleted=False).order_by('-created_at')[:self.MAX_EXPORT_NOTES]
 
         buf = io.StringIO()
         writer = csv.writer(buf)
@@ -1489,6 +1529,7 @@ class DailyPromptView(APIView):
         try:
             recent = MoodNote.objects.filter(
                 user=request.user,
+                is_deleted=False,
                 sentiment_score__isnull=False,
                 created_at__gte=timezone.now() - timedelta(days=7),
             ).aggregate(avg_s=Avg('sentiment_score'), avg_st=Avg('stress_index'))
@@ -1688,8 +1729,8 @@ class TherapistReportCreateView(generics.CreateAPIView):
 
         report_data = {
             'mood_trends': mood_data,
-            'mood_avg': round(agg['avg_s'], 2) if agg['avg_s'] else None,
-            'stress_avg': round(agg['avg_st'], 1) if agg['avg_st'] else None,
+            'mood_avg': round(agg['avg_s'], 2) if agg['avg_s'] is not None else None,
+            'stress_avg': round(agg['avg_st'], 1) if agg['avg_st'] is not None else None,
             'note_count': notes.count(),
             'assessments': assessments,
         }

@@ -6,6 +6,7 @@ import { useLang } from '../context/LanguageContext'
 import MoodBadge from '../components/MoodBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ConfirmModal from '../components/ConfirmModal'
+import ShareNoteButton from '../components/ShareNoteButton'
 import { useToast } from '../context/ToastContext'
 
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
@@ -67,7 +68,6 @@ export default function NoteDetailPage() {
       toast?.success(t('noteDetail.deleted'))
       navigate('/')
     } catch (err) {
-      console.error('Failed to delete:', err)
       setDeleting(false)
       toast?.error(t('noteDetail.deleteFailed'))
     }
@@ -146,6 +146,7 @@ export default function NoteDetailPage() {
             <button onClick={handleStartEdit} className="btn-secondary text-xs">
               {t('noteDetail.edit')}
             </button>
+            <ShareNoteButton noteId={note.id} />
             <button onClick={() => setConfirmOpen(true)} disabled={deleting} className="btn-danger text-xs">
               {deleting ? t('noteDetail.deleting') : t('noteDetail.delete')}
             </button>
@@ -158,9 +159,10 @@ export default function NoteDetailPage() {
             <textarea
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
+              aria-label={t('noteDetail.edit')}
               className="glass-input min-h-[140px] resize-y"
             />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <input value={editWeather} onChange={(e) => setEditWeather(e.target.value)} placeholder={t('noteForm.weather')} className="glass-input" />
               <input type="number" value={editTemp} onChange={(e) => setEditTemp(e.target.value)} placeholder={t('noteForm.temperature')} className="glass-input" />
               <input value={editTags} onChange={(e) => setEditTags(e.target.value)} placeholder={t('noteForm.tags')} className="glass-input" />

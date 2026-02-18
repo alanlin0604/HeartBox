@@ -34,6 +34,7 @@ export default function PasswordField({
           value={value}
           onChange={onChange}
           placeholder={placeholder}
+          aria-label={label || placeholder}
           className={`${className} pr-12`}
           required={required}
           minLength={minLength}

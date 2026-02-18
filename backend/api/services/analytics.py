@@ -20,8 +20,9 @@ def get_mood_trends(queryset, period='week', lookback_days=30):
     df['date'] = pd.to_datetime(df['created_at']).dt.tz_localize(None)
 
     if period == 'week':
-        df['period'] = df['date'].dt.isocalendar().week.astype(str) + 'W'
-        df['sort_key'] = df['date'].dt.isocalendar().week
+        iso = df['date'].dt.isocalendar()
+        df['period'] = iso.year.astype(str) + '-W' + iso.week.astype(str).str.zfill(2)
+        df['sort_key'] = df['period']
     else:  # month
         df['period'] = df['date'].dt.strftime('%Y-%m')
         df['sort_key'] = df['date'].dt.to_period('M').astype(str)

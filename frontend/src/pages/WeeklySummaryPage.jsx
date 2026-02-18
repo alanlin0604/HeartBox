@@ -76,6 +76,7 @@ export default function WeeklySummaryPage() {
           type="date"
           value={selectedWeek}
           onChange={(e) => setSelectedWeek(getMonday(new Date(e.target.value)))}
+          max={new Date().toISOString().slice(0, 10)}
           className="glass-input w-auto"
         />
         <button onClick={handleGenerate} disabled={loading} className="btn-primary text-sm">

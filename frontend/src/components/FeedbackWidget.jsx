@@ -79,6 +79,7 @@ export default function FeedbackWidget() {
                 onMouseEnter={() => setHover(star)}
                 onMouseLeave={() => setHover(0)}
                 className="text-2xl cursor-pointer transition-transform hover:scale-110"
+                aria-label={`${star} / 5`}
               >
                 {star <= (hover || rating) ? '★' : '☆'}
               </button>

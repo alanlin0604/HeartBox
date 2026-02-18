@@ -700,5 +700,21 @@
   "settings.fontSize": "Font Size",
   "settings.fontSmall": "Small",
   "settings.fontMedium": "Medium",
-  "settings.fontLarge": "Large"
+  "settings.fontLarge": "Large",
+  "common.confirm": "Confirm",
+  "common.serverError": "Server error, please try again later",
+  "schedule.deleteConfirm": "Are you sure you want to delete this time slot? This cannot be undone.",
+  "journal.permanentDeleteConfirm": "Are you sure you want to permanently delete this note? This cannot be undone.",
+  "publicReport.title": "Therapist Report",
+  "publicReport.notFound": "Report not found",
+  "publicReport.expired": "This report has expired",
+  "publicReport.generated": "Generated",
+  "publicReport.notes": "Notes",
+  "publicReport.avgMood": "Avg Mood",
+  "publicReport.avgStress": "Avg Stress",
+  "publicReport.moodTrends": "Mood Trends",
+  "publicReport.sentiment": "Sentiment",
+  "publicReport.stress": "Stress",
+  "publicReport.assessments": "Self-Assessment Scores",
+  "publicReport.sharedVia": "Shared via HeartBox"
 }

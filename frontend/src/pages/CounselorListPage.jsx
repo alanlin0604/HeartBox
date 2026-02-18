@@ -120,7 +120,6 @@ export default function CounselorListPage() {
         // User is not a counselor — that's fine
       }
     } catch (err) {
-      console.error('Failed to load data', err)
       toast?.error(t('common.operationFailed'))
       setError(t('counselor.loadFailed'))
     } finally {
@@ -385,7 +384,7 @@ export default function CounselorListPage() {
                     <h3 className="font-semibold">{conv.other_user.username}</h3>
                     {conv.last_message && (
                       <p className="text-sm opacity-60 mt-1">
-                        {conv.last_message.sender_name}：{conv.last_message.content}
+                        {conv.last_message.sender_name}: {conv.last_message.content}
                       </p>
                     )}
                   </div>

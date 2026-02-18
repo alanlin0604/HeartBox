@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useLang } from './LanguageContext'
 
 const ToastContext = createContext(null)
 
 let toastSeq = 1
 
 export function ToastProvider({ children }) {
+  const { t } = useLang()
   const [toasts, setToasts] = useState([])
 
   const removeToast = useCallback((id) => {
@@ -26,7 +28,10 @@ export function ToastProvider({ children }) {
 
   // Listen for global API error events from axios interceptor
   useEffect(() => {
-    const handler = (e) => api.error(e.detail?.message || 'Server error')
+    const handler = (e) => {
+      const msg = e.detail?.messageKey ? t(e.detail.messageKey) : (e.detail?.message || 'Server error')
+      api.error(msg)
+    }
     window.addEventListener('api-error', handler)
     return () => window.removeEventListener('api-error', handler)
   }, [api])

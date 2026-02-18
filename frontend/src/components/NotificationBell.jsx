@@ -93,7 +93,8 @@ export default memo(function NotificationBell() {
     }
 
     ws.onmessage = (e) => {
-      const data = JSON.parse(e.data)
+      let data
+      try { data = JSON.parse(e.data) } catch { return }
       // Handle auth response
       if (data.type === 'auth_ok') {
         reconnectDelay.current = 3000
@@ -105,7 +106,6 @@ export default memo(function NotificationBell() {
         return
       }
       if (data.error) {
-        console.error('WebSocket error:', data.error)
         return
       }
       setNotifications((prev) => [data, ...prev])
@@ -130,7 +130,6 @@ export default memo(function NotificationBell() {
       setNotifications(items)
       setUnreadCount(items.filter((n) => !n.is_read).length)
     } catch (err) {
-      console.error('Failed to load notifications', err)
     }
   }
 

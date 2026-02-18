@@ -164,10 +164,11 @@ export default function SettingsPage() {
         <h2 className="text-lg font-semibold">{t('settings.profile')}</h2>
 
         <div>
-          <label className="block text-sm font-medium opacity-60 mb-1">
+          <label htmlFor="settings-username" className="block text-sm font-medium opacity-60 mb-1">
             {t('settings.username')}
           </label>
           <input
+            id="settings-username"
             type="text"
             value={user?.username || ''}
             disabled
@@ -176,10 +177,11 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium opacity-60 mb-1">
+          <label htmlFor="settings-email" className="block text-sm font-medium opacity-60 mb-1">
             {t('settings.email')}
           </label>
           <input
+            id="settings-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -188,10 +190,11 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium opacity-60 mb-1">
+          <label htmlFor="settings-bio" className="block text-sm font-medium opacity-60 mb-1">
             {t('settings.bio')}
           </label>
           <textarea
+            id="settings-bio"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             placeholder={t('settings.bioPlaceholder')}
@@ -235,10 +238,11 @@ export default function SettingsPage() {
         <h2 className="text-lg font-semibold">{t('settings.changePassword')}</h2>
 
         <div>
-          <label className="block text-sm font-medium opacity-60 mb-1">
+          <label htmlFor="settings-old-password" className="block text-sm font-medium opacity-60 mb-1">
             {t('settings.oldPassword')}
           </label>
           <PasswordField
+            id="settings-old-password"
             value={oldPassword}
             onChange={(e) => setOldPassword(e.target.value)}
             required
@@ -246,10 +250,11 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium opacity-60 mb-1">
+          <label htmlFor="settings-new-password" className="block text-sm font-medium opacity-60 mb-1">
             {t('settings.newPassword')}
           </label>
           <PasswordField
+            id="settings-new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             required
@@ -258,10 +263,11 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium opacity-60 mb-1">
+          <label htmlFor="settings-confirm-password" className="block text-sm font-medium opacity-60 mb-1">
             {t('settings.confirmPassword')}
           </label>
           <PasswordField
+            id="settings-confirm-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
@@ -342,7 +348,7 @@ export default function SettingsPage() {
       {/* Delete Account Modal */}
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="popup-panel p-4 sm:p-6 w-full max-w-md space-y-4">
+          <div className="popup-panel p-4 sm:p-6 w-full max-w-md space-y-4" role="dialog" aria-modal="true">
             <h2 className="text-lg font-semibold text-red-500">{t('settings.deleteAccountConfirm')}</h2>
             <p className="text-sm opacity-70">{t('settings.deleteAccountDesc')}</p>
             <input

@@ -19,7 +19,6 @@ export default memo(function AlertBanner() {
     getAlerts()
       .then((res) => setAlerts(res.data.alerts || []))
       .catch((err) => {
-        console.error(err)
         toast?.error(t('common.operationFailed'))
       })
   }, [])
@@ -65,6 +64,7 @@ export default memo(function AlertBanner() {
             <button
               onClick={() => setDismissed([...dismissed, i])}
               className="text-sm opacity-50 hover:opacity-100"
+              aria-label="Dismiss"
             >
               ✕
             </button>
