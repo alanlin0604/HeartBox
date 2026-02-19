@@ -21,6 +21,8 @@ from .views import (
     CalendarView,
     ConversationCreateView,
     ConversationListView,
+    CourseDetailView,
+    CourseListView,
     DailyPromptView,
     QuoteActionView,
     CounselorApplyView,
@@ -31,12 +33,14 @@ from .views import (
     ExportDataView,
     ExportPDFView,
     FeedbackCreateView,
+    LessonCompleteView,
     MessageListView,
     MoodNoteViewSet,
     NoteAttachmentUploadView,
     NotificationListView,
     NotificationReadView,
     ProfileView,
+    PsychoArticleDetailView,
     PsychoArticleListView,
     RefreshView,
     RegisterView,
@@ -53,6 +57,7 @@ from .views import (
     TimeSlotListView,
     WeeklySummaryListView,
     WeeklySummaryView,
+    WellnessSessionListCreateView,
     YearPixelsView,
 )
 
@@ -131,6 +136,13 @@ urlpatterns = [
     path('reports/public/<uuid:token>/', TherapistReportPublicView.as_view(), name='report-public'),
     # Psycho Education
     path('articles/', PsychoArticleListView.as_view(), name='articles'),
+    path('articles/<int:pk>/', PsychoArticleDetailView.as_view(), name='article-detail'),
+    # Wellness Sessions
+    path('wellness-sessions/', WellnessSessionListCreateView.as_view(), name='wellness-sessions'),
+    # Courses
+    path('courses/', CourseListView.as_view(), name='course-list'),
+    path('courses/<int:pk>/', CourseDetailView.as_view(), name='course-detail'),
+    path('lessons/<int:pk>/complete/', LessonCompleteView.as_view(), name='lesson-complete'),
     # Notes CRUD
     path('', include(router.urls)),
 ]

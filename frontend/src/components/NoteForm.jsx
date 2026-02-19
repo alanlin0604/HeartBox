@@ -36,6 +36,13 @@ const ACTIVITIES = [
 
 const LANG_SPEECH_MAP = { 'zh-TW': 'zh-TW', en: 'en-US', ja: 'ja-JP' }
 
+const GRATITUDE_TEMPLATES = [
+  { id: 'gratitude_3things', nameKey: 'noteForm.gratitude3Things', contentKey: 'noteForm.gratitude3ThingsContent' },
+  { id: 'gratitude_person', nameKey: 'noteForm.gratitudePerson', contentKey: 'noteForm.gratitudePersonContent' },
+  { id: 'gratitude_moment', nameKey: 'noteForm.gratitudeMoment', contentKey: 'noteForm.gratitudeMomentContent' },
+  { id: 'gratitude_overlooked', nameKey: 'noteForm.gratitudeOverlooked', contentKey: 'noteForm.gratitudeOverlookedContent' },
+]
+
 export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const { t, lang } = useLang()
 
@@ -77,6 +84,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const [tagSuggestions, setTagSuggestions] = useState([])
   const [selectedActivities, setSelectedActivities] = useState([])
   const [isRecording, setIsRecording] = useState(false)
+  const [metadataType, setMetadataType] = useState(null)
   const fileInputRef = useRef(null)
   const recognitionRef = useRef(null)
   // Force toolbar re-render on every editor transaction (for undo/redo disabled state)
@@ -183,6 +191,9 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     if (selectedActivities.length > 0) {
       metadata.activities = selectedActivities
     }
+    if (metadataType) {
+      metadata.type = metadataType
+    }
 
     onSubmit(content, metadata, files)
     try { localStorage.removeItem('heartbox_draft') } catch { /* ignore */ }
@@ -192,7 +203,8 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     setTagsInput('')
     setFiles([])
     setSelectedActivities([])
-  }, [editor, weather, temperature, tagsInput, files, selectedActivities, onSubmit])
+    setMetadataType(null)
+  }, [editor, weather, temperature, tagsInput, files, selectedActivities, metadataType, onSubmit])
 
   const handleFileChange = useCallback((e) => {
     const selected = Array.from(e.target.files)
@@ -228,6 +240,25 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
       <h2 className="text-lg font-semibold">{t('noteForm.title')}</h2>
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2">
+          {GRATITUDE_TEMPLATES.map((tpl) => (
+            <button
+              key={tpl.id}
+              type="button"
+              onClick={() => {
+                if (editor) {
+                  editor.chain().clearContent().setContent(t(tpl.contentKey)).focus('end').run()
+                  setMetadataType('gratitude')
+                }
+              }}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
+                metadataType === 'gratitude'
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
+              }`}
+            >
+              {t(tpl.nameKey)}
+            </button>
+          ))}
           {customTemplates.map((tpl) => (
             <div key={tpl.id} className="group relative">
               <button

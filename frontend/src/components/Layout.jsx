@@ -70,6 +70,7 @@ export default function Layout() {
     { to: '/dashboard', label: t('nav.dashboard') },
     { to: '/assessments', label: t('nav.assessments') },
     { to: '/weekly-summary', label: t('nav.weeklySummary') },
+    { to: '/breathe', label: t('nav.breathe') },
     { to: '/learn', label: t('nav.learn') },
     { to: '/counselors', label: t('nav.counselors') },
     { to: '/ai-chat', label: t('nav.aiChat') },

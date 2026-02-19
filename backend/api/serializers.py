@@ -3,9 +3,10 @@ from rest_framework import serializers
 
 from .models import (
     AIChatMessage, AIChatSession,
-    Booking, Conversation, CounselorProfile, Feedback, Message, MoodNote,
+    Booking, Conversation, Course, CounselorProfile, Feedback, Message, MoodNote,
     NoteAttachment, Notification, PsychoArticle, SelfAssessment, SharedNote,
-    TherapistReport, TimeSlot, UserAchievement, WeeklySummary,
+    TherapistReport, TimeSlot, UserAchievement, UserLessonProgress, WeeklySummary,
+    WellnessSession,
 )
 
 User = get_user_model()
@@ -358,4 +359,101 @@ class PsychoArticleSerializer(serializers.ModelSerializer):
         model = PsychoArticle
         fields = ('id', 'title_zh', 'title_en', 'title_ja',
                   'content_zh', 'content_en', 'content_ja',
-                  'category', 'reading_time', 'source', 'order', 'created_at')
+                  'category', 'reading_time', 'source', 'order',
+                  'course', 'lesson_order', 'created_at')
+
+
+class WellnessSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WellnessSession
+        fields = ('id', 'session_type', 'exercise_name', 'duration_seconds', 'completed_at')
+        read_only_fields = ('id', 'completed_at')
+
+
+class CourseListSerializer(serializers.ModelSerializer):
+    lesson_count = serializers.SerializerMethodField()
+    completed_count = serializers.SerializerMethodField()
+    progress_pct = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Course
+        fields = ('id', 'title_zh', 'title_en', 'title_ja',
+                  'description_zh', 'description_en', 'description_ja',
+                  'category', 'icon_emoji', 'order',
+                  'lesson_count', 'completed_count', 'progress_pct')
+
+    def get_lesson_count(self, obj):
+        return obj.lessons.filter(is_published=True).count()
+
+    def get_completed_count(self, obj):
+        user = self.context.get('request')
+        if not user:
+            return 0
+        user = user.user
+        return UserLessonProgress.objects.filter(
+            user=user,
+            article__course=obj,
+            completed_at__isnull=False,
+        ).count()
+
+    def get_progress_pct(self, obj):
+        total = self.get_lesson_count(obj)
+        if total == 0:
+            return 0
+        completed = self.get_completed_count(obj)
+        return round(completed / total * 100)
+
+
+class CourseLessonSerializer(serializers.ModelSerializer):
+    is_completed = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PsychoArticle
+        fields = ('id', 'title_zh', 'title_en', 'title_ja',
+                  'category', 'reading_time', 'lesson_order', 'is_completed')
+
+    def get_is_completed(self, obj):
+        user = self.context.get('request')
+        if not user:
+            return False
+        user = user.user
+        return UserLessonProgress.objects.filter(
+            user=user, article=obj, completed_at__isnull=False,
+        ).exists()
+
+
+class CourseDetailSerializer(serializers.ModelSerializer):
+    lessons = serializers.SerializerMethodField()
+    lesson_count = serializers.SerializerMethodField()
+    completed_count = serializers.SerializerMethodField()
+    progress_pct = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Course
+        fields = ('id', 'title_zh', 'title_en', 'title_ja',
+                  'description_zh', 'description_en', 'description_ja',
+                  'category', 'icon_emoji', 'order',
+                  'lessons', 'lesson_count', 'completed_count', 'progress_pct')
+
+    def get_lessons(self, obj):
+        lessons = obj.lessons.filter(is_published=True).order_by('lesson_order')
+        return CourseLessonSerializer(lessons, many=True, context=self.context).data
+
+    def get_lesson_count(self, obj):
+        return obj.lessons.filter(is_published=True).count()
+
+    def get_completed_count(self, obj):
+        user = self.context.get('request')
+        if not user:
+            return 0
+        user = user.user
+        return UserLessonProgress.objects.filter(
+            user=user, article__course=obj, completed_at__isnull=False,
+        ).count()
+
+    def get_progress_pct(self, obj):
+        total = self.get_lesson_count(obj)
+        if total == 0:
+            return 0
+        completed = self.get_completed_count(obj)
+        return round(completed / total * 100)

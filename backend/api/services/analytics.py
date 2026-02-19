@@ -227,6 +227,40 @@ def get_sleep_mood_correlation(queryset, lookback_days=90):
     return result
 
 
+def get_gratitude_stats(queryset):
+    """Count gratitude notes and calculate consecutive gratitude days streak."""
+    gratitude_notes = queryset.filter(metadata__type='gratitude')
+    gratitude_count = gratitude_notes.count()
+
+    # Calculate gratitude streak
+    gratitude_streak = 0
+    if gratitude_count > 0:
+        dates = list(
+            gratitude_notes.values_list('created_at__date', flat=True)
+            .distinct()
+            .order_by('-created_at__date')[:366]
+        )
+        if dates:
+            today = timezone.localdate()
+            streak = 0
+            expected = today
+            for d in dates:
+                if d == expected:
+                    streak += 1
+                    expected = d - timedelta(days=1)
+                elif d == today - timedelta(days=1) and streak == 0:
+                    streak = 1
+                    expected = d - timedelta(days=1)
+                else:
+                    break
+            gratitude_streak = streak
+
+    return {
+        'gratitude_count': gratitude_count,
+        'gratitude_streak': gratitude_streak,
+    }
+
+
 def get_year_pixels(queryset, year):
     """Per-day average sentiment for the entire year. Returns {date_str: avg_sentiment}."""
     notes = queryset.filter(

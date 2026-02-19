@@ -35,3 +35,16 @@ export const getPublicReport = (token) =>
 // Psycho Education Articles
 export const getArticles = (category) =>
   api.get(`/articles/${category ? `?category=${category}` : ''}`)
+
+export const getArticleDetail = (id) =>
+  api.get(`/articles/${id}/`)
+
+// Courses
+export const getCourses = () =>
+  api.get('/courses/')
+
+export const getCourseDetail = (id) =>
+  api.get(`/courses/${id}/`)
+
+export const completeLesson = (articleId) =>
+  api.post(`/lessons/${articleId}/complete/`)

@@ -538,6 +538,12 @@ class PsychoArticle(models.Model):
     source = models.CharField(max_length=500, blank=True, default='')
     is_published = models.BooleanField(default=True)
     order = models.IntegerField(default=0)
+    course = models.ForeignKey(
+        'Course', null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='lessons',
+    )
+    lesson_order = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -545,3 +551,78 @@ class PsychoArticle(models.Model):
 
     def __str__(self):
         return self.title_en
+
+
+class WellnessSession(models.Model):
+    SESSION_TYPE_CHOICES = [
+        ('breathing', 'Breathing'),
+        ('meditation', 'Meditation'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='wellness_sessions',
+    )
+    session_type = models.CharField(max_length=20, choices=SESSION_TYPE_CHOICES)
+    exercise_name = models.CharField(max_length=100)
+    duration_seconds = models.IntegerField()
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-completed_at']
+        indexes = [
+            models.Index(fields=['user', '-completed_at'], name='wellness_user_completed'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} — {self.exercise_name} ({self.duration_seconds}s)'
+
+
+class Course(models.Model):
+    CATEGORY_CHOICES = [
+        ('cbt', 'CBT'),
+        ('stress', 'Stress'),
+        ('emotion', 'Emotion'),
+        ('mindfulness', 'Mindfulness'),
+    ]
+
+    title_zh = models.CharField(max_length=200)
+    title_en = models.CharField(max_length=200)
+    title_ja = models.CharField(max_length=200)
+    description_zh = models.TextField(blank=True, default='')
+    description_en = models.TextField(blank=True, default='')
+    description_ja = models.TextField(blank=True, default='')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    icon_emoji = models.CharField(max_length=10, default='')
+    order = models.IntegerField(default=0)
+    is_published = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return self.title_en
+
+
+class UserLessonProgress(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='lesson_progress',
+    )
+    article = models.ForeignKey(
+        PsychoArticle,
+        on_delete=models.CASCADE,
+        related_name='user_progress',
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ['user', 'article']
+        ordering = ['-started_at']
+
+    def __str__(self):
+        return f'{self.user.username} — {self.article.title_en}'

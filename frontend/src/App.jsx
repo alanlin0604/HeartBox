@@ -25,6 +25,9 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const AssessmentsPage = lazy(() => import('./pages/AssessmentsPage'))
 const WeeklySummaryPage = lazy(() => import('./pages/WeeklySummaryPage'))
 const PsychoContentPage = lazy(() => import('./pages/PsychoContentPage'))
+const BreathingPage = lazy(() => import('./pages/BreathingPage'))
+const CourseDetailPage = lazy(() => import('./pages/CourseDetailPage'))
+const LessonPage = lazy(() => import('./pages/LessonPage'))
 const TherapistReportPublicPage = lazy(() => import('./pages/TherapistReportPublicPage'))
 
 function PrivateRoute({ children }) {
@@ -70,7 +73,10 @@ export default function App() {
           <Route path="settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
           <Route path="assessments" element={<Suspense fallback={<LoadingSpinner />}><AssessmentsPage /></Suspense>} />
           <Route path="weekly-summary" element={<Suspense fallback={<LoadingSpinner />}><WeeklySummaryPage /></Suspense>} />
+          <Route path="breathe" element={<Suspense fallback={<LoadingSpinner />}><BreathingPage /></Suspense>} />
           <Route path="learn" element={<Suspense fallback={<LoadingSpinner />}><PsychoContentPage /></Suspense>} />
+          <Route path="learn/courses/:courseId" element={<Suspense fallback={<LoadingSpinner />}><CourseDetailPage /></Suspense>} />
+          <Route path="learn/courses/:courseId/lessons/:lessonId" element={<Suspense fallback={<LoadingSpinner />}><LessonPage /></Suspense>} />
           <Route
             path="admin"
             element={

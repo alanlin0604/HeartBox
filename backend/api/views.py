@@ -29,9 +29,10 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import (
     AIChatMessage, AIChatSession,
-    Booking, Conversation, CounselorProfile, Feedback, Message, MoodNote,
+    Booking, Conversation, Course, CounselorProfile, Feedback, Message, MoodNote,
     NoteAttachment, Notification, PsychoArticle, SelfAssessment, SharedNote,
-    TherapistReport, TimeSlot, UserAchievement, WeeklySummary,
+    TherapistReport, TimeSlot, UserAchievement, UserLessonProgress, WeeklySummary,
+    WellnessSession,
 )
 from .serializers import (
     AIChatMessageSerializer,
@@ -40,6 +41,8 @@ from .serializers import (
     AdminUserSerializer,
     BookingSerializer,
     ConversationSerializer,
+    CourseDetailSerializer,
+    CourseListSerializer,
     CounselorListSerializer,
     CounselorProfileSerializer,
     FeedbackSerializer,
@@ -58,11 +61,12 @@ from .serializers import (
     UserProfileSerializer,
     UserRegistrationSerializer,
     WeeklySummarySerializer,
+    WellnessSessionSerializer,
 )
 from .services.analytics import (
     get_activity_mood_correlation, get_calendar_data, get_frequent_tags,
-    get_mood_trends, get_mood_weather_correlation, get_sleep_mood_correlation,
-    get_stress_by_tag, get_year_pixels,
+    get_gratitude_stats, get_mood_trends, get_mood_weather_correlation,
+    get_sleep_mood_correlation, get_stress_by_tag, get_year_pixels,
 )
 from .services.alerts import check_mood_alerts
 from .services.audit import log_action
@@ -465,6 +469,8 @@ class AnalyticsView(APIView):
                     run = 1
             longest_streak = best
 
+        gratitude = get_gratitude_stats(qs)
+
         result = {
             'mood_trends': get_mood_trends(qs, period=period, lookback_days=lookback_days),
             'weather_correlation': get_mood_weather_correlation(qs, lookback_days=lookback_days),
@@ -474,6 +480,8 @@ class AnalyticsView(APIView):
             'sleep_correlation': get_sleep_mood_correlation(qs, lookback_days=lookback_days),
             'current_streak': current_streak,
             'longest_streak': longest_streak,
+            'gratitude_count': gratitude['gratitude_count'],
+            'gratitude_streak': gratitude['gratitude_streak'],
         }
         cache.set(cache_key, result, 300)
         return Response(result)
@@ -1481,6 +1489,16 @@ DEFAULT_PROMPTS_ZH = [
     "現在最想做的一件事是什麼？",
     "今天和誰有了愉快的互動？",
     "用三個詞形容你現在的狀態。",
+    "今天學到了什麼新東西？",
+    "如果可以重來，今天你會做什麼不同的事？",
+    "最近什麼事情讓你感到驕傲？",
+    "今天有沒有一個讓你微笑的瞬間？",
+    "你現在最需要什麼？",
+    "今天有什麼事情超出你的預期？",
+    "最近有什麼讓你擔心的事嗎？",
+    "你上次真正放鬆是什麼時候？",
+    "如果此刻可以跟任何人說話，你會選誰？",
+    "今天你為自己做了什麼好事？",
 ]
 
 DEFAULT_PROMPTS_EN = [
@@ -1494,6 +1512,16 @@ DEFAULT_PROMPTS_EN = [
     "What's one thing you'd like to do for yourself right now?",
     "Who did you enjoy spending time with today?",
     "Describe your current state in three words.",
+    "What did you learn today?",
+    "If you could redo today, what would you do differently?",
+    "What have you felt proud of recently?",
+    "Was there a moment today that made you smile?",
+    "What do you need most right now?",
+    "What surprised you today?",
+    "Is there something that's been worrying you lately?",
+    "When was the last time you truly relaxed?",
+    "If you could talk to anyone right now, who would it be?",
+    "What's one kind thing you did for yourself today?",
 ]
 
 DEFAULT_PROMPTS_JA = [
@@ -1507,6 +1535,16 @@ DEFAULT_PROMPTS_JA = [
     "今一番やりたいことは何ですか？",
     "今日、誰と楽しい時間を過ごしましたか？",
     "今の状態を三つの言葉で表すと？",
+    "今日、何か新しいことを学びましたか？",
+    "もし今日をやり直せるなら、何を変えますか？",
+    "最近、誇りに思ったことは何ですか？",
+    "今日、思わず笑顔になった瞬間はありましたか？",
+    "今、一番必要なものは何ですか？",
+    "今日、予想外だったことはありますか？",
+    "最近、心配していることはありますか？",
+    "最後に心からリラックスしたのはいつですか？",
+    "今、誰とでも話せるなら、誰を選びますか？",
+    "今日、自分に優しくしたことは何ですか？",
 ]
 
 DEFAULT_PROMPTS_MAP = {
@@ -1775,3 +1813,65 @@ class PsychoArticleListView(generics.ListAPIView):
         if category:
             qs = qs.filter(category=category)
         return qs
+
+
+class PsychoArticleDetailView(generics.RetrieveAPIView):
+    serializer_class = PsychoArticleSerializer
+
+    def get_queryset(self):
+        return PsychoArticle.objects.filter(is_published=True)
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        # Auto-create progress record when article is viewed
+        article = self.get_object()
+        UserLessonProgress.objects.get_or_create(
+            user=request.user, article=article,
+        )
+        return response
+
+
+# ===== Wellness Session Views =====
+
+class WellnessSessionListCreateView(APIView):
+    def get(self, request):
+        sessions = WellnessSession.objects.filter(user=request.user)[:50]
+        return Response(WellnessSessionSerializer(sessions, many=True).data)
+
+    def post(self, request):
+        serializer = WellnessSessionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+# ===== Course Views =====
+
+class CourseListView(generics.ListAPIView):
+    serializer_class = CourseListSerializer
+
+    def get_queryset(self):
+        return Course.objects.filter(is_published=True)
+
+
+class CourseDetailView(generics.RetrieveAPIView):
+    serializer_class = CourseDetailSerializer
+
+    def get_queryset(self):
+        return Course.objects.filter(is_published=True)
+
+
+class LessonCompleteView(APIView):
+    def post(self, request, pk):
+        try:
+            article = PsychoArticle.objects.get(pk=pk, is_published=True)
+        except PsychoArticle.DoesNotExist:
+            return Response({'error': 'Article not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        progress, created = UserLessonProgress.objects.get_or_create(
+            user=request.user, article=article,
+        )
+        if not progress.completed_at:
+            progress.completed_at = timezone.now()
+            progress.save(update_fields=['completed_at'])
+        return Response({'status': 'completed', 'completed_at': progress.completed_at})

@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
-import { getArticles } from '../api/wellness'
+import { getArticles, getCourses } from '../api/wellness'
 import { useLang } from '../context/LanguageContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 
@@ -38,20 +39,33 @@ const LANG_FIELD_MAP = { 'zh-TW': 'zh', en: 'en', ja: 'ja' }
 
 export default function PsychoContentPage() {
   const { t, lang } = useLang()
+  const navigate = useNavigate()
+  const [tab, setTab] = useState('courses')
   const [articles, setArticles] = useState([])
+  const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState('')
   const [expandedId, setExpandedId] = useState(null)
 
   useEffect(() => { document.title = `${t('nav.learn')} — ${t('app.name')}` }, [t])
 
+  // Load courses on mount
   useEffect(() => {
+    getCourses()
+      .then((res) => setCourses(res.data?.results || res.data || []))
+      .catch(() => setCourses([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  // Load articles when switching to articles tab or changing category
+  useEffect(() => {
+    if (tab !== 'articles') return
     setLoading(true)
     getArticles(category)
       .then((res) => setArticles(res.data?.results || res.data || []))
       .catch(() => setArticles([]))
       .finally(() => setLoading(false))
-  }, [category])
+  }, [tab, category])
 
   const langKey = LANG_FIELD_MAP[lang] || 'en'
 
@@ -59,69 +73,136 @@ export default function PsychoContentPage() {
     <div className="space-y-6 mt-4 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold">{t('nav.learn')}</h1>
 
-      {/* Category filter */}
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat.value}
-            onClick={() => setCategory(cat.value)}
-            className={`text-sm px-4 py-2 rounded-lg transition-colors ${
-              category === cat.value
-                ? 'bg-purple-500/30 text-purple-400'
-                : 'opacity-60 hover:opacity-100'
-            }`}
-          >
-            {t(cat.labelKey)}
-          </button>
-        ))}
+      {/* Tabs: Courses / Articles */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab('courses')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            tab === 'courses' ? 'bg-purple-500/30 text-purple-400' : 'opacity-60 hover:opacity-100'
+          }`}
+        >
+          {t('learn.coursesTab')}
+        </button>
+        <button
+          onClick={() => setTab('articles')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            tab === 'articles' ? 'bg-purple-500/30 text-purple-400' : 'opacity-60 hover:opacity-100'
+          }`}
+        >
+          {t('learn.articlesTab')}
+        </button>
       </div>
 
-      {loading ? <LoadingSpinner /> : articles.length === 0 ? (
-        <p className="text-sm opacity-60 text-center py-12">{t('learn.noArticles')}</p>
-      ) : (
-        <div className="space-y-3">
-          {articles.map((article) => {
-            const title = article[`title_${langKey}`] || article.title_en
-            const content = article[`content_${langKey}`] || article.content_en
-            const isExpanded = expandedId === article.id
+      {/* Courses Tab */}
+      {tab === 'courses' && (
+        loading ? <LoadingSpinner /> : courses.length === 0 ? (
+          <p className="text-sm opacity-60 text-center py-12">{t('learn.noCourses')}</p>
+        ) : (
+          <div className="grid gap-4">
+            {courses.map((course) => {
+              const title = course[`title_${langKey}`] || course.title_en
+              const desc = course[`description_${langKey}`] || course.description_en
+              const pct = course.progress_pct || 0
 
-            return (
-              <div key={article.id} className="glass overflow-hidden">
+              return (
                 <button
-                  onClick={() => setExpandedId(isExpanded ? null : article.id)}
-                  className="w-full p-4 flex items-center justify-between text-left hover:bg-purple-500/5 transition-colors cursor-pointer"
+                  key={course.id}
+                  onClick={() => navigate(`/learn/courses/${course.id}`)}
+                  className="glass p-5 text-left hover:bg-purple-500/5 transition-colors cursor-pointer"
                 >
-                  <div>
-                    <h3 className="font-semibold">{title}</h3>
-                    <div className="flex items-center gap-3 mt-1 text-xs opacity-50">
-                      <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-400">
-                        {t(`learn.${article.category}`)}
-                      </span>
-                      <span>{article.reading_time} {t('learn.minRead')}</span>
+                  <div className="flex items-start gap-4">
+                    <span className="text-3xl">{course.icon_emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-lg">{title}</h3>
+                      <p className="text-sm opacity-60 mt-1 line-clamp-2">{desc}</p>
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="flex-1 h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-purple-500 transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="text-xs opacity-60 whitespace-nowrap">
+                          {course.completed_count}/{course.lesson_count} {t('learn.lessons')}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <span className={`transition-transform text-lg opacity-50 ${isExpanded ? 'rotate-180' : ''}`}>
-                    &#9660;
-                  </span>
                 </button>
+              )
+            })}
+          </div>
+        )
+      )}
 
-                {isExpanded && (
-                  <div className="px-4 pb-4 pt-0">
-                    <div
-                      className="border-t border-[var(--card-border)] pt-4 prose prose-invert max-w-none text-sm leading-relaxed opacity-80"
-                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mdToHtml(content)) }}
-                    />
-                    {article.source && (
-                      <p className="text-xs opacity-40 mt-3 pt-2 border-t border-[var(--card-border)]">
-                        {t('learn.source')}: {article.source}
-                      </p>
+      {/* Articles Tab */}
+      {tab === 'articles' && (
+        <>
+          {/* Category filter */}
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.value}
+                onClick={() => setCategory(cat.value)}
+                className={`text-sm px-4 py-2 rounded-lg transition-colors ${
+                  category === cat.value
+                    ? 'bg-purple-500/30 text-purple-400'
+                    : 'opacity-60 hover:opacity-100'
+                }`}
+              >
+                {t(cat.labelKey)}
+              </button>
+            ))}
+          </div>
+
+          {loading ? <LoadingSpinner /> : articles.length === 0 ? (
+            <p className="text-sm opacity-60 text-center py-12">{t('learn.noArticles')}</p>
+          ) : (
+            <div className="space-y-3">
+              {articles.map((article) => {
+                const title = article[`title_${langKey}`] || article.title_en
+                const content = article[`content_${langKey}`] || article.content_en
+                const isExpanded = expandedId === article.id
+
+                return (
+                  <div key={article.id} className="glass overflow-hidden">
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : article.id)}
+                      className="w-full p-4 flex items-center justify-between text-left hover:bg-purple-500/5 transition-colors cursor-pointer"
+                    >
+                      <div>
+                        <h3 className="font-semibold">{title}</h3>
+                        <div className="flex items-center gap-3 mt-1 text-xs opacity-50">
+                          <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-400">
+                            {t(`learn.${article.category}`)}
+                          </span>
+                          <span>{article.reading_time} {t('learn.minRead')}</span>
+                        </div>
+                      </div>
+                      <span className={`transition-transform text-lg opacity-50 ${isExpanded ? 'rotate-180' : ''}`}>
+                        &#9660;
+                      </span>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="px-4 pb-4 pt-0">
+                        <div
+                          className="border-t border-[var(--card-border)] pt-4 prose prose-invert max-w-none text-sm leading-relaxed opacity-80"
+                          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mdToHtml(content)) }}
+                        />
+                        {article.source && (
+                          <p className="text-xs opacity-40 mt-3 pt-2 border-t border-[var(--card-border)]">
+                            {t('learn.source')}: {article.source}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

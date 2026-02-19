@@ -159,6 +159,24 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Gratitude stats */}
+      {(data?.gratitude_count > 0 || data?.gratitude_streak > 0) && (
+        <div className="glass p-4 flex flex-wrap items-center gap-6">
+          {data?.gratitude_count > 0 && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-xl">🙏</span>
+              <span className="font-medium">{t('dashboard.gratitudeCount', { count: data.gratitude_count })}</span>
+            </div>
+          )}
+          {data?.gratitude_streak > 0 && (
+            <div className="flex items-center gap-2 text-sm opacity-70">
+              <span className="text-xl">✨</span>
+              <span>{t('dashboard.gratitudeStreak', { days: data.gratitude_streak })}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Controls */}
       <div className="glass p-4 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
