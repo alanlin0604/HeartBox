@@ -53,7 +53,8 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
 
   const saveTemplate = () => {
     const content = editor?.getHTML() || ''
-    if (!content.trim() || content === '<p></p>') return
+    const textOnly = content.replace(/<[^>]*>/g, '').trim()
+    if (!textOnly) return
     if (!templateName.trim()) return
     const newTpl = { id: Date.now().toString(), name: templateName.trim(), content }
     const updated = [...customTemplates, newTpl]
@@ -231,7 +232,11 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
             <div key={tpl.id} className="group relative">
               <button
                 type="button"
-                onClick={() => { editor?.commands.setContent(tpl.content); editor?.commands.focus('end') }}
+                onClick={() => {
+                  if (editor && tpl.content) {
+                    editor.chain().clearContent().setContent(tpl.content).focus('end').run()
+                  }
+                }}
                 className="text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 hover:bg-purple-500/25 transition-colors cursor-pointer pr-7"
               >
                 {tpl.name}
