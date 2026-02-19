@@ -5,6 +5,7 @@ import {
   ScatterChart, Scatter, BarChart, Bar, Legend,
 } from 'recharts'
 import { getAnalytics } from '../api/analytics'
+import { getCourses } from '../api/wellness'
 import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
@@ -75,10 +76,31 @@ export default function DashboardPage() {
   const [error, setError] = useState(false)
   const [period, setPeriod] = useState('week')
   const [lookback, setLookback] = useState(30)
+  const [learningStats, setLearningStats] = useState(null)
   const trendsRef = useRef(null)
   const tagsRef = useRef(null)
 
   useEffect(() => { document.title = `${t('nav.dashboard')} — ${t('app.name')}` }, [t])
+
+  useEffect(() => {
+    getCourses()
+      .then(res => {
+        const courses = res.data?.results || res.data || []
+        const totalCourses = courses.length
+        let startedCourses = 0
+        let completedLessons = 0
+        let totalLessons = 0
+        courses.forEach(c => {
+          const lessons = c.total_lessons || c.lessons_count || 0
+          const completed = c.completed_lessons || 0
+          totalLessons += lessons
+          completedLessons += completed
+          if (completed > 0) startedCourses++
+        })
+        setLearningStats({ totalCourses, startedCourses, completedLessons, totalLessons })
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -175,6 +197,33 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Learning Progress */}
+      {learningStats && learningStats.totalCourses > 0 && (
+        <button
+          onClick={() => navigate('/learn')}
+          className="glass p-4 w-full text-left flex items-center gap-4 hover:bg-purple-500/5 transition-colors cursor-pointer"
+        >
+          <span className="text-2xl">📚</span>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-sm">{t('dashboard.learningProgress')}</h3>
+            <p className="text-xs opacity-60 mt-0.5">
+              {t('dashboard.coursesStarted', { started: learningStats.startedCourses, total: learningStats.totalCourses })}
+              {' · '}
+              {t('dashboard.lessonsCompleted', { completed: learningStats.completedLessons, total: learningStats.totalLessons })}
+            </p>
+            {learningStats.totalLessons > 0 && (
+              <div className="mt-2 w-full h-2 rounded-full bg-[var(--stress-bar-bg)]">
+                <div
+                  className="h-2 rounded-full bg-purple-500 transition-all"
+                  style={{ width: `${Math.round((learningStats.completedLessons / learningStats.totalLessons) * 100)}%` }}
+                />
+              </div>
+            )}
+          </div>
+          <span className="text-xs text-purple-400 font-medium whitespace-nowrap">{t('dashboard.goLearn')}</span>
+        </button>
       )}
 
       {/* Controls */}

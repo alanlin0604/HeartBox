@@ -65,17 +65,35 @@ export default function Layout() {
     document.documentElement.style.fontSize = parseFloat(scale) * 16 + 'px'
   }, [])
 
+  const [moreOpen, setMoreOpen] = useState(false)
+  const moreRef = useRef(null)
+
+  // Close "more" dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (moreRef.current && !moreRef.current.contains(e.target)) {
+        setMoreOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   const navLinks = [
-    { to: '/', label: t('nav.journal'), end: true },
-    { to: '/dashboard', label: t('nav.dashboard') },
-    { to: '/assessments', label: t('nav.assessments') },
-    { to: '/weekly-summary', label: t('nav.weeklySummary') },
-    { to: '/breathe', label: t('nav.breathe') },
-    { to: '/learn', label: t('nav.learn') },
-    { to: '/counselors', label: t('nav.counselors') },
-    { to: '/ai-chat', label: t('nav.aiChat') },
-    { to: '/achievements', label: t('nav.achievements') },
+    { to: '/', label: t('nav.journal'), icon: '\u{1F4DD}', end: true },
+    { to: '/dashboard', label: t('nav.dashboard'), icon: '\u{1F4CA}' },
+    { to: '/assessments', label: t('nav.assessments'), icon: '\u{1F4CB}' },
+    { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '\u{1F4C5}' },
+    { to: '/breathe', label: t('nav.breathe'), icon: '\u{1F9D8}' },
+    { to: '/learn', label: t('nav.learn'), icon: '\u{1F4DA}' },
+    { to: '/counselors', label: t('nav.counselors'), icon: '\u{1F4AC}' },
+    { to: '/ai-chat', label: t('nav.aiChat'), icon: '\u{1F916}' },
+    { to: '/achievements', label: t('nav.achievements'), icon: '\u{1F3C6}' },
   ]
+
+  // Bottom nav: first 4 items + "More"
+  const bottomNavLinks = navLinks.slice(0, 4)
+  const moreNavLinks = navLinks.slice(4)
 
   return (
     <div className={`flex flex-col ${isChatRoute ? 'h-dvh overflow-hidden' : 'min-h-screen'}`}>
@@ -134,9 +152,10 @@ export default function Layout() {
               end={link.end}
               onMouseEnter={() => ROUTE_PRELOADS[link.to]?.()}
               className={({ isActive }) =>
-                `font-medium transition-colors ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
+                `font-medium transition-colors flex items-center gap-1 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
+              <span className="text-sm">{link.icon}</span>
               {link.label}
             </NavLink>
           ))}
@@ -260,9 +279,10 @@ export default function Layout() {
               end={link.end}
               onClick={() => setMobileNavOpen(false)}
               className={({ isActive }) =>
-                `block font-medium transition-colors py-1 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
+                `block font-medium transition-colors py-1 flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
+              <span className="text-sm">{link.icon}</span>
               {link.label}
             </NavLink>
           ))}
@@ -302,9 +322,68 @@ export default function Layout() {
         </div>
       )}
 
-      <main id="main-content" className={`flex-1 flex flex-col p-4 max-w-6xl mx-auto w-full ${isChatRoute ? 'min-h-0' : ''}`}>
+      <main id="main-content" className={`flex-1 flex flex-col p-4 pb-20 md:pb-4 max-w-6xl mx-auto w-full ${isChatRoute ? 'min-h-0' : ''}`}>
         <Outlet />
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass safe-area-bottom border-t border-[var(--glass-border)]" style={{ borderRadius: 0 }}>
+        <div className="flex items-center justify-around py-2">
+          {bottomNavLinks.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              onClick={() => { setMobileNavOpen(false); setMoreOpen(false) }}
+              className={({ isActive }) =>
+                `flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors ${isActive ? 'text-purple-500' : 'opacity-60'}`
+              }
+            >
+              <span className="text-lg">{link.icon}</span>
+              <span className="truncate max-w-[4.5rem]">{link.label}</span>
+            </NavLink>
+          ))}
+          {/* More button */}
+          <div className="relative" ref={moreRef}>
+            <button
+              onClick={() => setMoreOpen(!moreOpen)}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors cursor-pointer ${moreOpen ? 'text-purple-500' : 'opacity-60'}`}
+            >
+              <span className="text-lg">{'\u2630'}</span>
+              <span>{t('nav.more')}</span>
+            </button>
+            {moreOpen && (
+              <div className="absolute bottom-full right-0 mb-2 w-48 rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)] py-2">
+                {moreNavLinks.map((link) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    onClick={() => { setMoreOpen(false); setMobileNavOpen(false) }}
+                    className={({ isActive }) =>
+                      `block px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-70 hover:opacity-100'}`
+                    }
+                  >
+                    <span>{link.icon}</span>
+                    {link.label}
+                  </NavLink>
+                ))}
+                {user?.is_staff && (
+                  <NavLink
+                    to="/admin"
+                    onClick={() => { setMoreOpen(false); setMobileNavOpen(false) }}
+                    className={({ isActive }) =>
+                      `block px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-70 hover:opacity-100'}`
+                    }
+                  >
+                    <span>{'\u2699\uFE0F'}</span>
+                    {t('nav.admin')}
+                  </NavLink>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </nav>
 
       {/* Footer */}
       <footer className="text-center text-xs opacity-40 py-4 space-x-4">

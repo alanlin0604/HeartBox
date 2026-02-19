@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
 import { getWellnessSessions, createWellnessSession } from '../api/breathe'
+import { getCourses } from '../api/wellness'
 
 const BREATHING_EXERCISES = [
   { id: '478', nameKey: 'breathe.478', steps: [
@@ -25,8 +27,10 @@ const MEDITATION_DURATIONS = [1, 3, 5, 10, 15]
 
 export default function BreathingPage() {
   const { t } = useLang()
+  const navigate = useNavigate()
   const [tab, setTab] = useState('breathing')
   const [sessions, setSessions] = useState([])
+  const [courseId, setCourseId] = useState(null)
 
   // Breathing state
   const [selectedExercise, setSelectedExercise] = useState(null)
@@ -58,6 +62,13 @@ export default function BreathingPage() {
   useEffect(() => {
     getWellnessSessions()
       .then(res => setSessions(res.data?.results || res.data || []))
+      .catch(() => {})
+    getCourses()
+      .then(res => {
+        const courses = res.data?.results || res.data || []
+        const found = courses.find(c => c.title_en === 'Breathing & Meditation')
+        if (found) setCourseId(found.id)
+      })
       .catch(() => {})
   }, [])
 
@@ -233,6 +244,20 @@ export default function BreathingPage() {
     <div className="space-y-6 mt-4 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold">{t('breathe.title')}</h1>
 
+      {/* Learn More Banner */}
+      {courseId && (
+        <button
+          onClick={() => navigate(`/learn/courses/${courseId}`)}
+          className="glass p-4 w-full text-left flex items-center gap-3 hover:bg-purple-500/5 transition-colors cursor-pointer"
+        >
+          <span className="text-2xl">📚</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm opacity-80">{t('breathe.learnMore')}</p>
+            <p className="text-sm font-semibold text-purple-400">{t('breathe.learnMoreLink')}</p>
+          </div>
+        </button>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-2">
         <button
@@ -265,6 +290,7 @@ export default function BreathingPage() {
                   className="glass p-4 text-left hover:bg-purple-500/5 transition-colors cursor-pointer"
                 >
                   <h3 className="font-semibold">{t(ex.nameKey)}</h3>
+                  <p className="text-xs text-purple-400 mt-0.5">{t(`breathe.desc.${ex.id}`)}</p>
                   <p className="text-sm opacity-60 mt-1">
                     {ex.steps.map(s => `${t(`breathe.phase.${s.phase}`)} ${s.duration}s`).join(' → ')}
                   </p>

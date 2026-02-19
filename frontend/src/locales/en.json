@@ -717,7 +717,7 @@
   "publicReport.stress": "Stress",
   "publicReport.assessments": "Self-Assessment Scores",
   "publicReport.sharedVia": "Shared via HeartBox",
-  "nav.breathe": "Breathe",
+  "nav.breathe": "Breathe & Meditate",
   "breathe.title": "Breathing & Meditation",
   "breathe.breathingTab": "Breathing",
   "breathe.meditationTab": "Meditation",
@@ -761,5 +761,15 @@
   "learn.lessonCompleted": "Lesson completed",
   "learn.markComplete": "Mark as Complete",
   "common.goBack": "Go Back",
-  "common.saving": "Saving..."
+  "common.saving": "Saving...",
+  "breathe.learnMore": "Want to learn more? Check out the Breathing & Meditation course",
+  "breathe.learnMoreLink": "Go to Course →",
+  "breathe.desc.478": "Best for relaxation & sleep",
+  "breathe.desc.box": "Quickly restore focus",
+  "breathe.desc.deep": "Relieve anxiety & tension",
+  "dashboard.learningProgress": "Learning Progress",
+  "dashboard.coursesStarted": "{started}/{total} courses started",
+  "dashboard.lessonsCompleted": "{completed}/{total} lessons completed",
+  "dashboard.goLearn": "Go to Learn",
+  "nav.more": "More"
 }

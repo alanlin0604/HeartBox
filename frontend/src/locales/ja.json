@@ -717,7 +717,7 @@
   "publicReport.stress": "ストレス指数",
   "publicReport.assessments": "自己評価スコア",
   "publicReport.sharedVia": "HeartBox で共有",
-  "nav.breathe": "呼吸",
+  "nav.breathe": "呼吸と瞑想",
   "breathe.title": "呼吸とメディテーション",
   "breathe.breathingTab": "呼吸エクササイズ",
   "breathe.meditationTab": "瞑想タイマー",
@@ -761,5 +761,15 @@
   "learn.lessonCompleted": "レッスン完了",
   "learn.markComplete": "完了にする",
   "common.goBack": "戻る",
-  "common.saving": "保存中..."
+  "common.saving": "保存中...",
+  "breathe.learnMore": "もっと知りたいですか？呼吸と瞑想コースをチェック",
+  "breathe.learnMoreLink": "コースへ →",
+  "breathe.desc.478": "リラックス・睡眠に最適",
+  "breathe.desc.box": "集中力を素早く回復",
+  "breathe.desc.deep": "不安と緊張を和らげる",
+  "dashboard.learningProgress": "学習の進捗",
+  "dashboard.coursesStarted": "{started}/{total} コース開始済み",
+  "dashboard.lessonsCompleted": "{completed}/{total} レッスン完了",
+  "dashboard.goLearn": "学びに行く",
+  "nav.more": "その他"
 }

@@ -717,7 +717,7 @@
   "publicReport.stress": "壓力指數",
   "publicReport.assessments": "自評量表分數",
   "publicReport.sharedVia": "透過 HeartBox 分享",
-  "nav.breathe": "呼吸",
+  "nav.breathe": "呼吸與冥想",
   "breathe.title": "呼吸與冥想",
   "breathe.breathingTab": "呼吸練習",
   "breathe.meditationTab": "冥想計時",
@@ -761,5 +761,15 @@
   "learn.lessonCompleted": "已完成此課程",
   "learn.markComplete": "標記完成",
   "common.goBack": "返回",
-  "common.saving": "儲存中..."
+  "common.saving": "儲存中...",
+  "breathe.learnMore": "想了解更多？查看呼吸與冥想課程",
+  "breathe.learnMoreLink": "前往課程 →",
+  "breathe.desc.478": "最適合放鬆入睡",
+  "breathe.desc.box": "快速恢復專注力",
+  "breathe.desc.deep": "緩解焦慮與緊張",
+  "dashboard.learningProgress": "學習進度",
+  "dashboard.coursesStarted": "已開始 {started}/{total} 門課程",
+  "dashboard.lessonsCompleted": "已完成 {completed}/{total} 堂課",
+  "dashboard.goLearn": "前往學習",
+  "nav.more": "更多"
 }

@@ -236,6 +236,11 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
+/* ===== Safe area for mobile bottom nav ===== */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 /* ===== Tooltip override for Recharts ===== */
 .recharts-tooltip-wrapper .recharts-default-tooltip {
   background: var(--tooltip-bg) !important;
