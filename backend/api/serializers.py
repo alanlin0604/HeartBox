@@ -109,7 +109,7 @@ class CounselorListSerializer(serializers.ModelSerializer):
 # ===== Messaging =====
 
 class MessageSerializer(serializers.ModelSerializer):
-    sender_name = serializers.CharField(source='sender.username', read_only=True)
+    sender_name = serializers.SerializerMethodField()
     sender_avatar = serializers.ImageField(source='sender.avatar', read_only=True)
 
     class Meta:
@@ -117,6 +117,12 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = ('id', 'sender', 'sender_name', 'sender_avatar', 'content',
                   'message_type', 'metadata', 'is_read', 'created_at')
         read_only_fields = ('id', 'sender', 'sender_name', 'is_read', 'created_at')
+
+    def get_sender_name(self, obj):
+        profile = getattr(obj.sender, 'counselor_profile', None)
+        if profile and profile.display_name:
+            return profile.display_name
+        return obj.sender.username
 
 
 # ===== Admin =====
@@ -167,14 +173,20 @@ class ConversationSerializer(serializers.ModelSerializer):
         if getattr(other, 'avatar', None):
             request = self.context.get('request')
             avatar = request.build_absolute_uri(other.avatar.url) if request else other.avatar.url
-        return {'id': other.id, 'username': other.username, 'avatar': avatar}
+        display_name = ''
+        profile = getattr(other, 'counselor_profile', None)
+        if profile and profile.display_name:
+            display_name = profile.display_name
+        return {'id': other.id, 'username': other.username, 'display_name': display_name, 'avatar': avatar}
 
     def get_last_message(self, obj):
         # Prefetch ordered by -created_at, so first element is latest
         msgs = obj.messages.all()
         if msgs:
             msg = msgs[0]
-            return {'content': msg.content[:80], 'created_at': msg.created_at, 'sender_name': msg.sender.username}
+            profile = getattr(msg.sender, 'counselor_profile', None)
+            sender_name = profile.display_name if profile and profile.display_name else msg.sender.username
+            return {'content': msg.content[:80], 'created_at': msg.created_at, 'sender_name': sender_name}
         return None
 
     def get_unread_count(self, obj):

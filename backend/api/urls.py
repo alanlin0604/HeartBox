@@ -20,6 +20,7 @@ from .views import (
     BookingListView,
     CalendarView,
     ConversationCreateView,
+    ConversationDeleteView,
     ConversationListView,
     CourseDetailView,
     CourseListView,
@@ -94,6 +95,7 @@ urlpatterns = [
     # Messaging
     path('conversations/', ConversationListView.as_view(), name='conversation-list'),
     path('conversations/create/', ConversationCreateView.as_view(), name='conversation-create'),
+    path('conversations/<int:conv_id>/', ConversationDeleteView.as_view(), name='conversation-delete'),
     path('conversations/<int:conv_id>/messages/', MessageListView.as_view(), name='message-list'),
     path('conversations/<int:conv_id>/messages/<int:msg_id>/quote-action/', QuoteActionView.as_view(), name='quote-action'),
     # Admin

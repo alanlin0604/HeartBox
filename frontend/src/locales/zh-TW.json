@@ -796,5 +796,8 @@
   "guide.achievementsTitle": "成就系統",
   "guide.achievementsDesc": "透過持續記錄、探索功能解鎖各種成就徽章，保持寫作動力。",
   "guide.settingsTitle": "設定",
-  "guide.settingsDesc": "管理個人資料、修改密碼、調整字體大小、匯出資料或刪除帳號。"
+  "guide.settingsDesc": "管理個人資料、修改密碼、調整字體大小、匯出資料或刪除帳號。",
+  "chat.deleteConversation": "刪除對話",
+  "chat.deleteConfirm": "確定要刪除這個對話嗎？所有訊息將被永久刪除。",
+  "chat.deleted": "對話已刪除"
 }

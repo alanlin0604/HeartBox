@@ -2,16 +2,16 @@ import { useEffect } from 'react'
 import { useLang } from '../context/LanguageContext'
 
 const FEATURES = [
-  { icon: '\u{1F4DD}', titleKey: 'guide.journalTitle', descKey: 'guide.journalDesc' },
-  { icon: '\u{1F4CA}', titleKey: 'guide.dashboardTitle', descKey: 'guide.dashboardDesc' },
-  { icon: '\u{1F4CB}', titleKey: 'guide.assessmentsTitle', descKey: 'guide.assessmentsDesc' },
-  { icon: '\u{1F4C5}', titleKey: 'guide.weeklySummaryTitle', descKey: 'guide.weeklySummaryDesc' },
-  { icon: '\u{1F9D8}', titleKey: 'guide.breatheTitle', descKey: 'guide.breatheDesc' },
-  { icon: '\u{1F4DA}', titleKey: 'guide.learnTitle', descKey: 'guide.learnDesc' },
-  { icon: '\u{1F4AC}', titleKey: 'guide.counselorsTitle', descKey: 'guide.counselorsDesc' },
-  { icon: '\u{1F916}', titleKey: 'guide.aiChatTitle', descKey: 'guide.aiChatDesc' },
-  { icon: '\u{1F3C6}', titleKey: 'guide.achievementsTitle', descKey: 'guide.achievementsDesc' },
-  { icon: '\u2699\uFE0F', titleKey: 'guide.settingsTitle', descKey: 'guide.settingsDesc' },
+  { icon: '\u{1F4DD}', titleKey: 'nav.journal', descKey: 'guide.journalDesc' },
+  { icon: '\u{1F4CA}', titleKey: 'nav.dashboard', descKey: 'guide.dashboardDesc' },
+  { icon: '\u{1F4CB}', titleKey: 'nav.assessments', descKey: 'guide.assessmentsDesc' },
+  { icon: '\u{1F4C5}', titleKey: 'nav.weeklySummary', descKey: 'guide.weeklySummaryDesc' },
+  { icon: '\u{1F9D8}', titleKey: 'nav.breathe', descKey: 'guide.breatheDesc' },
+  { icon: '\u{1F4DA}', titleKey: 'nav.learn', descKey: 'guide.learnDesc' },
+  { icon: '\u{1F4AC}', titleKey: 'nav.counselors', descKey: 'guide.counselorsDesc' },
+  { icon: '\u{1F916}', titleKey: 'nav.aiChat', descKey: 'guide.aiChatDesc' },
+  { icon: '\u{1F3C6}', titleKey: 'nav.achievements', descKey: 'guide.achievementsDesc' },
+  { icon: '\u2699\uFE0F', titleKey: 'settings.title', descKey: 'guide.settingsDesc' },
 ]
 
 export default function GuidePage() {

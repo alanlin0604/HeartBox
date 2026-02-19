@@ -606,6 +606,20 @@ class ConversationListView(generics.ListAPIView):
         )
 
 
+class ConversationDeleteView(APIView):
+    """Delete a conversation (only participants can delete)."""
+
+    def delete(self, request, conv_id):
+        try:
+            conv = Conversation.objects.get(
+                Q(id=conv_id) & (Q(user=request.user) | Q(counselor=request.user))
+            )
+        except Conversation.DoesNotExist:
+            return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
+        conv.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class ConversationCreateView(APIView):
     """Start a conversation with a counselor."""
 

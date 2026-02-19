@@ -796,5 +796,8 @@
   "guide.achievementsTitle": "Achievements",
   "guide.achievementsDesc": "Unlock badges by journaling consistently and exploring features. Stay motivated!",
   "guide.settingsTitle": "Settings",
-  "guide.settingsDesc": "Manage your profile, change password, adjust font size, export data, or delete your account."
+  "guide.settingsDesc": "Manage your profile, change password, adjust font size, export data, or delete your account.",
+  "chat.deleteConversation": "Delete",
+  "chat.deleteConfirm": "Are you sure you want to delete this conversation? All messages will be permanently deleted.",
+  "chat.deleted": "Conversation deleted"
 }

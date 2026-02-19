@@ -51,3 +51,8 @@ export const sendQuote = (convId, data) =>
 
 export const quoteAction = (convId, msgId, action) =>
   api.post(`/conversations/${convId}/messages/${msgId}/quote-action/`, { action })
+
+export const deleteConversation = (convId) => {
+  invalidate('conversations')
+  return api.delete(`/conversations/${convId}/`)
+}

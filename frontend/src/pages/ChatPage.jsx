@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback, memo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
-import { getMessages, getConversations, sendMessage, sendQuote, quoteAction } from '../api/counselors'
+import { getMessages, getConversations, sendMessage, sendQuote, quoteAction, deleteConversation } from '../api/counselors'
 import { useToast } from '../context/ToastContext'
 import { getAccessToken } from '../utils/tokenStorage'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -265,6 +265,17 @@ export default function ChatPage() {
     }
   }
 
+  const handleDeleteConversation = async () => {
+    if (!window.confirm(t('chat.deleteConfirm'))) return
+    try {
+      await deleteConversation(id)
+      toast?.success(t('chat.deleted'))
+      navigate('/counselors?tab=chats')
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
+  }
+
   if (loading) return <LoadingSpinner />
 
   return (
@@ -281,19 +292,28 @@ export default function ChatPage() {
           {otherUser ? (
             <span className="flex items-center gap-2">
               {otherUser.avatar ? (
-                <img src={otherUser.avatar} alt={otherUser.username} loading="lazy" decoding="async" className="w-7 h-7 rounded-full object-cover border border-white/20" />
+                <img src={otherUser.avatar} alt={otherUser.display_name || otherUser.username} loading="lazy" decoding="async" className="w-7 h-7 rounded-full object-cover border border-white/20" />
               ) : (
                 <span className="w-7 h-7 rounded-full bg-purple-500/25 text-xs flex items-center justify-center">
-                  {otherUser.username?.slice(0, 1).toUpperCase()}
+                  {(otherUser.display_name || otherUser.username)?.slice(0, 1).toUpperCase()}
                 </span>
               )}
-              {otherUser.username}
+              {otherUser.display_name || otherUser.username}
             </span>
           ) : t('chat.conversation')}
         </h2>
-        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${wsConnected ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'}`}>
-          {wsConnected ? t('chat.connected') : t('chat.reconnecting')}
-        </span>
+        <div className="ml-auto flex items-center gap-2">
+          <span className={`text-xs px-2 py-0.5 rounded-full ${wsConnected ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'}`}>
+            {wsConnected ? t('chat.connected') : t('chat.reconnecting')}
+          </span>
+          <button
+            onClick={handleDeleteConversation}
+            className="text-xs px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
+            title={t('chat.deleteConversation')}
+          >
+            {t('chat.deleteConversation')}
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
