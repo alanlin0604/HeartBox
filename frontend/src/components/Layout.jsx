@@ -22,6 +22,7 @@ const ROUTE_PRELOADS = {
   '/learn': () => import('../pages/PsychoContentPage'),
   '/admin': () => import('../pages/AdminPage'),
   '/settings': () => import('../pages/SettingsPage'),
+  '/guide': () => import('../pages/GuidePage'),
 }
 
 export default function Layout() {
@@ -89,6 +90,7 @@ export default function Layout() {
     { to: '/counselors', label: t('nav.counselors'), icon: '\u{1F4AC}' },
     { to: '/ai-chat', label: t('nav.aiChat'), icon: '\u{1F916}' },
     { to: '/achievements', label: t('nav.achievements'), icon: '\u{1F3C6}' },
+    { to: '/guide', label: t('nav.guide'), icon: '\u{1F4D6}' },
   ]
 
   // Bottom nav: first 4 items + "More"

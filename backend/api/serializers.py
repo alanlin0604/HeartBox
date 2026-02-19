@@ -91,7 +91,7 @@ class CounselorProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CounselorProfile
-        fields = ('id', 'username', 'license_number', 'specialty', 'introduction',
+        fields = ('id', 'username', 'license_number', 'display_name', 'specialty', 'introduction',
                   'hourly_rate', 'currency', 'status', 'created_at')
         read_only_fields = ('id', 'status', 'created_at')
 
@@ -103,7 +103,7 @@ class CounselorListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CounselorProfile
-        fields = ('id', 'username', 'avatar', 'specialty', 'introduction', 'hourly_rate', 'currency')
+        fields = ('id', 'username', 'avatar', 'display_name', 'specialty', 'introduction', 'hourly_rate', 'currency')
 
 
 # ===== Messaging =====

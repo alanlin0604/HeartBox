@@ -107,6 +107,7 @@ class CounselorProfile(models.Model):
         related_name='counselor_profile',
     )
     license_number = models.CharField(max_length=50, unique=True, help_text='諮商師執照號碼')
+    display_name = models.CharField(max_length=50, blank=True, default='')
     specialty = models.CharField(max_length=200, help_text='專長領域')
     introduction = models.TextField(help_text='自我介紹')
     hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)

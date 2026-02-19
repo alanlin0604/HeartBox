@@ -224,6 +224,45 @@ export default function BreathingPage() {
     setAmbientOn(false)
   }, [])
 
+  const playChime = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)()
+      const now = ctx.currentTime
+
+      // Fundamental 528Hz sine wave
+      const osc1 = ctx.createOscillator()
+      osc1.type = 'sine'
+      osc1.frequency.value = 528
+      const gain1 = ctx.createGain()
+      gain1.gain.setValueAtTime(0.3, now)
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 3)
+      osc1.connect(gain1)
+      gain1.connect(ctx.destination)
+
+      // Harmonic 1056Hz
+      const osc2 = ctx.createOscillator()
+      osc2.type = 'sine'
+      osc2.frequency.value = 1056
+      const gain2 = ctx.createGain()
+      gain2.gain.setValueAtTime(0.15, now)
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 3)
+      osc2.connect(gain2)
+      gain2.connect(ctx.destination)
+
+      osc1.start(now)
+      osc2.start(now)
+      osc1.stop(now + 3)
+      osc2.stop(now + 3)
+
+      setTimeout(() => ctx.close(), 3500)
+    } catch {}
+  }, [])
+
+  // Play chime when breathing or meditation completes
+  useEffect(() => {
+    if (breathComplete || medComplete) playChime()
+  }, [breathComplete, medComplete, playChime])
+
   const toggleAmbient = () => {
     if (ambientOn) stopAmbient()
     else startAmbient()

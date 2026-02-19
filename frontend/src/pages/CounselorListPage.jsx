@@ -61,6 +61,7 @@ export default function CounselorListPage() {
   const [applyCurrency, setApplyCurrency] = useState('TWD')
 
   // Edit profile form state (pricing tab upgrade)
+  const [editDisplayName, setEditDisplayName] = useState('')
   const [editSpecialty, setEditSpecialty] = useState('')
   const [editIntroduction, setEditIntroduction] = useState('')
   const [pricingRate, setPricingRate] = useState('')
@@ -109,6 +110,7 @@ export default function CounselorListPage() {
       try {
         const profileRes = await getMyCounselorProfile()
         setMyProfile(profileRes.data)
+        setEditDisplayName(profileRes.data.display_name || '')
         setEditSpecialty(profileRes.data.specialty || '')
         setEditIntroduction(profileRes.data.introduction || '')
         setPricingRate(profileRes.data.hourly_rate || '')
@@ -179,6 +181,7 @@ export default function CounselorListPage() {
     setPricingSaving(true)
     try {
       const res = await updateMyCounselorProfile({
+        display_name: editDisplayName,
         specialty: editSpecialty,
         introduction: editIntroduction,
         hourly_rate: pricingRate || null,
@@ -322,10 +325,10 @@ export default function CounselorListPage() {
                         className="w-10 h-10 rounded-full bg-purple-500/25 items-center justify-center text-sm font-semibold"
                         style={{ display: c.avatar ? 'none' : 'flex' }}
                       >
-                        {String(c.username || '?').slice(0, 1).toUpperCase()}
+                        {String(c.display_name || c.username || '?').slice(0, 1).toUpperCase()}
                       </div>
                       <div>
-                      <h3 className="text-lg font-semibold">{c.username}</h3>
+                      <h3 className="text-lg font-semibold">{c.display_name || c.username}</h3>
                       <p className="text-sm opacity-60">{c.specialty}</p>
                       </div>
                     </div>
@@ -523,6 +526,17 @@ export default function CounselorListPage() {
           <h2 className="text-xl font-semibold">{t('counselor.editProfile')}</h2>
           <p className="text-sm opacity-60">{t('counselor.editProfileDesc')}</p>
           <form onSubmit={handleSaveProfile} className="glass p-6 space-y-4 max-w-lg">
+            <div>
+              <label className="text-sm opacity-60 block mb-1">{t('counselor.displayNameLabel')}</label>
+              <input
+                type="text"
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                placeholder={t('counselor.displayNamePlaceholder')}
+                className="glass-input"
+                maxLength={50}
+              />
+            </div>
             <div>
               <label className="text-sm opacity-60 block mb-1">{t('counselor.specialtyLabel')}</label>
               <input

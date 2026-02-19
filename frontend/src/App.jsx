@@ -28,6 +28,7 @@ const PsychoContentPage = lazy(() => import('./pages/PsychoContentPage'))
 const BreathingPage = lazy(() => import('./pages/BreathingPage'))
 const CourseDetailPage = lazy(() => import('./pages/CourseDetailPage'))
 const LessonPage = lazy(() => import('./pages/LessonPage'))
+const GuidePage = lazy(() => import('./pages/GuidePage'))
 const TherapistReportPublicPage = lazy(() => import('./pages/TherapistReportPublicPage'))
 
 function PrivateRoute({ children }) {
@@ -77,6 +78,7 @@ export default function App() {
           <Route path="learn" element={<Suspense fallback={<LoadingSpinner />}><PsychoContentPage /></Suspense>} />
           <Route path="learn/courses/:courseId" element={<Suspense fallback={<LoadingSpinner />}><CourseDetailPage /></Suspense>} />
           <Route path="learn/courses/:courseId/lessons/:lessonId" element={<Suspense fallback={<LoadingSpinner />}><LessonPage /></Suspense>} />
+          <Route path="guide" element={<Suspense fallback={<LoadingSpinner />}><GuidePage /></Suspense>} />
           <Route
             path="admin"
             element={
