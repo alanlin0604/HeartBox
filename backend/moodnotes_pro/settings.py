@@ -169,7 +169,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'user': os.getenv('THROTTLE_USER', '200/hour'),
-        'login': os.getenv('THROTTLE_LOGIN', '10/hour'),
+        'login': os.getenv('THROTTLE_LOGIN', '30/hour'),
         'register': os.getenv('THROTTLE_REGISTER', '5/hour'),
         'password_reset': os.getenv('THROTTLE_PASSWORD_RESET', '5/hour'),
         'note_create': '30/hour',
