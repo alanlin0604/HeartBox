@@ -102,7 +102,7 @@ export default function Layout() {
       )}
 
       <nav className="glass sticky top-0 z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent flex items-center gap-2">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent flex items-center gap-2 flex-shrink-0">
           <img src="/logo.png" alt="HeartBox" decoding="async" className="w-12 h-12 object-contain" />
           {t('app.displayName')}
         </h1>
@@ -133,7 +133,7 @@ export default function Layout() {
         </div>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-9 text-base">
+        <div className="hidden md:flex items-center gap-4 lg:gap-6 xl:gap-8 text-sm lg:text-base flex-shrink min-w-0">
           {navLinks.map((link) => (
             <NavLink
               key={link.to}
@@ -141,10 +141,10 @@ export default function Layout() {
               end={link.end}
               onMouseEnter={() => ROUTE_PRELOADS[link.to]?.()}
               className={({ isActive }) =>
-                `font-medium transition-colors flex items-center gap-1 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
+                `font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
-              <img src={link.icon} alt="" className="w-7 h-7 object-contain" />
+              <img src={link.icon} alt="" className="w-6 h-6 lg:w-7 lg:h-7 object-contain flex-shrink-0" />
               {link.label}
             </NavLink>
           ))}
