@@ -1187,7 +1187,7 @@ class BookingUserCancelView(APIView):
             message=f'{request.user.username} cancelled their booking.',
             data={
                 'booking_id': booking.id,
-                'action': 'cancelled',
+                'action': 'user_cancelled',
                 'username': request.user.username,
             },
         )
@@ -1230,7 +1230,7 @@ class ShareAssessmentView(APIView):
         # Notify counselor
         notif = Notification.objects.create(
             user=profile.user,
-            type='system',
+            type='assessment_share',
             title='Assessment shared',
             message=f'{request.user.username} shared a {assessment.assessment_type.upper()} assessment with you.',
             data={
@@ -1839,17 +1839,21 @@ class WeeklySummaryView(APIView):
 
         # Check if PDF format requested
         if request.query_params.get('format') == 'pdf':
-            week_end = summary.week_start + timedelta(days=6)
-            notes_qs = MoodNote.objects.filter(
-                user=request.user,
-                is_deleted=False,
-                created_at__date__gte=summary.week_start,
-                created_at__date__lte=week_end,
-            ).order_by('created_at')
-            lang = request.headers.get('Accept-Language', 'zh-TW')
-            buf = generate_weekly_summary_pdf(summary, notes_qs, request.user, lang=lang)
-            filename = f'weekly_summary_{summary.week_start}.pdf'
-            return FileResponse(buf, as_attachment=True, filename=filename, content_type='application/pdf')
+            try:
+                week_end = summary.week_start + timedelta(days=6)
+                notes_qs = MoodNote.objects.filter(
+                    user=request.user,
+                    is_deleted=False,
+                    created_at__date__gte=summary.week_start,
+                    created_at__date__lte=week_end,
+                ).order_by('created_at')
+                lang = request.query_params.get('lang') or request.headers.get('Accept-Language', 'zh-TW').split(',')[0].strip()
+                buf = generate_weekly_summary_pdf(summary, notes_qs, request.user, lang=lang)
+                filename = f'weekly_summary_{summary.week_start}.pdf'
+                return FileResponse(buf, as_attachment=True, filename=filename, content_type='application/pdf')
+            except Exception as e:
+                logger.error('Weekly summary PDF generation failed: %s', e, exc_info=True)
+                return Response({'error': 'PDF generation failed.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(WeeklySummarySerializer(summary).data)
 

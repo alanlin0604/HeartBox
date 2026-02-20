@@ -10,6 +10,7 @@ const NOTIF_TYPE_KEYS = {
   booking: 'notification.type.booking',
   bookingStatus: 'notification.type.bookingStatus',
   share: 'notification.type.share',
+  assessment_share: 'notification.type.assessmentShare',
 }
 
 function getLocalizedMessage(notif, t) {
@@ -24,6 +25,9 @@ function getLocalizedMessage(notif, t) {
     if (d.action === 'cancelled') {
       return t('notification.booking.cancelled', { counselor: d.counselor_name })
     }
+    if (d.action === 'user_cancelled') {
+      return t('notification.booking.userCancelled', { username: d.username })
+    }
     if (d.action === 'completed') {
       return t('notification.booking.completed', { counselor: d.counselor_name })
     }
@@ -36,6 +40,9 @@ function getLocalizedMessage(notif, t) {
   }
   if (notif.type === 'share' && d.author_name) {
     return t('notification.share.from', { name: d.author_name })
+  }
+  if (notif.type === 'assessment_share' && d.username) {
+    return t('notification.assessmentShare.from', { name: d.username, type: (d.assessment_type || '').toUpperCase() })
   }
   // Fallback for old notifications without enriched data
   return notif.message
@@ -155,6 +162,8 @@ export default memo(function NotificationBell() {
       navigate('/counselors', { state: { tab: 'bookings' } })
     } else if (notif.type === 'share') {
       navigate('/counselors', { state: { tab: 'received' } })
+    } else if (notif.type === 'assessment_share') {
+      navigate('/counselors', { state: { tab: 'assessments' } })
     } else if (notif.type === 'note' && notif.data?.note_id) {
       navigate(`/notes/${notif.data.note_id}`)
     }

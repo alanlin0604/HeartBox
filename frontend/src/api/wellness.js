@@ -53,6 +53,10 @@ export const completeLesson = (articleId) =>
 export const shareAssessment = (assessmentId, counselorId) =>
   api.post(`/assessments/${assessmentId}/share/`, { counselor_id: counselorId })
 
+// Shared assessments received (counselor)
+export const getSharedAssessments = () =>
+  api.get('/shared-assessments/')
+
 // Weekly Summary PDF export
-export const exportWeeklySummaryPDF = (weekStart) =>
-  api.get(`/weekly-summary/?week_start=${weekStart}&format=pdf`, { responseType: 'blob' })
+export const exportWeeklySummaryPDF = (weekStart, lang) =>
+  api.get(`/weekly-summary/?week_start=${weekStart}&format=pdf${lang ? `&lang=${lang}` : ''}`, { responseType: 'blob' })

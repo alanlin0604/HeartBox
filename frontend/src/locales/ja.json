@@ -804,5 +804,13 @@
   "guide.settingsDesc": "プロフィール管理、パスワード変更、フォントサイズ調整、データエクスポート、アカウント削除を行えます。",
   "chat.deleteConversation": "削除",
   "chat.deleteConfirm": "この会話を削除してもよろしいですか？すべてのメッセージが完全に削除されます。",
-  "chat.deleted": "会話を削除しました"
+  "chat.deleted": "会話を削除しました",
+  "notification.type.assessmentShare": "評価の共有",
+  "notification.assessmentShare.from": "{name} が {type} 評価を共有しました",
+  "notification.booking.userCancelled": "{username} が予約をキャンセルしました",
+  "share.assessmentsTab": "受信した評価",
+  "share.assessmentsTitle": "受信した評価",
+  "share.noAssessments": "共有された評価はまだありません",
+  "share.noAssessmentsDesc": "ユーザーから共有された評価結果がここに表示されます。",
+  "share.assessmentDate": "評価日"
 }

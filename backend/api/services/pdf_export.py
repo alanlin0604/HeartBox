@@ -265,7 +265,16 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
     if not notes:
         story.append(Paragraph(labels['no_notes'], styles['CJKBody']))
 
-    doc.build(story)
+    try:
+        doc.build(story)
+    except Exception:
+        # Retry without image attachments if build fails
+        story_no_img = [s for s in story if not isinstance(s, Image)]
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4,
+                                leftMargin=20*mm, rightMargin=20*mm,
+                                topMargin=20*mm, bottomMargin=20*mm)
+        doc.build(story_no_img)
     buf.seek(0)
     return buf
 

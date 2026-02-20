@@ -10,6 +10,7 @@ import {
   deleteConversation,
 } from '../api/counselors'
 import { getSharedNotes } from '../api/notes'
+import { getSharedAssessments } from '../api/wellness'
 import { getBookings, bookingAction, cancelBooking } from '../api/schedule'
 import { useLang } from '../context/LanguageContext'
 import SkeletonCard from '../components/SkeletonCard'
@@ -50,6 +51,9 @@ export default function CounselorListPage() {
   // Shared notes received
   const [sharedNotes, setSharedNotes] = useState([])
 
+  // Shared assessments received
+  const [sharedAssessments, setSharedAssessments] = useState([])
+
   // Apply form state
   const [licenseNumber, setLicenseNumber] = useState('')
   const [specialty, setSpecialty] = useState('')
@@ -65,6 +69,9 @@ export default function CounselorListPage() {
   // Delete conversation state
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
   const [deletingConv, setDeletingConv] = useState(false)
+
+  // Expanded shared note
+  const [expandedNoteId, setExpandedNoteId] = useState(null)
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState(null) // { x, y, type, id }
@@ -95,7 +102,7 @@ export default function CounselorListPage() {
   // Sync tab state with URL search params
   useEffect(() => {
     if (location.state?.tab) {
-      const tabMap = { bookings: 'bookings', received: 'shared' }
+      const tabMap = { bookings: 'bookings', received: 'shared', assessments: 'assessments' }
       const newTab = tabMap[location.state.tab] || location.state.tab
       setTab(newTab)
       setSearchParams({ tab: newTab }, { replace: true })
@@ -133,9 +140,13 @@ export default function CounselorListPage() {
         setEditIntroduction(profileRes.data.introduction || '')
         setPricingRate(profileRes.data.hourly_rate || '')
         setPricingCurrency(profileRes.data.currency || 'TWD')
-        // If counselor, load shared notes
-        const sharedRes = await getSharedNotes()
+        // If counselor, load shared notes and assessments
+        const [sharedRes, sharedAssRes] = await Promise.all([
+          getSharedNotes(),
+          getSharedAssessments(),
+        ])
         setSharedNotes(sharedRes.data.results || sharedRes.data)
+        setSharedAssessments(sharedAssRes.data.results || sharedAssRes.data)
       } catch {
         // User is not a counselor — that's fine
       }
@@ -330,6 +341,16 @@ export default function CounselorListPage() {
             }`}
           >
             {t('share.receivedTab')} {sharedNotes.length > 0 && `(${sharedNotes.length})`}
+          </button>
+        )}
+        {isCounselor && (
+          <button
+            onClick={() => setTab('assessments')}
+            className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
+              tab === 'assessments' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+            }`}
+          >
+            {t('share.assessmentsTab')} {sharedAssessments.length > 0 && `(${sharedAssessments.length})`}
           </button>
         )}
       </div>
@@ -565,21 +586,49 @@ export default function CounselorListPage() {
           ) : (
             <div className="space-y-3">
               {sharedNotes.map((sn) => (
-                <div key={sn.id} className="glass-card p-4 space-y-2">
+                <div
+                  key={sn.id}
+                  className="glass-card p-4 space-y-2 cursor-pointer hover:border-purple-500/30 transition-all"
+                  onClick={() => setExpandedNoteId(expandedNoteId === sn.id ? null : sn.id)}
+                >
                   <div className="flex items-center justify-between">
                     <span className="font-medium">
                       {sn.author || t('share.anonymousUser')}
                     </span>
-                    <span className="text-xs opacity-40">
-                      {new Date(sn.shared_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
-                        timeZone: TZ_MAP[lang] || 'Asia/Taipei',
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs opacity-40">
+                        {new Date(sn.shared_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
+                          timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                      <span className="text-xs opacity-40">{expandedNoteId === sn.id ? '▲' : '▼'}</span>
+                    </div>
                   </div>
-                  <p className="text-sm opacity-80">{sn.note_preview}</p>
+                  {expandedNoteId === sn.id ? (
+                    <>
+                      <p className="text-sm opacity-80 whitespace-pre-wrap">{sn.note_content || sn.note_preview}</p>
+                      {sn.note_tags?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {sn.note_tags.map((tag) => (
+                            <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {sn.note_ai_feedback && (
+                        <div className="glass-card p-3 border-l-4 border-purple-500/50 mt-2">
+                          <p className="text-xs font-semibold text-purple-400 mb-1">{t('noteDetail.aiFeedback')}</p>
+                          <p className="text-xs opacity-70 whitespace-pre-wrap">{sn.note_ai_feedback}</p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm opacity-80">{sn.note_preview}</p>
+                  )}
                   <div className="flex items-center gap-3 text-xs opacity-60">
                     {sn.sentiment_score != null && (
                       <span>{t('dashboard.avgSentiment')}: {sn.sentiment_score?.toFixed(2)}</span>
@@ -591,6 +640,62 @@ export default function CounselorListPage() {
                       <span className="text-purple-500">{t('share.anonymousLabel')}</span>
                     )}
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Shared Assessments Tab (counselors only) */}
+      {tab === 'assessments' && isCounselor && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">{t('share.assessmentsTitle')}</h2>
+          {sharedAssessments.length === 0 ? (
+            <EmptyState
+              title={t('share.noAssessments')}
+              description={t('share.noAssessmentsDesc')}
+              actionText={t('schedule.tab')}
+              onAction={() => setTab('schedule')}
+            />
+          ) : (
+            <div className="space-y-3">
+              {sharedAssessments.map((sa) => (
+                <div key={sa.id} className="glass-card p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{sa.username}</span>
+                    <span className="text-xs opacity-40">
+                      {new Date(sa.shared_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
+                        timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs px-2 py-1 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 font-medium">
+                      {(sa.assessment_type || '').toUpperCase()}
+                    </span>
+                    <span className="text-lg font-bold">{sa.total_score}</span>
+                  </div>
+                  {sa.responses && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {sa.responses.map((r, i) => (
+                        <span key={i} className={`text-xs w-6 h-6 rounded-full flex items-center justify-center font-medium ${
+                          r === 0 ? 'bg-green-500/20 text-green-400' :
+                          r === 1 ? 'bg-yellow-500/20 text-yellow-400' :
+                          r === 2 ? 'bg-orange-500/20 text-orange-400' :
+                          'bg-red-500/20 text-red-400'
+                        }`}>
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs opacity-50">
+                    {t('share.assessmentDate')}: {new Date(sa.assessment_date).toLocaleDateString(LOCALE_MAP[lang] || lang)}
+                  </p>
                 </div>
               ))}
             </div>

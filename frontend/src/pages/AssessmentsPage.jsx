@@ -113,7 +113,7 @@ export default function AssessmentsPage() {
     setSharingId(counselorId)
     try {
       await shareAssessment(assessmentId, counselorId)
-      toast?.success(t('assessment.shared') || 'Shared successfully')
+      toast?.success(t('assessment.shared'))
       setShareModal(null)
     } catch {
       toast?.error(t('common.operationFailed'))
@@ -170,7 +170,7 @@ export default function AssessmentsPage() {
               onClick={() => openShareModal(result.id)}
               className="btn-secondary text-xs"
             >
-              {t('assessment.shareToCounselor') || 'Share'}
+              {t('assessment.shareToCounselor')}
             </button>
           </div>
           <p className="text-xs opacity-60 mt-2">{t('assessment.disclaimer')}</p>
@@ -221,7 +221,7 @@ export default function AssessmentsPage() {
       {/* History list with share buttons */}
       {history.length > 0 && (
         <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4">{t('assessment.pastResults') || 'Past Results'}</h2>
+          <h2 className="text-lg font-semibold mb-4">{t('assessment.pastResults')}</h2>
           <div className="space-y-2">
             {history.map((item) => (
               <div key={item.id} className="glass-card p-3 flex items-center justify-between text-sm">
@@ -237,7 +237,7 @@ export default function AssessmentsPage() {
                   onClick={() => openShareModal(item.id)}
                   className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors cursor-pointer"
                 >
-                  {t('assessment.shareToCounselor') || 'Share'}
+                  {t('assessment.shareToCounselor')}
                 </button>
               </div>
             ))}
@@ -247,11 +247,11 @@ export default function AssessmentsPage() {
 
       {/* Share Modal */}
       {shareModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="glass p-6 max-w-sm w-full space-y-4 rounded-2xl">
-            <h3 className="text-lg font-semibold">{t('assessment.selectCounselor') || 'Select Counselor'}</h3>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="p-6 max-w-sm w-full space-y-4 rounded-2xl border border-[var(--card-border)] shadow-xl" style={{ background: 'var(--popup-bg)' }}>
+            <h3 className="text-lg font-semibold">{t('assessment.selectCounselor')}</h3>
             {counselors.length === 0 ? (
-              <p className="text-sm opacity-60">{t('counselor.noApproved') || 'No counselors available'}</p>
+              <p className="text-sm opacity-60">{t('counselor.noApproved')}</p>
             ) : (
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {counselors.map((c) => (

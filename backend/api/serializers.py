@@ -256,21 +256,29 @@ class FeedbackSerializer(serializers.ModelSerializer):
 
 class SharedNoteSerializer(serializers.ModelSerializer):
     note_preview = serializers.CharField(source='note.content_preview', read_only=True)
+    note_content = serializers.CharField(source='note.search_text', read_only=True)
     author = serializers.SerializerMethodField()
     sentiment_score = serializers.FloatField(source='note.sentiment_score', read_only=True)
     stress_index = serializers.IntegerField(source='note.stress_index', read_only=True)
     note_created_at = serializers.DateTimeField(source='note.created_at', read_only=True)
+    note_tags = serializers.SerializerMethodField()
+    note_ai_feedback = serializers.CharField(source='note.ai_feedback', read_only=True)
 
     class Meta:
         model = SharedNote
-        fields = ('id', 'note', 'author', 'note_preview', 'sentiment_score',
-                  'stress_index', 'is_anonymous', 'shared_at', 'note_created_at')
+        fields = ('id', 'note', 'author', 'note_preview', 'note_content',
+                  'sentiment_score', 'stress_index', 'is_anonymous', 'shared_at',
+                  'note_created_at', 'note_tags', 'note_ai_feedback')
         read_only_fields = fields
 
     def get_author(self, obj):
         if obj.is_anonymous:
             return None
         return obj.note.user.username
+
+    def get_note_tags(self, obj):
+        meta = obj.note.metadata or {}
+        return meta.get('tags', [])
 
 
 # ===== AI Chat =====

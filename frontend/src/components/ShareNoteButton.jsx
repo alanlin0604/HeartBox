@@ -49,8 +49,8 @@ export default function ShareNoteButton({ noteId }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="glass rounded-2xl p-6 max-w-sm w-full space-y-4" role="dialog" aria-modal="true" aria-labelledby="share-modal-title">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="rounded-2xl p-6 max-w-sm w-full space-y-4 border border-[var(--card-border)] shadow-xl" role="dialog" aria-modal="true" aria-labelledby="share-modal-title" style={{ background: 'var(--popup-bg)' }}>
         <div className="flex justify-between items-center">
           <h3 id="share-modal-title" className="font-semibold">{t('share.title')}</h3>
           <button onClick={() => setOpen(false)} className="opacity-60 hover:opacity-100 cursor-pointer text-xl">

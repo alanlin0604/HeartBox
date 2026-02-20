@@ -40,7 +40,7 @@ function weekInputToDate(weekStr) {
 }
 
 export default function WeeklySummaryPage() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const toast = useToast()
   const [summaries, setSummaries] = useState([])
   const [selectedWeek, setSelectedWeek] = useState(getMonday(new Date()))
@@ -165,7 +165,7 @@ export default function WeeklySummaryPage() {
           <button
             onClick={async () => {
               try {
-                const res = await exportWeeklySummaryPDF(detail.week_start)
+                const res = await exportWeeklySummaryPDF(detail.week_start, lang)
                 const url = URL.createObjectURL(res.data)
                 const a = document.createElement('a')
                 a.href = url
@@ -178,7 +178,7 @@ export default function WeeklySummaryPage() {
             }}
             className="btn-secondary text-sm"
           >
-            {t('weeklySummary.exportPDF') || 'Export PDF'}
+            {t('weeklySummary.exportPDF')}
           </button>
         </div>
       )}

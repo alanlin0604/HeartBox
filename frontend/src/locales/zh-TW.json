@@ -804,5 +804,13 @@
   "guide.settingsDesc": "管理個人資料、修改密碼、調整字體大小、匯出資料或刪除帳號。",
   "chat.deleteConversation": "刪除對話",
   "chat.deleteConfirm": "確定要刪除這個對話嗎？所有訊息將被永久刪除。",
-  "chat.deleted": "對話已刪除"
+  "chat.deleted": "對話已刪除",
+  "notification.type.assessmentShare": "問卷分享",
+  "notification.assessmentShare.from": "{name} 分享了 {type} 評估給您",
+  "notification.booking.userCancelled": "{username} 取消了預約",
+  "share.assessmentsTab": "收到的評估",
+  "share.assessmentsTitle": "收到的問卷評估",
+  "share.noAssessments": "尚未收到任何評估",
+  "share.noAssessmentsDesc": "使用者分享的評估結果會顯示在這裡。",
+  "share.assessmentDate": "評估日期"
 }
