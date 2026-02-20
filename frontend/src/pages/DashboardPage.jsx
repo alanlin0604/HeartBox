@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   ScatterChart, Scatter, BarChart, Bar, Legend,
 } from 'recharts'
 import { getAnalytics } from '../api/analytics'
-import { getCourses } from '../api/wellness'
 import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
@@ -14,57 +13,6 @@ import MoodCalendar from '../components/MoodCalendar'
 import YearInPixels from '../components/YearInPixels'
 import StressRadarChart from '../components/StressRadarChart'
 import EmptyState from '../components/EmptyState'
-
-function downloadChartAsPNG(containerRef, filename = 'chart.png') {
-  const svg = containerRef.current?.querySelector('svg')
-  if (!svg) return
-  const clone = svg.cloneNode(true)
-  // Inline all computed styles so the exported image renders correctly
-  const original = svg.querySelectorAll('*')
-  const cloned = clone.querySelectorAll('*')
-  for (let i = 0; i < original.length; i++) {
-    const computed = window.getComputedStyle(original[i])
-    const style = cloned[i].style
-    for (let j = 0; j < computed.length; j++) {
-      const prop = computed[j]
-      style.setProperty(prop, computed.getPropertyValue(prop))
-    }
-  }
-  // Set explicit dimensions on the SVG
-  const { width, height } = svg.getBoundingClientRect()
-  clone.setAttribute('width', width)
-  clone.setAttribute('height', height)
-  const svgData = new XMLSerializer().serializeToString(clone)
-  const canvas = document.createElement('canvas')
-  const scale = 2
-  canvas.width = width * scale
-  canvas.height = height * scale
-  const ctx = canvas.getContext('2d')
-  ctx.scale(scale, scale)
-  ctx.fillStyle = '#1e1b4b'
-  ctx.fillRect(0, 0, width, height)
-  const img = new Image()
-  img.onload = () => {
-    ctx.drawImage(img, 0, 0, width, height)
-    const a = document.createElement('a')
-    a.download = filename
-    a.href = canvas.toDataURL('image/png')
-    a.click()
-  }
-  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)))
-}
-
-function downloadDataAsCSV(data, columns, filename = 'data.csv') {
-  const header = columns.map(c => c.label).join(',')
-  const rows = data.map(row => columns.map(c => row[c.key] ?? '').join(','))
-  const csv = [header, ...rows].join('\n')
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
-  const a = document.createElement('a')
-  a.download = filename
-  a.href = URL.createObjectURL(blob)
-  a.click()
-  URL.revokeObjectURL(a.href)
-}
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -76,31 +24,8 @@ export default function DashboardPage() {
   const [error, setError] = useState(false)
   const [period, setPeriod] = useState('week')
   const [lookback, setLookback] = useState(30)
-  const [learningStats, setLearningStats] = useState(null)
-  const trendsRef = useRef(null)
-  const tagsRef = useRef(null)
 
   useEffect(() => { document.title = `${t('nav.dashboard')} — ${t('app.name')}` }, [t])
-
-  useEffect(() => {
-    getCourses()
-      .then(res => {
-        const courses = res.data?.results || res.data || []
-        const totalCourses = courses.length
-        let startedCourses = 0
-        let completedLessons = 0
-        let totalLessons = 0
-        courses.forEach(c => {
-          const lessons = c.total_lessons || c.lessons_count || 0
-          const completed = c.completed_lessons || 0
-          totalLessons += lessons
-          completedLessons += completed
-          if (completed > 0) startedCourses++
-        })
-        setLearningStats({ totalCourses, startedCourses, completedLessons, totalLessons })
-      })
-      .catch(() => {})
-  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -199,33 +124,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Learning Progress */}
-      {learningStats && learningStats.totalCourses > 0 && (
-        <button
-          onClick={() => navigate('/learn')}
-          className="glass p-4 w-full text-left flex items-center gap-4 hover:bg-purple-500/5 transition-colors cursor-pointer"
-        >
-          <span className="text-2xl">📚</span>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm">{t('dashboard.learningProgress')}</h3>
-            <p className="text-xs opacity-60 mt-0.5">
-              {t('dashboard.coursesStarted', { started: learningStats.startedCourses, total: learningStats.totalCourses })}
-              {' · '}
-              {t('dashboard.lessonsCompleted', { completed: learningStats.completedLessons, total: learningStats.totalLessons })}
-            </p>
-            {learningStats.totalLessons > 0 && (
-              <div className="mt-2 w-full h-2 rounded-full bg-[var(--stress-bar-bg)]">
-                <div
-                  className="h-2 rounded-full bg-purple-500 transition-all"
-                  style={{ width: `${Math.round((learningStats.completedLessons / learningStats.totalLessons) * 100)}%` }}
-                />
-              </div>
-            )}
-          </div>
-          <span className="text-xs text-purple-400 font-medium whitespace-nowrap">{t('dashboard.goLearn')}</span>
-        </button>
-      )}
-
       {/* Controls */}
       <div className="glass p-4 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
@@ -254,31 +152,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Mood Trends */}
-      <div className="glass p-6" ref={trendsRef}>
+      <div className="glass p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">{t('dashboard.moodTrends')}</h2>
-          {trends.length > 0 && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => downloadChartAsPNG(trendsRef, 'mood_trends.png')}
-                className="text-xs opacity-50 hover:opacity-100 transition-opacity px-2 py-1 rounded border border-[var(--card-border)]"
-                title="PNG"
-              >
-                PNG
-              </button>
-              <button
-                onClick={() => downloadDataAsCSV(trends, [
-                  { key: 'name', label: 'Period' },
-                  { key: 'avg_sentiment', label: 'Avg Sentiment' },
-                  { key: 'avg_stress', label: 'Avg Stress' },
-                ], 'mood_trends.csv')}
-                className="text-xs opacity-50 hover:opacity-100 transition-opacity px-2 py-1 rounded border border-[var(--card-border)]"
-                title="CSV"
-              >
-                CSV
-              </button>
-            </div>
-          )}
         </div>
         {trends.length === 0 ? (
           <EmptyState
@@ -344,30 +220,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Frequent Tags */}
-      <div className="glass p-6" ref={tagsRef}>
+      <div className="glass p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">{t('dashboard.frequentTags')}</h2>
-          {tags.length > 0 && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => downloadChartAsPNG(tagsRef, 'frequent_tags.png')}
-                className="text-xs opacity-50 hover:opacity-100 transition-opacity px-2 py-1 rounded border border-[var(--card-border)]"
-                title="PNG"
-              >
-                PNG
-              </button>
-              <button
-                onClick={() => downloadDataAsCSV(tags, [
-                  { key: 'name', label: 'Tag' },
-                  { key: 'count', label: 'Count' },
-                ], 'frequent_tags.csv')}
-                className="text-xs opacity-50 hover:opacity-100 transition-opacity px-2 py-1 rounded border border-[var(--card-border)]"
-                title="CSV"
-              >
-                CSV
-              </button>
-            </div>
-          )}
         </div>
         {tags.length === 0 ? (
           <EmptyState

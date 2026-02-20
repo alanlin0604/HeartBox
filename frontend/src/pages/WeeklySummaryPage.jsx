@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getWeeklySummary, getWeeklySummaryList } from '../api/wellness'
+import { getWeeklySummary, getWeeklySummaryList, exportWeeklySummaryPDF } from '../api/wellness'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -10,6 +10,33 @@ function getMonday(date) {
   const diff = d.getDate() - day + (day === 0 ? -6 : 1)
   d.setDate(diff)
   return d.toISOString().slice(0, 10)
+}
+
+function dateToWeekInput(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00')
+  // ISO week number: find Thursday of the week, then calculate week number
+  const thu = new Date(d)
+  thu.setDate(d.getDate() + (4 - ((d.getDay() + 6) % 7 + 1)))
+  const yearStart = new Date(thu.getFullYear(), 0, 1)
+  const weekNum = Math.ceil(((thu - yearStart) / 86400000 + 1) / 7)
+  return `${thu.getFullYear()}-W${String(weekNum).padStart(2, '0')}`
+}
+
+function weekInputToDate(weekStr) {
+  // "YYYY-Wnn" → Monday date string
+  const [yearStr, weekPart] = weekStr.split('-W')
+  const year = Number(yearStr)
+  const week = Number(weekPart)
+  // Jan 4 is always in ISO week 1
+  const jan4 = new Date(year, 0, 4)
+  const dayOfWeek = jan4.getDay() || 7 // Monday=1 ... Sunday=7
+  // Monday of week 1
+  const week1Monday = new Date(jan4)
+  week1Monday.setDate(jan4.getDate() - dayOfWeek + 1)
+  // Monday of the target week
+  const target = new Date(week1Monday)
+  target.setDate(week1Monday.getDate() + (week - 1) * 7)
+  return target.toISOString().slice(0, 10)
 }
 
 export default function WeeklySummaryPage() {
@@ -66,6 +93,9 @@ export default function WeeklySummaryPage() {
     }
   }
 
+  const weekInputValue = dateToWeekInput(selectedWeek)
+  const currentWeekValue = dateToWeekInput(getMonday(new Date()))
+
   return (
     <div className="space-y-6 mt-4 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold">{t('nav.weeklySummary')}</h1>
@@ -73,10 +103,14 @@ export default function WeeklySummaryPage() {
       {/* Generate new */}
       <div className="glass p-4 flex flex-wrap items-center gap-3">
         <input
-          type="date"
-          value={selectedWeek}
-          onChange={(e) => setSelectedWeek(getMonday(new Date(e.target.value)))}
-          max={new Date().toISOString().slice(0, 10)}
+          type="week"
+          value={weekInputValue}
+          onChange={(e) => {
+            if (e.target.value) {
+              setSelectedWeek(weekInputToDate(e.target.value))
+            }
+          }}
+          max={currentWeekValue}
           className="glass-input w-auto"
         />
         <button onClick={handleGenerate} disabled={loading} className="btn-primary text-sm">
@@ -127,6 +161,25 @@ export default function WeeklySummaryPage() {
               <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-80">{detail.ai_summary}</p>
             </div>
           )}
+
+          <button
+            onClick={async () => {
+              try {
+                const res = await exportWeeklySummaryPDF(detail.week_start)
+                const url = URL.createObjectURL(res.data)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `weekly_summary_${detail.week_start}.pdf`
+                a.click()
+                URL.revokeObjectURL(url)
+              } catch {
+                toast?.error(t('common.operationFailed'))
+              }
+            }}
+            className="btn-secondary text-sm"
+          >
+            {t('weeklySummary.exportPDF') || 'Export PDF'}
+          </button>
         </div>
       )}
 

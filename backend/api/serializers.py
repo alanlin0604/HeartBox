@@ -4,9 +4,9 @@ from rest_framework import serializers
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, Course, CounselorProfile, Feedback, Message, MoodNote,
-    NoteAttachment, Notification, PsychoArticle, SelfAssessment, SharedNote,
-    TherapistReport, TimeSlot, UserAchievement, UserLessonProgress, WeeklySummary,
-    WellnessSession,
+    NoteAttachment, Notification, PsychoArticle, SelfAssessment, SharedAssessment,
+    SharedNote, TherapistReport, TimeSlot, UserAchievement, UserLessonProgress,
+    WeeklySummary, WellnessSession,
 )
 
 User = get_user_model()
@@ -340,6 +340,20 @@ class SelfAssessmentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['total_score'] = sum(validated_data.get('responses', []))
         return super().create(validated_data)
+
+
+class SharedAssessmentSerializer(serializers.ModelSerializer):
+    assessment_type = serializers.CharField(source='assessment.assessment_type', read_only=True)
+    responses = serializers.JSONField(source='assessment.responses', read_only=True)
+    total_score = serializers.IntegerField(source='assessment.total_score', read_only=True)
+    assessment_date = serializers.DateTimeField(source='assessment.created_at', read_only=True)
+    username = serializers.CharField(source='assessment.user.username', read_only=True)
+
+    class Meta:
+        model = SharedAssessment
+        fields = ('id', 'assessment', 'assessment_type', 'responses', 'total_score',
+                  'assessment_date', 'username', 'shared_at')
+        read_only_fields = fields
 
 
 class WeeklySummarySerializer(serializers.ModelSerializer):

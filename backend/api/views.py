@@ -31,9 +31,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, Course, CounselorProfile, Feedback, Message, MoodNote,
-    NoteAttachment, Notification, PsychoArticle, SelfAssessment, SharedNote,
-    TherapistReport, TimeSlot, UserAchievement, UserLessonProgress, WeeklySummary,
-    WellnessSession,
+    NoteAttachment, Notification, PsychoArticle, SelfAssessment, SharedAssessment,
+    SharedNote, TherapistReport, TimeSlot, UserAchievement, UserLessonProgress,
+    WeeklySummary, WellnessSession,
 )
 from .serializers import (
     AIChatMessageSerializer,
@@ -54,6 +54,7 @@ from .serializers import (
     NotificationSerializer,
     PsychoArticleSerializer,
     SelfAssessmentSerializer,
+    SharedAssessmentSerializer,
     SharedNoteSerializer,
     TherapistReportPublicSerializer,
     TherapistReportSerializer,
@@ -71,7 +72,7 @@ from .services.analytics import (
 )
 from .services.alerts import check_mood_alerts
 from .services.audit import log_action
-from .services.pdf_export import generate_notes_pdf
+from .services.pdf_export import generate_notes_pdf, generate_weekly_summary_pdf
 from .services.search import search_notes
 from .throttles import (
     AIChatThrottle, BookingThrottle, DeleteAccountThrottle, ExportThrottle,
@@ -1160,6 +1161,99 @@ class BookingActionView(APIView):
         return Response(BookingSerializer(booking).data)
 
 
+class BookingUserCancelView(APIView):
+    """Allow a user to cancel their own pending or confirmed booking."""
+
+    def post(self, request, pk):
+        try:
+            booking = Booking.objects.get(pk=pk, user=request.user)
+        except Booking.DoesNotExist:
+            return Response({'error': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if booking.status not in ('pending', 'confirmed'):
+            return Response(
+                {'error': 'Only pending or confirmed bookings can be cancelled.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        booking.status = 'cancelled'
+        booking.save(update_fields=['status'])
+
+        # Notify counselor
+        notif = Notification.objects.create(
+            user=booking.counselor,
+            type='booking',
+            title='Booking cancelled',
+            message=f'{request.user.username} cancelled their booking.',
+            data={
+                'booking_id': booking.id,
+                'action': 'cancelled',
+                'username': request.user.username,
+            },
+        )
+        _push_ws_notification(booking.counselor_id, notif)
+
+        return Response(BookingSerializer(booking).data)
+
+
+# ===== Share Assessment Views =====
+
+class ShareAssessmentView(APIView):
+    """Share a self-assessment result with a counselor."""
+
+    def post(self, request, pk):
+        try:
+            assessment = SelfAssessment.objects.get(pk=pk, user=request.user)
+        except SelfAssessment.DoesNotExist:
+            return Response({'error': 'Assessment not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        counselor_id = request.data.get('counselor_id')
+        if not counselor_id:
+            return Response({'error': 'counselor_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify target is an approved counselor
+        try:
+            profile = CounselorProfile.objects.get(id=counselor_id, status='approved')
+        except CounselorProfile.DoesNotExist:
+            try:
+                profile = CounselorProfile.objects.get(user_id=counselor_id, status='approved')
+            except CounselorProfile.DoesNotExist:
+                return Response({'error': 'Counselor not found or not approved.'}, status=status.HTTP_404_NOT_FOUND)
+
+        shared, created = SharedAssessment.objects.get_or_create(
+            assessment=assessment,
+            shared_with=profile.user,
+        )
+        if not created:
+            return Response({'detail': 'Already shared with this counselor.'}, status=status.HTTP_200_OK)
+
+        # Notify counselor
+        notif = Notification.objects.create(
+            user=profile.user,
+            type='system',
+            title='Assessment shared',
+            message=f'{request.user.username} shared a {assessment.assessment_type.upper()} assessment with you.',
+            data={
+                'assessment_id': assessment.id,
+                'assessment_type': assessment.assessment_type,
+                'username': request.user.username,
+            },
+        )
+        _push_ws_notification(profile.user_id, notif)
+
+        return Response(SharedAssessmentSerializer(shared).data, status=status.HTTP_201_CREATED)
+
+
+class SharedAssessmentsReceivedView(generics.ListAPIView):
+    """Counselor endpoint to list assessments shared with them."""
+    serializer_class = SharedAssessmentSerializer
+
+    def get_queryset(self):
+        return SharedAssessment.objects.filter(
+            shared_with=self.request.user,
+        ).select_related('assessment', 'assessment__user')
+
+
 # ===== Share Views =====
 
 class ShareNoteView(APIView):
@@ -1660,70 +1754,103 @@ class WeeklySummaryView(APIView):
 
         # Try to find existing
         summary = WeeklySummary.objects.filter(user=request.user, week_start=week_start).first()
-        if summary:
-            return Response(WeeklySummarySerializer(summary).data)
 
-        # Generate new summary
-        week_end = week_start + timedelta(days=6)
-        notes = MoodNote.objects.filter(
-            user=request.user,
-            is_deleted=False,
-            created_at__date__gte=week_start,
-            created_at__date__lte=week_end,
-        )
-        note_count = notes.count()
-        if note_count == 0:
-            return Response({'error': 'No notes found for this week.'}, status=status.HTTP_404_NOT_FOUND)
+        if not summary:
+            # Generate new summary
+            week_end = week_start + timedelta(days=6)
+            notes = MoodNote.objects.filter(
+                user=request.user,
+                is_deleted=False,
+                created_at__date__gte=week_start,
+                created_at__date__lte=week_end,
+            )
+            note_count = notes.count()
+            if note_count == 0:
+                return Response({'error': 'No notes found for this week.'}, status=status.HTTP_404_NOT_FOUND)
 
-        agg = notes.aggregate(avg_s=Avg('sentiment_score'), avg_st=Avg('stress_index'))
+            agg = notes.aggregate(avg_s=Avg('sentiment_score'), avg_st=Avg('stress_index'))
 
-        # Count activities
-        activity_counts = {}
-        for note in notes.values('metadata'):
-            meta = note.get('metadata') or {}
-            for act in meta.get('activities', []):
-                activity_counts[act] = activity_counts.get(act, 0) + 1
-        top_activities = sorted(
-            [{'name': k, 'count': v} for k, v in activity_counts.items()],
-            key=lambda x: x['count'], reverse=True,
-        )[:5]
+            # Count activities
+            activity_counts = {}
+            for note in notes.values('metadata'):
+                meta = note.get('metadata') or {}
+                for act in meta.get('activities', []):
+                    activity_counts[act] = activity_counts.get(act, 0) + 1
+            top_activities = sorted(
+                [{'name': k, 'count': v} for k, v in activity_counts.items()],
+                key=lambda x: x['count'], reverse=True,
+            )[:5]
 
-        # Generate AI summary
-        ai_summary = ''
-        try:
-            client = _get_openai_client()
-            if client:
-                lang = request.headers.get('Accept-Language', 'zh-TW')
-                lang_map = {'zh-TW': 'Traditional Chinese', 'en': 'English', 'ja': 'Japanese'}
-                lang_name = lang_map.get(lang, 'Traditional Chinese')
-                resp = client.chat.completions.create(
-                    model='gpt-4o-mini',
-                    messages=[{
-                        'role': 'system',
-                        'content': (
-                            f'Generate a brief weekly mental health summary in {lang_name}. '
-                            f'Data: {note_count} journal entries, avg mood {agg["avg_s"]:.2f} (-1 to 1), '
-                            f'avg stress {agg["avg_st"]:.1f}/10, top activities: {top_activities}. '
-                            f'Give 2-3 observations and 1-2 suggestions. Keep it warm and supportive. Max 200 words.'
-                        ),
-                    }],
-                    max_tokens=300,
-                    temperature=0.7,
-                    timeout=20,
-                )
-                ai_summary = resp.choices[0].message.content.strip()
-        except Exception as e:
-            logger.warning('Weekly summary AI generation failed: %s', e)
+            # Generate AI summary
+            ai_summary = ''
+            try:
+                client = _get_openai_client()
+                if client:
+                    lang = request.headers.get('Accept-Language', 'zh-TW')
+                    lang_map = {'zh-TW': 'Traditional Chinese', 'en': 'English', 'ja': 'Japanese'}
+                    lang_name = lang_map.get(lang, 'Traditional Chinese')
 
-        summary = WeeklySummary.objects.create(
-            user=request.user,
-            week_start=week_start,
-            mood_avg=round(agg['avg_s'], 2) if agg['avg_s'] is not None else None,
-            stress_avg=round(agg['avg_st'], 1) if agg['avg_st'] is not None else None,
-            note_count=note_count,
-            top_activities=top_activities,
-            ai_summary=ai_summary,
-        )
+                    # Collect diary content snippets (use search_text to avoid decryption overhead)
+                    note_previews = list(notes.values_list('search_text', flat=True))
+                    diary_snippets = '\n---\n'.join(
+                        [(t[:200] if t else '') for t in note_previews if t]
+                    )
+
+                    content = (
+                        f'You are a warm, professional mental health assistant. '
+                        f'Generate a weekly mental health summary in {lang_name} based on the following data:\n\n'
+                        f'Period: {week_start} to {week_end}\n'
+                        f'Journal entries: {note_count}\n'
+                        f'Average mood: {agg["avg_s"]:.2f} (-1 to 1 scale)\n'
+                        f'Average stress: {agg["avg_st"]:.1f} (0-10 scale)\n'
+                        f'Top activities: {top_activities}\n\n'
+                        f'--- Diary excerpts ---\n{diary_snippets}\n\n'
+                        f'Based on ALL the above data (diary content, mood, stress, activities), '
+                        f'provide a comprehensive analysis with:\n'
+                        f'1. Key emotional themes and patterns observed this week\n'
+                        f'2. Specific observations tied to diary content\n'
+                        f'3. Personalized suggestions based on what the user wrote\n'
+                        f'Be warm, supportive, and specific (not generic).'
+                    )
+
+                    # Dynamic token limit: base 300 + 100 per diary entry, cap at 1500
+                    max_tok = min(300 + note_count * 100, 1500)
+
+                    resp = client.chat.completions.create(
+                        model='gpt-4o-mini',
+                        messages=[{'role': 'system', 'content': content}],
+                        max_tokens=max_tok,
+                        temperature=0.7,
+                        timeout=30,
+                    )
+                    ai_summary = resp.choices[0].message.content.strip()
+            except Exception as e:
+                logger.warning('Weekly summary AI generation failed: %s', e)
+
+            summary = WeeklySummary.objects.create(
+                user=request.user,
+                week_start=week_start,
+                mood_avg=round(agg['avg_s'], 2) if agg['avg_s'] is not None else None,
+                stress_avg=round(agg['avg_st'], 1) if agg['avg_st'] is not None else None,
+                note_count=note_count,
+                top_activities=top_activities,
+                ai_summary=ai_summary,
+            )
+
+        # Check if PDF format requested
+        if request.query_params.get('format') == 'pdf':
+            week_end = summary.week_start + timedelta(days=6)
+            notes_qs = MoodNote.objects.filter(
+                user=request.user,
+                is_deleted=False,
+                created_at__date__gte=summary.week_start,
+                created_at__date__lte=week_end,
+            ).order_by('created_at')
+            lang = request.headers.get('Accept-Language', 'zh-TW')
+            buf = generate_weekly_summary_pdf(summary, notes_qs, request.user, lang=lang)
+            filename = f'weekly_summary_{summary.week_start}.pdf'
+            return FileResponse(buf, as_attachment=True, filename=filename, content_type='application/pdf')
+
         return Response(WeeklySummarySerializer(summary).data)
 
 

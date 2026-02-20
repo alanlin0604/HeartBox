@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { getAssessments, createAssessment } from '../api/wellness'
+import { getAssessments, createAssessment, shareAssessment } from '../api/wellness'
+import { getCounselors } from '../api/counselors'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
@@ -51,6 +52,9 @@ export default function AssessmentsPage() {
   const [responses, setResponses] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
+  const [shareModal, setShareModal] = useState(null) // assessment id to share
+  const [counselors, setCounselors] = useState([])
+  const [sharingId, setSharingId] = useState(null)
 
   useEffect(() => { document.title = `${t('nav.assessments')} — ${t('app.name')}` }, [t])
 
@@ -93,6 +97,31 @@ export default function AssessmentsPage() {
     }
   }
 
+  const openShareModal = async (assessmentId) => {
+    setShareModal(assessmentId)
+    if (counselors.length === 0) {
+      try {
+        const res = await getCounselors()
+        setCounselors(res.data?.results || res.data || [])
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  const handleShare = async (assessmentId, counselorId) => {
+    setSharingId(counselorId)
+    try {
+      await shareAssessment(assessmentId, counselorId)
+      toast?.success(t('assessment.shared') || 'Shared successfully')
+      setShareModal(null)
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    } finally {
+      setSharingId(null)
+    }
+  }
+
   const gridStroke = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
   const axisStroke = theme === 'dark' ? '#9ca3af' : '#475569'
   const tooltipStyle = {
@@ -129,13 +158,21 @@ export default function AssessmentsPage() {
       {/* Result banner */}
       {result && (
         <div className="glass p-4 border-l-4 border-purple-500/50">
-          <p className="font-semibold">
-            {t('assessment.yourScore')}: <span className={getScoreColor(tab, result.total_score)}>{result.total_score}</span>
-            {' — '}
-            <span className={getScoreColor(tab, result.total_score)}>
-              {getScoreLabel(tab, result.total_score, t)}
-            </span>
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="font-semibold">
+              {t('assessment.yourScore')}: <span className={getScoreColor(tab, result.total_score)}>{result.total_score}</span>
+              {' — '}
+              <span className={getScoreColor(tab, result.total_score)}>
+                {getScoreLabel(tab, result.total_score, t)}
+              </span>
+            </p>
+            <button
+              onClick={() => openShareModal(result.id)}
+              className="btn-secondary text-xs"
+            >
+              {t('assessment.shareToCounselor') || 'Share'}
+            </button>
+          </div>
           <p className="text-xs opacity-60 mt-2">{t('assessment.disclaimer')}</p>
         </div>
       )}
@@ -180,6 +217,65 @@ export default function AssessmentsPage() {
           {submitting ? t('common.loading') : t('assessment.submit')}
         </button>
       </div>
+
+      {/* History list with share buttons */}
+      {history.length > 0 && (
+        <div className="glass p-6">
+          <h2 className="text-lg font-semibold mb-4">{t('assessment.pastResults') || 'Past Results'}</h2>
+          <div className="space-y-2">
+            {history.map((item) => (
+              <div key={item.id} className="glass-card p-3 flex items-center justify-between text-sm">
+                <div>
+                  <span className={`font-semibold ${getScoreColor(tab, item.total_score)}`}>{item.total_score}</span>
+                  <span className="mx-2 opacity-40">—</span>
+                  <span className={getScoreColor(tab, item.total_score)}>{getScoreLabel(tab, item.total_score, t)}</span>
+                  <span className="ml-3 text-xs opacity-50">
+                    {new Date(item.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => openShareModal(item.id)}
+                  className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors cursor-pointer"
+                >
+                  {t('assessment.shareToCounselor') || 'Share'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {shareModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="glass p-6 max-w-sm w-full space-y-4 rounded-2xl">
+            <h3 className="text-lg font-semibold">{t('assessment.selectCounselor') || 'Select Counselor'}</h3>
+            {counselors.length === 0 ? (
+              <p className="text-sm opacity-60">{t('counselor.noApproved') || 'No counselors available'}</p>
+            ) : (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {counselors.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleShare(shareModal, c.id)}
+                    disabled={sharingId === c.id}
+                    className="w-full glass-card p-3 flex items-center justify-between text-sm hover:bg-purple-500/10 transition-colors cursor-pointer"
+                  >
+                    <span className="font-medium">{c.display_name || c.username}</span>
+                    <span className="text-xs opacity-50">{c.specialty}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShareModal(null)}
+              className="btn-secondary text-sm w-full"
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* History chart */}
       {chartData.length > 1 && (

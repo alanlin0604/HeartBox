@@ -10,7 +10,7 @@ import {
   deleteConversation,
 } from '../api/counselors'
 import { getSharedNotes } from '../api/notes'
-import { getBookings, bookingAction } from '../api/schedule'
+import { getBookings, bookingAction, cancelBooking } from '../api/schedule'
 import { useLang } from '../context/LanguageContext'
 import SkeletonCard from '../components/SkeletonCard'
 import BookingPanel from '../components/BookingPanel'
@@ -175,6 +175,16 @@ export default function CounselorListPage() {
   const handleBookingAction = async (bookingId, action) => {
     try {
       const res = await bookingAction(bookingId, action)
+      setBookings((prev) => prev.map((b) => (b.id === bookingId ? res.data : b)))
+      toast?.success(t('booking.actionSuccess'))
+    } catch (err) {
+      toast?.error(err.response?.data?.error || t('booking.actionFailed'))
+    }
+  }
+
+  const handleUserCancel = async (bookingId) => {
+    try {
+      const res = await cancelBooking(bookingId)
       setBookings((prev) => prev.map((b) => (b.id === bookingId ? res.data : b)))
       toast?.success(t('booking.actionSuccess'))
     } catch (err) {
@@ -475,22 +485,32 @@ export default function CounselorListPage() {
                       {BOOKING_STATUS_MAP[b.status] || b.status}
                     </span>
                   </div>
-                  {isCounselor && b.status === 'pending' && (
-                    <div className="flex gap-2">
+                  <div className="flex gap-2">
+                    {isCounselor && b.status === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => handleBookingAction(b.id, 'confirm')}
+                          className="btn-primary text-xs"
+                        >
+                          {t('booking.confirm')}
+                        </button>
+                        <button
+                          onClick={() => handleBookingAction(b.id, 'cancel')}
+                          className="btn-danger text-xs"
+                        >
+                          {t('booking.cancel')}
+                        </button>
+                      </>
+                    )}
+                    {!isCounselor && (b.status === 'pending' || b.status === 'confirmed') && (
                       <button
-                        onClick={() => handleBookingAction(b.id, 'confirm')}
-                        className="btn-primary text-xs"
-                      >
-                        {t('booking.confirm')}
-                      </button>
-                      <button
-                        onClick={() => handleBookingAction(b.id, 'cancel')}
+                        onClick={() => handleUserCancel(b.id)}
                         className="btn-danger text-xs"
                       >
                         {t('booking.cancel')}
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

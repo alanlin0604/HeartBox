@@ -18,6 +18,7 @@ from .views import (
     BookingActionView,
     BookingCreateView,
     BookingListView,
+    BookingUserCancelView,
     CalendarView,
     ConversationCreateView,
     ConversationDeleteView,
@@ -50,6 +51,8 @@ from .views import (
     LogoutOtherDevicesView,
     ResetPasswordView,
     SelfAssessmentListCreateView,
+    ShareAssessmentView,
+    SharedAssessmentsReceivedView,
     ShareNoteView,
     SharedNotesReceivedView,
     TherapistReportCreateView,
@@ -114,6 +117,7 @@ urlpatterns = [
     path('bookings/', BookingListView.as_view(), name='booking-list'),
     path('bookings/create/', BookingCreateView.as_view(), name='booking-create'),
     path('bookings/<int:pk>/action/', BookingActionView.as_view(), name='booking-action'),
+    path('bookings/<int:pk>/cancel/', BookingUserCancelView.as_view(), name='booking-user-cancel'),
     path('counselors/<int:counselor_id>/available/', AvailableSlotsView.as_view(), name='available-slots'),
     # Sharing
     path('notes/<int:note_id>/share/', ShareNoteView.as_view(), name='share-note'),
@@ -129,6 +133,8 @@ urlpatterns = [
     path('daily-prompt/', DailyPromptView.as_view(), name='daily-prompt'),
     # Assessments
     path('assessments/', SelfAssessmentListCreateView.as_view(), name='assessments'),
+    path('assessments/<int:pk>/share/', ShareAssessmentView.as_view(), name='assessment-share'),
+    path('shared-assessments/', SharedAssessmentsReceivedView.as_view(), name='shared-assessments'),
     # Weekly Summary
     path('weekly-summary/', WeeklySummaryView.as_view(), name='weekly-summary'),
     path('weekly-summary/list/', WeeklySummaryListView.as_view(), name='weekly-summary-list'),

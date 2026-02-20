@@ -476,6 +476,27 @@ class SelfAssessment(models.Model):
         return f'{self.user.username} {self.assessment_type} = {self.total_score} ({self.created_at:%Y-%m-%d})'
 
 
+class SharedAssessment(models.Model):
+    assessment = models.ForeignKey(
+        SelfAssessment,
+        on_delete=models.CASCADE,
+        related_name='shares',
+    )
+    shared_with = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='received_assessments',
+    )
+    shared_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['assessment', 'shared_with']
+        ordering = ['-shared_at']
+
+    def __str__(self):
+        return f'Assessment #{self.assessment_id} → {self.shared_with.username}'
+
+
 class WeeklySummary(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

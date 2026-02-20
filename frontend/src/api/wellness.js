@@ -48,3 +48,11 @@ export const getCourseDetail = (id) =>
 
 export const completeLesson = (articleId) =>
   api.post(`/lessons/${articleId}/complete/`)
+
+// Share assessment with counselor
+export const shareAssessment = (assessmentId, counselorId) =>
+  api.post(`/assessments/${assessmentId}/share/`, { counselor_id: counselorId })
+
+// Weekly Summary PDF export
+export const exportWeeklySummaryPDF = (weekStart) =>
+  api.get(`/weekly-summary/?week_start=${weekStart}&format=pdf`, { responseType: 'blob' })

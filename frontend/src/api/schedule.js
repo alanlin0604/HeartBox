@@ -41,3 +41,8 @@ export const bookingAction = (id, action) => {
   invalidate('bookings')
   return api.post(`/bookings/${id}/action/`, { action })
 }
+
+export const cancelBooking = (id) => {
+  invalidate('bookings')
+  return api.post(`/bookings/${id}/cancel/`)
+}

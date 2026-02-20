@@ -1,7 +1,7 @@
 import io
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -264,6 +264,118 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
 
     if not notes:
         story.append(Paragraph(labels['no_notes'], styles['CJKBody']))
+
+    doc.build(story)
+    buf.seek(0)
+    return buf
+
+
+# i18n labels for weekly summary PDF
+WEEKLY_PDF_LABELS = {
+    'zh-TW': {
+        'title': '每週心情報告',
+        'note_count': '日記數',
+        'avg_mood': '平均情緒',
+        'avg_stress': '平均壓力',
+        'top_activities': '熱門活動',
+        'ai_summary': 'AI 智慧摘要',
+        'diary_entries': '本週日記',
+    },
+    'en': {
+        'title': 'Weekly Mood Summary',
+        'note_count': 'Diary Entries',
+        'avg_mood': 'Avg Mood',
+        'avg_stress': 'Avg Stress',
+        'top_activities': 'Top Activities',
+        'ai_summary': 'AI Summary',
+        'diary_entries': 'Diary Entries This Week',
+    },
+    'ja': {
+        'title': '週間気分レポート',
+        'note_count': '日記数',
+        'avg_mood': '平均気分',
+        'avg_stress': '平均ストレス',
+        'top_activities': '人気活動',
+        'ai_summary': 'AIサマリー',
+        'diary_entries': '今週の日記',
+    },
+}
+
+
+def generate_weekly_summary_pdf(summary, notes_qs, user, lang='zh-TW'):
+    """Generate a PDF for a weekly summary including AI analysis and diary entries."""
+    labels = WEEKLY_PDF_LABELS.get(lang, WEEKLY_PDF_LABELS['zh-TW'])
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=20*mm, rightMargin=20*mm,
+                            topMargin=20*mm, bottomMargin=20*mm)
+    styles = _build_styles()
+    story = []
+
+    # Title
+    story.append(Paragraph(labels['title'], styles['CJKTitle']))
+
+    username = user.username if user else ''
+    if username:
+        story.append(Paragraph(username, styles['CJKSubtitle']))
+
+    week_end = summary.week_start + timedelta(days=6)
+    story.append(Paragraph(
+        f'{summary.week_start} ~ {week_end}',
+        styles['CJKSubtitle'],
+    ))
+    story.append(Spacer(1, 6*mm))
+
+    # Summary statistics table
+    mood_str = str(round(summary.mood_avg, 2)) if summary.mood_avg is not None else 'N/A'
+    stress_str = str(round(summary.stress_avg, 1)) if summary.stress_avg is not None else 'N/A'
+
+    summary_data = [
+        [labels['note_count'], labels['avg_mood'], labels['avg_stress']],
+        [str(summary.note_count), mood_str, stress_str],
+    ]
+    summary_table = Table(summary_data, colWidths=[55*mm, 55*mm, 55*mm])
+    summary_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), CJK_FONT),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('FONTSIZE', (0, 1), (-1, 1), 15),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#ede9fe')),
+        ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#f5f3ff')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#c4b5fd')),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(summary_table)
+    story.append(Spacer(1, 6*mm))
+
+    # Top activities
+    if summary.top_activities:
+        story.append(Paragraph(f'<b>{labels["top_activities"]}</b>', styles['CJKHeading']))
+        acts_text = ', '.join(
+            f'{_strip_emoji(a["name"])} ({a["count"]})' for a in summary.top_activities
+        )
+        story.append(Paragraph(acts_text, styles['CJKBody']))
+        story.append(Spacer(1, 4*mm))
+
+    # AI Summary
+    if summary.ai_summary:
+        story.append(Paragraph(f'<b>{labels["ai_summary"]}</b>', styles['CJKHeading']))
+        feedback_parts = _format_ai_feedback(summary.ai_summary, styles['CJKBody'])
+        story.extend(feedback_parts)
+        story.append(Spacer(1, 6*mm))
+
+    # Diary entries
+    notes = list(notes_qs[:100])
+    if notes:
+        story.append(Paragraph(f'<b>{labels["diary_entries"]}</b>', styles['CJKHeading']))
+        story.append(Spacer(1, 2*mm))
+        for note in notes:
+            date_str = note.created_at.strftime('%Y-%m-%d %H:%M')
+            story.append(Paragraph(date_str, styles['CJKSmall']))
+            content = note.content or ''
+            story.append(Paragraph(_escape(content), styles['CJKBody']))
+            story.append(Spacer(1, 3*mm))
 
     doc.build(story)
     buf.seek(0)
