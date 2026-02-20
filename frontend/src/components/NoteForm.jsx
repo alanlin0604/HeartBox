@@ -248,9 +248,10 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
               }}
               className={`text-sm px-3 py-1.5 rounded-full border font-medium transition-colors cursor-pointer ${
                 metadataType === 'gratitude'
-                  ? 'bg-amber-500/30 text-black dark:text-white border-amber-400/50'
-                  : 'bg-amber-500/20 text-black dark:text-white border-amber-400/40 hover:bg-amber-500/30'
+                  ? 'bg-amber-500/30 border-amber-400/50'
+                  : 'bg-amber-500/20 border-amber-400/40 hover:bg-amber-500/30'
               }`}
+              style={{ color: 'var(--text-primary)' }}
             >
               {t(tpl.nameKey)}
             </button>
@@ -264,7 +265,8 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
                     editor.chain().clearContent().setContent(tpl.content).focus('end').run()
                   }
                 }}
-                className="text-sm px-3 py-1.5 rounded-full bg-purple-500/25 text-black dark:text-white border border-purple-400/40 hover:bg-purple-500/35 font-medium transition-colors cursor-pointer pr-7"
+                className="text-sm px-3 py-1.5 rounded-full bg-purple-500/25 border border-purple-400/40 hover:bg-purple-500/35 font-medium transition-colors cursor-pointer pr-7"
+                style={{ color: 'var(--text-primary)' }}
               >
                 {tpl.name}
               </button>
