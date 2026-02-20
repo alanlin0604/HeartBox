@@ -248,8 +248,8 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
               }}
               className={`text-sm px-3 py-1.5 rounded-full border font-medium transition-colors cursor-pointer ${
                 metadataType === 'gratitude'
-                  ? 'bg-amber-500/30 text-white border-amber-400/50'
-                  : 'bg-amber-500/20 text-white border-amber-400/40 hover:bg-amber-500/30'
+                  ? 'bg-amber-500/30 text-black border-amber-400/50'
+                  : 'bg-amber-500/20 text-black border-amber-400/40 hover:bg-amber-500/30'
               }`}
             >
               {t(tpl.nameKey)}
@@ -264,7 +264,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
                     editor.chain().clearContent().setContent(tpl.content).focus('end').run()
                   }
                 }}
-                className="text-sm px-3 py-1.5 rounded-full bg-purple-500/25 text-white border border-purple-400/40 hover:bg-purple-500/35 font-medium transition-colors cursor-pointer pr-7"
+                className="text-sm px-3 py-1.5 rounded-full bg-purple-500/25 text-black border border-purple-400/40 hover:bg-purple-500/35 font-medium transition-colors cursor-pointer pr-7"
               >
                 {tpl.name}
               </button>
