@@ -133,7 +133,7 @@ export default function Layout() {
         </div>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-4 text-base">
+        <div className="hidden md:flex items-center gap-6 text-base">
           {navLinks.map((link) => (
             <NavLink
               key={link.to}
