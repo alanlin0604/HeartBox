@@ -3,13 +3,8 @@ import { NavLink, Outlet, useNavigate, Link, useLocation } from 'react-router-do
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
+import { LANG_OPTIONS } from '../utils/locales'
 import NotificationBell from './NotificationBell'
-
-const LANG_OPTIONS = [
-  { code: 'zh-TW', label: 'ZH' },
-  { code: 'en', label: 'EN' },
-  { code: 'ja', label: 'JA' },
-]
 
 const ROUTE_PRELOADS = {
   '/': () => import('../pages/JournalPage'),
@@ -37,11 +32,17 @@ export default function Layout() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
   const menuRef = useRef(null)
 
-  // Close dropdown on outside click
+  const [moreOpen, setMoreOpen] = useState(false)
+  const moreRef = useRef(null)
+
+  // Close both dropdowns on outside click (single listener)
   useEffect(() => {
     const handler = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setMenuOpen(false)
+      }
+      if (moreRef.current && !moreRef.current.contains(e.target)) {
+        setMoreOpen(false)
       }
     }
     document.addEventListener('mousedown', handler)
@@ -64,20 +65,6 @@ export default function Layout() {
   useEffect(() => {
     const scale = localStorage.getItem('heartbox_font_scale') || '1'
     document.documentElement.style.fontSize = parseFloat(scale) * 16 + 'px'
-  }, [])
-
-  const [moreOpen, setMoreOpen] = useState(false)
-  const moreRef = useRef(null)
-
-  // Close "more" dropdown on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (moreRef.current && !moreRef.current.contains(e.target)) {
-        setMoreOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
   }, [])
 
   const navLinks = [

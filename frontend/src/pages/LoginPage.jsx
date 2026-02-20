@@ -2,14 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
+import { LANG_OPTIONS } from '../utils/locales'
 import PasswordField from '../components/PasswordField'
 import { useToast } from '../context/ToastContext'
-
-const LANG_OPTIONS = [
-  { code: 'zh-TW', label: 'ZH' },
-  { code: 'en', label: 'EN' },
-  { code: 'ja', label: 'JA' },
-]
 
 export default function LoginPage() {
   const { user, login } = useAuth()
@@ -35,7 +30,6 @@ export default function LoginPage() {
     } catch (err) {
       const message = !err.response ? t('common.serverUnreachable') : t('login.failed')
       setError(message)
-      toast?.error(message)
     } finally {
       setLoading(false)
     }

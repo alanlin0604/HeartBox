@@ -85,8 +85,8 @@ class MoodNote(models.Model):
 
     @property
     def content_preview(self) -> str:
-        """Decrypted first 100 chars for list views (HTML stripped)."""
-        full = strip_tags(self.content)
+        """First 100 chars for list views (from pre-stored plaintext, no decryption)."""
+        full = self.search_text
         if len(full) <= 100:
             return full
         return full[:100] + '...'

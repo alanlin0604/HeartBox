@@ -18,6 +18,7 @@ from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.db.models import Prefetch
 import rest_framework.pagination
+import rest_framework.throttling
 from rest_framework import generics, viewsets, permissions, status, filters, exceptions
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -80,6 +81,46 @@ from .throttles import (
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+# Lazy singleton for OpenAI client
+_openai_client = None
+
+
+def _get_openai_client():
+    """Return a shared OpenAI client instance (lazy-initialized)."""
+    global _openai_client
+    if _openai_client is None:
+        from openai import OpenAI
+        from django.conf import settings as django_settings
+        api_key = getattr(django_settings, 'OPENAI_API_KEY', '')
+        if api_key:
+            _openai_client = OpenAI(api_key=api_key)
+    return _openai_client
+
+
+def _push_ws_notification(recipient_id, notif):
+    """Push a notification to a user via WebSocket (fire-and-forget)."""
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'notifications_{recipient_id}',
+            {
+                'type': 'notify',
+                'data': {
+                    'id': notif.id,
+                    'type': notif.type,
+                    'title': notif.title,
+                    'message': notif.message,
+                    'data': notif.data,
+                    'is_read': False,
+                    'created_at': notif.created_at.isoformat(),
+                },
+            },
+        )
+    except Exception as e:
+        logger.debug('Channel layer push failed: %s', e)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -281,8 +322,8 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
             qs = qs.prefetch_related('attachments')
         return qs
 
-    def perform_create(self, serializer):
-        note = serializer.save(user=self.request.user)
+    def _run_ai_analysis(self, note):
+        """Run AI sentiment analysis on a note (graceful degradation)."""
         try:
             from api.services.ai_engine import ai_engine
             plaintext = note.content
@@ -294,15 +335,22 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
                 note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
         except Exception as e:
             logger.warning('AI analysis failed for note %s: %s', note.pk, e)
-        # Invalidate analytics/calendar caches for this user
+
+    def _invalidate_user_cache(self):
+        """Invalidate analytics and calendar caches for the current user."""
+        uid = self.request.user.id
+        now = timezone.now()
         cache.delete_many([
-            k for k in [
-                f'analytics_{self.request.user.id}_week_30',
-                f'analytics_{self.request.user.id}_month_30',
-                f'analytics_{self.request.user.id}_week_7',
-                f'calendar_{self.request.user.id}_{timezone.now().year}_{timezone.now().month}',
-            ]
+            f'analytics_{uid}_week_30',
+            f'analytics_{uid}_month_30',
+            f'analytics_{uid}_week_7',
+            f'calendar_{uid}_{now.year}_{now.month}',
         ])
+
+    def perform_create(self, serializer):
+        note = serializer.save(user=self.request.user)
+        self._run_ai_analysis(note)
+        self._invalidate_user_cache()
         # Auto-check achievements
         try:
             from api.services.achievements import check_achievements
@@ -314,23 +362,8 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         note = serializer.save()
-        try:
-            from api.services.ai_engine import ai_engine
-            plaintext = note.content
-            if plaintext:
-                result = ai_engine.analyze(plaintext)
-                note.sentiment_score = result['sentiment_score']
-                note.stress_index = result['stress_index']
-                note.ai_feedback = result['ai_feedback']
-                note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
-        except Exception as e:
-            logger.warning('AI re-analysis failed for note %s: %s', note.pk, e)
-        cache.delete_many([
-            f'analytics_{self.request.user.id}_week_30',
-            f'analytics_{self.request.user.id}_month_30',
-            f'analytics_{self.request.user.id}_week_7',
-            f'calendar_{self.request.user.id}_{timezone.now().year}_{timezone.now().month}',
-        ])
+        self._run_ai_analysis(note)
+        self._invalidate_user_cache()
 
     def create(self, request, *args, **kwargs):
         self._new_achievements = []
@@ -598,10 +631,15 @@ class ConversationListView(generics.ListAPIView):
         user = self.request.user
         return Conversation.objects.filter(
             Q(user=user) | Q(counselor=user)
-        ).select_related('user', 'counselor').prefetch_related(
+        ).select_related(
+            'user', 'counselor',
+            'user__counselor_profile', 'counselor__counselor_profile',
+        ).prefetch_related(
             Prefetch(
                 'messages',
-                queryset=Message.objects.select_related('sender').order_by('-created_at'),
+                queryset=Message.objects.select_related(
+                    'sender', 'sender__counselor_profile',
+                ).order_by('-created_at'),
             )
         )
 
@@ -719,28 +757,7 @@ class MessageListView(APIView):
             data=notif_data,
         )
 
-        # Push via WebSocket
-        try:
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                f'notifications_{recipient_id}',
-                {
-                    'type': 'notify',
-                    'data': {
-                        'id': notif.id,
-                        'type': notif.type,
-                        'title': notif.title,
-                        'message': notif.message,
-                        'data': notif.data,
-                        'is_read': False,
-                        'created_at': notif.created_at.isoformat(),
-                    },
-                },
-            )
-        except Exception as e:
-            logger.debug('Channel layer push failed: %s', e)
+        _push_ws_notification(recipient_id, notif)
 
         return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
 
@@ -785,14 +802,22 @@ class AdminStatsView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
+        from django.db.models import Count
         today = timezone.now().date()
+        user_stats = User.objects.aggregate(
+            total_users=Count('id'),
+            today_new_users=Count('id', filter=Q(date_joined__date=today)),
+            active_users=Count('id', filter=Q(is_active=True)),
+        )
+        note_stats = MoodNote.objects.aggregate(
+            total_notes=Count('id', filter=Q(is_deleted=False)),
+            today_new_notes=Count('id', filter=Q(created_at__date=today, is_deleted=False)),
+        )
+        pending_counselors = CounselorProfile.objects.filter(status='pending').count()
         return Response({
-            'total_users': User.objects.count(),
-            'total_notes': MoodNote.objects.filter(is_deleted=False).count(),
-            'pending_counselors': CounselorProfile.objects.filter(status='pending').count(),
-            'today_new_users': User.objects.filter(date_joined__date=today).count(),
-            'today_new_notes': MoodNote.objects.filter(created_at__date=today, is_deleted=False).count(),
-            'active_users': User.objects.filter(is_active=True).count(),
+            **user_stats,
+            **note_stats,
+            'pending_counselors': pending_counselors,
         })
 
 
@@ -1093,28 +1118,7 @@ class BookingCreateView(APIView):
             },
         )
 
-        # Push via WebSocket
-        try:
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                f'notifications_{counselor_user_id}',
-                {
-                    'type': 'notify',
-                    'data': {
-                        'id': notif.id,
-                        'type': notif.type,
-                        'title': notif.title,
-                        'message': notif.message,
-                        'data': notif.data,
-                        'is_read': False,
-                        'created_at': notif.created_at.isoformat(),
-                    },
-                },
-            )
-        except Exception as e:
-            logger.debug('Channel layer push failed: %s', e)
+        _push_ws_notification(counselor_user_id, notif)
 
         return Response(BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
 
@@ -1151,28 +1155,7 @@ class BookingActionView(APIView):
             },
         )
 
-        # Push via WebSocket
-        try:
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                f'notifications_{booking.user_id}',
-                {
-                    'type': 'notify',
-                    'data': {
-                        'id': notif.id,
-                        'type': notif.type,
-                        'title': notif.title,
-                        'message': notif.message,
-                        'data': notif.data,
-                        'is_read': False,
-                        'created_at': notif.created_at.isoformat(),
-                    },
-                },
-            )
-        except Exception as e:
-            logger.debug('Channel layer push failed: %s', e)
+        _push_ws_notification(booking.user_id, notif)
 
         return Response(BookingSerializer(booking).data)
 
@@ -1356,7 +1339,20 @@ class AIChatSessionListCreateView(APIView):
     """List all active sessions or create a new one."""
 
     def get(self, request):
-        sessions = AIChatSession.objects.filter(user=request.user, is_active=True)
+        from django.db.models import Count, Subquery, OuterRef
+        from django.db.models.functions import Substr
+        last_msg_subquery = (
+            AIChatMessage.objects.filter(session=OuterRef('pk'))
+            .order_by('-created_at')
+            .values('content')[:1]
+        )
+        sessions = (
+            AIChatSession.objects.filter(user=request.user, is_active=True)
+            .annotate(
+                _message_count=Count('messages'),
+                _last_message_preview=Substr(Subquery(last_msg_subquery), 1, 80),
+            )
+        )
         return Response(AIChatSessionSerializer(sessions, many=True).data)
 
     def post(self, request):
@@ -1379,12 +1375,12 @@ class AIChatSessionDetailView(APIView):
         if before:
             messages = messages.filter(id__lt=before)
         total = messages.count()
-        messages = messages.order_by('-created_at')[:50]
-        msg_list = list(reversed(messages))
+        page = messages.order_by('-created_at')[:50]
+        msg_list = list(reversed(page))
         return Response({
             **AIChatSessionSerializer(session).data,
             'messages': AIChatMessageSerializer(msg_list, many=True).data,
-            'has_more': total > 50,
+            'has_more': total > len(msg_list),
         })
 
     def patch(self, request, session_id):
@@ -1589,11 +1585,8 @@ class DailyPromptView(APIView):
             avg_s = recent['avg_s']
             avg_st = recent['avg_st']
 
-            from openai import OpenAI
-            from django.conf import settings as django_settings
-            api_key = getattr(django_settings, 'OPENAI_API_KEY', '')
-            if api_key:
-                client = OpenAI(api_key=api_key)
+            client = _get_openai_client()
+            if client:
                 lang = request.headers.get('Accept-Language', 'zh-TW')
                 lang_map = {'zh-TW': 'Traditional Chinese', 'en': 'English', 'ja': 'Japanese'}
                 lang_name = lang_map.get(lang, 'Traditional Chinese')
@@ -1698,11 +1691,8 @@ class WeeklySummaryView(APIView):
         # Generate AI summary
         ai_summary = ''
         try:
-            from openai import OpenAI
-            from django.conf import settings as django_settings
-            api_key = getattr(django_settings, 'OPENAI_API_KEY', '')
-            if api_key:
-                client = OpenAI(api_key=api_key)
+            client = _get_openai_client()
+            if client:
                 lang = request.headers.get('Accept-Language', 'zh-TW')
                 lang_map = {'zh-TW': 'Traditional Chinese', 'en': 'English', 'ja': 'Japanese'}
                 lang_name = lang_map.get(lang, 'Traditional Chinese')
@@ -1805,6 +1795,7 @@ class TherapistReportListView(generics.ListAPIView):
 
 class TherapistReportPublicView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [rest_framework.throttling.AnonRateThrottle]
 
     def get(self, request, token):
         try:
@@ -1865,14 +1856,40 @@ class CourseListView(generics.ListAPIView):
     serializer_class = CourseListSerializer
 
     def get_queryset(self):
-        return Course.objects.filter(is_published=True)
+        from django.db.models import Count
+        return Course.objects.filter(is_published=True).annotate(
+            _lesson_count=Count('lessons', filter=Q(lessons__is_published=True)),
+        )
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        completed_ids = set(
+            UserLessonProgress.objects.filter(
+                user=self.request.user, completed_at__isnull=False,
+            ).values_list('article_id', flat=True)
+        )
+        ctx['completed_ids'] = completed_ids
+        return ctx
 
 
 class CourseDetailView(generics.RetrieveAPIView):
     serializer_class = CourseDetailSerializer
 
     def get_queryset(self):
-        return Course.objects.filter(is_published=True)
+        from django.db.models import Count
+        return Course.objects.filter(is_published=True).annotate(
+            _lesson_count=Count('lessons', filter=Q(lessons__is_published=True)),
+        )
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        completed_ids = set(
+            UserLessonProgress.objects.filter(
+                user=self.request.user, completed_at__isnull=False,
+            ).values_list('article_id', flat=True)
+        )
+        ctx['completed_ids'] = completed_ids
+        return ctx
 
 
 class LessonCompleteView(APIView):

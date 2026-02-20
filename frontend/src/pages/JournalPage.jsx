@@ -144,20 +144,17 @@ export default function JournalPage() {
   }, [filters])
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      getAnalytics('week', 30)
-        .then((res) => {
-          setStreak(res.data.current_streak || 0)
-          // Compute weekly average mood from mood_trends
-          const trends = res.data.mood_trends || []
-          if (trends.length > 0) {
-            const sum = trends.reduce((acc, t) => acc + (t.avg_sentiment ?? 0), 0)
-            setWeekAvgMood((sum / trends.length).toFixed(2))
-          }
-        })
-        .catch(() => {})
-    }, 100)
-    return () => clearTimeout(timer)
+    getAnalytics('week', 30)
+      .then((res) => {
+        setStreak(res.data.current_streak || 0)
+        // Compute weekly average mood from mood_trends
+        const trends = res.data.mood_trends || []
+        if (trends.length > 0) {
+          const sum = trends.reduce((acc, t) => acc + (t.avg_sentiment ?? 0), 0)
+          setWeekAvgMood((sum / trends.length).toFixed(2))
+        }
+      })
+      .catch(() => {})
   }, [])
 
   // Count today's notes from fetched notes list

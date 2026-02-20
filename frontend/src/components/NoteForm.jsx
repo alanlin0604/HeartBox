@@ -1,9 +1,10 @@
-import { useState, useRef, useCallback, useEffect, useMemo, useReducer } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { useLang } from '../context/LanguageContext'
 import { getAnalytics } from '../api/analytics'
+import EditorToolbar from './EditorToolbar'
 
 const WEATHER_LABEL_KEYS = [
   { labelKey: 'noteForm.weather', isEmpty: true },
@@ -87,8 +88,6 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const [metadataType, setMetadataType] = useState(null)
   const fileInputRef = useRef(null)
   const recognitionRef = useRef(null)
-  // Force toolbar re-render on every editor transaction (for undo/redo disabled state)
-  const [, forceUpdate] = useReducer((x) => x + 1, 0)
 
   // Tiptap editor
   const editor = useEditor({
@@ -101,9 +100,6 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     })(),
     onUpdate: ({ editor }) => {
       try { localStorage.setItem('heartbox_draft', editor.getHTML()) } catch { /* quota */ }
-    },
-    onTransaction: () => {
-      forceUpdate()
     },
   })
 
@@ -310,31 +306,12 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
 
       {/* Rich text editor toolbar + editor */}
       <div className="glass-card rounded-xl overflow-hidden">
-        {editor && (
-          <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--card-border)]">
-            <button type="button" onClick={() => editor.chain().focus().toggleBold().run()}
-              className={`px-2 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${editor.isActive('bold') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>{t('noteForm.bold')}</button>
-            <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()}
-              className={`px-2 py-1 rounded text-xs italic transition-colors cursor-pointer ${editor.isActive('italic') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>{t('noteForm.italic')}</button>
-            <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()}
-              className={`px-2 py-1 rounded text-xs transition-colors cursor-pointer ${editor.isActive('bulletList') ? 'bg-purple-500/30 text-purple-400' : 'opacity-50 hover:opacity-100'}`}>{t('noteForm.list')}</button>
-            <div className="w-px h-5 bg-[var(--card-border)] mx-1" />
-            <button type="button" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}
-              className="px-2 py-1 rounded text-xs opacity-50 hover:opacity-100 disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed">{t('noteForm.undo')}</button>
-            <button type="button" onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()}
-              className="px-2 py-1 rounded text-xs opacity-50 hover:opacity-100 disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed">{t('noteForm.redo')}</button>
-            {speechSupported && (
-              <>
-                <div className="w-px h-5 bg-[var(--card-border)] mx-1" />
-                <button type="button" onClick={toggleSpeechRecognition}
-                  className={`p-1.5 rounded text-sm transition-colors ${isRecording ? 'bg-red-500/30 text-red-400 animate-pulse' : 'opacity-50 hover:opacity-100'}`}
-                  title={t('noteForm.voiceInput')}>
-                  {isRecording ? '\u{1F534}' : '\u{1F3A4}'}
-                </button>
-              </>
-            )}
-          </div>
-        )}
+        <EditorToolbar
+          editor={editor}
+          showVoice={speechSupported}
+          isListening={isRecording}
+          onToggleVoice={toggleSpeechRecognition}
+        />
         <EditorContent editor={editor} className="prose prose-invert max-w-none px-4 py-3 min-h-[140px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[120px]" />
       </div>
 

@@ -6,6 +6,7 @@ import { getMessages, getConversations, sendMessage, sendQuote, quoteAction, del
 import { useToast } from '../context/ToastContext'
 import { getAccessToken } from '../utils/tokenStorage'
 import LoadingSpinner from '../components/LoadingSpinner'
+import ConfirmModal from '../components/ConfirmModal'
 
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
 
@@ -119,6 +120,8 @@ export default function ChatPage() {
   const [showQuoteForm, setShowQuoteForm] = useState(false)
   const [quoteData, setQuoteData] = useState({ description: '', price: '', currency: 'TWD' })
   const [sendingQuote, setSendingQuote] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const bottomRef = useRef(null)
   const wsRef = useRef(null)
   const reconnectTimer = useRef(null)
@@ -266,13 +269,16 @@ export default function ChatPage() {
   }
 
   const handleDeleteConversation = async () => {
-    if (!window.confirm(t('chat.deleteConfirm'))) return
+    setDeleting(true)
     try {
       await deleteConversation(id)
       toast?.success(t('chat.deleted'))
       navigate('/counselors?tab=chats')
     } catch {
       toast?.error(t('common.operationFailed'))
+    } finally {
+      setDeleting(false)
+      setShowDeleteConfirm(false)
     }
   }
 
@@ -307,7 +313,7 @@ export default function ChatPage() {
             {wsConnected ? t('chat.connected') : t('chat.reconnecting')}
           </span>
           <button
-            onClick={handleDeleteConversation}
+            onClick={() => setShowDeleteConfirm(true)}
             className="text-xs px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
             title={t('chat.deleteConversation')}
           >
@@ -414,6 +420,17 @@ export default function ChatPage() {
           {sending ? t('chat.sending') : t('chat.send')}
         </button>
       </form>
+
+      <ConfirmModal
+        open={showDeleteConfirm}
+        title={t('chat.deleteConversation')}
+        message={t('chat.deleteConfirm')}
+        confirmText={t('noteDetail.delete')}
+        cancelText={t('common.cancel')}
+        loading={deleting}
+        onConfirm={handleDeleteConversation}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   )
 }

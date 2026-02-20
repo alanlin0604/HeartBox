@@ -44,6 +44,16 @@ function AdminRoute({ children }) {
   return user.is_staff ? children : <Navigate to="/" />
 }
 
+function LazyRoute({ children }) {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingSpinner />}>
+        {children}
+      </Suspense>
+    </ErrorBoundary>
+  )
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -55,7 +65,7 @@ export default function App() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         {/* Public therapist report (no auth required) */}
-        <Route path="/report/:token" element={<Suspense fallback={<LoadingSpinner />}><TherapistReportPublicPage /></Suspense>} />
+        <Route path="/report/:token" element={<LazyRoute><TherapistReportPublicPage /></LazyRoute>} />
         <Route
           path="/"
           element={
@@ -64,26 +74,26 @@ export default function App() {
             </PrivateRoute>
           }
         >
-          <Route index element={<Suspense fallback={<LoadingSpinner />}><JournalPage /></Suspense>} />
-          <Route path="dashboard" element={<Suspense fallback={<LoadingSpinner />}><DashboardPage /></Suspense>} />
-          <Route path="notes/:id" element={<Suspense fallback={<LoadingSpinner />}><NoteDetailPage /></Suspense>} />
-          <Route path="counselors" element={<Suspense fallback={<LoadingSpinner />}><CounselorListPage /></Suspense>} />
-          <Route path="ai-chat" element={<Suspense fallback={<LoadingSpinner />}><AIChatPage /></Suspense>} />
-          <Route path="achievements" element={<Suspense fallback={<LoadingSpinner />}><AchievementsPage /></Suspense>} />
-          <Route path="chat/:id" element={<Suspense fallback={<LoadingSpinner />}><ChatPage /></Suspense>} />
-          <Route path="settings" element={<Suspense fallback={<LoadingSpinner />}><SettingsPage /></Suspense>} />
-          <Route path="assessments" element={<Suspense fallback={<LoadingSpinner />}><AssessmentsPage /></Suspense>} />
-          <Route path="weekly-summary" element={<Suspense fallback={<LoadingSpinner />}><WeeklySummaryPage /></Suspense>} />
-          <Route path="breathe" element={<Suspense fallback={<LoadingSpinner />}><BreathingPage /></Suspense>} />
-          <Route path="learn" element={<Suspense fallback={<LoadingSpinner />}><PsychoContentPage /></Suspense>} />
-          <Route path="learn/courses/:courseId" element={<Suspense fallback={<LoadingSpinner />}><CourseDetailPage /></Suspense>} />
-          <Route path="learn/courses/:courseId/lessons/:lessonId" element={<Suspense fallback={<LoadingSpinner />}><LessonPage /></Suspense>} />
-          <Route path="guide" element={<Suspense fallback={<LoadingSpinner />}><GuidePage /></Suspense>} />
+          <Route index element={<LazyRoute><JournalPage /></LazyRoute>} />
+          <Route path="dashboard" element={<LazyRoute><DashboardPage /></LazyRoute>} />
+          <Route path="notes/:id" element={<LazyRoute><NoteDetailPage /></LazyRoute>} />
+          <Route path="counselors" element={<LazyRoute><CounselorListPage /></LazyRoute>} />
+          <Route path="ai-chat" element={<LazyRoute><AIChatPage /></LazyRoute>} />
+          <Route path="achievements" element={<LazyRoute><AchievementsPage /></LazyRoute>} />
+          <Route path="chat/:id" element={<LazyRoute><ChatPage /></LazyRoute>} />
+          <Route path="settings" element={<LazyRoute><SettingsPage /></LazyRoute>} />
+          <Route path="assessments" element={<LazyRoute><AssessmentsPage /></LazyRoute>} />
+          <Route path="weekly-summary" element={<LazyRoute><WeeklySummaryPage /></LazyRoute>} />
+          <Route path="breathe" element={<LazyRoute><BreathingPage /></LazyRoute>} />
+          <Route path="learn" element={<LazyRoute><PsychoContentPage /></LazyRoute>} />
+          <Route path="learn/courses/:courseId" element={<LazyRoute><CourseDetailPage /></LazyRoute>} />
+          <Route path="learn/courses/:courseId/lessons/:lessonId" element={<LazyRoute><LessonPage /></LazyRoute>} />
+          <Route path="guide" element={<LazyRoute><GuidePage /></LazyRoute>} />
           <Route
             path="admin"
             element={
               <AdminRoute>
-                <Suspense fallback={<LoadingSpinner />}><AdminPage /></Suspense>
+                <LazyRoute><AdminPage /></LazyRoute>
               </AdminRoute>
             }
           />

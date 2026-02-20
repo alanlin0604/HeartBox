@@ -7,8 +7,27 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
   const toast = useToast()
   const [expanded, setExpanded] = useState(false)
   const [search, setSearch] = useState(filters.search || '')
+  const [localTag, setLocalTag] = useState(filters.tag || '')
+  const [localSentimentMin, setLocalSentimentMin] = useState(filters.sentiment_min ?? '')
+  const [localSentimentMax, setLocalSentimentMax] = useState(filters.sentiment_max ?? '')
+  const [localStressMin, setLocalStressMin] = useState(filters.stress_min ?? '')
+  const [localStressMax, setLocalStressMax] = useState(filters.stress_max ?? '')
+  const [localDateFrom, setLocalDateFrom] = useState(filters.date_from || '')
+  const [localDateTo, setLocalDateTo] = useState(filters.date_to || '')
   const [showHistory, setShowHistory] = useState(false)
   const debounceRef = useRef(null)
+
+  // Sync local state when filters change externally (e.g. clear)
+  useEffect(() => {
+    setSearch(filters.search || '')
+    setLocalTag(filters.tag || '')
+    setLocalSentimentMin(filters.sentiment_min ?? '')
+    setLocalSentimentMax(filters.sentiment_max ?? '')
+    setLocalStressMin(filters.stress_min ?? '')
+    setLocalStressMax(filters.stress_max ?? '')
+    setLocalDateFrom(filters.date_from || '')
+    setLocalDateTo(filters.date_to || '')
+  }, [filters])
 
   const getSearchHistory = () => {
     try { return JSON.parse(localStorage.getItem('heartbox_search_history') || '[]') } catch { return [] }
@@ -140,8 +159,8 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
             <label className="text-xs opacity-60 mb-1 block">{t('search.tag')}</label>
             <input
               type="text"
-              defaultValue={filters.tag || ''}
-              onChange={(e) => updateFilter('tag', e.target.value)}
+              value={localTag}
+              onChange={(e) => { setLocalTag(e.target.value); updateFilter('tag', e.target.value) }}
               placeholder={t('search.tagPlaceholder')}
               className="glass-input text-sm w-full"
             />
@@ -156,8 +175,8 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
                 step="0.1"
                 min="-1"
                 max="1"
-                defaultValue={filters.sentiment_min ?? ''}
-                onChange={(e) => updateFilter('sentiment_min', e.target.value)}
+                value={localSentimentMin}
+                onChange={(e) => { setLocalSentimentMin(e.target.value); updateFilter('sentiment_min', e.target.value) }}
                 placeholder="-1.0"
                 className="glass-input text-sm w-full"
               />
@@ -167,8 +186,8 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
                 step="0.1"
                 min="-1"
                 max="1"
-                defaultValue={filters.sentiment_max ?? ''}
-                onChange={(e) => updateFilter('sentiment_max', e.target.value)}
+                value={localSentimentMax}
+                onChange={(e) => { setLocalSentimentMax(e.target.value); updateFilter('sentiment_max', e.target.value) }}
                 placeholder="1.0"
                 className="glass-input text-sm w-full"
               />
@@ -183,8 +202,8 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
                 type="number"
                 min="0"
                 max="10"
-                defaultValue={filters.stress_min ?? ''}
-                onChange={(e) => updateFilter('stress_min', e.target.value)}
+                value={localStressMin}
+                onChange={(e) => { setLocalStressMin(e.target.value); updateFilter('stress_min', e.target.value) }}
                 placeholder="0"
                 className="glass-input text-sm w-full"
               />
@@ -193,8 +212,8 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
                 type="number"
                 min="0"
                 max="10"
-                defaultValue={filters.stress_max ?? ''}
-                onChange={(e) => updateFilter('stress_max', e.target.value)}
+                value={localStressMax}
+                onChange={(e) => { setLocalStressMax(e.target.value); updateFilter('stress_max', e.target.value) }}
                 placeholder="10"
                 className="glass-input text-sm w-full"
               />
@@ -207,15 +226,15 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
             <div className="flex gap-2">
               <input
                 type="date"
-                defaultValue={filters.date_from || ''}
-                onChange={(e) => updateFilter('date_from', e.target.value)}
+                value={localDateFrom}
+                onChange={(e) => { setLocalDateFrom(e.target.value); updateFilter('date_from', e.target.value) }}
                 className="glass-input text-sm w-full"
               />
               <span className="self-center opacity-40">~</span>
               <input
                 type="date"
-                defaultValue={filters.date_to || ''}
-                onChange={(e) => updateFilter('date_to', e.target.value)}
+                value={localDateTo}
+                onChange={(e) => { setLocalDateTo(e.target.value); updateFilter('date_to', e.target.value) }}
                 className="glass-input text-sm w-full"
               />
             </div>

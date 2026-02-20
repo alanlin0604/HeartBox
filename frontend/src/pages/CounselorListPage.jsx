@@ -16,6 +16,7 @@ import SkeletonCard from '../components/SkeletonCard'
 import BookingPanel from '../components/BookingPanel'
 import ScheduleManager from '../components/ScheduleManager'
 import EmptyState from '../components/EmptyState'
+import ConfirmModal from '../components/ConfirmModal'
 import { useToast } from '../context/ToastContext'
 import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
 
@@ -60,6 +61,10 @@ export default function CounselorListPage() {
   // Apply form optional pricing
   const [applyRate, setApplyRate] = useState('')
   const [applyCurrency, setApplyCurrency] = useState('TWD')
+
+  // Delete conversation state
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const [deletingConv, setDeletingConv] = useState(false)
 
   // Edit profile form state (pricing tab upgrade)
   const [editDisplayName, setEditDisplayName] = useState('')
@@ -177,15 +182,18 @@ export default function CounselorListPage() {
     }
   }
 
-  const handleDeleteConversation = async (e, convId) => {
-    e.stopPropagation()
-    if (!window.confirm(t('chat.deleteConfirm'))) return
+  const handleDeleteConversation = async () => {
+    if (!deleteConfirmId) return
+    setDeletingConv(true)
     try {
-      await deleteConversation(convId)
-      setConversations((prev) => prev.filter((c) => c.id !== convId))
+      await deleteConversation(deleteConfirmId)
+      setConversations((prev) => prev.filter((c) => c.id !== deleteConfirmId))
       toast?.success(t('chat.deleted'))
     } catch {
       toast?.error(t('common.operationFailed'))
+    } finally {
+      setDeletingConv(false)
+      setDeleteConfirmId(null)
     }
   }
 
@@ -422,7 +430,7 @@ export default function CounselorListPage() {
                       </p>
                     </div>
                     <button
-                      onClick={(e) => handleDeleteConversation(e, conv.id)}
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(conv.id) }}
                       className="text-xs px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
                       title={t('chat.deleteConversation')}
                     >
@@ -721,6 +729,17 @@ export default function CounselorListPage() {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        open={!!deleteConfirmId}
+        title={t('chat.deleteConversation')}
+        message={t('chat.deleteConfirm')}
+        confirmText={t('noteDetail.delete')}
+        cancelText={t('common.cancel')}
+        loading={deletingConv}
+        onConfirm={handleDeleteConversation}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
 
       {/* Booking Panel Modal */}
       {bookingTarget && (

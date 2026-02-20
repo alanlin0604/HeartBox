@@ -39,7 +39,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div role="status" aria-live="polite" className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-[400px] max-w-[calc(100vw-2rem)] space-y-2">
+      <div role="status" aria-live={toasts.some((t) => t.type === 'error') ? 'assertive' : 'polite'} className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-[400px] max-w-[calc(100vw-2rem)] space-y-2">
         {toasts.map((toast) => (
           <button
             key={toast.id}

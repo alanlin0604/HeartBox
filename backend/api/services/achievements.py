@@ -351,68 +351,77 @@ def _get_weather_note_count(user):
 
 def _get_progress(user):
     """Calculate progress for all achievements. Returns dict of achievement_id -> current value."""
-    note_count = _get_note_count(user)
+    from django.db.models import Count, Q
+
+    # --- Batch 1: Aggregate MoodNote counts in a single query ---
+    note_agg = MoodNote.objects.filter(user=user).aggregate(
+        note_count=Count('id', filter=Q(is_deleted=False)),
+        pinned_count=Count('id', filter=Q(is_pinned=True)),
+        ai_analyzed=Count('id', filter=Q(ai_feedback__gt='')),
+        has_night=Count('id', filter=Q(created_at__hour__gte=0, created_at__hour__lt=5)),
+        has_early=Count('id', filter=Q(created_at__hour__gte=5, created_at__hour__lt=7)),
+        low_stress_count=Count('id', filter=Q(stress_index__isnull=False, stress_index__lte=3)),
+        has_high_sentiment=Count('id', filter=Q(sentiment_score__gt=0.6)),
+        has_low_sentiment=Count('id', filter=Q(sentiment_score__lt=-0.6)),
+    )
+    note_count = note_agg['note_count']
+
+    # Max note length (separate query - Length is not an aggregate function)
+    max_len = _get_max_note_length(user)
+
     longest_streak = _get_longest_streak(user)
-    share_count = SharedNote.objects.filter(note__user=user).count()
-    booking_count = Booking.objects.filter(user=user).count()
-    ai_session_count = AIChatSession.objects.filter(user=user).count()
-    pinned_count = MoodNote.objects.filter(user=user, is_pinned=True).count()
-    ai_analyzed = _get_ai_analyzed_count(user)
-    mood_buckets = _get_distinct_mood_buckets(user)
 
-    # Time-based: check any note written at night/early
-    has_night = MoodNote.objects.filter(user=user, created_at__hour__gte=0, created_at__hour__lt=5).exists()
-    has_early = MoodNote.objects.filter(user=user, created_at__hour__gte=5, created_at__hour__lt=7).exists()
+    # --- Batch 2: Aggregate other model counts in single queries ---
+    other_counts = {
+        'share_count': SharedNote.objects.filter(note__user=user).count(),
+        'booking_count': Booking.objects.filter(user=user).count(),
+        'ai_session_count': AIChatSession.objects.filter(user=user).count(),
+        'conversation_count': Conversation.objects.filter(user=user).count(),
+        'message_count': Message.objects.filter(sender=user).count(),
+        'feedback_count': Feedback.objects.filter(user=user).count(),
+        'image_count': NoteAttachment.objects.filter(note__user=user, file_type='image').count(),
+    }
 
-    # New achievement metrics
-    image_count = NoteAttachment.objects.filter(note__user=user, file_type='image').count()
     has_weekend = _has_weekend_pair(user)
     distinct_months = MoodNote.objects.filter(user=user, is_deleted=False).dates('created_at', 'month').count()
-    low_stress_count = MoodNote.objects.filter(user=user, stress_index__isnull=False, stress_index__lte=3).count()
-
-    # Emotional range: has both >0.6 and <-0.6
-    has_high = MoodNote.objects.filter(user=user, sentiment_score__gt=0.6).exists()
-    has_low = MoodNote.objects.filter(user=user, sentiment_score__lt=-0.6).exists()
-    emotional_range = (1 if has_high else 0) + (1 if has_low else 0)
-
-    conversation_count = Conversation.objects.filter(user=user).count()
-    message_count = Message.objects.filter(sender=user).count()
+    mood_buckets = _get_distinct_mood_buckets(user)
     tag_count = _get_distinct_tag_count(user)
     weather_count = _get_weather_note_count(user)
-    feedback_count = Feedback.objects.filter(user=user).count()
+
+    emotional_range = (1 if note_agg['has_high_sentiment'] > 0 else 0) + (1 if note_agg['has_low_sentiment'] > 0 else 0)
 
     return {
         'first_note': note_count,
         'notes_10': note_count,
         'notes_50': note_count,
         'notes_100': note_count,
-        'long_writer': _get_max_note_length(user),
+        'long_writer': max_len,
         'streak_3': longest_streak,
         'streak_7': longest_streak,
         'streak_30': longest_streak,
         'mood_explorer': mood_buckets,
         'positive_streak': 3 if _has_positive_streak(user) else 0,
         'mood_improver': 3 if _has_mood_improving(user) else 0,
-        'self_aware': ai_analyzed,
-        'first_share': share_count,
-        'first_booking': booking_count,
-        'first_ai_chat': ai_session_count,
-        'ai_chat_10': ai_session_count,
-        'night_owl': 1 if has_night else 0,
-        'early_bird': 1 if has_early else 0,
-        'pin_master': pinned_count,
+        'self_aware': note_agg['ai_analyzed'],
+        'first_share': other_counts['share_count'],
+        'first_booking': other_counts['booking_count'],
+        'first_ai_chat': other_counts['ai_session_count'],
+        'ai_chat_10': other_counts['ai_session_count'],
+        'night_owl': 1 if note_agg['has_night'] > 0 else 0,
+        'early_bird': 1 if note_agg['has_early'] > 0 else 0,
+        'pin_master': note_agg['pinned_count'],
         # New achievements
         'notes_200': note_count,
-        'first_image': image_count,
+        'first_image': other_counts['image_count'],
         'weekend_warrior': 1 if has_weekend else 0,
         'dedicated_months_3': distinct_months,
-        'stress_manager': low_stress_count,
+        'stress_manager': note_agg['low_stress_count'],
         'emotional_range': emotional_range,
-        'conversation_starter': conversation_count,
-        'messages_50': message_count,
+        'conversation_starter': other_counts['conversation_count'],
+        'messages_50': other_counts['message_count'],
         'tag_collector': tag_count,
         'weather_logger': weather_count,
-        'feedback_giver': feedback_count,
+        'feedback_giver': other_counts['feedback_count'],
     }
 
 

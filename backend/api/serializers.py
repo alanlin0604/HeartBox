@@ -292,9 +292,15 @@ class AIChatSessionSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created_at', 'updated_at')
 
     def get_message_count(self, obj):
+        # Use annotation if available, otherwise fallback to query
+        if hasattr(obj, '_message_count'):
+            return obj._message_count
         return obj.messages.count()
 
     def get_last_message_preview(self, obj):
+        # Use annotation if available, otherwise fallback to query
+        if hasattr(obj, '_last_message_preview'):
+            return obj._last_message_preview
         last_msg = obj.messages.order_by('-created_at').first()
         if last_msg:
             return last_msg.content[:80]
@@ -395,17 +401,20 @@ class CourseListSerializer(serializers.ModelSerializer):
                   'lesson_count', 'completed_count', 'progress_pct')
 
     def get_lesson_count(self, obj):
+        if hasattr(obj, '_lesson_count'):
+            return obj._lesson_count
         return obj.lessons.filter(is_published=True).count()
 
     def get_completed_count(self, obj):
-        user = self.context.get('request')
-        if not user:
+        completed_ids = self.context.get('completed_ids', set())
+        if completed_ids is not None and hasattr(obj, '_lesson_count'):
+            lesson_ids = set(obj.lessons.filter(is_published=True).values_list('id', flat=True))
+            return len(lesson_ids & completed_ids)
+        request = self.context.get('request')
+        if not request:
             return 0
-        user = user.user
         return UserLessonProgress.objects.filter(
-            user=user,
-            article__course=obj,
-            completed_at__isnull=False,
+            user=request.user, article__course=obj, completed_at__isnull=False,
         ).count()
 
     def get_progress_pct(self, obj):
@@ -425,12 +434,14 @@ class CourseLessonSerializer(serializers.ModelSerializer):
                   'category', 'reading_time', 'lesson_order', 'is_completed')
 
     def get_is_completed(self, obj):
-        user = self.context.get('request')
-        if not user:
+        completed_ids = self.context.get('completed_ids')
+        if completed_ids is not None:
+            return obj.id in completed_ids
+        request = self.context.get('request')
+        if not request:
             return False
-        user = user.user
         return UserLessonProgress.objects.filter(
-            user=user, article=obj, completed_at__isnull=False,
+            user=request.user, article=obj, completed_at__isnull=False,
         ).exists()
 
 
@@ -452,15 +463,20 @@ class CourseDetailSerializer(serializers.ModelSerializer):
         return CourseLessonSerializer(lessons, many=True, context=self.context).data
 
     def get_lesson_count(self, obj):
+        if hasattr(obj, '_lesson_count'):
+            return obj._lesson_count
         return obj.lessons.filter(is_published=True).count()
 
     def get_completed_count(self, obj):
-        user = self.context.get('request')
-        if not user:
+        completed_ids = self.context.get('completed_ids', set())
+        if completed_ids is not None and hasattr(obj, '_lesson_count'):
+            lesson_ids = set(obj.lessons.filter(is_published=True).values_list('id', flat=True))
+            return len(lesson_ids & completed_ids)
+        request = self.context.get('request')
+        if not request:
             return 0
-        user = user.user
         return UserLessonProgress.objects.filter(
-            user=user, article__course=obj, completed_at__isnull=False,
+            user=request.user, article__course=obj, completed_at__isnull=False,
         ).count()
 
     def get_progress_pct(self, obj):
