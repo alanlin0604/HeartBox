@@ -144,7 +144,7 @@ export default function Layout() {
                 `font-medium transition-colors flex items-center gap-1 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
-              <img src={link.icon} alt="" className="w-5 h-5 object-contain" />
+              <img src={link.icon} alt="" className="w-7 h-7 object-contain" />
               {link.label}
             </NavLink>
           ))}
@@ -271,7 +271,7 @@ export default function Layout() {
                 `block font-medium transition-colors py-1 flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
-              <img src={link.icon} alt="" className="w-5 h-5 object-contain" />
+              <img src={link.icon} alt="" className="w-7 h-7 object-contain" />
               {link.label}
             </NavLink>
           ))}
@@ -328,7 +328,7 @@ export default function Layout() {
                 `flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors ${isActive ? 'text-purple-500' : 'opacity-60'}`
               }
             >
-              <img src={link.icon} alt="" className="w-6 h-6 object-contain" />
+              <img src={link.icon} alt="" className="w-8 h-8 object-contain" />
               <span className="truncate max-w-[4.5rem]">{link.label}</span>
             </NavLink>
           ))}
@@ -352,7 +352,7 @@ export default function Layout() {
                       `block px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-70 hover:opacity-100'}`
                     }
                   >
-                    <img src={link.icon} alt="" className="w-5 h-5 object-contain" />
+                    <img src={link.icon} alt="" className="w-7 h-7 object-contain" />
                     {link.label}
                   </NavLink>
                 ))}
