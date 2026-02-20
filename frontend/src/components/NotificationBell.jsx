@@ -114,6 +114,7 @@ export default memo(function NotificationBell() {
 
     ws.onclose = () => {
       if (!closedIntentionally.current) {
+        if (reconnectTimer.current) clearTimeout(reconnectTimer.current)
         reconnectTimer.current = setTimeout(connectWs, reconnectDelay.current)
         reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30000)
       }

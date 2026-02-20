@@ -81,6 +81,14 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
         toast?.error(t('search.minExceedsMax'))
         return
       }
+      if (key === 'date_from' && next.date_to && value > next.date_to) {
+        toast?.error(t('search.minExceedsMax'))
+        return
+      }
+      if (key === 'date_to' && next.date_from && value < next.date_from) {
+        toast?.error(t('search.minExceedsMax'))
+        return
+      }
       onFilterChange(next)
     }, 300)
   }, [filters, onFilterChange])

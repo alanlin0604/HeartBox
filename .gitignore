@@ -44,6 +44,9 @@ chroma_db/
 Thumbs.db
 nul
 
+# Claude Code
+.claude/
+
 # Coverage
 htmlcov/
 .coverage
