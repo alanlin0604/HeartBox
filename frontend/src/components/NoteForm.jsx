@@ -246,10 +246,10 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
                   setMetadataType('gratitude')
                 }
               }}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
+              className={`text-sm px-3 py-1.5 rounded-full border font-medium transition-colors cursor-pointer ${
                 metadataType === 'gratitude'
-                  ? 'bg-amber-500/30 text-amber-300 border-amber-400/40'
-                  : 'bg-amber-500/20 text-amber-300 border-amber-400/30 hover:bg-amber-500/30'
+                  ? 'bg-amber-500/40 text-amber-200 border-amber-400/50'
+                  : 'bg-amber-500/30 text-amber-200 border-amber-400/40 hover:bg-amber-500/40'
               }`}
             >
               {t(tpl.nameKey)}
@@ -264,7 +264,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
                     editor.chain().clearContent().setContent(tpl.content).focus('end').run()
                   }
                 }}
-                className="text-xs px-3 py-1.5 rounded-full bg-purple-500/25 text-purple-300 border border-purple-400/30 hover:bg-purple-500/35 transition-colors cursor-pointer pr-7"
+                className="text-sm px-3 py-1.5 rounded-full bg-purple-500/35 text-purple-200 border border-purple-400/40 hover:bg-purple-500/45 font-medium transition-colors cursor-pointer pr-7"
               >
                 {tpl.name}
               </button>
