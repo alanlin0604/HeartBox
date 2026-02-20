@@ -361,11 +361,11 @@ def generate_weekly_summary_pdf(summary, notes_qs, user, lang='zh-TW'):
     # AI Summary
     if summary.ai_summary:
         story.append(Paragraph(f'<b>{labels["ai_summary"]}</b>', styles['CJKHeading']))
-        feedback_parts = _format_ai_feedback(summary.ai_summary, styles['CJKBody'])
+        feedback_parts = _format_ai_feedback(_strip_emoji(summary.ai_summary), styles['CJKBody'])
         story.extend(feedback_parts)
         story.append(Spacer(1, 6*mm))
 
-    # Diary entries
+    # Diary entries (use search_text to avoid decryption overhead/failures)
     notes = list(notes_qs[:100])
     if notes:
         story.append(Paragraph(f'<b>{labels["diary_entries"]}</b>', styles['CJKHeading']))
@@ -373,8 +373,13 @@ def generate_weekly_summary_pdf(summary, notes_qs, user, lang='zh-TW'):
         for note in notes:
             date_str = note.created_at.strftime('%Y-%m-%d %H:%M')
             story.append(Paragraph(date_str, styles['CJKSmall']))
-            content = note.content or ''
-            story.append(Paragraph(_escape(content), styles['CJKBody']))
+            try:
+                content = note.search_text or note.content or ''
+            except Exception:
+                content = note.search_text or ''
+            content = _strip_emoji(content)
+            if content:
+                story.append(Paragraph(_escape(content), styles['CJKBody']))
             story.append(Spacer(1, 3*mm))
 
     doc.build(story)

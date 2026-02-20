@@ -66,6 +66,9 @@ export default function CounselorListPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
   const [deletingConv, setDeletingConv] = useState(false)
 
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState(null) // { x, y, type, id }
+
   // Edit profile form state (pricing tab upgrade)
   const [editDisplayName, setEditDisplayName] = useState('')
   const [editSpecialty, setEditSpecialty] = useState('')
@@ -75,6 +78,15 @@ export default function CounselorListPage() {
   const [pricingSaving, setPricingSaving] = useState(false)
 
   useEffect(() => { document.title = `${t('nav.counselors')} — ${t('app.name')}` }, [t])
+
+  // Close context menu on click anywhere
+  useEffect(() => {
+    const close = () => setContextMenu(null)
+    if (contextMenu) {
+      window.addEventListener('click', close)
+      return () => window.removeEventListener('click', close)
+    }
+  }, [contextMenu])
 
   useEffect(() => {
     loadData()
@@ -412,6 +424,11 @@ export default function CounselorListPage() {
                 <div
                   key={conv.id}
                   onClick={() => navigate(`/chat/${conv.id}`)}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setContextMenu({ x: e.clientX, y: e.clientY, type: 'conversation', id: conv.id })
+                  }}
                   className="glass-card p-4 cursor-pointer hover:border-purple-500/30 transition-all flex justify-between items-center"
                 >
                   <div>
@@ -468,7 +485,16 @@ export default function CounselorListPage() {
           ) : (
             <div className="space-y-3">
               {bookings.map((b) => (
-                <div key={b.id} className="glass-card p-4 flex justify-between items-center">
+                <div
+                  key={b.id}
+                  className="glass-card p-4 flex justify-between items-center"
+                  onContextMenu={(e) => {
+                    if (b.status === 'pending' || b.status === 'confirmed') {
+                      e.preventDefault()
+                      setContextMenu({ x: e.clientX, y: e.clientY, type: 'booking', id: b.id, status: b.status })
+                    }
+                  }}
+                >
                   <div>
                     <p className="font-medium">
                       {b.counselor_name} — {b.date}
@@ -486,14 +512,16 @@ export default function CounselorListPage() {
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    {isCounselor && b.status === 'pending' && (
+                    {isCounselor && (b.status === 'pending' || b.status === 'confirmed') && (
                       <>
-                        <button
-                          onClick={() => handleBookingAction(b.id, 'confirm')}
-                          className="btn-primary text-xs"
-                        >
-                          {t('booking.confirm')}
-                        </button>
+                        {b.status === 'pending' && (
+                          <button
+                            onClick={() => handleBookingAction(b.id, 'confirm')}
+                            className="btn-primary text-xs"
+                          >
+                            {t('booking.confirm')}
+                          </button>
+                        )}
                         <button
                           onClick={() => handleBookingAction(b.id, 'cancel')}
                           className="btn-danger text-xs"
@@ -746,6 +774,41 @@ export default function CounselorListPage() {
                 {applyLoading ? t('counselor.submitting') : t('counselor.submitApply')}
               </button>
             </form>
+          )}
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 glass rounded-xl shadow-xl border border-[var(--card-border)] py-1 min-w-[140px]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          {contextMenu.type === 'conversation' && (
+            <button
+              onClick={() => {
+                setDeleteConfirmId(contextMenu.id)
+                setContextMenu(null)
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+            >
+              {t('chat.deleteConversation')}
+            </button>
+          )}
+          {contextMenu.type === 'booking' && (
+            <button
+              onClick={() => {
+                if (isCounselor) {
+                  handleBookingAction(contextMenu.id, 'cancel')
+                } else {
+                  handleUserCancel(contextMenu.id)
+                }
+                setContextMenu(null)
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+            >
+              {t('booking.cancel')}
+            </button>
           )}
         </div>
       )}
