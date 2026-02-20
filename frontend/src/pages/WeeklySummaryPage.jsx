@@ -9,7 +9,11 @@ function getMonday(date) {
   const day = d.getDay()
   const diff = d.getDate() - day + (day === 0 ? -6 : 1)
   d.setDate(diff)
-  return d.toISOString().slice(0, 10)
+  // Use local date (not UTC) to avoid timezone offset issues
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
 }
 
 function dateToWeekInput(dateStr) {
@@ -165,7 +169,7 @@ export default function WeeklySummaryPage() {
           <button
             onClick={async () => {
               try {
-                const res = await exportWeeklySummaryPDF(detail.week_start, lang)
+                const res = await exportWeeklySummaryPDF(detail.id, lang)
                 const url = URL.createObjectURL(res.data)
                 const a = document.createElement('a')
                 a.href = url

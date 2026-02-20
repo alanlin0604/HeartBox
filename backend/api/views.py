@@ -1739,6 +1739,29 @@ class SelfAssessmentListCreateView(generics.ListCreateAPIView):
 
 class WeeklySummaryView(APIView):
     def get(self, request):
+        # PDF export by summary ID (most reliable)
+        summary_id = request.query_params.get('id')
+        if summary_id and request.query_params.get('format') == 'pdf':
+            try:
+                summary = WeeklySummary.objects.get(id=summary_id, user=request.user)
+            except WeeklySummary.DoesNotExist:
+                return Response({'error': 'Summary not found.'}, status=status.HTTP_404_NOT_FOUND)
+            try:
+                week_end = summary.week_start + timedelta(days=6)
+                notes_qs = MoodNote.objects.filter(
+                    user=request.user,
+                    is_deleted=False,
+                    created_at__date__gte=summary.week_start,
+                    created_at__date__lte=week_end,
+                ).order_by('created_at')
+                lang = request.query_params.get('lang') or request.headers.get('Accept-Language', 'zh-TW').split(',')[0].strip()
+                buf = generate_weekly_summary_pdf(summary, notes_qs, request.user, lang=lang)
+                filename = f'weekly_summary_{summary.week_start}.pdf'
+                return FileResponse(buf, as_attachment=True, filename=filename, content_type='application/pdf')
+            except Exception as e:
+                logger.error('Weekly summary PDF generation failed: %s', e, exc_info=True)
+                return Response({'error': 'PDF generation failed.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         week_start_str = request.query_params.get('week_start')
         if not week_start_str:
             return Response({'error': 'week_start parameter required (YYYY-MM-DD).'}, status=status.HTTP_400_BAD_REQUEST)
