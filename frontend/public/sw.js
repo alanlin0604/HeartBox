@@ -1,4 +1,4 @@
-const CACHE_NAME = 'heartbox-cache-v3'
+const CACHE_NAME = 'heartbox-cache-v4'
 const APP_SHELL = ['/', '/index.html', '/manifest.json', '/offline.html']
 
 self.addEventListener('install', (event) => {

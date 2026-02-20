@@ -256,7 +256,7 @@ class FeedbackSerializer(serializers.ModelSerializer):
 
 class SharedNoteSerializer(serializers.ModelSerializer):
     note_preview = serializers.CharField(source='note.content_preview', read_only=True)
-    note_content = serializers.CharField(source='note.search_text', read_only=True)
+    note_content = serializers.SerializerMethodField()
     author = serializers.SerializerMethodField()
     sentiment_score = serializers.FloatField(source='note.sentiment_score', read_only=True)
     stress_index = serializers.IntegerField(source='note.stress_index', read_only=True)
@@ -275,6 +275,15 @@ class SharedNoteSerializer(serializers.ModelSerializer):
         if obj.is_anonymous:
             return None
         return obj.note.user.username
+
+    def get_note_content(self, obj):
+        """Return full note content: try search_text first, then decrypt."""
+        if obj.note.search_text:
+            return obj.note.search_text
+        try:
+            return obj.note.content or ''
+        except Exception:
+            return ''
 
     def get_note_tags(self, obj):
         meta = obj.note.metadata or {}

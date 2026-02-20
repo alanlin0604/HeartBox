@@ -44,6 +44,10 @@ function getLocalizedMessage(notif, t) {
   if (notif.type === 'assessment_share' && d.username) {
     return t('notification.assessmentShare.from', { name: d.username, type: (d.assessment_type || '').toUpperCase() })
   }
+  // Fallback: system notifications that carry assessment data (pre-migration)
+  if (d.assessment_id && d.username) {
+    return t('notification.assessmentShare.from', { name: d.username, type: (d.assessment_type || '').toUpperCase() })
+  }
   // Fallback for old notifications without enriched data
   return notif.message
 }
@@ -162,7 +166,7 @@ export default memo(function NotificationBell() {
       navigate('/counselors', { state: { tab: 'bookings' } })
     } else if (notif.type === 'share') {
       navigate('/counselors', { state: { tab: 'received' } })
-    } else if (notif.type === 'assessment_share') {
+    } else if (notif.type === 'assessment_share' || notif.data?.assessment_id) {
       navigate('/counselors', { state: { tab: 'assessments' } })
     } else if (notif.type === 'note' && notif.data?.note_id) {
       navigate(`/notes/${notif.data.note_id}`)
@@ -230,7 +234,7 @@ export default memo(function NotificationBell() {
                     <span className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{NOTIF_TYPE_KEYS[notif.type] ? t(NOTIF_TYPE_KEYS[notif.type]) : notif.title}</p>
+                    <p className="text-sm font-medium truncate">{NOTIF_TYPE_KEYS[notif.type] ? t(NOTIF_TYPE_KEYS[notif.type]) : notif.data?.assessment_id ? t('notification.type.assessmentShare') : notif.title}</p>
                     <p className="text-xs opacity-60 truncate">{getLocalizedMessage(notif, t)}</p>
                     <p className="text-xs opacity-40 mt-1">
                       {new Date(notif.created_at).toLocaleString(LOCALE_MAP[lang] || lang)}

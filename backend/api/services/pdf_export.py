@@ -362,7 +362,7 @@ def generate_weekly_summary_pdf(summary, notes_qs, user, lang='zh-TW'):
     if summary.top_activities:
         story.append(Paragraph(f'<b>{labels["top_activities"]}</b>', styles['CJKHeading']))
         acts_text = ', '.join(
-            f'{_strip_emoji(a["name"])} ({a["count"]})' for a in summary.top_activities
+            f'{_escape(_strip_emoji(a["name"]))} ({a["count"]})' for a in summary.top_activities
         )
         story.append(Paragraph(acts_text, styles['CJKBody']))
         story.append(Spacer(1, 4*mm))
@@ -391,6 +391,16 @@ def generate_weekly_summary_pdf(summary, notes_qs, user, lang='zh-TW'):
                 story.append(Paragraph(_escape(content), styles['CJKBody']))
             story.append(Spacer(1, 3*mm))
 
-    doc.build(story)
+    try:
+        doc.build(story)
+    except Exception:
+        # Retry with minimal story if build fails
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4,
+                                leftMargin=20*mm, rightMargin=20*mm,
+                                topMargin=20*mm, bottomMargin=20*mm)
+        # Keep only title, subtitle, and summary table (first 6 elements), skip problematic content
+        safe_story = story[:6] if len(story) > 6 else story
+        doc.build(safe_story)
     buf.seek(0)
     return buf
