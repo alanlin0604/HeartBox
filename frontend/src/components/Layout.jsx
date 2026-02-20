@@ -68,16 +68,16 @@ export default function Layout() {
   }, [])
 
   const navLinks = [
-    { to: '/', label: t('nav.journal'), icon: '\u{1F4DD}', end: true },
-    { to: '/dashboard', label: t('nav.dashboard'), icon: '\u{1F4CA}' },
-    { to: '/assessments', label: t('nav.assessments'), icon: '\u{1F4CB}' },
-    { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '\u{1F4C5}' },
-    { to: '/breathe', label: t('nav.breathe'), icon: '\u{1F9D8}' },
-    { to: '/learn', label: t('nav.learn'), icon: '\u{1F4DA}' },
-    { to: '/counselors', label: t('nav.counselors'), icon: '\u{1F4AC}' },
-    { to: '/ai-chat', label: t('nav.aiChat'), icon: '\u{1F916}' },
-    { to: '/achievements', label: t('nav.achievements'), icon: '\u{1F3C6}' },
-    { to: '/guide', label: t('nav.guide'), icon: '\u{1F4D6}' },
+    { to: '/', label: t('nav.journal'), icon: '/icons/日誌.png', end: true },
+    { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.png' },
+    { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.png' },
+    { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.png' },
+    { to: '/breathe', label: t('nav.breathe'), icon: '/icons/呼吸與冥想.png' },
+    { to: '/learn', label: t('nav.learn'), icon: '/icons/學習.png' },
+    { to: '/counselors', label: t('nav.counselors'), icon: '/icons/諮商師.png' },
+    { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.png' },
+    { to: '/achievements', label: t('nav.achievements'), icon: '/icons/成就.png' },
+    { to: '/guide', label: t('nav.guide'), icon: '/icons/功能指南.png' },
   ]
 
   // Bottom nav: first 4 items + "More"
@@ -144,7 +144,7 @@ export default function Layout() {
                 `font-medium transition-colors flex items-center gap-1 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
-              <span className="text-sm">{link.icon}</span>
+              <img src={link.icon} alt="" className="w-5 h-5 object-contain" />
               {link.label}
             </NavLink>
           ))}
@@ -271,7 +271,7 @@ export default function Layout() {
                 `block font-medium transition-colors py-1 flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
-              <span className="text-sm">{link.icon}</span>
+              <img src={link.icon} alt="" className="w-5 h-5 object-contain" />
               {link.label}
             </NavLink>
           ))}
@@ -328,7 +328,7 @@ export default function Layout() {
                 `flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors ${isActive ? 'text-purple-500' : 'opacity-60'}`
               }
             >
-              <span className="text-lg">{link.icon}</span>
+              <img src={link.icon} alt="" className="w-6 h-6 object-contain" />
               <span className="truncate max-w-[4.5rem]">{link.label}</span>
             </NavLink>
           ))}
@@ -352,7 +352,7 @@ export default function Layout() {
                       `block px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-70 hover:opacity-100'}`
                     }
                   >
-                    <span>{link.icon}</span>
+                    <img src={link.icon} alt="" className="w-5 h-5 object-contain" />
                     {link.label}
                   </NavLink>
                 ))}
