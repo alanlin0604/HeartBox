@@ -410,7 +410,7 @@ export default function BreathingPage() {
                     ambientOn ? 'bg-purple-500' : 'bg-[var(--card-border)]'
                   }`}
                 >
-                  <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                  <span className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
                     ambientOn ? 'translate-x-6' : 'translate-x-0.5'
                   }`} />
                 </button>

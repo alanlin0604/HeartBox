@@ -30,16 +30,16 @@ export default memo(function StressRadarChart({ data }) {
     <div className="glass p-6">
       <h2 className="text-lg font-semibold mb-4">{t('dashboard.stressRadar')}</h2>
       <ResponsiveContainer width="100%" height={350}>
-        <RadarChart data={data} outerRadius="40%" cx="50%" cy="50%">
+        <RadarChart data={data} outerRadius="65%" cx="50%" cy="50%">
           <PolarGrid stroke={theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} />
           <PolarAngleAxis
             dataKey="tag"
-            tick={{ fill: theme === 'dark' ? '#9ca3af' : '#475569', fontSize: 10 }}
+            tick={{ fill: theme === 'dark' ? '#9ca3af' : '#475569', fontSize: 12, dy: 4 }}
           />
           <PolarRadiusAxis
             angle={90}
             domain={[0, 10]}
-            tick={{ fill: theme === 'dark' ? '#9ca3af' : '#475569', fontSize: 10 }}
+            tick={{ fill: theme === 'dark' ? '#9ca3af' : '#475569', fontSize: 11 }}
           />
           <Tooltip contentStyle={tooltipStyle} />
           <Radar

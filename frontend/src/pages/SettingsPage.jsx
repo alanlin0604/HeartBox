@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [bio, setBio] = useState(user?.bio || '')
   const [avatar, setAvatar] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [fontScale, setFontScale] = useState(() => parseFloat(localStorage.getItem('heartbox_font_scale') || '1'))
 
   // Track initial profile values for unsaved-changes detection
   const initialProfile = useRef({ email: user?.email || '', bio: user?.bio || '' })
@@ -292,26 +293,24 @@ export default function SettingsPage() {
             { label: t('settings.fontSmall'), scale: 0.875 },
             { label: t('settings.fontMedium'), scale: 1 },
             { label: t('settings.fontLarge'), scale: 1.125 },
-          ].map((opt) => {
-            const current = parseFloat(localStorage.getItem('heartbox_font_scale') || '1')
-            return (
+          ].map((opt) => (
               <button
                 key={opt.scale}
                 type="button"
                 onClick={() => {
                   localStorage.setItem('heartbox_font_scale', String(opt.scale))
                   document.documentElement.style.fontSize = opt.scale * 16 + 'px'
+                  setFontScale(opt.scale)
                 }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                  current === opt.scale
+                  fontScale === opt.scale
                     ? 'bg-purple-500/30 text-purple-400'
                     : 'opacity-60 hover:opacity-100 border border-[var(--card-border)]'
                 }`}
               >
                 {opt.label}
               </button>
-            )
-          })}
+            ))}
         </div>
       </div>
 
