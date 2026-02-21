@@ -58,7 +58,7 @@ export default function BookingPanel({ counselorId, counselorName, hourlyRate, c
       setSuccess(true)
       toast?.success(t('booking.success'))
     } catch (err) {
-      toast?.error(err.response?.data?.error || t('booking.failed'))
+      toast?.error(err.response?.data?.detail || t('booking.failed'))
     } finally {
       setBooking(false)
     }

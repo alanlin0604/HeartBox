@@ -1,6 +1,13 @@
 import api from './axios';
 import { getCached, setCache, invalidate } from './cache';
 
+/** Invalidate all note-related caches (notes list, alerts, analytics). */
+const invalidateNotesCaches = () => {
+  invalidate('notes');
+  invalidate('alerts');
+  invalidate('analytics');
+};
+
 export const getNotes = (page = 1, filters = {}) => {
   const params = new URLSearchParams({ page });
   Object.entries(filters).forEach(([key, value]) => {
@@ -32,24 +39,19 @@ export const getNote = (id) => {
 };
 
 export const createNote = (content, metadata = {}) => {
-  invalidate('notes');
-  invalidate('alerts');
-  invalidate('analytics');
+  invalidateNotesCaches();
   return api.post('/notes/', { content, metadata });
 };
 
 export const updateNote = (id, content, metadata) => {
-  invalidate('notes');
+  invalidateNotesCaches();
   invalidate(`note:${id}`);
-  invalidate('analytics');
   return api.put(`/notes/${id}/`, { content, metadata });
 };
 
 export const deleteNote = (id) => {
-  invalidate('notes');
+  invalidateNotesCaches();
   invalidate(`note:${id}`);
-  invalidate('analytics');
-  invalidate('alerts');
   return api.delete(`/notes/${id}/`);
 };
 
@@ -93,9 +95,7 @@ export const getSharedNotes = () => {
 };
 
 export const batchDeleteNotes = (ids) => {
-  invalidate('notes');
-  invalidate('analytics');
-  invalidate('alerts');
+  invalidateNotesCaches();
   return api.post('/notes/batch_delete/', { ids });
 };
 

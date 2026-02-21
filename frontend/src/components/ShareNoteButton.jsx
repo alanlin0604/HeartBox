@@ -31,7 +31,7 @@ export default function ShareNoteButton({ noteId }) {
       await shareNote(noteId, selectedCounselor, isAnonymous)
       setSuccess(true)
     } catch (err) {
-      setError(err.response?.data?.error || t('share.failed'))
+      setError(err.response?.data?.detail || t('share.failed'))
     } finally {
       setSharing(false)
     }

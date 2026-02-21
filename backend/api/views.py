@@ -83,6 +83,16 @@ from .throttles import (
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
+# ===== Constants =====
+MAX_BATCH_DELETE = 50
+MAX_MESSAGE_LENGTH = 5000
+MAX_AI_CHAT_MESSAGE_LENGTH = 2000
+MAX_EXPORT_NOTES = 5000
+CACHE_TTL_ANALYTICS = 300       # 5 minutes
+CACHE_TTL_CALENDAR = 300        # 5 minutes
+CACHE_TTL_YEAR_PIXELS = 3600    # 1 hour
+CACHE_TTL_DAILY_PROMPT = 86400  # 24 hours
+
 # Lazy singleton for OpenAI client
 _openai_client = None
 
@@ -231,21 +241,21 @@ class ResetPasswordView(APIView):
         token = request.data.get('token') or ''
         new_password = request.data.get('new_password') or ''
         if len(new_password) < 8:
-            return Response({'error': 'Password too short'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Password too short'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             user_id = force_str(urlsafe_base64_decode(uid))
             user = User.objects.get(pk=user_id)
         except (ValueError, TypeError, OverflowError, User.DoesNotExist):
-            return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
         if not default_token_generator.check_token(user, token):
-            return Response({'error': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Invalid reset link'}, status=status.HTTP_400_BAD_REQUEST)
         # Run Django password validators
         from django.contrib.auth.password_validation import validate_password
         from django.core.exceptions import ValidationError
         try:
             validate_password(new_password, user=user)
         except ValidationError as e:
-            return Response({'error': e.messages}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': e.messages}, status=status.HTTP_400_BAD_REQUEST)
         user.set_password(new_password)
         # Rotate token_version to invalidate all existing JWT sessions
         user.token_version += 1
@@ -411,9 +421,9 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
     def batch_delete(self, request):
         ids = request.data.get('ids', [])
         if not ids or not isinstance(ids, list):
-            return Response({'error': 'Please provide a list of note IDs to delete.'}, status=status.HTTP_400_BAD_REQUEST)
-        if len(ids) > 50:
-            return Response({'error': 'Cannot delete more than 50 notes at once.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Please provide a list of note IDs to delete.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(ids) > MAX_BATCH_DELETE:
+            return Response({'detail': f'Cannot delete more than {MAX_BATCH_DELETE} notes at once.'}, status=status.HTTP_400_BAD_REQUEST)
         updated = MoodNote.objects.filter(user=request.user, id__in=ids, is_deleted=False).update(
             is_deleted=True, deleted_at=timezone.now()
         )
@@ -432,7 +442,7 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         try:
             note = MoodNote.objects.get(pk=pk, user=request.user, is_deleted=True)
         except MoodNote.DoesNotExist:
-            return Response({'error': 'Note not found in trash.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Note not found in trash.'}, status=status.HTTP_404_NOT_FOUND)
         note.is_deleted = False
         note.deleted_at = None
         note.save(update_fields=['is_deleted', 'deleted_at'])
@@ -445,7 +455,7 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         try:
             note = MoodNote.objects.get(pk=pk, user=request.user, is_deleted=True)
         except MoodNote.DoesNotExist:
-            return Response({'error': 'Note not found in trash.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Note not found in trash.'}, status=status.HTTP_404_NOT_FOUND)
         log_action(request.user, 'note_permanent_delete', request, 'MoodNote', note.pk)
         note.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -517,7 +527,7 @@ class AnalyticsView(APIView):
             'gratitude_count': gratitude['gratitude_count'],
             'gratitude_streak': gratitude['gratitude_streak'],
         }
-        cache.set(cache_key, result, 300)
+        cache.set(cache_key, result, CACHE_TTL_ANALYTICS)
         return Response(result)
 
 
@@ -527,9 +537,9 @@ class CalendarView(APIView):
             year = int(request.query_params.get('year', timezone.now().year))
             month = int(request.query_params.get('month', timezone.now().month))
         except (ValueError, TypeError):
-            return Response({'error': 'Invalid year or month.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Invalid year or month.'}, status=status.HTTP_400_BAD_REQUEST)
         if not (1 <= month <= 12) or not (1900 <= year <= 2100):
-            return Response({'error': 'Year must be 1900-2100, month must be 1-12.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Year must be 1900-2100, month must be 1-12.'}, status=status.HTTP_400_BAD_REQUEST)
 
         cache_key = f'calendar_{request.user.id}_{year}_{month}'
         cached = cache.get(cache_key)
@@ -539,7 +549,7 @@ class CalendarView(APIView):
         qs = MoodNote.objects.filter(user=request.user, is_deleted=False)
         days = get_calendar_data(qs, year, month)
         result = {'year': year, 'month': month, 'days': days}
-        cache.set(cache_key, result, 300)
+        cache.set(cache_key, result, CACHE_TTL_CALENDAR)
         return Response(result)
 
 
@@ -550,7 +560,7 @@ class ExportPDFView(APIView):
         date_from = request.query_params.get('date_from')
         date_to = request.query_params.get('date_to')
         if date_from and date_to and date_from > date_to:
-            return Response({'error': 'date_from must be before date_to.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'date_from must be before date_to.'}, status=status.HTTP_400_BAD_REQUEST)
         lang = request.query_params.get('lang', 'zh-TW')
         qs = MoodNote.objects.filter(user=request.user, is_deleted=False)
         buf = generate_notes_pdf(qs, date_from=date_from, date_to=date_to, user=request.user, lang=lang)
@@ -593,7 +603,7 @@ class CounselorApplyView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         if CounselorProfile.objects.filter(user=self.request.user).exists():
-            raise exceptions.ValidationError({'error': 'You have already applied as a counselor.'})
+            raise exceptions.ValidationError({'detail': 'You have already applied as a counselor.'})
         serializer.save(user=self.request.user)
 
 
@@ -654,7 +664,7 @@ class ConversationDeleteView(APIView):
                 Q(id=conv_id) & (Q(user=request.user) | Q(counselor=request.user))
             )
         except Conversation.DoesNotExist:
-            return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
         conv.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -667,7 +677,7 @@ class ConversationCreateView(APIView):
         try:
             profile = CounselorProfile.objects.get(id=counselor_id, status='approved')
         except CounselorProfile.DoesNotExist:
-            return Response({'error': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         conv, created = Conversation.objects.get_or_create(
             user=request.user,
@@ -691,12 +701,12 @@ class MessageListView(APIView):
                 Q(id=conv_id) & (Q(user=request.user) | Q(counselor=request.user))
             )
         except Conversation.DoesNotExist:
-            return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         # Mark unread messages as read
         conv.messages.filter(is_read=False).exclude(sender=request.user).update(is_read=True)
 
-        messages = conv.messages.all()
+        messages = conv.messages.select_related('sender', 'sender__counselor_profile').all()
         return Response(MessageSerializer(messages, many=True).data)
 
     def post(self, request, conv_id):
@@ -705,25 +715,25 @@ class MessageListView(APIView):
                 Q(id=conv_id) & (Q(user=request.user) | Q(counselor=request.user))
             )
         except Conversation.DoesNotExist:
-            return Response({'error': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         message_type = request.data.get('message_type', 'text')
 
         if message_type == 'quote':
             # Only approved counselors can send quotes
             if not hasattr(request.user, 'counselor_profile') or not request.user.counselor_profile.is_approved:
-                return Response({'error': 'Only approved counselors can send quotes.'},
+                return Response({'detail': 'Only approved counselors can send quotes.'},
                                 status=status.HTTP_403_FORBIDDEN)
             description = strip_tags(request.data.get('description', '')).strip()
             if not description:
-                return Response({'error': 'Quote description is required.'},
+                return Response({'detail': 'Quote description is required.'},
                                 status=status.HTTP_400_BAD_REQUEST)
             try:
                 price = float(request.data.get('price', 0))
             except (ValueError, TypeError):
-                return Response({'error': 'Invalid price.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'detail': 'Invalid price.'}, status=status.HTTP_400_BAD_REQUEST)
             if price < 0:
-                return Response({'error': 'Price cannot be negative.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'detail': 'Price cannot be negative.'}, status=status.HTTP_400_BAD_REQUEST)
             currency = request.data.get('currency', 'TWD')
             metadata = {'description': description, 'price': price, 'currency': currency}
             content = f'[Quote] {description} — {currency} {price}'
@@ -734,10 +744,10 @@ class MessageListView(APIView):
         else:
             content = strip_tags(request.data.get('content', '')).strip()
             if not content:
-                return Response({'error': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
-            if len(content) > 5000:
-                return Response({'error': 'Message cannot exceed 5000 characters.'}, status=status.HTTP_400_BAD_REQUEST)
-            msg = Message.objects.create(conversation=conv, sender=request.user, content=content[:5000])
+                return Response({'detail': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+            if len(content) > MAX_MESSAGE_LENGTH:
+                return Response({'detail': f'Message cannot exceed {MAX_MESSAGE_LENGTH} characters.'}, status=status.HTTP_400_BAD_REQUEST)
+            msg = Message.objects.create(conversation=conv, sender=request.user, content=content[:MAX_MESSAGE_LENGTH])
 
         conv.save()  # update updated_at
 
@@ -769,23 +779,23 @@ class QuoteActionView(APIView):
     def post(self, request, conv_id, msg_id):
         action = request.data.get('action')
         if action not in ('accept', 'reject'):
-            return Response({'error': 'Action must be accept or reject.'},
+            return Response({'detail': 'Action must be accept or reject.'},
                             status=status.HTTP_400_BAD_REQUEST)
         try:
             conv = Conversation.objects.get(
                 Q(id=conv_id) & (Q(user=request.user) | Q(counselor=request.user))
             )
         except Conversation.DoesNotExist:
-            return Response({'error': 'Conversation not found.'},
+            return Response({'detail': 'Conversation not found.'},
                             status=status.HTTP_404_NOT_FOUND)
         try:
             msg = conv.messages.get(id=msg_id, message_type='quote')
         except Message.DoesNotExist:
-            return Response({'error': 'Quote not found.'},
+            return Response({'detail': 'Quote not found.'},
                             status=status.HTTP_404_NOT_FOUND)
         # Only the non-sender can accept/reject
         if msg.sender == request.user:
-            return Response({'error': 'Cannot act on your own quote.'},
+            return Response({'detail': 'Cannot act on your own quote.'},
                             status=status.HTTP_403_FORBIDDEN)
         msg.metadata['status'] = 'accepted' if action == 'accept' else 'rejected'
         msg.save(update_fields=['metadata'])
@@ -822,9 +832,14 @@ class AdminStatsView(APIView):
         })
 
 
+class AdminUserPagination(rest_framework.pagination.PageNumberPagination):
+    page_size = 50
+
+
 class AdminUserListView(generics.ListAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = AdminUserSerializer
+    pagination_class = AdminUserPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['username', 'email']
 
@@ -842,7 +857,7 @@ class AdminUserDetailView(generics.RetrieveUpdateAPIView):
         # Prevent admin from demoting themselves
         if target.pk == self.request.user.pk and 'is_staff' in serializer.validated_data:
             if not serializer.validated_data['is_staff']:
-                raise exceptions.ValidationError({'error': 'You cannot remove your own admin privileges.'})
+                raise exceptions.ValidationError({'detail': 'You cannot remove your own admin privileges.'})
         serializer.save()
 
 
@@ -865,11 +880,11 @@ class AdminCounselorActionView(APIView):
         try:
             profile = CounselorProfile.objects.get(pk=pk)
         except CounselorProfile.DoesNotExist:
-            return Response({'error': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         action = request.data.get('action')
         if action not in ('approve', 'reject'):
-            return Response({'error': 'Action must be "approve" or "reject".'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Action must be "approve" or "reject".'}, status=status.HTTP_400_BAD_REQUEST)
 
         profile.status = 'approved' if action == 'approve' else 'rejected'
         profile.reviewed_at = timezone.now()
@@ -928,31 +943,31 @@ class NoteAttachmentUploadView(APIView):
         try:
             note = MoodNote.objects.select_for_update().get(id=note_id, user=request.user)
         except MoodNote.DoesNotExist:
-            return Response({'error': 'Note not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Note not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         file = request.FILES.get('file')
         if not file:
-            return Response({'error': 'Please upload a file.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Please upload a file.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if file.size > self.MAX_FILE_SIZE:
-            return Response({'error': 'File size cannot exceed 10MB.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'File size cannot exceed 10MB.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check attachment count quota (select_for_update prevents race condition)
         existing_count = NoteAttachment.objects.filter(note__user=request.user).count()
         if existing_count >= self.MAX_USER_ATTACHMENTS:
-            return Response({'error': 'Attachment limit reached (500).'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Attachment limit reached (500).'}, status=status.HTTP_400_BAD_REQUEST)
 
         mime_type = file.content_type or mimetypes.guess_type(file.name)[0] or ''
         file_type = mime_type.split('/')[0]
         if file_type not in self.ALLOWED_TYPES:
-            return Response({'error': 'Only image files are allowed.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Only image files are allowed.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Validate file content via magic number (prevent MIME spoofing)
         header = file.read(16)
         file.seek(0)
         is_webp = header[:4] == b'RIFF' and header[8:12] == b'WEBP'
         if not is_webp and not any(header.startswith(sig) for sig, _ in self.IMAGE_SIGNATURES):
-            return Response({'error': 'File content does not match an image format.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'File content does not match an image format.'}, status=status.HTTP_400_BAD_REQUEST)
 
         attachment = NoteAttachment.objects.create(
             note=note,
@@ -994,18 +1009,18 @@ class AvailableSlotsView(APIView):
     def get(self, request, counselor_id):
         date_str = request.query_params.get('date')
         if not date_str:
-            return Response({'error': 'Please provide a date parameter.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Please provide a date parameter.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
-            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Resolve CounselorProfile.pk → User.pk
         try:
             profile = CounselorProfile.objects.get(pk=counselor_id, status='approved')
         except CounselorProfile.DoesNotExist:
-            return Response({'error': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
         user_id = profile.user_id
 
         day_of_week = target_date.weekday()
@@ -1051,7 +1066,7 @@ class BookingCreateView(APIView):
         end_time = request.data.get('end_time')
 
         if not all([counselor_id, date_str, start_time, end_time]):
-            return Response({'error': 'All required fields must be provided.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'All required fields must be provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Validate time format (HH:MM or HH:MM:SS)
         from datetime import time as dt_time
@@ -1061,28 +1076,28 @@ class BookingCreateView(APIView):
             parts = str(end_time).split(':')
             end_t = dt_time(int(parts[0]), int(parts[1]))
         except (ValueError, IndexError):
-            return Response({'error': 'Invalid time format. Use HH:MM.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Invalid time format. Use HH:MM.'}, status=status.HTTP_400_BAD_REQUEST)
         if start_t >= end_t:
-            return Response({'error': 'Start time must be before end time.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Start time must be before end time.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Resolve CounselorProfile.pk → User.pk
         try:
             profile = CounselorProfile.objects.get(pk=counselor_id, status='approved')
         except CounselorProfile.DoesNotExist:
-            return Response({'error': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Counselor not found.'}, status=status.HTTP_404_NOT_FOUND)
         counselor_user_id = profile.user_id
 
         # Prevent self-booking
         if counselor_user_id == request.user.id:
-            return Response({'error': 'You cannot book yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'You cannot book yourself.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Validate date
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Invalid date format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
         if target_date < timezone.now().date():
-            return Response({'error': 'Cannot book a past date.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Cannot book a past date.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Check for conflicts with row-level locking to prevent race condition
         conflict = Booking.objects.select_for_update().filter(
@@ -1093,7 +1108,7 @@ class BookingCreateView(APIView):
             status__in=['pending', 'confirmed'],
         ).exists()
         if conflict:
-            return Response({'error': 'This time slot is already booked.'}, status=status.HTTP_409_CONFLICT)
+            return Response({'detail': 'This time slot is already booked.'}, status=status.HTTP_409_CONFLICT)
 
         booking = Booking.objects.create(
             user=request.user,
@@ -1129,7 +1144,7 @@ class BookingActionView(APIView):
         try:
             booking = Booking.objects.get(pk=pk, counselor=request.user)
         except Booking.DoesNotExist:
-            return Response({'error': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         action_type = request.data.get('action')
         if action_type == 'confirm':
@@ -1139,7 +1154,7 @@ class BookingActionView(APIView):
         elif action_type == 'complete':
             booking.status = 'completed'
         else:
-            return Response({'error': 'Action must be "confirm", "cancel", or "complete".'},
+            return Response({'detail': 'Action must be "confirm", "cancel", or "complete".'},
                             status=status.HTTP_400_BAD_REQUEST)
         booking.save(update_fields=['status'])
 
@@ -1168,11 +1183,11 @@ class BookingUserCancelView(APIView):
         try:
             booking = Booking.objects.get(pk=pk, user=request.user)
         except Booking.DoesNotExist:
-            return Response({'error': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         if booking.status not in ('pending', 'confirmed'):
             return Response(
-                {'error': 'Only pending or confirmed bookings can be cancelled.'},
+                {'detail': 'Only pending or confirmed bookings can be cancelled.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -1205,11 +1220,11 @@ class ShareAssessmentView(APIView):
         try:
             assessment = SelfAssessment.objects.get(pk=pk, user=request.user)
         except SelfAssessment.DoesNotExist:
-            return Response({'error': 'Assessment not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Assessment not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         counselor_id = request.data.get('counselor_id')
         if not counselor_id:
-            return Response({'error': 'counselor_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'counselor_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Verify target is an approved counselor
         try:
@@ -1218,7 +1233,7 @@ class ShareAssessmentView(APIView):
             try:
                 profile = CounselorProfile.objects.get(user_id=counselor_id, status='approved')
             except CounselorProfile.DoesNotExist:
-                return Response({'error': 'Counselor not found or not approved.'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'detail': 'Counselor not found or not approved.'}, status=status.HTTP_404_NOT_FOUND)
 
         shared, created = SharedAssessment.objects.get_or_create(
             assessment=assessment,
@@ -1261,13 +1276,13 @@ class ShareNoteView(APIView):
         try:
             note = MoodNote.objects.get(id=note_id, user=request.user)
         except MoodNote.DoesNotExist:
-            return Response({'error': 'Note not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Note not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         counselor_id = request.data.get('counselor_user_id') or request.data.get('counselor_id')
         is_anonymous = request.data.get('is_anonymous', False)
 
         if not counselor_id:
-            return Response({'error': 'Counselor ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Counselor ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Verify the target is an approved counselor (accept either profile pk or user pk)
         try:
@@ -1276,7 +1291,7 @@ class ShareNoteView(APIView):
             try:
                 profile = CounselorProfile.objects.get(user_id=counselor_id, status='approved')
             except CounselorProfile.DoesNotExist:
-                return Response({'error': 'Counselor not found or not approved.'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'detail': 'Counselor not found or not approved.'}, status=status.HTTP_404_NOT_FOUND)
 
         counselor_user_id = profile.user_id
 
@@ -1286,7 +1301,7 @@ class ShareNoteView(APIView):
             defaults={'is_anonymous': is_anonymous},
         )
         if not created:
-            return Response({'error': 'This note has already been shared.'}, status=status.HTTP_409_CONFLICT)
+            return Response({'detail': 'This note has already been shared.'}, status=status.HTTP_409_CONFLICT)
 
         # Notify counselor
         author_name = 'Anonymous' if is_anonymous else request.user.username
@@ -1322,9 +1337,9 @@ class DeleteAccountView(APIView):
     def post(self, request):
         password = request.data.get('password', '')
         if not password:
-            return Response({'error': 'Password is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Password is required.'}, status=status.HTTP_400_BAD_REQUEST)
         if not request.user.check_password(password):
-            return Response({'error': 'Incorrect password.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Incorrect password.'}, status=status.HTTP_400_BAD_REQUEST)
         log_action(request.user, 'account_delete', request)
         request.user.delete()
         return Response({'status': 'ok'}, status=status.HTTP_200_OK)
@@ -1333,14 +1348,13 @@ class DeleteAccountView(APIView):
 class ExportDataView(APIView):
     """Export all user data as JSON (GDPR compliance)."""
     throttle_classes = [ExportThrottle]
-    MAX_EXPORT_NOTES = 5000
 
     def get(self, request):
         import json
         from django.http import HttpResponse
 
         user = request.user
-        notes = MoodNote.objects.filter(user=user, is_deleted=False).order_by('-created_at')[:self.MAX_EXPORT_NOTES]
+        notes = MoodNote.objects.filter(user=user, is_deleted=False).order_by('-created_at')[:MAX_EXPORT_NOTES]
 
         data = {
             'user': {
@@ -1377,7 +1391,6 @@ class ExportDataView(APIView):
 class ExportCSVView(APIView):
     """Export all user notes as CSV."""
     throttle_classes = [ExportThrottle]
-    MAX_EXPORT_NOTES = 5000
 
     def get(self, request):
         import csv
@@ -1385,7 +1398,7 @@ class ExportCSVView(APIView):
         from django.http import HttpResponse
 
         user = request.user
-        notes = MoodNote.objects.filter(user=user, is_deleted=False).order_by('-created_at')[:self.MAX_EXPORT_NOTES]
+        notes = MoodNote.objects.filter(user=user, is_deleted=False).order_by('-created_at')[:MAX_EXPORT_NOTES]
 
         buf = io.StringIO()
         writer = csv.writer(buf)
@@ -1461,7 +1474,7 @@ class AIChatSessionDetailView(APIView):
         try:
             session = AIChatSession.objects.get(id=session_id, user=request.user, is_active=True)
         except AIChatSession.DoesNotExist:
-            return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         messages = session.messages.all()
         # Pagination: return last 50 by default, support ?before=<msg_id>
@@ -1481,7 +1494,7 @@ class AIChatSessionDetailView(APIView):
         try:
             session = AIChatSession.objects.get(id=session_id, user=request.user, is_active=True)
         except AIChatSession.DoesNotExist:
-            return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         update_fields = []
         if 'title' in request.data:
@@ -1499,7 +1512,7 @@ class AIChatSessionDetailView(APIView):
         try:
             session = AIChatSession.objects.get(id=session_id, user=request.user, is_active=True)
         except AIChatSession.DoesNotExist:
-            return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         session.is_active = False
         session.save(update_fields=['is_active'])
@@ -1514,13 +1527,13 @@ class AIChatSendMessageView(APIView):
         try:
             session = AIChatSession.objects.get(id=session_id, user=request.user, is_active=True)
         except AIChatSession.DoesNotExist:
-            return Response({'error': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Session not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         content = (request.data.get('content') or '').strip()
         if not content:
-            return Response({'error': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
-        if len(content) > 2000:
-            return Response({'error': 'Message cannot exceed 2000 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Message cannot be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(content) > MAX_AI_CHAT_MESSAGE_LENGTH:
+            return Response({'detail': f'Message cannot exceed {MAX_AI_CHAT_MESSAGE_LENGTH} characters.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Analyze sentiment locally
         from .services.ai_chat import analyze_user_message, generate_ai_response, _get_lang
@@ -1576,7 +1589,7 @@ class YearPixelsView(APIView):
 
         qs = MoodNote.objects.filter(user=request.user, is_deleted=False)
         pixels = get_year_pixels(qs, year)
-        cache.set(cache_key, pixels, 3600)  # 1 hour
+        cache.set(cache_key, pixels, CACHE_TTL_YEAR_PIXELS)
         return Response({'year': year, 'pixels': pixels})
 
 
@@ -1715,7 +1728,7 @@ class DailyPromptView(APIView):
             prompts = DEFAULT_PROMPTS_MAP.get(lang, DEFAULT_PROMPTS_ZH)
             prompt_text = random.choice(prompts)
 
-        cache.set(cache_key, prompt_text, 86400)  # 24 hours
+        cache.set(cache_key, prompt_text, CACHE_TTL_DAILY_PROMPT)
         return Response({'prompt': prompt_text})
 
 
@@ -1767,19 +1780,19 @@ class WeeklySummaryView(APIView):
                     # Log for debugging
                     exists = WeeklySummary.objects.filter(id=summary_id).exists()
                     logger.warning('Weekly PDF by ID=%s: user=%s, exists_any_user=%s', summary_id, request.user.id, exists)
-                    return Response({'error': 'Summary not found.'}, status=status.HTTP_404_NOT_FOUND)
+                    return Response({'detail': 'Summary not found.'}, status=status.HTTP_404_NOT_FOUND)
                 return self._generate_pdf_response(summary, request)
             except Exception as e:
                 logger.error('Weekly summary PDF (id=%s) failed: %s', summary_id, e, exc_info=True)
-                return Response({'error': 'PDF generation failed.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({'detail': 'PDF generation failed.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         week_start_str = request.query_params.get('week_start')
         if not week_start_str:
-            return Response({'error': 'week_start parameter required (YYYY-MM-DD).'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'week_start parameter required (YYYY-MM-DD).'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
         except ValueError:
-            return Response({'error': 'Invalid date format.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Invalid date format.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Auto-adjust to Monday of the given week
         weekday = week_start.weekday()  # 0=Monday, 6=Sunday
@@ -1811,7 +1824,7 @@ class WeeklySummaryView(APIView):
             )
             note_count = notes.count()
             if note_count == 0:
-                return Response({'error': 'No notes found for this week.'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'detail': 'No notes found for this week.'}, status=status.HTTP_404_NOT_FOUND)
 
             agg = notes.aggregate(avg_s=Avg('sentiment_score'), avg_st=Avg('stress_index'))
 
@@ -1888,7 +1901,7 @@ class WeeklySummaryView(APIView):
                 return self._generate_pdf_response(summary, request)
             except Exception as e:
                 logger.error('Weekly summary PDF generation failed: %s', e, exc_info=True)
-                return Response({'error': 'PDF generation failed.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response({'detail': 'PDF generation failed.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(WeeklySummarySerializer(summary).data)
 
@@ -1910,7 +1923,7 @@ class TherapistReportCreateView(generics.CreateAPIView):
         period_start = serializer.validated_data['period_start']
         period_end = serializer.validated_data['period_end']
         if period_end < period_start:
-            raise exceptions.ValidationError({'error': 'period_end must be >= period_start.'})
+            raise exceptions.ValidationError({'detail': 'period_end must be >= period_start.'})
 
         notes = MoodNote.objects.filter(
             user=user, is_deleted=False,
@@ -1967,9 +1980,9 @@ class TherapistReportPublicView(APIView):
         try:
             report = TherapistReport.objects.get(token=token)
         except TherapistReport.DoesNotExist:
-            return Response({'error': 'Report not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Report not found.'}, status=status.HTTP_404_NOT_FOUND)
         if timezone.now() > report.expires_at:
-            return Response({'error': 'This report has expired.'}, status=status.HTTP_410_GONE)
+            return Response({'detail': 'This report has expired.'}, status=status.HTTP_410_GONE)
         return Response(TherapistReportPublicSerializer(report).data)
 
 
@@ -2063,7 +2076,7 @@ class LessonCompleteView(APIView):
         try:
             article = PsychoArticle.objects.get(pk=pk, is_published=True)
         except PsychoArticle.DoesNotExist:
-            return Response({'error': 'Article not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'detail': 'Article not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         progress, created = UserLessonProgress.objects.get_or_create(
             user=request.user, article=article,

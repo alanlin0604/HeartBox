@@ -13,6 +13,9 @@ export default defineConfig({
     setupFiles: './src/test/setup.js',
   },
   build: {
+    sourcemap: false,
+    reportCompressedSize: false,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks: {

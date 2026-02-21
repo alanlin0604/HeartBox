@@ -514,6 +514,9 @@ class WeeklySummary(models.Model):
     class Meta:
         unique_together = ['user', 'week_start']
         ordering = ['-week_start']
+        indexes = [
+            models.Index(fields=['user', 'week_start'], name='weeklysummary_user_week'),
+        ]
 
     def __str__(self):
         return f'{self.user.username} week {self.week_start}'

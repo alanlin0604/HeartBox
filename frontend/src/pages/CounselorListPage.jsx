@@ -192,7 +192,7 @@ export default function CounselorListPage() {
       const res = await createConversation(counselorId)
       navigate(`/chat/${res.data.id}`)
     } catch (err) {
-      toast?.error(err.response?.data?.error || t('counselor.createFailed'))
+      toast?.error(err.response?.data?.detail || t('counselor.createFailed'))
     }
   }
 
@@ -202,7 +202,7 @@ export default function CounselorListPage() {
       setBookings((prev) => prev.map((b) => (b.id === bookingId ? res.data : b)))
       toast?.success(t('booking.actionSuccess'))
     } catch (err) {
-      toast?.error(err.response?.data?.error || t('booking.actionFailed'))
+      toast?.error(err.response?.data?.detail || t('booking.actionFailed'))
     }
   }
 
@@ -212,7 +212,7 @@ export default function CounselorListPage() {
       setBookings((prev) => prev.map((b) => (b.id === bookingId ? res.data : b)))
       toast?.success(t('booking.actionSuccess'))
     } catch (err) {
-      toast?.error(err.response?.data?.error || t('booking.actionFailed'))
+      toast?.error(err.response?.data?.detail || t('booking.actionFailed'))
     }
   }
 

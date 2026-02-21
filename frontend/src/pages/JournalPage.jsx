@@ -89,7 +89,7 @@ export default function JournalPage() {
     return initial
   })
 
-  const fetchNotes = async (p = 1, f = filters) => {
+  const fetchNotes = useCallback(async (p = 1, f = filters) => {
     setLoading(true)
     try {
       const { data } = await getNotes(p, f)
@@ -102,7 +102,7 @@ export default function JournalPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters, toast, t])
 
   const loadTrash = async () => {
     setTrashLoading(true)
@@ -141,7 +141,7 @@ export default function JournalPage() {
 
   useEffect(() => {
     fetchNotes(1, filters)
-  }, [filters])
+  }, [filters, fetchNotes])
 
   useEffect(() => {
     getAnalytics('week', 30)

@@ -133,7 +133,7 @@ export default function SettingsPage() {
       await deleteAccount(deletePassword)
       window.location.href = '/login'
     } catch (err) {
-      const msg = err.response?.data?.error || t('settings.deleteFailed')
+      const msg = err.response?.data?.detail || t('settings.deleteFailed')
       toast?.error(msg)
     } finally {
       setDeleting(false)

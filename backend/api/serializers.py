@@ -277,9 +277,7 @@ class SharedNoteSerializer(serializers.ModelSerializer):
         return obj.note.user.username
 
     def get_note_content(self, obj):
-        """Return full note content: try search_text first, then decrypt."""
-        if obj.note.search_text:
-            return obj.note.search_text
+        """Return full note content via decryption (never expose raw search_text)."""
         try:
             return obj.note.content or ''
         except Exception:
