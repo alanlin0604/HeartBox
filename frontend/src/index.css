@@ -22,6 +22,8 @@
   --chart-grid: rgba(255, 255, 255, 0.1);
   --chart-axis: #9ca3af;
   --popup-bg: rgba(30, 20, 60, 0.97);
+  --nav-bg: #1a1440;
+  --nav-border: rgba(255, 255, 255, 0.12);
 }
 
 /* ===== Light Theme ===== */
@@ -45,6 +47,8 @@
   --chart-grid: rgba(0, 0, 0, 0.1);
   --chart-axis: #475569;
   --popup-bg: rgba(255, 255, 255, 0.97);
+  --nav-bg: #ffffff;
+  --nav-border: rgba(0, 0, 0, 0.1);
 }
 
 body {
@@ -88,6 +92,14 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+/* ===== Solid Navbar ===== */
+.nav-bar {
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 /* ===== Glassmorphism ===== */

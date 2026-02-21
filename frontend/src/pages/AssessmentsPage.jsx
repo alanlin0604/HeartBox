@@ -137,11 +137,11 @@ export default function AssessmentsPage() {
   }))
 
   return (
-    <div className="space-y-6 mt-4 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold">{t('nav.assessments')}</h1>
+    <div className="mt-4">
+      <h1 className="text-2xl font-bold mb-6">{t('nav.assessments')}</h1>
 
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 mb-6">
         {['phq9', 'gad7'].map((type) => (
           <button
             key={type}
@@ -157,7 +157,7 @@ export default function AssessmentsPage() {
 
       {/* Result banner */}
       {result && (
-        <div className="glass p-4 border-l-4 border-purple-500/50">
+        <div className="glass p-4 border-l-4 border-purple-500/50 mb-6">
           <div className="flex items-center justify-between">
             <p className="font-semibold">
               {t('assessment.yourScore')}: <span className={getScoreColor(tab, result.total_score)}>{result.total_score}</span>
@@ -177,73 +177,99 @@ export default function AssessmentsPage() {
         </div>
       )}
 
-      {/* Questionnaire */}
-      <div className="glass p-6 space-y-6">
-        <h2 className="text-lg font-semibold">
-          {tab === 'phq9' ? t('assessment.phq9Title') : t('assessment.gad7Title')}
-        </h2>
-        <p className="text-sm opacity-60">{t('assessment.instructions')}</p>
-        <p className="text-xs opacity-50 italic">{t('assessment.disclaimer')}</p>
+      {/* Desktop: side-by-side, Mobile: stacked */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left: Questionnaire */}
+        <div className="flex-1 min-w-0">
+          <div className="glass p-6 space-y-6">
+            <h2 className="text-lg font-semibold">
+              {tab === 'phq9' ? t('assessment.phq9Title') : t('assessment.gad7Title')}
+            </h2>
+            <p className="text-sm opacity-60">{t('assessment.instructions')}</p>
+            <p className="text-xs opacity-50 italic">{t('assessment.disclaimer')}</p>
 
-        {Array.from({ length: questionCount }, (_, i) => (
-          <div key={i} className="space-y-2">
-            <p className="text-sm font-medium">
-              {i + 1}. {t(`assessment.${tab}_q${i + 1}`)}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {[0, 1, 2, 3].map((val) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => handleAnswer(i, val)}
-                  className={`text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
-                    responses[i] === val
-                      ? 'bg-purple-500/30 border-purple-500/40 text-purple-400'
-                      : 'border-[var(--card-border)] opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  {t(`assessment.option${val}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-
-        <button
-          onClick={handleSubmit}
-          disabled={submitting || responses.some((r) => r < 0)}
-          className="btn-primary"
-        >
-          {submitting ? t('common.loading') : t('assessment.submit')}
-        </button>
-      </div>
-
-      {/* History list with share buttons */}
-      {history.length > 0 && (
-        <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4">{t('assessment.pastResults')}</h2>
-          <div className="space-y-2">
-            {history.map((item) => (
-              <div key={item.id} className="glass-card p-3 flex items-center justify-between text-sm">
-                <div>
-                  <span className={`font-semibold ${getScoreColor(tab, item.total_score)}`}>{item.total_score}</span>
-                  <span className="mx-2 opacity-40">—</span>
-                  <span className={getScoreColor(tab, item.total_score)}>{getScoreLabel(tab, item.total_score, t)}</span>
-                  <span className="ml-3 text-xs opacity-50">
-                    {new Date(item.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}
-                  </span>
+            {Array.from({ length: questionCount }, (_, i) => (
+              <div key={i} className="space-y-2">
+                <p className="text-sm font-medium">
+                  {i + 1}. {t(`assessment.${tab}_q${i + 1}`)}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[0, 1, 2, 3].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => handleAnswer(i, val)}
+                      className={`text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+                        responses[i] === val
+                          ? 'bg-purple-500/30 border-purple-500/40 text-purple-400'
+                          : 'border-[var(--card-border)] opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      {t(`assessment.option${val}`)}
+                    </button>
+                  ))}
                 </div>
-                <button
-                  onClick={() => openShareModal(item.id)}
-                  className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors cursor-pointer"
-                >
-                  {t('assessment.shareToCounselor')}
-                </button>
               </div>
             ))}
+
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || responses.some((r) => r < 0)}
+              className="btn-primary"
+            >
+              {submitting ? t('common.loading') : t('assessment.submit')}
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Right: History + Chart (desktop sidebar) */}
+        {(history.length > 0 || chartData.length > 1) && (
+          <div className="lg:w-80 xl:w-96 flex-shrink-0 space-y-6">
+            {/* History list */}
+            {history.length > 0 && (
+              <div className="glass p-6">
+                <h2 className="text-lg font-semibold mb-4">{t('assessment.pastResults')}</h2>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {history.map((item) => (
+                    <div key={item.id} className="glass-card p-3 flex items-center justify-between text-sm">
+                      <div>
+                        <span className={`font-semibold ${getScoreColor(tab, item.total_score)}`}>{item.total_score}</span>
+                        <span className="mx-2 opacity-40">—</span>
+                        <span className={getScoreColor(tab, item.total_score)}>{getScoreLabel(tab, item.total_score, t)}</span>
+                        <span className="ml-3 text-xs opacity-50">
+                          {new Date(item.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => openShareModal(item.id)}
+                        className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors cursor-pointer"
+                      >
+                        {t('assessment.shareToCounselor')}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* History chart */}
+            {chartData.length > 1 && (
+              <div className="glass p-6">
+                <h2 className="text-lg font-semibold mb-4">{t('assessment.history')}</h2>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                    <XAxis dataKey="date" stroke={axisStroke} fontSize={11} />
+                    <YAxis stroke={axisStroke} fontSize={11} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Line type="monotone" dataKey="score" stroke="#a78bfa" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Share Modal */}
       {shareModal && (
@@ -274,22 +300,6 @@ export default function AssessmentsPage() {
               {t('common.cancel')}
             </button>
           </div>
-        </div>
-      )}
-
-      {/* History chart */}
-      {chartData.length > 1 && (
-        <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4">{t('assessment.history')}</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-              <XAxis dataKey="date" stroke={axisStroke} fontSize={12} />
-              <YAxis stroke={axisStroke} fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="score" stroke="#a78bfa" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
         </div>
       )}
     </div>

@@ -57,6 +57,6 @@ export const shareAssessment = (assessmentId, counselorId) =>
 export const getSharedAssessments = () =>
   api.get('/shared-assessments/')
 
-// Weekly Summary PDF export (by summary ID for reliability)
-export const exportWeeklySummaryPDF = (summaryId, lang) =>
-  api.get(`/weekly-summary/?id=${summaryId}&format=pdf${lang ? `&lang=${lang}` : ''}`, { responseType: 'blob' })
+// Weekly Summary PDF export (use 'export' param — DRF intercepts 'format')
+export const exportWeeklySummaryPDF = (weekStart, lang) =>
+  api.get(`/weekly-summary/?week_start=${weekStart}&export=pdf${lang ? `&lang=${lang}` : ''}`, { responseType: 'blob' })

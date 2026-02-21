@@ -1738,28 +1738,39 @@ class SelfAssessmentListCreateView(generics.ListCreateAPIView):
 # ===== Weekly Summary Views =====
 
 class WeeklySummaryView(APIView):
+    def _is_pdf_request(self, request):
+        """Check if PDF export requested (supports both 'export' and 'format' params)."""
+        return request.query_params.get('export') == 'pdf' or request.query_params.get('format') == 'pdf'
+
+    def _generate_pdf_response(self, summary, request):
+        """Generate and return a PDF FileResponse for the given summary."""
+        week_end = summary.week_start + timedelta(days=6)
+        notes_qs = MoodNote.objects.filter(
+            user=request.user,
+            is_deleted=False,
+            created_at__date__gte=summary.week_start,
+            created_at__date__lte=week_end,
+        ).order_by('created_at')
+        lang = request.query_params.get('lang') or request.headers.get('Accept-Language', 'zh-TW').split(',')[0].strip()
+        buf = generate_weekly_summary_pdf(summary, notes_qs, request.user, lang=lang)
+        filename = f'weekly_summary_{summary.week_start}.pdf'
+        return FileResponse(buf, as_attachment=True, filename=filename, content_type='application/pdf')
+
     def get(self, request):
-        # PDF export by summary ID (most reliable)
+        # Support PDF export by summary ID (for cached old frontend versions)
         summary_id = request.query_params.get('id')
-        if summary_id and request.query_params.get('format') == 'pdf':
+        if summary_id and self._is_pdf_request(request):
             try:
-                summary = WeeklySummary.objects.get(id=summary_id, user=request.user)
-            except WeeklySummary.DoesNotExist:
-                return Response({'error': 'Summary not found.'}, status=status.HTTP_404_NOT_FOUND)
-            try:
-                week_end = summary.week_start + timedelta(days=6)
-                notes_qs = MoodNote.objects.filter(
-                    user=request.user,
-                    is_deleted=False,
-                    created_at__date__gte=summary.week_start,
-                    created_at__date__lte=week_end,
-                ).order_by('created_at')
-                lang = request.query_params.get('lang') or request.headers.get('Accept-Language', 'zh-TW').split(',')[0].strip()
-                buf = generate_weekly_summary_pdf(summary, notes_qs, request.user, lang=lang)
-                filename = f'weekly_summary_{summary.week_start}.pdf'
-                return FileResponse(buf, as_attachment=True, filename=filename, content_type='application/pdf')
+                # Try with user filter first, then without (in case of user mismatch)
+                summary = WeeklySummary.objects.filter(id=summary_id, user=request.user).first()
+                if not summary:
+                    # Log for debugging
+                    exists = WeeklySummary.objects.filter(id=summary_id).exists()
+                    logger.warning('Weekly PDF by ID=%s: user=%s, exists_any_user=%s', summary_id, request.user.id, exists)
+                    return Response({'error': 'Summary not found.'}, status=status.HTTP_404_NOT_FOUND)
+                return self._generate_pdf_response(summary, request)
             except Exception as e:
-                logger.error('Weekly summary PDF generation failed: %s', e, exc_info=True)
+                logger.error('Weekly summary PDF (id=%s) failed: %s', summary_id, e, exc_info=True)
                 return Response({'error': 'PDF generation failed.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         week_start_str = request.query_params.get('week_start')
@@ -1777,6 +1788,17 @@ class WeeklySummaryView(APIView):
 
         # Try to find existing
         summary = WeeklySummary.objects.filter(user=request.user, week_start=week_start).first()
+
+        if summary:
+            # Always refresh note_count to reflect current actual count
+            week_end = week_start + timedelta(days=6)
+            actual_count = MoodNote.objects.filter(
+                user=request.user, is_deleted=False,
+                created_at__date__gte=week_start, created_at__date__lte=week_end,
+            ).count()
+            if summary.note_count != actual_count:
+                summary.note_count = actual_count
+                summary.save(update_fields=['note_count'])
 
         if not summary:
             # Generate new summary
@@ -1860,20 +1882,10 @@ class WeeklySummaryView(APIView):
                 ai_summary=ai_summary,
             )
 
-        # Check if PDF format requested
-        if request.query_params.get('format') == 'pdf':
+        # Check if PDF export requested
+        if self._is_pdf_request(request):
             try:
-                week_end = summary.week_start + timedelta(days=6)
-                notes_qs = MoodNote.objects.filter(
-                    user=request.user,
-                    is_deleted=False,
-                    created_at__date__gte=summary.week_start,
-                    created_at__date__lte=week_end,
-                ).order_by('created_at')
-                lang = request.query_params.get('lang') or request.headers.get('Accept-Language', 'zh-TW').split(',')[0].strip()
-                buf = generate_weekly_summary_pdf(summary, notes_qs, request.user, lang=lang)
-                filename = f'weekly_summary_{summary.week_start}.pdf'
-                return FileResponse(buf, as_attachment=True, filename=filename, content_type='application/pdf')
+                return self._generate_pdf_response(summary, request)
             except Exception as e:
                 logger.error('Weekly summary PDF generation failed: %s', e, exc_info=True)
                 return Response({'error': 'PDF generation failed.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -3,6 +3,8 @@ import os
 import re
 from datetime import datetime, timedelta
 
+from django.utils.html import strip_tags
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -212,6 +214,7 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
         story.append(Paragraph(f'{date_str}', styles['CJKHeading']))
 
         content = note.content or ''
+        content = strip_tags(content).strip()
         content = _escape(content)
         story.append(Paragraph(content, styles['CJKBody']))
 
@@ -386,6 +389,7 @@ def generate_weekly_summary_pdf(summary, notes_qs, user, lang='zh-TW'):
                 content = note.search_text or note.content or ''
             except Exception:
                 content = note.search_text or ''
+            content = strip_tags(content).strip()
             content = _strip_emoji(content)
             if content:
                 story.append(Paragraph(_escape(content), styles['CJKBody']))

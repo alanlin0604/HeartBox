@@ -169,7 +169,7 @@ export default function WeeklySummaryPage() {
           <button
             onClick={async () => {
               try {
-                const res = await exportWeeklySummaryPDF(detail.id, lang)
+                const res = await exportWeeklySummaryPDF(detail.week_start, lang)
                 const url = URL.createObjectURL(res.data)
                 const a = document.createElement('a')
                 a.href = url
