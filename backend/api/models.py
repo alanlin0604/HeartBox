@@ -522,6 +522,30 @@ class WeeklySummary(models.Model):
         return f'{self.user.username} week {self.week_start}'
 
 
+class DailySleep(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sleep_records',
+    )
+    date = models.DateField()
+    sleep_hours = models.FloatField(
+        validators=[MinValueValidator(0), MaxValueValidator(24)],
+    )
+    sleep_quality = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['user', 'date']
+        ordering = ['-date']
+
+    def __str__(self):
+        return f'{self.user.username} {self.date} — {self.sleep_hours}h'
+
+
 class TherapistReport(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

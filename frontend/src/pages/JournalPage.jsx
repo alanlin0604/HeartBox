@@ -13,6 +13,7 @@ import ExportPDFButton from '../components/ExportPDFButton'
 import AlertBanner from '../components/AlertBanner'
 import EmptyState from '../components/EmptyState'
 import ConfirmModal from '../components/ConfirmModal'
+import SleepTracker from '../components/SleepTracker'
 import { useToast } from '../context/ToastContext'
 import FeedbackWidget from '../components/FeedbackWidget'
 
@@ -279,6 +280,9 @@ export default function JournalPage() {
 
           {/* Write section */}
           <NoteForm onSubmit={handleCreate} loading={creating} initialPrompt={promptContent} />
+
+          {/* Sleep tracking */}
+          <SleepTracker />
 
           {/* Mobile: streak + stats inline */}
           <div className="lg:hidden space-y-3">

@@ -3,10 +3,10 @@ from rest_framework import serializers
 
 from .models import (
     AIChatMessage, AIChatSession,
-    Booking, Conversation, Course, CounselorProfile, Feedback, Message, MoodNote,
-    NoteAttachment, Notification, PsychoArticle, SelfAssessment, SharedAssessment,
-    SharedNote, TherapistReport, TimeSlot, UserAchievement, UserLessonProgress,
-    WeeklySummary, WellnessSession,
+    Booking, Conversation, Course, CounselorProfile, DailySleep, Feedback,
+    Message, MoodNote, NoteAttachment, Notification, PsychoArticle,
+    SelfAssessment, SharedAssessment, SharedNote, TherapistReport, TimeSlot,
+    UserAchievement, UserLessonProgress, WeeklySummary, WellnessSession,
 )
 
 User = get_user_model()
@@ -377,6 +377,13 @@ class WeeklySummarySerializer(serializers.ModelSerializer):
         fields = ('id', 'week_start', 'mood_avg', 'stress_avg', 'note_count',
                   'top_activities', 'ai_summary', 'created_at')
         read_only_fields = fields
+
+
+class DailySleepSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailySleep
+        fields = ('id', 'date', 'sleep_hours', 'sleep_quality', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'created_at', 'updated_at')
 
 
 class TherapistReportSerializer(serializers.ModelSerializer):

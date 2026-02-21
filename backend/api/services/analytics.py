@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 import pandas as pd
+from django.db.models import Avg
 from django.utils import timezone
 from scipy import stats
 
@@ -182,24 +183,59 @@ def get_activity_mood_correlation(queryset, lookback_days=90):
 
 
 def get_sleep_mood_correlation(queryset, lookback_days=90):
-    """Pearson correlation between sleep hours/quality and sentiment."""
+    """Pearson correlation between sleep hours/quality and sentiment.
+
+    Reads from DailySleep model (primary) and falls back to legacy
+    note metadata for older data.
+    """
+    from ..models import DailySleep
+
     since = timezone.now() - timedelta(days=lookback_days)
+    user = queryset.first()
+    user_obj = user.user if user else None
+
+    pairs = []
+
+    # Primary source: DailySleep records joined with daily avg sentiment
+    if user_obj:
+        sleep_records = DailySleep.objects.filter(
+            user=user_obj, date__gte=since.date(),
+        ).values('date', 'sleep_hours', 'sleep_quality')
+
+        for rec in sleep_records:
+            day_notes = queryset.filter(
+                created_at__date=rec['date'],
+                sentiment_score__isnull=False,
+            )
+            avg = day_notes.aggregate(avg=Avg('sentiment_score'))['avg']
+            if avg is not None:
+                pairs.append({
+                    'sentiment': round(avg, 3),
+                    'sleep_hours': float(rec['sleep_hours']),
+                    'sleep_quality': rec['sleep_quality'],
+                })
+        seen_dates = {r['date'] for r in sleep_records}
+    else:
+        seen_dates = set()
+
+    # Fallback: legacy note metadata (for older data before DailySleep model)
     notes = queryset.filter(
         created_at__gte=since,
         sentiment_score__isnull=False,
-    ).values('sentiment_score', 'metadata')
+    ).values('sentiment_score', 'metadata', 'created_at')
 
-    pairs = []
     for note in notes:
+        note_date = note['created_at'].date() if hasattr(note['created_at'], 'date') else note['created_at']
+        if note_date in seen_dates:
+            continue
         meta = note.get('metadata') or {}
         sleep_hours = meta.get('sleep_hours')
-        sleep_quality = meta.get('sleep_quality')
         if sleep_hours is not None:
             try:
                 pairs.append({
                     'sentiment': note['sentiment_score'],
                     'sleep_hours': float(sleep_hours),
-                    'sleep_quality': int(sleep_quality) if sleep_quality is not None else None,
+                    'sleep_quality': int(meta['sleep_quality']) if meta.get('sleep_quality') is not None else None,
                 })
             except (ValueError, TypeError):
                 continue

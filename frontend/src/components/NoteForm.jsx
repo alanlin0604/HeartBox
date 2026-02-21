@@ -37,6 +37,29 @@ const ACTIVITIES = [
 
 const LANG_SPEECH_MAP = { 'zh-TW': 'zh-TW', en: 'en-US', ja: 'ja-JP' }
 
+// Add punctuation to speech transcript based on language
+function addPunctuation(text, lang) {
+  if (!text) return text
+  let result = text.trim()
+  if (!result) return result
+
+  if (lang === 'zh-TW' || lang === 'ja-JP') {
+    // CJK: add comma between clauses (split on natural pauses like 然後/但是/所以/因為/而且/不過/可是/就是)
+    result = result.replace(/(?<=[^\s，。！？、])(然後|但是|所以|因為|而且|不過|可是|就是|接著|另外)/g, '，$1')
+    // Add period at end if missing punctuation
+    if (!/[，。！？、\s]$/.test(result)) {
+      result += '。'
+    }
+  } else {
+    // English: capitalize first letter, add period at end
+    result = result.charAt(0).toUpperCase() + result.slice(1)
+    if (!/[.!?,\s]$/.test(result)) {
+      result += '.'
+    }
+  }
+  return result
+}
+
 const GRATITUDE_TEMPLATES = [
   { id: 'gratitude_3things', nameKey: 'noteForm.gratitude3Things', contentKey: 'noteForm.gratitude3ThingsContent' },
   { id: 'gratitude_person', nameKey: 'noteForm.gratitudePerson', contentKey: 'noteForm.gratitudePersonContent' },
@@ -128,6 +151,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     recognition.continuous = true
     recognition.interimResults = true
     recognition.lang = LANG_SPEECH_MAP[lang] || 'en-US'
+    const speechLang = LANG_SPEECH_MAP[lang] || 'en-US'
     recognition.onresult = (event) => {
       let transcript = ''
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -136,7 +160,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
         }
       }
       if (transcript && editor) {
-        editor.commands.insertContent(transcript)
+        editor.commands.insertContent(addPunctuation(transcript, speechLang))
       }
     }
     recognition.onerror = () => setIsRecording(false)

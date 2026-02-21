@@ -30,10 +30,10 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import (
     AIChatMessage, AIChatSession,
-    Booking, Conversation, Course, CounselorProfile, Feedback, Message, MoodNote,
-    NoteAttachment, Notification, PsychoArticle, SelfAssessment, SharedAssessment,
-    SharedNote, TherapistReport, TimeSlot, UserAchievement, UserLessonProgress,
-    WeeklySummary, WellnessSession,
+    Booking, Conversation, Course, CounselorProfile, DailySleep, Feedback,
+    Message, MoodNote, NoteAttachment, Notification, PsychoArticle,
+    SelfAssessment, SharedAssessment, SharedNote, TherapistReport, TimeSlot,
+    UserAchievement, UserLessonProgress, WeeklySummary, WellnessSession,
 )
 from .serializers import (
     AIChatMessageSerializer,
@@ -46,6 +46,7 @@ from .serializers import (
     CourseListSerializer,
     CounselorListSerializer,
     CounselorProfileSerializer,
+    DailySleepSerializer,
     FeedbackSerializer,
     MessageSerializer,
     MoodNoteListSerializer,
@@ -1911,6 +1912,47 @@ class WeeklySummaryListView(generics.ListAPIView):
 
     def get_queryset(self):
         return WeeklySummary.objects.filter(user=self.request.user)
+
+
+# ===== Daily Sleep Views =====
+
+class DailySleepView(APIView):
+    """GET today's sleep record, POST/PUT to upsert."""
+
+    def get(self, request):
+        date_str = request.query_params.get('date')
+        if date_str:
+            try:
+                date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'detail': 'Invalid date format. Use YYYY-MM-DD.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+        else:
+            date = timezone.localdate()
+        try:
+            record = DailySleep.objects.get(user=request.user, date=date)
+            return Response(DailySleepSerializer(record).data)
+        except DailySleep.DoesNotExist:
+            return Response({'date': str(date), 'sleep_hours': None, 'sleep_quality': None})
+
+    def post(self, request):
+        date = request.data.get('date', str(timezone.localdate()))
+        record, _created = DailySleep.objects.update_or_create(
+            user=request.user,
+            date=date,
+            defaults={
+                'sleep_hours': request.data.get('sleep_hours'),
+                'sleep_quality': request.data.get('sleep_quality'),
+            },
+        )
+        return Response(DailySleepSerializer(record).data, status=status.HTTP_200_OK)
+
+
+class DailySleepListView(generics.ListAPIView):
+    serializer_class = DailySleepSerializer
+
+    def get_queryset(self):
+        return DailySleep.objects.filter(user=self.request.user)
 
 
 # ===== Therapist Report Views =====

@@ -26,6 +26,8 @@ from .views import (
     CourseDetailView,
     CourseListView,
     DailyPromptView,
+    DailySleepListView,
+    DailySleepView,
     QuoteActionView,
     CounselorApplyView,
     CounselorListView,
@@ -138,6 +140,9 @@ urlpatterns = [
     # Weekly Summary
     path('weekly-summary/', WeeklySummaryView.as_view(), name='weekly-summary'),
     path('weekly-summary/list/', WeeklySummaryListView.as_view(), name='weekly-summary-list'),
+    # Sleep Tracking
+    path('sleep/', DailySleepView.as_view(), name='daily-sleep'),
+    path('sleep/list/', DailySleepListView.as_view(), name='daily-sleep-list'),
     # Therapist Reports
     path('reports/', TherapistReportCreateView.as_view(), name='report-create'),
     path('reports/list/', TherapistReportListView.as_view(), name='report-list'),
