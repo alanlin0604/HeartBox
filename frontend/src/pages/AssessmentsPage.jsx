@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getAssessments, createAssessment, shareAssessment } from '../api/wellness'
 import { getCounselors } from '../api/counselors'
@@ -131,10 +131,10 @@ export default function AssessmentsPage() {
     color: theme === 'dark' ? '#e2e8f0' : '#1e293b',
   }
 
-  const chartData = [...history].reverse().map((item) => ({
+  const chartData = useMemo(() => [...history].reverse().map((item) => ({
     date: new Date(item.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang),
     score: item.total_score,
-  }))
+  })), [history, lang])
 
   return (
     <div className="mt-4">

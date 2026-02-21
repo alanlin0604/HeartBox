@@ -76,6 +76,12 @@ api.interceptors.response.use(
       }
     }
 
+    // Attach backend error code to the error for i18n lookup via t(`error.${code}`)
+    const code = error.response?.data?.code;
+    if (code) {
+      error.errorCode = code;
+    }
+
     // Global toast for 5xx server errors
     if (error.response?.status >= 500) {
       window.dispatchEvent(new CustomEvent('api-error', {

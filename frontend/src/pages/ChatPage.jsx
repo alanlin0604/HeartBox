@@ -166,6 +166,7 @@ export default function ChatPage() {
         if (prev.some((m) => m.id === data.id)) return prev
         return [...prev, data]
       })
+      setSending(false)
     }
 
     ws.onclose = () => {
@@ -226,6 +227,7 @@ export default function ChatPage() {
     if (!newMsg.trim() || sending) return
 
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      setSending(true)
       wsRef.current.send(JSON.stringify({ message: newMsg }))
       setNewMsg('')
     } else {

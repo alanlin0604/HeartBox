@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -8,6 +10,8 @@ from .models import (
     SelfAssessment, SharedAssessment, SharedNote, TherapistReport, TimeSlot,
     UserAchievement, UserLessonProgress, WeeklySummary, WellnessSession,
 )
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -280,7 +284,8 @@ class SharedNoteSerializer(serializers.ModelSerializer):
         """Return full note content via decryption (never expose raw search_text)."""
         try:
             return obj.note.content or ''
-        except Exception:
+        except Exception as e:
+            logger.warning('SharedNote %s: decryption failed: %s', obj.pk, e)
             return ''
 
     def get_note_tags(self, obj):

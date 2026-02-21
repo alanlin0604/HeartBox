@@ -45,7 +45,7 @@ function addPunctuation(text, lang) {
 
   if (lang === 'zh-TW' || lang === 'ja-JP') {
     // CJK: add comma between clauses (split on natural pauses like 然後/但是/所以/因為/而且/不過/可是/就是)
-    result = result.replace(/(?<=[^\s，。！？、])(然後|但是|所以|因為|而且|不過|可是|就是|接著|另外)/g, '，$1')
+    result = result.replace(/([^\s，。！？、])(然後|但是|所以|因為|而且|不過|可是|就是|接著|另外)/g, '$1，$2')
     // Add period at end if missing punctuation
     if (!/[，。！？、\s]$/.test(result)) {
       result += '。'

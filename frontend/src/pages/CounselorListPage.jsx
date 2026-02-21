@@ -76,6 +76,7 @@ export default function CounselorListPage() {
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState(null) // { x, y, type, id }
+  const [failedAvatars, setFailedAvatars] = useState(new Set())
 
   // Edit profile form state (pricing tab upgrade)
   const [editDisplayName, setEditDisplayName] = useState('')
@@ -373,25 +374,22 @@ export default function CounselorListPage() {
                 <div key={c.id} className="glass-card p-5 space-y-3">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                      {c.avatar ? (
+                      {c.avatar && !failedAvatars.has(c.id) ? (
                         <img
                           src={c.avatar}
                           alt={c.username}
                           loading="lazy"
                           decoding="async"
                           className="w-10 h-10 rounded-full object-cover border border-white/20"
-                          onError={(e) => {
-                            e.target.style.display = 'none'
-                            e.target.nextElementSibling.style.display = 'flex'
-                          }}
+                          onError={() => setFailedAvatars(prev => new Set(prev).add(c.id))}
                         />
-                      ) : null}
+                      ) : (
                       <div
-                        className="w-10 h-10 rounded-full bg-purple-500/25 items-center justify-center text-sm font-semibold"
-                        style={{ display: c.avatar ? 'none' : 'flex' }}
+                        className="w-10 h-10 rounded-full bg-purple-500/25 flex items-center justify-center text-sm font-semibold"
                       >
                         {String(c.display_name || c.username || '?').slice(0, 1).toUpperCase()}
                       </div>
+                      )}
                       <div>
                       <h3 className="text-lg font-semibold">{c.display_name || c.username}</h3>
                       <p className="text-sm opacity-60">{c.specialty}</p>

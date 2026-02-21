@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getNotes, createNote, uploadAttachment, reanalyzeNote, batchDeleteNotes, getTrashNotes, restoreNote, permanentDeleteNote, togglePin, deleteNote } from '../api/notes'
 import { getAnalytics } from '../api/analytics'
@@ -41,6 +41,7 @@ export default function JournalPage() {
   const [permanentDeleteId, setPermanentDeleteId] = useState(null)
   const [dailyPrompt, setDailyPrompt] = useState('')
   const [promptContent, setPromptContent] = useState(null)
+  const fetchIdRef = useRef(0)
 
   // Close context menu on click anywhere
   useEffect(() => {
@@ -91,17 +92,20 @@ export default function JournalPage() {
   })
 
   const fetchNotes = useCallback(async (p = 1, f = filters) => {
+    const id = ++fetchIdRef.current
     setLoading(true)
     try {
       const { data } = await getNotes(p, f)
+      if (id !== fetchIdRef.current) return
       setNotes(data.results || [])
       setHasNext(!!data.next)
       setTotalCount(data.count || 0)
       setPage(p)
     } catch (err) {
+      if (id !== fetchIdRef.current) return
       toast?.error(t('common.operationFailed'))
     } finally {
-      setLoading(false)
+      if (id === fetchIdRef.current) setLoading(false)
     }
   }, [filters, toast, t])
 

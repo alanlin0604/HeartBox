@@ -142,6 +142,7 @@ export default memo(function NotificationBell() {
       setNotifications(items)
       setUnreadCount(items.filter((n) => !n.is_read).length)
     } catch (err) {
+      console.warn('Failed to load notifications:', err)
     }
   }
 

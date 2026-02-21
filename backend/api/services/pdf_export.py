@@ -244,22 +244,21 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
             story.append(Paragraph(f'<b>{labels["attachments"]}</b>', styles['CJKFeedbackLabel']))
             for att in image_attachments:
                 try:
-                    img_path = att.file.path
-                    if os.path.exists(img_path):
-                        img = Image(img_path)
-                        # Scale to fit within page width (max 150mm wide, 100mm tall)
-                        max_w, max_h = 150*mm, 100*mm
-                        iw, ih = img.drawWidth, img.drawHeight
-                        if iw > max_w:
-                            ratio = max_w / iw
-                            iw, ih = iw * ratio, ih * ratio
-                        if ih > max_h:
-                            ratio = max_h / ih
-                            iw, ih = iw * ratio, ih * ratio
-                        img.drawWidth = iw
-                        img.drawHeight = ih
-                        story.append(img)
-                        story.append(Spacer(1, 2*mm))
+                    img_data = att.file.read()
+                    img = Image(io.BytesIO(img_data))
+                    # Scale to fit within page width (max 150mm wide, 100mm tall)
+                    max_w, max_h = 150*mm, 100*mm
+                    iw, ih = img.drawWidth, img.drawHeight
+                    if iw > max_w:
+                        ratio = max_w / iw
+                        iw, ih = iw * ratio, ih * ratio
+                    if ih > max_h:
+                        ratio = max_h / ih
+                        iw, ih = iw * ratio, ih * ratio
+                    img.drawWidth = iw
+                    img.drawHeight = ih
+                    story.append(img)
+                    story.append(Spacer(1, 2*mm))
                 except Exception:
                     pass  # Skip images that can't be loaded
 
