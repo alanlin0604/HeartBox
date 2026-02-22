@@ -1,9 +1,27 @@
+import math
 from datetime import timedelta
 
+import numpy as np
 import pandas as pd
 from django.db.models import Avg
 from django.utils import timezone
 from scipy import stats
+
+
+def _sanitize(obj):
+    """Recursively replace NaN/Inf float values with None for JSON safety."""
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    if isinstance(obj, (np.floating, np.integer)):
+        v = obj.item()
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            return None
+        return v
+    return obj
 
 
 def get_mood_trends(queryset, period='week', lookback_days=30):
@@ -37,7 +55,7 @@ def get_mood_trends(queryset, period='week', lookback_days=30):
     grouped['avg_sentiment'] = grouped['avg_sentiment'].round(2)
     grouped['avg_stress'] = grouped['avg_stress'].round(1)
 
-    return grouped.rename(columns={'period': 'name'}).to_dict(orient='records')
+    return _sanitize(grouped.rename(columns={'period': 'name'}).to_dict(orient='records'))
 
 
 def get_mood_weather_correlation(queryset, lookback_days=90):
@@ -76,13 +94,13 @@ def get_mood_weather_correlation(queryset, lookback_days=90):
     heatmap = df.assign(temp_bin=temp_bins, sent_bin=sent_bins)\
         .groupby(['temp_bin', 'sent_bin']).size().reset_index(name='count')
 
-    return {
+    return _sanitize({
         'correlation': round(r, 3),
         'p_value': round(p, 4),
         'scatter_data': pairs,
         'heatmap': heatmap.to_dict(orient='records'),
         'sample_size': len(pairs),
-    }
+    })
 
 
 def get_calendar_data(queryset, year, month):
@@ -107,7 +125,7 @@ def get_calendar_data(queryset, year, month):
     grouped['avg_sentiment'] = grouped['avg_sentiment'].round(2)
     grouped['date'] = grouped['date'].astype(str)
 
-    return grouped.to_dict(orient='records')
+    return _sanitize(grouped.to_dict(orient='records'))
 
 
 def get_frequent_tags(queryset, lookback_days=90, top_n=10):
@@ -260,7 +278,7 @@ def get_sleep_mood_correlation(queryset, lookback_days=90):
             result['quality_p_value'] = round(p, 4)
         except Exception:
             result['quality_correlation'] = None
-    return result
+    return _sanitize(result)
 
 
 def get_gratitude_stats(queryset):
@@ -311,4 +329,4 @@ def get_year_pixels(queryset, year):
     df['date'] = pd.to_datetime(df['created_at']).dt.date
 
     grouped = df.groupby('date')['sentiment_score'].mean().round(2)
-    return {str(date): float(val) for date, val in grouped.items()}
+    return _sanitize({str(date): float(val) for date, val in grouped.items()})
