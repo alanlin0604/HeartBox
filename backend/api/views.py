@@ -274,12 +274,12 @@ class ForgotPasswordView(APIView):
                 f'</div>'
             )
             try:
-                from .tasks import send_email_task
-                send_email_task.delay(
+                send_mail(
                     'HeartBox — Reset Your Password',
                     plain_message,
                     getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@heartbox.local'),
                     [user.email],
+                    html_message=html_message,
                 )
             except Exception as e:
                 logger.error('Failed to send password reset email to %s: %s', user.email, e)
