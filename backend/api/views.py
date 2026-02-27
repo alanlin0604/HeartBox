@@ -2239,12 +2239,19 @@ class ResendVerificationView(APIView):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         frontend_url = os.environ.get('FRONTEND_URL', 'https://heartbox.pages.dev')
         verify_url = f'{frontend_url}/verify-email?uid={uid}&token={token}'
-        send_mail(
-            'Verify your HeartBox email',
-            f'Click this link to verify your email: {verify_url}',
-            settings.DEFAULT_FROM_EMAIL,
-            [user.email],
-        )
+        try:
+            send_mail(
+                'Verify your HeartBox email',
+                f'Click this link to verify your email: {verify_url}',
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+            )
+        except Exception:
+            logger.exception('Failed to send verification email to %s', user.email)
+            return Response(
+                {'detail': 'Failed to send verification email. Please try again later.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return Response({'detail': 'Verification email sent'})
 
 
