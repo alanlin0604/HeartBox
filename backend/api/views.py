@@ -177,7 +177,7 @@ class RegisterView(generics.CreateAPIView):
                 [user.email],
             )
         except Exception:
-            pass  # Don't block registration if email fails
+            logger.exception('Failed to send verification email to %s', user.email)
 
 
 def _issue_tokens(user):
