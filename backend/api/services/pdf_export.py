@@ -11,8 +11,9 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+from reportlab.lib.enums import TA_CENTER
 from reportlab.platypus import (
-    Image, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
+    Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
 
 
@@ -122,6 +123,65 @@ def _strip_emoji(text):
     return emoji_pattern.sub('', text).strip()
 
 
+def _add_page_number(canvas, doc):
+    """Add page number to the bottom of each page."""
+    page_num = canvas.getPageNumber()
+    canvas.saveState()
+    canvas.setFont(CJK_FONT, 9)
+    canvas.setFillColor(colors.HexColor('#9ca3af'))
+    canvas.drawCentredString(A4[0] / 2, 12 * mm, f'— {page_num} —')
+    canvas.restoreState()
+
+
+def _draw_divider(width=170 * mm):
+    """Return a horizontal divider table."""
+    t = Table([['']], colWidths=[width], rowHeights=[0.5])
+    t.setStyle(TableStyle([
+        ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.HexColor('#ddd6fe')),
+    ]))
+    return t
+
+
+def _generate_mood_trend_image(notes):
+    """Generate a mood trend chart as a PNG image using matplotlib. Returns BytesIO or None."""
+    sentiments = [(n.created_at, n.sentiment_score) for n in notes if n.sentiment_score is not None]
+    if len(sentiments) < 3:
+        return None
+
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        import matplotlib.dates as mdates
+
+        dates = [s[0] for s in sentiments]
+        scores = [s[1] for s in sentiments]
+
+        fig, ax = plt.subplots(figsize=(6, 2.5))
+        ax.plot(dates, scores, color='#7c3aed', linewidth=1.5, marker='o', markersize=3)
+        ax.fill_between(dates, scores, alpha=0.1, color='#7c3aed')
+        ax.axhline(y=0, color='#d1d5db', linewidth=0.5, linestyle='--')
+        ax.set_ylabel('Sentiment', fontsize=8, color='#6b7280')
+        ax.set_ylim(-1.1, 1.1)
+        ax.tick_params(axis='both', labelsize=7, colors='#6b7280')
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d'))
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color('#e5e7eb')
+        ax.spines['bottom'].set_color('#e5e7eb')
+        fig.tight_layout()
+
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+        plt.close(fig)
+        buf.seek(0)
+        return buf
+    except ImportError:
+        return None
+    except Exception:
+        return None
+
+
 def _format_ai_feedback(text, style):
     """Convert AI feedback text with newlines into multiple Paragraphs."""
     paragraphs = []
@@ -206,7 +266,17 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
     ]))
     story.append(summary_table)
-    story.append(Spacer(1, 8*mm))
+    story.append(Spacer(1, 6*mm))
+
+    # --- Mood trend chart ---
+    chart_buf = _generate_mood_trend_image(notes)
+    if chart_buf:
+        chart_img = Image(chart_buf, width=150*mm, height=62*mm)
+        story.append(chart_img)
+        story.append(Spacer(1, 4*mm))
+
+    story.append(_draw_divider())
+    story.append(PageBreak())
 
     # --- Each note ---
     for note in notes:
@@ -262,13 +332,15 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
                 except Exception:
                     pass  # Skip images that can't be loaded
 
+        # Divider between notes
+        story.append(_draw_divider())
         story.append(Spacer(1, 4*mm))
 
     if not notes:
         story.append(Paragraph(labels['no_notes'], styles['CJKBody']))
 
     try:
-        doc.build(story)
+        doc.build(story, onFirstPage=_add_page_number, onLaterPages=_add_page_number)
     except Exception:
         # Retry without image attachments if build fails
         story_no_img = [s for s in story if not isinstance(s, Image)]
@@ -276,7 +348,7 @@ def generate_notes_pdf(queryset, date_from=None, date_to=None, user=None, lang='
         doc = SimpleDocTemplate(buf, pagesize=A4,
                                 leftMargin=20*mm, rightMargin=20*mm,
                                 topMargin=20*mm, bottomMargin=20*mm)
-        doc.build(story_no_img)
+        doc.build(story_no_img, onFirstPage=_add_page_number, onLaterPages=_add_page_number)
     buf.seek(0)
     return buf
 

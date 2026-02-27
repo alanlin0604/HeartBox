@@ -1,9 +1,13 @@
+import csv
+import io
 import logging
 import mimetypes
+import os
 import random
 import time
 from datetime import datetime, timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import transaction
@@ -31,9 +35,12 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, Course, CounselorProfile, DailySleep, Feedback,
-    Message, MoodNote, NoteAttachment, Notification, PsychoArticle,
-    SelfAssessment, SharedAssessment, SharedNote, TherapistReport, TimeSlot,
-    UserAchievement, UserLessonProgress, WeeklySummary, WellnessSession,
+    Message, MoodNote, NoteAttachment, Notification, NotificationPreference,
+    PsychoArticle, PushSubscription,
+    SelfAssessment, SharedAssessment, SharedNote, SubscriptionPlan,
+    TherapistReport, TimeSlot, TOTPDevice,
+    UserAchievement, UserLessonProgress, UserSubscription, WeeklySummary,
+    WellnessSession,
 )
 from .serializers import (
     AIChatMessageSerializer,
@@ -52,17 +59,23 @@ from .serializers import (
     MoodNoteListSerializer,
     MoodNoteSerializer,
     NoteAttachmentSerializer,
+    NotificationPreferenceSerializer,
     NotificationSerializer,
     PsychoArticleSerializer,
+    PushSubscriptionSerializer,
     SelfAssessmentSerializer,
     SharedAssessmentSerializer,
     SharedNoteSerializer,
+    SubscriptionPlanSerializer,
     TherapistReportPublicSerializer,
     TherapistReportSerializer,
     TimeSlotSerializer,
+    TOTPSetupSerializer,
+    TOTPVerifySerializer,
     UserAchievementSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
+    UserSubscriptionSerializer,
     WeeklySummarySerializer,
     WellnessSessionSerializer,
 )
@@ -149,6 +162,24 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [RegisterRateThrottle]
 
+    def perform_create(self, serializer):
+        user = serializer.save()
+        # Send verification email asynchronously
+        try:
+            from .tasks import send_email_task
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            frontend_url = os.environ.get('FRONTEND_URL', 'https://heartbox.pages.dev')
+            verify_url = f'{frontend_url}/verify-email?uid={uid}&token={token}'
+            send_email_task.delay(
+                'Verify your HeartBox email',
+                f'Click this link to verify your email: {verify_url}',
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+            )
+        except Exception:
+            pass  # Don't block registration if email fails
+
 
 def _issue_tokens(user):
     refresh = RefreshToken.for_user(user)
@@ -181,6 +212,24 @@ class LoginView(TokenObtainPairView):
     permission_classes = [permissions.AllowAny]
     serializer_class = VersionedTokenObtainPairSerializer
     throttle_classes = [LoginRateThrottle]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.user
+        # Check for 2FA
+        try:
+            totp_device = user.totp_device
+            if totp_device.confirmed:
+                # Return partial token indicating 2FA is needed
+                partial_token = str(RefreshToken.for_user(user).access_token)
+                return Response({
+                    'requires_2fa': True,
+                    'partial_token': partial_token,
+                })
+        except TOTPDevice.DoesNotExist:
+            pass
+        return Response(serializer.validated_data)
 
 
 class RefreshView(TokenRefreshView):
@@ -225,12 +274,12 @@ class ForgotPasswordView(APIView):
                 f'</div>'
             )
             try:
-                send_mail(
+                from .tasks import send_email_task
+                send_email_task.delay(
                     'HeartBox — Reset Your Password',
                     plain_message,
                     getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@heartbox.local'),
                     [user.email],
-                    html_message=html_message,
                 )
             except Exception as e:
                 logger.error('Failed to send password reset email to %s: %s', user.email, e)
@@ -630,11 +679,40 @@ class CounselorMyProfileView(generics.RetrieveUpdateAPIView):
 
 
 class CounselorListView(generics.ListAPIView):
-    """List all approved counselors (public for authenticated users), excluding self."""
+    """List all approved counselors (public for authenticated users), excluding self.
+
+    Supports ``?recommended=true`` to sort counselors by relevance to the
+    current user's most frequently used mood-note tags.
+    """
     serializer_class = CounselorListSerializer
 
     def get_queryset(self):
-        return CounselorProfile.objects.filter(status='approved').exclude(user=self.request.user).select_related('user')
+        qs = CounselorProfile.objects.filter(status='approved').exclude(user=self.request.user).select_related('user')
+
+        if self.request.query_params.get('recommended') == 'true' and self.request.user.is_authenticated:
+            # Get user's frequently used tags
+            user_notes = MoodNote.objects.filter(user=self.request.user, is_deleted=False)
+            tag_counts = {}
+            for metadata in user_notes.values_list('metadata', flat=True)[:100]:
+                for tag in (metadata or {}).get('tags', []):
+                    tag_counts[tag] = tag_counts.get(tag, 0) + 1
+            top_tags = sorted(tag_counts, key=tag_counts.get, reverse=True)[:5]
+
+            if top_tags:
+                q = Q()
+                for tag in top_tags:
+                    q |= Q(specialty__icontains=tag)
+                # Annotate with a match flag so recommended counselors appear first
+                from django.db.models import Case, When, Value, IntegerField
+                qs = qs.annotate(
+                    is_recommended=Case(
+                        When(q, then=Value(1)),
+                        default=Value(0),
+                        output_field=IntegerField(),
+                    )
+                ).order_by('-is_recommended', '-created_at')
+
+        return qs
 
 
 # ===== Messaging Views =====
@@ -2125,3 +2203,409 @@ class LessonCompleteView(APIView):
             progress.completed_at = timezone.now()
             progress.save(update_fields=['completed_at'])
         return Response({'status': 'completed', 'completed_at': progress.completed_at})
+
+
+# === Email Verification ===
+
+class VerifyEmailView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from django.utils.http import urlsafe_base64_decode
+        from django.utils.encoding import force_str
+        uid = request.query_params.get('uid')
+        token = request.query_params.get('token')
+        if not uid or not token:
+            return error_response('error.invalid_reset_link', 'Invalid verification link.', 400)
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_id)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return error_response('error.invalid_reset_link', 'Invalid verification link.', 400)
+        if not default_token_generator.check_token(user, token):
+            return error_response('error.invalid_reset_link', 'Invalid or expired verification link.', 400)
+        user.email_verified = True
+        user.save(update_fields=['email_verified'])
+        return Response({'detail': 'Email verified successfully'})
+
+
+class ResendVerificationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.email_verified:
+            return Response({'detail': 'Email already verified'})
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://heartbox.pages.dev')
+        verify_url = f'{frontend_url}/verify-email?uid={uid}&token={token}'
+        from .tasks import send_email_task
+        send_email_task.delay(
+            'Verify your HeartBox email',
+            f'Click this link to verify your email: {verify_url}',
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+        )
+        return Response({'detail': 'Verification email sent'})
+
+
+class IsEmailVerified(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.email_verified
+
+
+# === 2FA TOTP ===
+
+class TOTPSetupView(APIView):
+    def post(self, request):
+        import pyotp
+        import qrcode
+        import base64
+        from io import BytesIO
+
+        user = request.user
+        # Delete existing unconfirmed device
+        TOTPDevice.objects.filter(user=user, confirmed=False).delete()
+
+        # Check if already has confirmed device
+        if TOTPDevice.objects.filter(user=user, confirmed=True).exists():
+            return error_response('totp_already_enabled', '2FA is already enabled.', 400)
+
+        secret = pyotp.random_base32()
+        device = TOTPDevice.objects.create(user=user, secret=secret, confirmed=False)
+
+        totp = pyotp.TOTP(secret)
+        otpauth_uri = totp.provisioning_uri(name=user.email or user.username, issuer_name='HeartBox')
+
+        # Generate QR code as base64
+        img = qrcode.make(otpauth_uri)
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+        return Response({
+            'secret': secret,
+            'otpauth_uri': otpauth_uri,
+            'qr_code': f'data:image/png;base64,{qr_base64}',
+        })
+
+
+class TOTPVerifyView(APIView):
+    def post(self, request):
+        import pyotp
+
+        code = request.data.get('code', '')
+        user = request.user
+
+        try:
+            device = user.totp_device
+        except TOTPDevice.DoesNotExist:
+            return error_response('totp_not_found', 'No 2FA device found.', 400)
+
+        totp = pyotp.TOTP(device.secret)
+        if not totp.verify(code, valid_window=1):
+            return error_response('totp_invalid_code', 'Invalid verification code.', 400)
+
+        device.confirmed = True
+        device.save(update_fields=['confirmed'])
+        return Response({'detail': '2FA enabled successfully'})
+
+
+class TOTPDisableView(APIView):
+    def post(self, request):
+        password = request.data.get('password', '')
+        if not request.user.check_password(password):
+            return error_response('error.incorrect_password', 'Incorrect password.', 400)
+
+        TOTPDevice.objects.filter(user=request.user).delete()
+        return Response({'detail': '2FA disabled successfully'})
+
+
+class Login2FAView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        import pyotp
+        from rest_framework_simplejwt.tokens import AccessToken
+
+        partial_token = request.data.get('partial_token', '')
+        code = request.data.get('code', '')
+
+        if not partial_token or not code:
+            return error_response('totp_missing_fields', 'Token and code are required.', 400)
+
+        try:
+            token = AccessToken(partial_token)
+            user = User.objects.get(pk=token['user_id'])
+        except Exception:
+            return error_response('totp_invalid_token', 'Invalid token.', 400)
+
+        try:
+            device = user.totp_device
+        except TOTPDevice.DoesNotExist:
+            return error_response('totp_not_found', 'No 2FA device found.', 400)
+
+        totp = pyotp.TOTP(device.secret)
+        if not totp.verify(code, valid_window=1):
+            return error_response('totp_invalid_code', 'Invalid verification code.', 400)
+
+        tokens = _issue_tokens(user)
+        return Response(tokens)
+
+
+# === Google OAuth ===
+
+class GoogleLoginCallbackView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+
+        credential = request.data.get('credential', '')
+        if not credential:
+            return error_response('oauth_missing_credential', 'Google credential is required.', 400)
+
+        client_id = os.environ.get('GOOGLE_CLIENT_ID', '')
+        if not client_id:
+            return error_response('oauth_not_configured', 'Google OAuth not configured.', 500)
+
+        try:
+            idinfo = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id)
+        except ValueError:
+            return error_response('oauth_invalid_credential', 'Invalid Google credential.', 400)
+
+        email = idinfo.get('email', '')
+        if not email:
+            return error_response('oauth_no_email', 'Email not provided by Google.', 400)
+
+        # Find or create user
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # Create new user with Google info
+            username = email.split('@')[0]
+            # Ensure unique username
+            base_username = username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f'{base_username}{counter}'
+                counter += 1
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=None,  # No password for OAuth users
+            )
+            user.email_verified = True
+            user.save(update_fields=['email_verified'])
+
+        tokens = _issue_tokens(user)
+        return Response(tokens)
+
+
+# === CSV Import ===
+
+class ImportCSVView(APIView):
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return error_response('error.upload_file_required', 'A file is required.', 400)
+
+        if not file.name.endswith('.csv'):
+            return error_response('csv_invalid_format', 'Only CSV files are accepted.', 400)
+
+        try:
+            content = file.read().decode('utf-8-sig')
+            reader = csv.DictReader(io.StringIO(content))
+        except Exception:
+            return error_response('csv_parse_error', 'Invalid CSV file.', 400)
+
+        created_count = 0
+        errors = []
+
+        for i, row in enumerate(reader, start=1):
+            if i > 1000:  # Limit to 1000 rows
+                break
+
+            date_str = row.get('date', '').strip()
+            content_text = row.get('content', '').strip()
+            mood = row.get('mood', '').strip()
+            stress = row.get('stress', '').strip()
+
+            if not content_text:
+                errors.append(f'Row {i}: missing content')
+                continue
+
+            note = MoodNote(user=request.user)
+            note.set_content(content_text)
+
+            # Parse metadata
+            metadata = {}
+            if mood:
+                metadata['imported_mood'] = mood
+            tags = row.get('tags', '').strip()
+            if tags:
+                metadata['tags'] = [t.strip() for t in tags.split(',') if t.strip()]
+            note.metadata = metadata
+
+            # Parse stress
+            if stress:
+                try:
+                    stress_val = int(stress)
+                    if 0 <= stress_val <= 10:
+                        note.stress_index = stress_val
+                except ValueError:
+                    pass
+
+            # Parse date
+            if date_str:
+                try:
+                    from django.utils.dateparse import parse_datetime, parse_date
+                    parsed = parse_datetime(date_str) or parse_date(date_str)
+                    if parsed:
+                        from django.utils import timezone as tz
+                        if hasattr(parsed, 'hour'):
+                            note.created_at = parsed
+                        else:
+                            note.created_at = tz.make_aware(
+                                tz.datetime.combine(parsed, tz.datetime.min.time())
+                            )
+                except Exception:
+                    pass
+
+            note.save()
+            created_count += 1
+
+        return Response({
+            'imported': created_count,
+            'errors': errors[:10],  # Return first 10 errors
+        })
+
+
+# === Subscription System ===
+
+class SubscriptionPlanListView(generics.ListAPIView):
+    permission_classes = [permissions.AllowAny]
+    serializer_class = SubscriptionPlanSerializer
+    queryset = SubscriptionPlan.objects.filter(is_active=True)
+
+
+class MySubscriptionView(APIView):
+    def get(self, request):
+        try:
+            sub = request.user.subscription
+            return Response(UserSubscriptionSerializer(sub).data)
+        except UserSubscription.DoesNotExist:
+            return Response({'plan': None, 'status': 'none'})
+
+    def post(self, request):
+        plan_id = request.data.get('plan')
+        try:
+            plan = SubscriptionPlan.objects.get(pk=plan_id, is_active=True)
+        except SubscriptionPlan.DoesNotExist:
+            return error_response('plan_not_found', 'Plan not found.', 404)
+
+        sub, created = UserSubscription.objects.update_or_create(
+            user=request.user,
+            defaults={'plan': plan, 'status': 'active'},
+        )
+        return Response(UserSubscriptionSerializer(sub).data)
+
+
+class RequireTier(permissions.BasePermission):
+    """Usage: permission_classes = [RequireTier.of('pro')]"""
+    tier_required = 'free'
+
+    @classmethod
+    def of(cls, tier):
+        return type(f'RequireTier_{tier}', (cls,), {'tier_required': tier})
+
+    TIER_LEVELS = {'free': 0, 'pro': 1, 'counselor': 2}
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        try:
+            user_tier = request.user.subscription.plan.tier
+        except (UserSubscription.DoesNotExist, AttributeError):
+            user_tier = 'free'
+        return self.TIER_LEVELS.get(user_tier, 0) >= self.TIER_LEVELS.get(self.tier_required, 0)
+
+
+# === Notification Preferences ===
+
+class NotificationPreferenceView(APIView):
+    def get(self, request):
+        prefs = NotificationPreference.objects.filter(user=request.user)
+        return Response(NotificationPreferenceSerializer(prefs, many=True).data)
+
+    def patch(self, request):
+        results = []
+        for item in request.data if isinstance(request.data, list) else [request.data]:
+            ntype = item.get('notification_type')
+            enabled = item.get('enabled', True)
+            if ntype:
+                pref, _ = NotificationPreference.objects.update_or_create(
+                    user=request.user,
+                    notification_type=ntype,
+                    defaults={'enabled': enabled},
+                )
+                results.append(NotificationPreferenceSerializer(pref).data)
+        return Response(results)
+
+
+# === Web Push ===
+
+class PushSubscriptionView(APIView):
+    def post(self, request):
+        endpoint = request.data.get('endpoint', '')
+        keys = request.data.get('keys', {})
+        p256dh = keys.get('p256dh', '')
+        auth = keys.get('auth', '')
+
+        if not endpoint or not p256dh or not auth:
+            return error_response('push_missing_data', 'Missing push subscription data.', 400)
+
+        PushSubscription.objects.update_or_create(
+            endpoint=endpoint,
+            defaults={'user': request.user, 'p256dh': p256dh, 'auth': auth},
+        )
+        return Response({'detail': 'Push subscription registered'})
+
+    def delete(self, request):
+        endpoint = request.data.get('endpoint', '')
+        PushSubscription.objects.filter(user=request.user, endpoint=endpoint).delete()
+        return Response({'detail': 'Push subscription removed'})
+
+
+def send_push_notification(user, title, body, url='/'):
+    """Send web push notification to all user's subscriptions."""
+    import json
+    try:
+        from pywebpush import webpush
+    except ImportError:
+        return
+
+    vapid_private_key = os.environ.get('VAPID_PRIVATE_KEY', '')
+    vapid_claims = {'sub': f'mailto:{settings.DEFAULT_FROM_EMAIL}'}
+
+    if not vapid_private_key:
+        return
+
+    subscriptions = PushSubscription.objects.filter(user=user)
+    payload = json.dumps({'title': title, 'body': body, 'url': url})
+
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info={
+                    'endpoint': sub.endpoint,
+                    'keys': {'p256dh': sub.p256dh, 'auth': sub.auth},
+                },
+                data=payload,
+                vapid_private_key=vapid_private_key,
+                vapid_claims=vapid_claims,
+            )
+        except Exception:
+            sub.delete()  # Remove invalid subscriptions

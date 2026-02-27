@@ -11,6 +11,9 @@ class CustomUser(AbstractUser):
     bio = models.TextField(blank=True, default='')
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     token_version = models.PositiveIntegerField(default=0)
+    timezone = models.CharField(max_length=50, default='Asia/Taipei')
+    onboarding_completed = models.BooleanField(default=False)
+    email_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -675,3 +678,107 @@ class UserLessonProgress(models.Model):
 
     def __str__(self):
         return f'{self.user.username} — {self.article.title_en}'
+
+
+class TOTPDevice(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='totp_device',
+    )
+    secret = models.CharField(max_length=64)
+    confirmed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'TOTP for {self.user.username} ({"confirmed" if self.confirmed else "pending"})'
+
+
+class SubscriptionPlan(models.Model):
+    TIER_CHOICES = [
+        ('free', 'Free'),
+        ('pro', 'Pro'),
+        ('counselor', 'Counselor'),
+    ]
+
+    name = models.CharField(max_length=100)
+    tier = models.CharField(max_length=20, choices=TIER_CHOICES, unique=True)
+    price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    currency = models.CharField(max_length=3, default='TWD')
+    features = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['price']
+
+    def __str__(self):
+        return f'{self.name} ({self.tier})'
+
+
+class UserSubscription(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('expired', 'Expired'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='subscription',
+    )
+    plan = models.ForeignKey(
+        SubscriptionPlan,
+        on_delete=models.PROTECT,
+        related_name='subscribers',
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    started_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.user.username} — {self.plan.name} ({self.status})'
+
+
+class NotificationPreference(models.Model):
+    TYPE_CHOICES = [
+        ('message', 'Message'),
+        ('booking', 'Booking'),
+        ('share', 'Share'),
+        ('weekly_report', 'Weekly Report'),
+        ('achievement', 'Achievement'),
+        ('system', 'System'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notification_preferences',
+    )
+    notification_type = models.CharField(max_length=30, choices=TYPE_CHOICES)
+    enabled = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ['user', 'notification_type']
+
+    def __str__(self):
+        return f'{self.user.username} — {self.notification_type}: {"on" if self.enabled else "off"}'
+
+
+class PushSubscription(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='push_subscriptions',
+    )
+    endpoint = models.URLField(max_length=500, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Push for {self.user.username} ({self.endpoint[:50]}...)'

@@ -37,17 +37,24 @@ from .views import (
     ExportDataView,
     ExportPDFView,
     FeedbackCreateView,
+    GoogleLoginCallbackView,
+    ImportCSVView,
     LessonCompleteView,
+    Login2FAView,
     MessageListView,
     MoodNoteViewSet,
+    MySubscriptionView,
     NoteAttachmentUploadView,
     NotificationListView,
+    NotificationPreferenceView,
     NotificationReadView,
     ProfileView,
     PsychoArticleDetailView,
     PsychoArticleListView,
+    PushSubscriptionView,
     RefreshView,
     RegisterView,
+    ResendVerificationView,
     ForgotPasswordView,
     LoginView,
     LogoutOtherDevicesView,
@@ -57,10 +64,15 @@ from .views import (
     SharedAssessmentsReceivedView,
     ShareNoteView,
     SharedNotesReceivedView,
+    SubscriptionPlanListView,
+    TOTPDisableView,
+    TOTPSetupView,
+    TOTPVerifyView,
     TherapistReportCreateView,
     TherapistReportListView,
     TherapistReportPublicView,
     TimeSlotListView,
+    VerifyEmailView,
     WeeklySummaryListView,
     WeeklySummaryView,
     WellnessSessionListCreateView,
@@ -91,6 +103,8 @@ urlpatterns = [
     path('achievements/check/', AchievementCheckView.as_view(), name='achievements-check'),
     # Alerts
     path('alerts/', AlertsView.as_view(), name='alerts'),
+    # CSV Import (must be before router.urls so it matches before notes/<pk>/)
+    path('notes/import/', ImportCSVView.as_view(), name='notes-import'),
     # PDF Export (must be before router.urls so it matches before notes/<pk>/)
     path('notes/export/', ExportPDFView.as_view(), name='notes-export'),
     # Counselor
@@ -156,6 +170,23 @@ urlpatterns = [
     path('courses/', CourseListView.as_view(), name='course-list'),
     path('courses/<int:pk>/', CourseDetailView.as_view(), name='course-detail'),
     path('lessons/<int:pk>/complete/', LessonCompleteView.as_view(), name='lesson-complete'),
+    # Email Verification
+    path('auth/verify-email/', VerifyEmailView.as_view(), name='verify-email'),
+    path('auth/resend-verification/', ResendVerificationView.as_view(), name='resend-verification'),
+    # 2FA
+    path('auth/2fa/setup/', TOTPSetupView.as_view(), name='2fa-setup'),
+    path('auth/2fa/verify/', TOTPVerifyView.as_view(), name='2fa-verify'),
+    path('auth/2fa/disable/', TOTPDisableView.as_view(), name='2fa-disable'),
+    path('auth/2fa/login/', Login2FAView.as_view(), name='2fa-login'),
+    # Google OAuth
+    path('auth/google/', GoogleLoginCallbackView.as_view(), name='google-login'),
+    # Subscriptions
+    path('subscriptions/plans/', SubscriptionPlanListView.as_view(), name='subscription-plans'),
+    path('subscriptions/me/', MySubscriptionView.as_view(), name='my-subscription'),
+    # Notification Preferences
+    path('notifications/preferences/', NotificationPreferenceView.as_view(), name='notification-preferences'),
+    # Web Push
+    path('push/subscribe/', PushSubscriptionView.as_view(), name='push-subscribe'),
     # Notes CRUD
     path('', include(router.urls)),
 ]

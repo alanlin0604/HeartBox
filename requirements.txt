@@ -21,3 +21,12 @@ whitenoise==6.8.2
 django-storages[google]==1.14.4
 Pillow==11.1.0
 sentry-sdk[django]==2.19.2
+pyotp==2.9.0
+qrcode==8.0
+django-allauth[socialaccount]==65.4.0
+pywebpush==2.0.1
+celery==5.4.0
+django-celery-beat==2.7.0
+drf-spectacular==0.28.0
+matplotlib==3.10.0
+numpy==2.2.6

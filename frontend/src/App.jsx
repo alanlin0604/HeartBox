@@ -30,11 +30,20 @@ const CourseDetailPage = lazy(() => import('./pages/CourseDetailPage'))
 const LessonPage = lazy(() => import('./pages/LessonPage'))
 const GuidePage = lazy(() => import('./pages/GuidePage'))
 const TherapistReportPublicPage = lazy(() => import('./pages/TherapistReportPublicPage'))
+const LandingPage = lazy(() => import('./pages/LandingPage'))
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
+const PricingPage = lazy(() => import('./pages/PricingPage'))
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <LoadingSpinner />
   return user ? children : <Navigate to="/login" />
+}
+
+function HomeRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return <LoadingSpinner />
+  return user ? children : <LazyRoute><LandingPage /></LazyRoute>
 }
 
 function AdminRoute({ children }) {
@@ -66,12 +75,14 @@ export default function App() {
         <Route path="/terms" element={<TermsPage />} />
         {/* Public therapist report (no auth required) */}
         <Route path="/report/:token" element={<LazyRoute><TherapistReportPublicPage /></LazyRoute>} />
+        <Route path="/verify-email" element={<LazyRoute><VerifyEmailPage /></LazyRoute>} />
+        <Route path="/pricing" element={<LazyRoute><PricingPage /></LazyRoute>} />
         <Route
           path="/"
           element={
-            <PrivateRoute>
+            <HomeRoute>
               <Layout />
-            </PrivateRoute>
+            </HomeRoute>
           }
         >
           <Route index element={<LazyRoute><JournalPage /></LazyRoute>} />

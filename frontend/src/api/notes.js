@@ -110,3 +110,12 @@ export const restoreNote = (id) => {
 };
 export const permanentDeleteNote = (id) =>
   api.delete(`/notes/${id}/permanent-delete/`);
+
+export const importCSV = (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  invalidateNotesCaches();
+  return api.post('/notes/import/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};

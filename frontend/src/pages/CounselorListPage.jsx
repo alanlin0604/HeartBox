@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import {
   getCounselors,
+  getRecommendedCounselors,
   applyCounselor,
   getMyCounselorProfile,
   updateMyCounselorProfile,
@@ -36,6 +37,7 @@ export default function CounselorListPage() {
   const { lang, t } = useLang()
   const toast = useToast()
   const [counselors, setCounselors] = useState([])
+  const [recommended, setRecommended] = useState([])
   const [conversations, setConversations] = useState([])
   const [myProfile, setMyProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -125,14 +127,16 @@ export default function CounselorListPage() {
     setLoading(true)
     setError('')
     try {
-      const [counselorRes, convRes, bookingRes] = await Promise.all([
+      const [counselorRes, convRes, bookingRes, recRes] = await Promise.all([
         getCounselors(),
         getConversations(),
         getBookings(),
+        getRecommendedCounselors().catch(() => ({ data: [] })),
       ])
       setCounselors(counselorRes.data.results || counselorRes.data)
       setConversations(convRes.data.results || convRes.data)
       setBookings(bookingRes.data)
+      setRecommended(recRes.data.results || recRes.data || [])
 
       try {
         const profileRes = await getMyCounselorProfile()
@@ -360,6 +364,49 @@ export default function CounselorListPage() {
       {/* Counselor List Tab */}
       {tab === 'list' && (
         <div className="space-y-4">
+          {/* Recommended counselors */}
+          {recommended.length > 0 && (
+            <>
+              <h2 className="text-xl font-semibold">{t('counselor.recommendedTitle')}</h2>
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                {recommended.map((c) => (
+                  <div key={c.id} className="glass-card p-5 space-y-3 border-purple-500/30">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        {c.avatar && !failedAvatars.has(c.id) ? (
+                          <img
+                            src={c.avatar}
+                            alt={c.username}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-10 h-10 rounded-full object-cover border border-purple-500/40"
+                            onError={() => setFailedAvatars(prev => new Set(prev).add(c.id))}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-purple-500/25 flex items-center justify-center text-sm font-semibold">
+                            {String(c.display_name || c.username || '?').slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="text-lg font-semibold">{c.display_name || c.username}</h3>
+                          <p className="text-sm opacity-60">{c.specialty}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                        {t('counselor.recommendedBadge')}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed opacity-80 whitespace-pre-line">{c.introduction}</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleStartChat(c.id)} className="btn-primary text-sm">{t('counselor.startChat')}</button>
+                      <button onClick={() => setBookingTarget({ id: c.id, username: c.username, hourly_rate: c.hourly_rate, currency: c.currency })} className="btn-secondary text-sm">{t('booking.book')}</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           <h2 className="text-xl font-semibold">{t('counselor.approvedList')}</h2>
           {counselors.length === 0 ? (
             <EmptyState

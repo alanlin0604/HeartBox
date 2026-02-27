@@ -10,6 +10,15 @@ export const getCounselors = () => {
   })
 }
 
+export const getRecommendedCounselors = () => {
+  const cached = getCached('recommendedCounselors')
+  if (cached) return Promise.resolve(cached)
+  return api.get('/counselors/', { params: { recommended: 'true' } }).then(res => {
+    setCache('recommendedCounselors', res, 60_000)
+    return res
+  })
+}
+
 export const applyCounselor = (data) => {
   invalidate('counselors')
   return api.post('/counselors/apply/', data)

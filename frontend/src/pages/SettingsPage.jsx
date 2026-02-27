@@ -5,8 +5,10 @@ import { useTheme } from '../context/ThemeContext'
 import { LOCALE_MAP } from '../utils/locales'
 import { logoutOtherDevices, updateProfile, deleteAccount, exportData } from '../api/auth'
 import PasswordField from '../components/PasswordField'
+import ImportModal from '../components/ImportModal'
 import { useToast } from '../context/ToastContext'
 import { isRememberedLogin, setAuthTokens } from '../utils/tokenStorage'
+import { subscribeToPush, unsubscribePush } from '../utils/pushNotifications'
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -49,6 +51,25 @@ export default function SettingsPage() {
   const [deletePassword, setDeletePassword] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [idleTimeout, setIdleTimeout] = useState(() => localStorage.getItem('heartbox_idle_timeout') || '30')
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [notifPrefs, setNotifPrefs] = useState([])
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false)
+  const [setupQR, setSetupQR] = useState(null)
+  const [totpCode, setTotpCode] = useState('')
+  const [disablePassword, setDisablePassword] = useState('')
+  const [currentSub, setCurrentSub] = useState(null)
+  const [userTimezone, setUserTimezone] = useState(user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone)
+
+  useEffect(() => {
+    // Notification preferences
+    import('../api/axios').then(({ default: api }) => {
+      api.get('/notifications/preferences/').then(r => setNotifPrefs(r.data)).catch(() => {})
+      api.get('/auth/2fa/setup/').catch(() => {}) // check if exists
+      api.get('/subscriptions/me/').then(r => setCurrentSub(r.data)).catch(() => {})
+    })
+  }, [user])
 
   const handleSaveProfile = async (e) => {
     e.preventDefault()
@@ -330,6 +351,210 @@ export default function SettingsPage() {
         <button onClick={handleExportData} disabled={exporting} className="btn-secondary">
           {exporting ? t('settings.exporting') : t('settings.exportButton')}
         </button>
+      </div>
+
+      {/* Data Import */}
+      <div className="glass p-4 sm:p-6 space-y-3">
+        <h2 className="text-lg font-semibold">{t('import.title')}</h2>
+        <p className="text-sm opacity-60">{t('import.settingsDesc')}</p>
+        <button onClick={() => setImportOpen(true)} className="btn-secondary">{t('import.button')}</button>
+      </div>
+
+      {importOpen && <ImportModal onClose={() => setImportOpen(false)} onSuccess={() => {}} />}
+
+      {/* Timezone */}
+      <div className="glass p-4 sm:p-6 space-y-3">
+        <h2 className="text-lg font-semibold">{t('settings.timezone')}</h2>
+        <select
+          value={userTimezone}
+          onChange={async (e) => {
+            const tz = e.target.value
+            setUserTimezone(tz)
+            try {
+              await updateProfile({ timezone: tz })
+              toast?.success(t('settings.saveSuccess'))
+            } catch { toast?.error(t('settings.saveFailed')) }
+          }}
+          className="glass-input"
+        >
+          {Intl.supportedValuesOf('timeZone').map(tz => (
+            <option key={tz} value={tz}>{tz}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Idle Auto-Logout */}
+      <div className="glass p-4 sm:p-6 space-y-3">
+        <h2 className="text-lg font-semibold">{t('idle.settingsTitle')}</h2>
+        <div className="flex gap-3">
+          {[
+            { label: t('idle.minutes15'), value: '15' },
+            { label: t('idle.minutes30'), value: '30' },
+            { label: t('idle.minutes60'), value: '60' },
+            { label: t('idle.disabled'), value: '0' },
+          ].map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                localStorage.setItem('heartbox_idle_timeout', opt.value)
+                setIdleTimeout(opt.value)
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                idleTimeout === opt.value
+                  ? 'bg-purple-500/30 text-purple-400'
+                  : 'opacity-60 hover:opacity-100 border border-[var(--card-border)]'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Notification Preferences */}
+      <div className="glass p-4 sm:p-6 space-y-3">
+        <h2 className="text-lg font-semibold">{t('notifPref.title')}</h2>
+        {['message', 'booking', 'share', 'weekly_report', 'achievement', 'system'].map(type => {
+          const pref = notifPrefs.find(p => p.notification_type === type)
+          const enabled = pref ? pref.enabled : true
+          return (
+            <label key={type} className="flex items-center justify-between py-1">
+              <span className="text-sm">{t(`notifPref.${type}`)}</span>
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={async (e) => {
+                  const val = e.target.checked
+                  try {
+                    const { default: api } = await import('../api/axios')
+                    await api.patch('/notifications/preferences/', { notification_type: type, enabled: val })
+                    setNotifPrefs(prev => {
+                      const idx = prev.findIndex(p => p.notification_type === type)
+                      if (idx >= 0) { const n = [...prev]; n[idx] = { ...n[idx], enabled: val }; return n }
+                      return [...prev, { notification_type: type, enabled: val }]
+                    })
+                  } catch {}
+                }}
+                className="w-5 h-5 accent-purple-500"
+              />
+            </label>
+          )
+        })}
+      </div>
+
+      {/* Push Notifications */}
+      <div className="glass p-4 sm:p-6 space-y-3">
+        <h2 className="text-lg font-semibold">{t('push.title')}</h2>
+        <label className="flex items-center justify-between">
+          <span className="text-sm">{t('push.enableDesc')}</span>
+          <input
+            type="checkbox"
+            checked={pushEnabled}
+            onChange={async (e) => {
+              if (e.target.checked) {
+                const ok = await subscribeToPush()
+                setPushEnabled(ok)
+                if (!ok) toast?.error(t('push.failed'))
+              } else {
+                await unsubscribePush()
+                setPushEnabled(false)
+              }
+            }}
+            className="w-5 h-5 accent-purple-500"
+          />
+        </label>
+      </div>
+
+      {/* Two-Factor Authentication */}
+      <div className="glass p-4 sm:p-6 space-y-3">
+        <h2 className="text-lg font-semibold">{t('twofa.title')}</h2>
+        {twoFAEnabled ? (
+          <div className="space-y-3">
+            <p className="text-sm text-green-500">{t('twofa.enabled')}</p>
+            <input
+              type="password"
+              value={disablePassword}
+              onChange={e => setDisablePassword(e.target.value)}
+              placeholder={t('twofa.passwordToDisable')}
+              className="glass-input"
+            />
+            <button
+              onClick={async () => {
+                try {
+                  const { default: api } = await import('../api/axios')
+                  await api.post('/auth/2fa/disable/', { password: disablePassword })
+                  setTwoFAEnabled(false)
+                  setDisablePassword('')
+                  toast?.success(t('twofa.disabled'))
+                } catch { toast?.error(t('twofa.disableFailed')) }
+              }}
+              disabled={!disablePassword}
+              className="btn-danger"
+            >
+              {t('twofa.disable')}
+            </button>
+          </div>
+        ) : setupQR ? (
+          <div className="space-y-3 text-center">
+            <img src={setupQR.qr_code} alt="QR Code" className="mx-auto w-48 h-48" />
+            <p className="text-xs opacity-60 break-all">{t('twofa.secretKey')}: {setupQR.secret}</p>
+            <input
+              type="text"
+              value={totpCode}
+              onChange={e => setTotpCode(e.target.value)}
+              placeholder={t('twofa.enterCode')}
+              maxLength={6}
+              className="glass-input text-center text-lg tracking-widest"
+            />
+            <div className="flex gap-3 justify-center">
+              <button onClick={() => setSetupQR(null)} className="btn-secondary">{t('common.cancel')}</button>
+              <button
+                onClick={async () => {
+                  try {
+                    const { default: api } = await import('../api/axios')
+                    await api.post('/auth/2fa/verify/', { code: totpCode })
+                    setTwoFAEnabled(true)
+                    setSetupQR(null)
+                    setTotpCode('')
+                    toast?.success(t('twofa.enabledSuccess'))
+                  } catch { toast?.error(t('twofa.verifyFailed')) }
+                }}
+                disabled={totpCode.length !== 6}
+                className="btn-primary"
+              >
+                {t('twofa.verify')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={async () => {
+              try {
+                const { default: api } = await import('../api/axios')
+                const { data } = await api.post('/auth/2fa/setup/')
+                setSetupQR(data)
+              } catch { toast?.error(t('twofa.setupFailed')) }
+            }}
+            className="btn-primary"
+          >
+            {t('twofa.enable')}
+          </button>
+        )}
+      </div>
+
+      {/* Subscription */}
+      <div className="glass p-4 sm:p-6 space-y-3">
+        <h2 className="text-lg font-semibold">{t('subscription.title')}</h2>
+        {currentSub?.plan ? (
+          <div className="text-sm space-y-1">
+            <p>{t('subscription.currentPlan')}: <span className="font-semibold">{currentSub.plan_name}</span></p>
+            <p>{t('subscription.status')}: {currentSub.status}</p>
+          </div>
+        ) : (
+          <p className="text-sm opacity-60">{t('subscription.noPlan')}</p>
+        )}
+        <a href="/pricing" className="btn-secondary inline-block">{t('subscription.viewPlans')}</a>
       </div>
 
       {/* Danger Zone - Delete Account */}

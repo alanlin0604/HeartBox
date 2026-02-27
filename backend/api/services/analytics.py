@@ -1,4 +1,5 @@
 import math
+import zoneinfo
 from datetime import timedelta
 
 import numpy as np
@@ -6,6 +7,45 @@ import pandas as pd
 from django.db.models import Avg
 from django.utils import timezone
 from scipy import stats
+
+
+def _user_now(user_timezone='Asia/Taipei'):
+    """Return current datetime in user's timezone."""
+    try:
+        tz = zoneinfo.ZoneInfo(user_timezone)
+    except (KeyError, Exception):
+        tz = zoneinfo.ZoneInfo('Asia/Taipei')
+    return timezone.now().astimezone(tz)
+
+
+def get_recommended_counselors(user):
+    """Get counselor IDs recommended based on user's frequent tags vs counselor specialty."""
+    from api.models import MoodNote
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    # Get user's top tags
+    notes = MoodNote.objects.filter(user=user, is_deleted=False)
+    tag_counts = {}
+    for meta in notes.values_list('metadata', flat=True)[:200]:
+        for tag in (meta or {}).get('tags', []):
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+    top_tags = sorted(tag_counts, key=tag_counts.get, reverse=True)[:5]
+    if not top_tags:
+        return []
+
+    from django.db.models import Q
+    q = Q()
+    for tag in top_tags:
+        q |= Q(counselor_profile__specialty__icontains=tag)
+
+    return list(
+        User.objects.filter(q, counselor_profile__status='approved')
+        .values_list('id', flat=True)
+        .distinct()[:10]
+    )
 
 
 def _sanitize(obj):

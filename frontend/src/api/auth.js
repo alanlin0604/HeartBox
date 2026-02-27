@@ -22,3 +22,12 @@ export const deleteAccount = (password) =>
 
 export const exportData = () =>
   api.get('/auth/export/', { responseType: 'blob' });
+
+export const verifyEmail = (uid, token) =>
+  api.get('/auth/verify-email/', { params: { uid, token } });
+
+export const resendVerification = () =>
+  api.post('/auth/resend-verification/');
+
+export const googleLogin = (credential) =>
+  api.post('/auth/google/', { credential });

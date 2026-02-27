@@ -3,3 +3,5 @@ Allow: /
 Disallow: /api/
 Disallow: /ws/
 Disallow: /admin
+
+Sitemap: https://heartbox.pages.dev/sitemap.xml

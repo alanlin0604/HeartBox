@@ -25,9 +25,13 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (username, password, rememberMe = true) => {
     const { data } = await apiLogin(username, password);
+    if (data.requires_2fa) {
+      return data; // Return 2FA data to caller without setting tokens
+    }
     setAuthTokens(data.access, data.refresh, rememberMe);
     const profile = await getProfile();
     setUser(profile.data);
+    return data;
   }, []);
 
   const registerUser = useCallback(async (username, email, password) => {

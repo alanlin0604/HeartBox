@@ -6,9 +6,12 @@ from rest_framework import serializers
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, Course, CounselorProfile, DailySleep, Feedback,
-    Message, MoodNote, NoteAttachment, Notification, PsychoArticle,
-    SelfAssessment, SharedAssessment, SharedNote, TherapistReport, TimeSlot,
-    UserAchievement, UserLessonProgress, WeeklySummary, WellnessSession,
+    Message, MoodNote, NoteAttachment, Notification, NotificationPreference,
+    PushSubscription, PsychoArticle,
+    SelfAssessment, SharedAssessment, SharedNote, SubscriptionPlan,
+    TherapistReport, TimeSlot, TOTPDevice,
+    UserAchievement, UserLessonProgress, UserSubscription,
+    WeeklySummary, WellnessSession,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,8 +36,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'bio', 'avatar', 'is_counselor', 'is_staff', 'created_at', 'updated_at')
-        read_only_fields = ('id', 'username', 'is_staff', 'created_at', 'updated_at')
+        fields = ('id', 'username', 'email', 'bio', 'avatar', 'is_counselor', 'is_staff', 'timezone', 'onboarding_completed', 'email_verified', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'username', 'is_staff', 'email_verified', 'created_at', 'updated_at')
 
     def get_is_counselor(self, obj):
         return hasattr(obj, 'counselor_profile') and obj.counselor_profile.is_approved
@@ -526,3 +529,46 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             return 0
         completed = self.get_completed_count(obj)
         return round(completed / total * 100)
+
+
+# ===== 2FA / TOTP =====
+
+class TOTPSetupSerializer(serializers.Serializer):
+    secret = serializers.CharField(read_only=True)
+    otpauth_uri = serializers.CharField(read_only=True)
+    qr_code = serializers.CharField(read_only=True)
+
+
+class TOTPVerifySerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=6, min_length=6)
+
+
+# ===== Subscription =====
+
+class SubscriptionPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionPlan
+        fields = ('id', 'name', 'tier', 'price', 'currency', 'features', 'is_active')
+
+
+class UserSubscriptionSerializer(serializers.ModelSerializer):
+    plan_name = serializers.CharField(source='plan.name', read_only=True)
+    plan_tier = serializers.CharField(source='plan.tier', read_only=True)
+
+    class Meta:
+        model = UserSubscription
+        fields = ('id', 'plan', 'plan_name', 'plan_tier', 'status', 'started_at', 'expires_at')
+        read_only_fields = ('id', 'status', 'started_at', 'expires_at')
+
+
+# ===== Notification Preferences =====
+
+class NotificationPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotificationPreference
+        fields = ('notification_type', 'enabled')
+
+
+class PushSubscriptionSerializer(serializers.Serializer):
+    endpoint = serializers.URLField(max_length=500)
+    keys = serializers.DictField(child=serializers.CharField())

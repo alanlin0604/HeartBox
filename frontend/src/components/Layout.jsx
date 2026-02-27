@@ -5,6 +5,8 @@ import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
 import { LANG_OPTIONS } from '../utils/locales'
 import NotificationBell from './NotificationBell'
+import useIdleTimer from '../hooks/useIdleTimer'
+import OnboardingModal from './OnboardingModal'
 
 const ROUTE_PRELOADS = {
   '/': () => import('../pages/JournalPage'),
@@ -34,6 +36,22 @@ export default function Layout() {
 
   const [moreOpen, setMoreOpen] = useState(false)
   const moreRef = useRef(null)
+
+  const idleTimeout = parseInt(localStorage.getItem('heartbox_idle_timeout') || '30', 10)
+  const idleEnabled = idleTimeout > 0
+
+  const { showWarning: idleWarning, countdown: idleCountdown, dismissWarning: dismissIdle } = useIdleTimer({
+    timeout: idleTimeout * 60 * 1000,
+    onIdle: () => { logout(); navigate('/login') },
+    enabled: idleEnabled,
+  })
+
+  const [onboardingDone, setOnboardingDone] = useState(true)
+  useEffect(() => {
+    if (user && user.onboarding_completed === false) {
+      setOnboardingDone(false)
+    }
+  }, [user])
 
   // Close both dropdowns on outside click (single listener)
   useEffect(() => {
@@ -98,6 +116,24 @@ export default function Layout() {
       {isOffline && (
         <div className="bg-yellow-500/90 text-black text-center text-sm py-1.5 px-4 font-medium">
           {t('common.offline')}
+        </div>
+      )}
+
+      {/* Email not verified banner */}
+      {user && user.email_verified === false && (
+        <div className="bg-yellow-500/80 text-black text-center text-sm py-1.5 px-4 font-medium">
+          {t('email.notVerifiedBanner')}
+          <button
+            onClick={async () => {
+              try {
+                const { resendVerification } = await import('../api/auth')
+                await resendVerification()
+              } catch {}
+            }}
+            className="underline ml-2 font-semibold"
+          >
+            {t('email.resendVerification')}
+          </button>
         </div>
       )}
 
@@ -380,6 +416,23 @@ export default function Layout() {
         <Link to="/terms" className="hover:opacity-70">{t('legal.terms')}</Link>
         <span>&copy; {new Date().getFullYear()} HeartBox</span>
       </footer>
+
+      {/* Idle Warning Modal */}
+      {idleWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="popup-panel p-6 w-full max-w-sm text-center space-y-4" role="dialog" aria-modal="true">
+            <h2 className="text-lg font-semibold">{t('idle.warningTitle')}</h2>
+            <p className="opacity-70">{t('idle.warningDesc')}</p>
+            <p className="text-3xl font-bold text-purple-500">{idleCountdown}s</p>
+            <button onClick={dismissIdle} className="btn-primary">{t('idle.stayLoggedIn')}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Modal */}
+      {!onboardingDone && (
+        <OnboardingModal onComplete={() => setOnboardingDone(true)} />
+      )}
     </div>
   )
 }
