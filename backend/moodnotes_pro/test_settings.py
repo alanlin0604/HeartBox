@@ -11,3 +11,7 @@ DATABASES = {
 
 # Disable production security settings for testing
 SECURE_SSL_REDIRECT = False
+
+# Run Celery tasks synchronously during tests
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
