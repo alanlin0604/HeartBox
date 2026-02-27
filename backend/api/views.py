@@ -164,14 +164,13 @@ class RegisterView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = serializer.save()
-        # Send verification email asynchronously
+        # Send verification email
         try:
-            from .tasks import send_email_task
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             frontend_url = os.environ.get('FRONTEND_URL', 'https://heartbox.pages.dev')
             verify_url = f'{frontend_url}/verify-email?uid={uid}&token={token}'
-            send_email_task.delay(
+            send_mail(
                 'Verify your HeartBox email',
                 f'Click this link to verify your email: {verify_url}',
                 settings.DEFAULT_FROM_EMAIL,
@@ -2240,8 +2239,7 @@ class ResendVerificationView(APIView):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         frontend_url = os.environ.get('FRONTEND_URL', 'https://heartbox.pages.dev')
         verify_url = f'{frontend_url}/verify-email?uid={uid}&token={token}'
-        from .tasks import send_email_task
-        send_email_task.delay(
+        send_mail(
             'Verify your HeartBox email',
             f'Click this link to verify your email: {verify_url}',
             settings.DEFAULT_FROM_EMAIL,
