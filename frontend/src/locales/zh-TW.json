@@ -987,7 +987,7 @@
   "push.failed": "啟用推播通知失敗",
   "report.tab": "報告",
   "report.title": "諮商師報告",
-  "report.description": "產生一份綜合報告，彙整你在指定期間的心情資料，分享給諮商師參考。報告連結有效期 30 天。",
+  "report.description": "產生報告分享心情資料給諮商師，30 天後過期",
   "report.reportTitle": "報告標題",
   "report.startDate": "開始日期",
   "report.endDate": "結束日期",
