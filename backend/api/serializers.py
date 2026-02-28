@@ -415,6 +415,16 @@ class DailySleepSerializer(serializers.ModelSerializer):
         fields = ('id', 'date', 'sleep_hours', 'sleep_quality', 'created_at', 'updated_at')
         read_only_fields = ('id', 'created_at', 'updated_at')
 
+    def validate_sleep_hours(self, value):
+        if value < 0 or value > 24:
+            raise serializers.ValidationError('Sleep hours must be between 0 and 24.')
+        return value
+
+    def validate_sleep_quality(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError('Sleep quality must be between 1 and 5.')
+        return value
+
 
 class TherapistReportSerializer(serializers.ModelSerializer):
     share_url = serializers.SerializerMethodField()

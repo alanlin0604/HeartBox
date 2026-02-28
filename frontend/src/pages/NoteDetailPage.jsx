@@ -50,7 +50,7 @@ export default function NoteDetailPage() {
       .then((res) => setNote(res.data))
       .catch(() => {
         toast?.error(t('common.operationFailed'))
-        navigate('/')
+        window.history.length > 1 ? navigate(-1) : navigate('/')
       })
       .finally(() => setLoading(false))
   }, [id, navigate])
@@ -166,7 +166,7 @@ export default function NoteDetailPage() {
   return (
     <div className="max-w-3xl mx-auto mt-4 space-y-4">
       <button
-        onClick={() => navigate('/')}
+        onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
         className="text-sm opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
       >
         &larr; {t('noteDetail.back')}

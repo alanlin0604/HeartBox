@@ -324,7 +324,9 @@ class CounselorReview(models.Model):
         blank=True,
         related_name='review',
     )
-    rating = models.PositiveSmallIntegerField()  # 1-5
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
     content = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 

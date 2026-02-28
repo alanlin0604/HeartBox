@@ -43,3 +43,7 @@ class DeleteAccountThrottle(UserRateThrottle):
 
 class RefreshTokenThrottle(AnonRateThrottle):
     scope = 'token_refresh'
+
+
+class GeneralWriteThrottle(UserRateThrottle):
+    scope = 'general_write'

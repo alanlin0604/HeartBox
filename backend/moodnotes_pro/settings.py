@@ -194,6 +194,7 @@ REST_FRAMEWORK = {
         'ai_chat': '30/hour',
         'delete_account': '5/hour',
         'token_refresh': '30/hour',
+        'general_write': '30/minute',
         'anon': '100/hour',
     },
 }

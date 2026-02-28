@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -24,19 +24,27 @@ export default function DashboardPage() {
   const [error, setError] = useState(false)
   const [period, setPeriod] = useState('week')
   const [lookback, setLookback] = useState(30)
+  const fetchIdRef = useRef(0)
 
   useEffect(() => { document.title = `${t('nav.dashboard')} — ${t('app.name')}` }, [t])
 
   useEffect(() => {
+    const fetchId = ++fetchIdRef.current
     setLoading(true)
     setError(false)
     getAnalytics(period, lookback)
-      .then((res) => setData(res.data))
-      .catch((err) => {
-        setError(true)
-        toast?.error(t('common.operationFailed'))
+      .then((res) => {
+        if (fetchId === fetchIdRef.current) setData(res.data)
       })
-      .finally(() => setLoading(false))
+      .catch((err) => {
+        if (fetchId === fetchIdRef.current) {
+          setError(true)
+          toast?.error(t('common.operationFailed'))
+        }
+      })
+      .finally(() => {
+        if (fetchId === fetchIdRef.current) setLoading(false)
+      })
   }, [period, lookback])
 
   const trends = useMemo(() => data?.mood_trends || [], [data])

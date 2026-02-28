@@ -91,7 +91,7 @@ from .services.pdf_export import generate_notes_pdf, generate_weekly_summary_pdf
 from .services.search import search_notes
 from .throttles import (
     AIChatThrottle, BookingThrottle, DeleteAccountThrottle, ExportThrottle,
-    LoginRateThrottle, MessageThrottle, NoteCreateThrottle,
+    GeneralWriteThrottle, LoginRateThrottle, MessageThrottle, NoteCreateThrottle,
     PasswordResetRateThrottle, RefreshTokenThrottle, RegisterRateThrottle, UploadThrottle,
 )
 
@@ -131,6 +131,17 @@ def _get_openai_client():
         if api_key:
             _openai_client = OpenAI(api_key=api_key)
     return _openai_client
+
+
+def create_notification_if_enabled(user, notification_type, **kwargs):
+    """Create a Notification only if the user hasn't disabled this type."""
+    from .models import NotificationPreference
+    pref = NotificationPreference.objects.filter(
+        user=user, notification_type=notification_type,
+    ).first()
+    if pref and not pref.enabled:
+        return None
+    return Notification.objects.create(user=user, type=notification_type, **kwargs)
 
 
 def _push_ws_notification(recipient_id, notif):
@@ -490,8 +501,12 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def trash(self, request):
-        """List soft-deleted notes (capped at 200)."""
-        qs = MoodNote.objects.filter(user=request.user, is_deleted=True).order_by('-deleted_at')[:200]
+        """List soft-deleted notes with pagination."""
+        qs = MoodNote.objects.filter(user=request.user, is_deleted=True).order_by('-deleted_at')
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = MoodNoteListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         serializer = MoodNoteListSerializer(qs, many=True)
         return Response(serializer.data)
 
@@ -720,6 +735,7 @@ class CounselorListView(generics.ListAPIView):
 
 class CounselorReviewCreateView(APIView):
     """POST /reviews/ — leave a review for a completed booking."""
+    throttle_classes = [GeneralWriteThrottle]
 
     def post(self, request):
         booking_id = request.data.get('booking_id')
@@ -896,15 +912,15 @@ class MessageListView(APIView):
         }
         if message_type == 'quote':
             notif_data['message_type'] = 'quote'
-        notif = Notification.objects.create(
-            user_id=recipient_id,
-            type='message',
+        notif = create_notification_if_enabled(
+            User.objects.get(pk=recipient_id), 'message',
             title='New message',
             message=msg.content[:100],
             data=notif_data,
         )
 
-        _push_ws_notification(recipient_id, notif)
+        if notif:
+            _push_ws_notification(recipient_id, notif)
 
         return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
 
@@ -1137,6 +1153,7 @@ class AvailableSlotsView(APIView):
     counselor_id in the URL is CounselorProfile.pk, but TimeSlot/Booking
     reference User.pk, so we resolve the profile first.
     """
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request, counselor_id):
         date_str = request.query_params.get('date')
@@ -1178,13 +1195,19 @@ class AvailableSlotsView(APIView):
         return Response(available)
 
 
-class BookingListView(APIView):
-    def get(self, request):
-        user = request.user
-        bookings = Booking.objects.filter(
+class BookingPagination(rest_framework.pagination.PageNumberPagination):
+    page_size = 50
+
+
+class BookingListView(generics.ListAPIView):
+    serializer_class = BookingSerializer
+    pagination_class = BookingPagination
+
+    def get_queryset(self):
+        user = self.request.user
+        return Booking.objects.filter(
             Q(user=user) | Q(counselor=user)
-        ).select_related('user', 'counselor').order_by('-created_at')[:100]
-        return Response(BookingSerializer(bookings, many=True).data)
+        ).select_related('user', 'counselor', 'review').order_by('-created_at')
 
 
 class BookingCreateView(APIView):
@@ -1252,9 +1275,8 @@ class BookingCreateView(APIView):
         )
 
         # Notify counselor
-        notif = Notification.objects.create(
-            user_id=counselor_user_id,
-            type='booking',
+        notif = create_notification_if_enabled(
+            User.objects.get(pk=counselor_user_id), 'booking',
             title='New booking',
             message=f'{request.user.username} booked {date_str} {start_time}',
             data={
@@ -1266,7 +1288,8 @@ class BookingCreateView(APIView):
             },
         )
 
-        _push_ws_notification(counselor_user_id, notif)
+        if notif:
+            _push_ws_notification(counselor_user_id, notif)
 
         return Response(BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
 
@@ -1290,9 +1313,8 @@ class BookingActionView(APIView):
         booking.save(update_fields=['status'])
 
         # Notify user
-        notif = Notification.objects.create(
-            user=booking.user,
-            type='booking',
+        notif = create_notification_if_enabled(
+            booking.user, 'booking',
             title=f'Booking {booking.status}',
             message=f'Your booking with {booking.counselor.username} is now {booking.status}.',
             data={
@@ -1302,7 +1324,8 @@ class BookingActionView(APIView):
             },
         )
 
-        _push_ws_notification(booking.user_id, notif)
+        if notif:
+            _push_ws_notification(booking.user_id, notif)
 
         return Response(BookingSerializer(booking).data)
 
@@ -1323,9 +1346,8 @@ class BookingUserCancelView(APIView):
         booking.save(update_fields=['status'])
 
         # Notify counselor
-        notif = Notification.objects.create(
-            user=booking.counselor,
-            type='booking',
+        notif = create_notification_if_enabled(
+            booking.counselor, 'booking',
             title='Booking cancelled',
             message=f'{request.user.username} cancelled their booking.',
             data={
@@ -1334,7 +1356,8 @@ class BookingUserCancelView(APIView):
                 'username': request.user.username,
             },
         )
-        _push_ws_notification(booking.counselor_id, notif)
+        if notif:
+            _push_ws_notification(booking.counselor_id, notif)
 
         return Response(BookingSerializer(booking).data)
 
@@ -1371,9 +1394,8 @@ class ShareAssessmentView(APIView):
             return error_response('already_shared', 'Already shared with this counselor.', 200)
 
         # Notify counselor
-        notif = Notification.objects.create(
-            user=profile.user,
-            type='assessment_share',
+        notif = create_notification_if_enabled(
+            profile.user, 'share',
             title='Assessment shared',
             message=f'{request.user.username} shared a {assessment.assessment_type.upper()} assessment with you.',
             data={
@@ -1382,7 +1404,8 @@ class ShareAssessmentView(APIView):
                 'username': request.user.username,
             },
         )
-        _push_ws_notification(profile.user_id, notif)
+        if notif:
+            _push_ws_notification(profile.user_id, notif)
 
         return Response(SharedAssessmentSerializer(shared).data, status=status.HTTP_201_CREATED)
 
@@ -1433,9 +1456,8 @@ class ShareNoteView(APIView):
 
         # Notify counselor
         author_name = 'Anonymous' if is_anonymous else request.user.username
-        Notification.objects.create(
-            user_id=counselor_user_id,
-            type='share',
+        create_notification_if_enabled(
+            User.objects.get(pk=counselor_user_id), 'share',
             title='Note shared with you',
             message=f'{author_name} shared a note with you.',
             data={
@@ -2182,6 +2204,7 @@ class TherapistReportPublicView(APIView):
 # ===== Psycho Education Views =====
 
 class PsychoArticleListView(generics.ListAPIView):
+    permission_classes = [permissions.AllowAny]
     serializer_class = PsychoArticleSerializer
 
     def get_queryset(self):
@@ -2193,6 +2216,7 @@ class PsychoArticleListView(generics.ListAPIView):
 
 
 class PsychoArticleDetailView(generics.RetrieveAPIView):
+    permission_classes = [permissions.AllowAny]
     serializer_class = PsychoArticleSerializer
 
     def get_queryset(self):
@@ -2200,31 +2224,36 @@ class PsychoArticleDetailView(generics.RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         response = super().retrieve(request, *args, **kwargs)
-        # Auto-create progress record when article is viewed
-        article = self.get_object()
-        UserLessonProgress.objects.get_or_create(
-            user=request.user, article=article,
-        )
+        # Auto-create progress record when article is viewed (authenticated users only)
+        if request.user.is_authenticated:
+            article = self.get_object()
+            UserLessonProgress.objects.get_or_create(
+                user=request.user, article=article,
+            )
         return response
 
 
 # ===== Wellness Session Views =====
 
-class WellnessSessionListCreateView(APIView):
-    def get(self, request):
-        sessions = WellnessSession.objects.filter(user=request.user)[:50]
-        return Response(WellnessSessionSerializer(sessions, many=True).data)
+class WellnessSessionPagination(rest_framework.pagination.PageNumberPagination):
+    page_size = 50
 
-    def post(self, request):
-        serializer = WellnessSessionSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class WellnessSessionListCreateView(generics.ListCreateAPIView):
+    serializer_class = WellnessSessionSerializer
+    pagination_class = WellnessSessionPagination
+
+    def get_queryset(self):
+        return WellnessSession.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 # ===== Course Views =====
 
 class CourseListView(generics.ListAPIView):
+    permission_classes = [permissions.AllowAny]
     serializer_class = CourseListSerializer
 
     def get_queryset(self):
@@ -2235,16 +2264,20 @@ class CourseListView(generics.ListAPIView):
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        completed_ids = set(
-            UserLessonProgress.objects.filter(
-                user=self.request.user, completed_at__isnull=False,
-            ).values_list('article_id', flat=True)
-        )
+        if self.request.user.is_authenticated:
+            completed_ids = set(
+                UserLessonProgress.objects.filter(
+                    user=self.request.user, completed_at__isnull=False,
+                ).values_list('article_id', flat=True)
+            )
+        else:
+            completed_ids = set()
         ctx['completed_ids'] = completed_ids
         return ctx
 
 
 class CourseDetailView(generics.RetrieveAPIView):
+    permission_classes = [permissions.AllowAny]
     serializer_class = CourseDetailSerializer
 
     def get_queryset(self):
@@ -2255,11 +2288,14 @@ class CourseDetailView(generics.RetrieveAPIView):
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        completed_ids = set(
-            UserLessonProgress.objects.filter(
-                user=self.request.user, completed_at__isnull=False,
-            ).values_list('article_id', flat=True)
-        )
+        if self.request.user.is_authenticated:
+            completed_ids = set(
+                UserLessonProgress.objects.filter(
+                    user=self.request.user, completed_at__isnull=False,
+                ).values_list('article_id', flat=True)
+            )
+        else:
+            completed_ids = set()
         ctx['completed_ids'] = completed_ids
         return ctx
 
@@ -2339,6 +2375,8 @@ class IsEmailVerified(permissions.BasePermission):
 # === 2FA TOTP ===
 
 class TOTPSetupView(APIView):
+    throttle_classes = [GeneralWriteThrottle]
+
     def get(self, request):
         """Check if 2FA is enabled for the current user."""
         enabled = TOTPDevice.objects.filter(user=request.user, confirmed=True).exists()
@@ -2378,6 +2416,8 @@ class TOTPSetupView(APIView):
 
 
 class TOTPVerifyView(APIView):
+    throttle_classes = [GeneralWriteThrottle]
+
     def post(self, request):
         import pyotp
 
@@ -2425,6 +2465,7 @@ class Login2FAView(APIView):
             token = AccessToken(partial_token)
             user = User.objects.get(pk=token['user_id'])
         except Exception:
+            logger.exception('Login2FA token validation failed')
             return error_response('totp_invalid_token', 'Invalid token.', 400)
 
         try:
@@ -2495,6 +2536,8 @@ class GoogleLoginCallbackView(APIView):
 # === CSV Import ===
 
 class ImportCSVView(APIView):
+    throttle_classes = [GeneralWriteThrottle]
+
     def post(self, request):
         file = request.FILES.get('file')
         if not file:
@@ -2507,6 +2550,7 @@ class ImportCSVView(APIView):
             content = file.read().decode('utf-8-sig')
             reader = csv.DictReader(io.StringIO(content))
         except Exception:
+            logger.exception('CSV import parse error')
             return error_response('csv_parse_error', 'Invalid CSV file.', 400)
 
         # Normalize column names to lowercase for case-insensitive matching
@@ -2600,7 +2644,7 @@ class ImportCSVView(APIView):
                             )
                             MoodNote.objects.filter(pk=note.pk).update(created_at=aware_dt)
                 except Exception:
-                    pass
+                    logger.exception('CSV import: failed to parse date for row %d', i)
 
             created_count += 1
 
@@ -2735,4 +2779,5 @@ def send_push_notification(user, title, body, url='/'):
                 vapid_claims=vapid_claims,
             )
         except Exception:
+            logger.exception('Web push failed for subscription %s, removing', sub.endpoint[:50])
             sub.delete()  # Remove invalid subscriptions

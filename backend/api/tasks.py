@@ -72,13 +72,18 @@ def generate_weekly_summaries():
             top_activities=top_activities,
         )
 
-        # Create notification
-        Notification.objects.create(
-            user=user,
-            type='system',
-            title='Weekly Summary Ready',
-            message=f'Your weekly summary for {prev_week_start} is ready.',
-        )
+        # Create notification (respecting user preferences)
+        from api.models import NotificationPreference
+        pref = NotificationPreference.objects.filter(
+            user=user, notification_type='weekly_report',
+        ).first()
+        if not pref or pref.enabled:
+            Notification.objects.create(
+                user=user,
+                type='system',
+                title='Weekly Summary Ready',
+                message=f'Your weekly summary for {prev_week_start} is ready.',
+            )
 
         created_count += 1
 
