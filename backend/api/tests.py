@@ -1142,7 +1142,8 @@ class SoftDeleteTests(APITestCase):
         self.client.delete(f'/api/notes/{note_id}/')
         resp = self.client.get('/api/notes/trash/')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        ids = [n['id'] for n in resp.data]
+        results = resp.data.get('results', resp.data) if isinstance(resp.data, dict) else resp.data
+        ids = [n['id'] for n in results]
         self.assertIn(note_id, ids)
 
     def test_restore(self):
