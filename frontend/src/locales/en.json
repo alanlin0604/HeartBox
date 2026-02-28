@@ -987,7 +987,7 @@
   "push.failed": "Failed to enable push notifications",
   "report.tab": "Reports",
   "report.title": "Therapist Reports",
-  "report.description": "Generate reports to share with your therapist. Expires in 30 days.",
+  "report.description": "Generate a comprehensive report summarizing your mood data for a selected period to share with your therapist or counselor. Report links expire after 30 days.",
   "report.reportTitle": "Report Title",
   "report.startDate": "Start Date",
   "report.endDate": "End Date",
@@ -1003,5 +1003,17 @@
   "review.submitSuccess": "Review submitted",
   "review.submitFailed": "Failed to submit",
   "review.contentPlaceholder": "Share your experience (optional)",
-  "review.alreadyReviewed": "Already reviewed"
+  "review.alreadyReviewed": "Already reviewed",
+  "settings.tabProfile": "Profile",
+  "settings.tabPreferences": "Preferences",
+  "settings.tabData": "Data",
+  "settings.tabSecurity": "Security",
+  "email.resendSuccess": "Verification email sent",
+  "email.resendFailed": "Failed to send verification email, please try again later",
+  "subscription.devNotice": "Subscription plans are under development — all features are currently free, and plan differences are not yet active.",
+  "report.includesTitle": "Reports include:",
+  "report.includesMoodTrend": "Mood trend charts for the selected period",
+  "report.includesStress": "Stress index statistics and analysis",
+  "report.includesAssessments": "PHQ-9 / GAD-7 self-assessment scores",
+  "report.includesShareable": "A shareable link valid for 30 days"
 }

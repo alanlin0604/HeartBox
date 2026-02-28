@@ -1674,7 +1674,7 @@ class ExportCSVView(APIView):
 
         buf = io.StringIO()
         writer = csv.writer(buf)
-        writer.writerow(['ID', 'Content', 'Sentiment', 'Stress', 'Tags', 'Weather', 'Temperature', 'Pinned', 'Created'])
+        writer.writerow(['ID', 'Content', 'Sentiment', 'Stress', 'Tags', 'Weather', 'Temperature', 'Pinned', 'AI_Feedback', 'Created', 'Updated'])
 
         for note in notes:
             meta = note.metadata or {}
@@ -1687,7 +1687,9 @@ class ExportCSVView(APIView):
                 meta.get('weather', ''),
                 meta.get('temperature', ''),
                 note.is_pinned,
+                note.ai_feedback or '',
                 note.created_at.isoformat(),
+                note.updated_at.isoformat() if note.updated_at else '',
             ])
 
         response = HttpResponse(buf.getvalue(), content_type='text/csv; charset=utf-8-sig')
@@ -2767,6 +2769,17 @@ class ImportCSVView(APIView):
                     logger.exception('CSV import: failed to parse date for row %d', i)
 
             created_count += 1
+
+        # Invalidate analytics/calendar caches so charts update immediately
+        if created_count > 0:
+            uid = request.user.id
+            now = timezone.now()
+            cache.delete_many([
+                f'analytics_{uid}_week_30',
+                f'analytics_{uid}_month_30',
+                f'analytics_{uid}_week_7',
+                f'calendar_{uid}_{now.year}_{now.month}',
+            ])
 
         return Response({
             'imported': created_count,

@@ -20,9 +20,6 @@ export const resetPassword = (uid, token, newPassword) =>
 export const deleteAccount = (password) =>
   api.post('/auth/delete-account/', { password });
 
-export const exportData = () =>
-  api.get('/auth/export/', { responseType: 'blob' });
-
 export const verifyEmail = (uid, token) =>
   api.get('/auth/verify-email/', { params: { uid, token } });
 

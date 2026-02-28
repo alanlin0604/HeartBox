@@ -748,6 +748,16 @@ export default function CounselorListPage() {
             <p className="text-sm opacity-60 mt-1">{t('report.description')}</p>
           </div>
 
+          <div className="glass p-4 space-y-2">
+            <p className="text-sm font-medium">{t('report.includesTitle')}</p>
+            <ul className="text-sm opacity-70 space-y-1 list-disc list-inside">
+              <li>{t('report.includesMoodTrend')}</li>
+              <li>{t('report.includesStress')}</li>
+              <li>{t('report.includesAssessments')}</li>
+              <li>{t('report.includesShareable')}</li>
+            </ul>
+          </div>
+
           <form onSubmit={handleGenerateReport} className="glass p-6 space-y-4 max-w-lg">
             <input
               type="text"

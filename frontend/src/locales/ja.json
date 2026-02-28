@@ -987,7 +987,7 @@
   "push.failed": "プッシュ通知の有効化に失敗しました",
   "report.tab": "レポート",
   "report.title": "セラピストレポート",
-  "report.description": "セラピストと共有するレポートを作成（30日後期限切れ）",
+  "report.description": "指定期間の気分データをまとめた総合レポートを作成し、セラピストやカウンセラーと共有できます。リンクの有効期限は30日間です。",
   "report.reportTitle": "レポートタイトル",
   "report.startDate": "開始日",
   "report.endDate": "終了日",
@@ -1003,5 +1003,17 @@
   "review.submitSuccess": "レビューを送信しました",
   "review.submitFailed": "レビュー送信に失敗しました",
   "review.contentPlaceholder": "体験を共有（任意）",
-  "review.alreadyReviewed": "レビュー済み"
+  "review.alreadyReviewed": "レビュー済み",
+  "settings.tabProfile": "プロフィール",
+  "settings.tabPreferences": "設定",
+  "settings.tabData": "データ管理",
+  "settings.tabSecurity": "セキュリティ",
+  "email.resendSuccess": "認証メールを再送信しました",
+  "email.resendFailed": "認証メールの送信に失敗しました。後でもう一度お試しください",
+  "subscription.devNotice": "サブスクリプション機能は開発中です — 現在すべての機能が無料で利用でき、プランの違いはまだ有効ではありません。",
+  "report.includesTitle": "レポートの内容：",
+  "report.includesMoodTrend": "指定期間の気分トレンドチャート",
+  "report.includesStress": "ストレス指数の統計と分析",
+  "report.includesAssessments": "PHQ-9 / GAD-7 自己評価スコア",
+  "report.includesShareable": "30日間有効な共有リンクを生成"
 }

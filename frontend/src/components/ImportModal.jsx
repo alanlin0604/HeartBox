@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 import { importCSV } from '../api/notes'
+import { invalidate } from '../api/cache'
 
 export default function ImportModal({ onClose, onSuccess }) {
   const { t } = useLang()
@@ -30,6 +31,8 @@ export default function ImportModal({ onClose, onSuccess }) {
     setImporting(true)
     try {
       const result = await importCSV(file)
+      invalidate('analytics')
+      invalidate('calendar')
       toast?.success(t('import.success').replace('{count}', result.data.imported))
       onSuccess?.()
       onClose()

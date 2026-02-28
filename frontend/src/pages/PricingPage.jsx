@@ -52,6 +52,10 @@ export default function PricingPage() {
       <h1 className="text-2xl font-bold text-center">{t('subscription.pricingTitle')}</h1>
       <p className="text-center opacity-70">{t('subscription.pricingDesc')}</p>
 
+      <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-center">
+        <p className="font-medium text-blue-400">{t('subscription.devNotice')}</p>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map(plan => (
           <div key={plan.id} className={`glass p-6 space-y-4 border-2 ${tierColors[plan.tier] || ''} ${currentSub?.plan === plan.id ? 'ring-2 ring-purple-500' : ''}`}>

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { NavLink, Outlet, useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -7,6 +7,7 @@ import { LANG_OPTIONS } from '../utils/locales'
 import NotificationBell from './NotificationBell'
 import useIdleTimer from '../hooks/useIdleTimer'
 import OnboardingModal from './OnboardingModal'
+import { useToast } from '../context/ToastContext'
 
 const ROUTE_PRELOADS = {
   '/': () => import('../pages/JournalPage'),
@@ -26,6 +27,8 @@ export default function Layout() {
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { lang, setLang, t } = useLang()
+  const toast = useToast()
+  const [resending, setResending] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const isChatRoute = location.pathname.startsWith('/chat/') || location.pathname === '/ai-chat'
@@ -125,14 +128,22 @@ export default function Layout() {
           {t('email.notVerifiedBanner')}
           <button
             onClick={async () => {
+              if (resending) return
+              setResending(true)
               try {
                 const { resendVerification } = await import('../api/auth')
                 await resendVerification()
-              } catch {}
+                toast?.success(t('email.resendSuccess'))
+              } catch {
+                toast?.error(t('email.resendFailed'))
+              } finally {
+                setResending(false)
+              }
             }}
+            disabled={resending}
             className="underline ml-2 font-semibold"
           >
-            {t('email.resendVerification')}
+            {resending ? t('common.loading') : t('email.resendVerification')}
           </button>
         </div>
       )}

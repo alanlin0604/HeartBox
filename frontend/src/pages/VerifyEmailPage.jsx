@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
+import { useAuth } from '../context/AuthContext'
 import { verifyEmail } from '../api/auth'
+import { getAccessToken } from '../utils/tokenStorage'
 
 export default function VerifyEmailPage() {
   const { t } = useLang()
+  const { refreshUser } = useAuth()
   const [params] = useSearchParams()
   const [status, setStatus] = useState('loading')
 
@@ -16,7 +19,12 @@ export default function VerifyEmailPage() {
       return
     }
     verifyEmail(uid, token)
-      .then(() => setStatus('success'))
+      .then(async () => {
+        setStatus('success')
+        if (getAccessToken()) {
+          await refreshUser()
+        }
+      })
       .catch(() => setStatus('error'))
   }, [params])
 

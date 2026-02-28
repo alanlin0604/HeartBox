@@ -987,7 +987,7 @@
   "push.failed": "啟用推播通知失敗",
   "report.tab": "報告",
   "report.title": "治療師報告",
-  "report.description": "產生報告分享心情資料給治療師，30 天後過期",
+  "report.description": "產生一份綜合報告，彙整你在指定期間的心情資料，分享給治療師或諮商師參考。報告連結有效期 30 天。",
   "report.reportTitle": "報告標題",
   "report.startDate": "開始日期",
   "report.endDate": "結束日期",
@@ -1003,5 +1003,17 @@
   "review.submitSuccess": "已提交評價",
   "review.submitFailed": "提交評價失敗",
   "review.contentPlaceholder": "分享您的經驗（選填）",
-  "review.alreadyReviewed": "已評價"
+  "review.alreadyReviewed": "已評價",
+  "settings.tabProfile": "個人資料",
+  "settings.tabPreferences": "偏好設定",
+  "settings.tabData": "資料管理",
+  "settings.tabSecurity": "安全性",
+  "email.resendSuccess": "驗證信已重新寄出",
+  "email.resendFailed": "寄送驗證信失敗，請稍後再試",
+  "subscription.devNotice": "訂閱功能開發中 — 目前所有功能皆可免費使用，方案差異尚未生效。",
+  "report.includesTitle": "報告包含以下內容：",
+  "report.includesMoodTrend": "指定期間內的心情趨勢圖表",
+  "report.includesStress": "壓力指數統計與分析",
+  "report.includesAssessments": "PHQ-9 / GAD-7 自評量表分數",
+  "report.includesShareable": "產生可分享的連結，有效期 30 天"
 }
