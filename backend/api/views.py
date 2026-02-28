@@ -2263,6 +2263,11 @@ class IsEmailVerified(permissions.BasePermission):
 # === 2FA TOTP ===
 
 class TOTPSetupView(APIView):
+    def get(self, request):
+        """Check if 2FA is enabled for the current user."""
+        enabled = TOTPDevice.objects.filter(user=request.user, confirmed=True).exists()
+        return Response({'enabled': enabled})
+
     def post(self, request):
         import pyotp
         import qrcode

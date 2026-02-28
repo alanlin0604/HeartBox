@@ -4,6 +4,11 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { getPlans, getMySubscription, subscribe } from '../api/subscription'
 
+const FEATURE_ORDER = [
+  'notes_per_month', 'ai_analysis', 'export_pdf', 'weekly_report',
+  'push_notifications', 'counselor_chat', 'client_management', 'shared_notes_access',
+]
+
 export default function PricingPage() {
   const { t } = useLang()
   const { user } = useAuth()
@@ -56,12 +61,21 @@ export default function PricingPage() {
               {plan.price > 0 && <span className="text-sm opacity-60">/{t('subscription.month')}</span>}
             </div>
             <ul className="space-y-2 text-sm">
-              {(plan.features || []).map((f, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="text-green-500 mt-0.5">✓</span>
-                  <span>{f}</span>
-                </li>
-              ))}
+              {FEATURE_ORDER
+                .filter(key => plan.features?.[key] !== undefined)
+                .map(key => {
+                  const val = plan.features[key]
+                  const enabled = val === true || (typeof val === 'number' && val !== 0)
+                  const label = typeof val === 'number' && val > 0
+                    ? t(`feature.${key}`).replace('{n}', val)
+                    : t(`feature.${key}`).replace('{n}', t('feature.unlimited'))
+                  return (
+                    <li key={key} className={`flex items-start gap-2 ${!enabled ? 'opacity-40 line-through' : ''}`}>
+                      <span className={enabled ? 'text-green-500 mt-0.5' : 'text-red-400 mt-0.5'}>{enabled ? '✓' : '✗'}</span>
+                      <span>{label}</span>
+                    </li>
+                  )
+                })}
             </ul>
             {user && (
               <button

@@ -66,7 +66,7 @@ export default function SettingsPage() {
     // Notification preferences
     import('../api/axios').then(({ default: api }) => {
       api.get('/notifications/preferences/').then(r => setNotifPrefs(r.data)).catch(() => {})
-      api.get('/auth/2fa/setup/').catch(() => {}) // check if exists
+      api.get('/auth/2fa/setup/').then(r => setTwoFAEnabled(r.data.enabled)).catch(() => {})
       api.get('/subscriptions/me/').then(r => setCurrentSub(r.data)).catch(() => {})
     })
   }, [user])
