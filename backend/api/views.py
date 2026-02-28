@@ -2499,7 +2499,10 @@ class ImportCSVView(APIView):
                 except ValueError:
                     pass
 
-            # Parse date
+            note.save()
+
+            # Parse date — must update AFTER save because auto_now_add
+            # ignores manual values during save()
             if date_str:
                 try:
                     from django.utils.dateparse import parse_datetime, parse_date
@@ -2507,15 +2510,17 @@ class ImportCSVView(APIView):
                     if parsed:
                         from django.utils import timezone as tz
                         if hasattr(parsed, 'hour'):
-                            note.created_at = parsed
+                            if tz.is_naive(parsed):
+                                parsed = tz.make_aware(parsed)
+                            MoodNote.objects.filter(pk=note.pk).update(created_at=parsed)
                         else:
-                            note.created_at = tz.make_aware(
+                            aware_dt = tz.make_aware(
                                 tz.datetime.combine(parsed, tz.datetime.min.time())
                             )
+                            MoodNote.objects.filter(pk=note.pk).update(created_at=aware_dt)
                 except Exception:
                     pass
 
-            note.save()
             created_count += 1
 
         return Response({
