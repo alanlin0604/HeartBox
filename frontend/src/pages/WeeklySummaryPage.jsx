@@ -58,7 +58,7 @@ export default function WeeklySummaryPage() {
     setListLoading(true)
     getWeeklySummaryList()
       .then((res) => setSummaries(res.data?.results || res.data || []))
-      .catch(() => setSummaries([]))
+      .catch(() => { toast?.error(t('common.operationFailed')); setSummaries([]) })
       .finally(() => setListLoading(false))
   }, [])
 

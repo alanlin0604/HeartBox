@@ -168,7 +168,7 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div className="space-y-6 mt-4 max-w-2xl mx-auto overflow-x-hidden">
+    <div className="space-y-6 mt-4 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
 
       {/* Tab Navigation */}
@@ -188,9 +188,9 @@ export default function SettingsPage() {
 
       {/* === Profile Tab === */}
       {activeTab === 'profile' && (
-        <div className="space-y-6">
+        <div className="glass p-4 sm:p-6 space-y-6">
           {/* Profile Section */}
-          <form onSubmit={handleSaveProfile} className="glass p-4 sm:p-6 space-y-4">
+          <form onSubmit={handleSaveProfile} className="space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.profile')}</h2>
 
             <div>
@@ -263,8 +263,10 @@ export default function SettingsPage() {
             </button>
           </form>
 
+          <div className="border-t border-[var(--card-border)]" />
+
           {/* Password Section */}
-          <form onSubmit={handleChangePassword} className="glass p-4 sm:p-6 space-y-4">
+          <form onSubmit={handleChangePassword} className="space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.changePassword')}</h2>
 
             <div>
@@ -318,11 +320,11 @@ export default function SettingsPage() {
 
       {/* === Preferences Tab === */}
       {activeTab === 'preferences' && (
-        <div className="space-y-6">
+        <div className="glass p-4 sm:p-6 space-y-6">
           {/* Font Size */}
-          <div className="glass p-4 sm:p-6 space-y-4">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.fontSize')}</h2>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               {[
                 { label: t('settings.fontSmall'), scale: 0.875 },
                 { label: t('settings.fontMedium'), scale: 1 },
@@ -348,8 +350,10 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          <div className="border-t border-[var(--card-border)]" />
+
           {/* Timezone */}
-          <div className="glass p-4 sm:p-6 space-y-4">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.timezone')}</h2>
             <select
               value={userTimezone}
@@ -401,10 +405,12 @@ export default function SettingsPage() {
             </select>
           </div>
 
+          <div className="border-t border-[var(--card-border)]" />
+
           {/* Idle Auto-Logout */}
-          <div className="glass p-4 sm:p-6 space-y-4">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('idle.settingsTitle')}</h2>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap">
               {[
                 { label: t('idle.minutes15'), value: '15' },
                 { label: t('idle.minutes30'), value: '30' },
@@ -430,8 +436,10 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          <div className="border-t border-[var(--card-border)]" />
+
           {/* Notification Preferences */}
-          <div className="glass p-4 sm:p-6 space-y-4">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('notifPref.title')}</h2>
             {['message', 'booking', 'share', 'weekly_report', 'achievement', 'system'].map(type => {
               const pref = notifPrefs.find(p => p.notification_type === type)
@@ -461,8 +469,10 @@ export default function SettingsPage() {
             })}
           </div>
 
+          <div className="border-t border-[var(--card-border)]" />
+
           {/* Push Notifications */}
-          <div className="glass p-4 sm:p-6 space-y-4">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('push.title')}</h2>
             <label className="flex items-center justify-between">
               <span className="text-sm">{t('push.enableDesc')}</span>
@@ -488,18 +498,20 @@ export default function SettingsPage() {
 
       {/* === Data Tab === */}
       {activeTab === 'data' && (
-        <div className="space-y-6">
+        <div className="glass p-4 sm:p-6 space-y-6">
           {/* Data Import */}
-          <div className="glass p-4 sm:p-6 space-y-4">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('import.title')}</h2>
             <p className="text-sm opacity-60">{t('import.settingsDesc')}</p>
-            <button onClick={() => setImportOpen(true)} className="btn-secondary w-full">{t('import.button')}</button>
+            <button onClick={() => setImportOpen(true)} className="btn-secondary">{t('import.button')}</button>
           </div>
 
           {importOpen && <ImportModal onClose={() => setImportOpen(false)} onSuccess={() => {}} />}
 
+          <div className="border-t border-[var(--card-border)]" />
+
           {/* Account Info */}
-          <div className="glass p-4 sm:p-6 space-y-4">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.accountInfo')}</h2>
             <div className="text-sm space-y-2 opacity-70">
               <p>{t('settings.joined')}: {user?.created_at ? new Date(user.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang) : '-'}</p>
@@ -507,8 +519,10 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          <div className="border-t border-[var(--card-border)]" />
+
           {/* Subscription */}
-          <div className="glass p-4 sm:p-6 space-y-4">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('subscription.title')}</h2>
             {currentSub?.plan ? (
               <div className="text-sm space-y-1">
@@ -518,16 +532,16 @@ export default function SettingsPage() {
             ) : (
               <p className="text-sm opacity-60">{t('subscription.noPlan')}</p>
             )}
-            <Link to="/pricing" className="btn-secondary block w-full text-center">{t('subscription.viewPlans')}</Link>
+            <Link to="/pricing" className="btn-secondary inline-block">{t('subscription.viewPlans')}</Link>
           </div>
         </div>
       )}
 
       {/* === Security Tab === */}
       {activeTab === 'security' && (
-        <div className="space-y-6">
+        <div className="glass p-4 sm:p-6 space-y-6">
           {/* Two-Factor Authentication */}
-          <div className="glass p-4 sm:p-6 space-y-4">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t('twofa.title')}</h2>
               {twoFAEnabled && (
@@ -557,7 +571,7 @@ export default function SettingsPage() {
                     } catch { toast?.error(t('twofa.disableFailed')) }
                   }}
                   disabled={!disablePassword}
-                  className="btn-danger w-full"
+                  className="btn-danger"
                 >
                   {t('twofa.disable')}
                 </button>
@@ -619,7 +633,7 @@ export default function SettingsPage() {
                       setSetupQR(data)
                     } catch { toast?.error(t('twofa.setupFailed')) }
                   }}
-                  className="btn-primary w-full"
+                  className="btn-primary"
                 >
                   {t('twofa.enable')}
                 </button>
@@ -627,13 +641,15 @@ export default function SettingsPage() {
             )}
           </div>
 
+          <div className="border-t border-[var(--card-border)]" />
+
           {/* Danger Zone - Delete Account */}
-          <div className="glass p-4 sm:p-6 space-y-4 border border-red-500/20">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold text-red-500">{t('settings.dangerZone')}</h2>
             <p className="text-sm opacity-60">{t('settings.deleteAccountDesc')}</p>
             <button
               onClick={() => setDeleteModalOpen(true)}
-              className="btn-danger w-full"
+              className="btn-danger"
             >
               {t('settings.deleteAccount')}
             </button>

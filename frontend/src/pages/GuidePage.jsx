@@ -22,7 +22,7 @@ export default function GuidePage() {
   }, [t])
 
   return (
-    <div className="space-y-6 mt-4 max-w-2xl mx-auto">
+    <div className="space-y-6 mt-4 max-w-3xl mx-auto">
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold">{t('guide.title')}</h1>
         <p className="text-sm opacity-60">{t('guide.subtitle')}</p>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { getArticles, getCourses } from '../api/wellness'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 /** Minimal markdown → HTML: headings, bold, bullet lists, paragraphs */
@@ -39,6 +40,7 @@ const LANG_FIELD_MAP = { 'zh-TW': 'zh', en: 'en', ja: 'ja' }
 
 export default function PsychoContentPage() {
   const { t, lang } = useLang()
+  const toast = useToast()
   const navigate = useNavigate()
   const [tab, setTab] = useState('courses')
   const [articles, setArticles] = useState([])
@@ -53,7 +55,7 @@ export default function PsychoContentPage() {
   useEffect(() => {
     getCourses()
       .then((res) => setCourses(res.data?.results || res.data || []))
-      .catch(() => setCourses([]))
+      .catch(() => { toast?.error(t('common.operationFailed')); setCourses([]) })
       .finally(() => setLoading(false))
   }, [])
 
@@ -63,7 +65,7 @@ export default function PsychoContentPage() {
     setLoading(true)
     getArticles(category)
       .then((res) => setArticles(res.data?.results || res.data || []))
-      .catch(() => setArticles([]))
+      .catch(() => { toast?.error(t('common.operationFailed')); setArticles([]) })
       .finally(() => setLoading(false))
   }, [tab, category])
 

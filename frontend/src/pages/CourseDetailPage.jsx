@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getCourseDetail } from '../api/wellness'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 const LANG_FIELD_MAP = { 'zh-TW': 'zh', en: 'en', ja: 'ja' }
@@ -10,6 +11,7 @@ export default function CourseDetailPage() {
   const { courseId } = useParams()
   const navigate = useNavigate()
   const { t, lang } = useLang()
+  const toast = useToast()
   const [course, setCourse] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -19,7 +21,7 @@ export default function CourseDetailPage() {
     setLoading(true)
     getCourseDetail(courseId)
       .then((res) => setCourse(res.data))
-      .catch(() => setCourse(null))
+      .catch(() => { toast?.error(t('common.operationFailed')); setCourse(null) })
       .finally(() => setLoading(false))
   }, [courseId])
 

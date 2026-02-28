@@ -158,6 +158,20 @@ body {
   color: #1e293b;
 }
 
+/* ===== Prose fix for light theme ===== */
+[data-theme="light"] .prose.prose-invert {
+  --tw-prose-body: var(--text-primary);
+  --tw-prose-headings: var(--text-primary);
+  --tw-prose-links: #7c3aed;
+  --tw-prose-bold: var(--text-primary);
+  --tw-prose-counters: var(--text-secondary);
+  --tw-prose-bullets: var(--text-secondary);
+  --tw-prose-hr: var(--card-border);
+  --tw-prose-quotes: var(--text-primary);
+  --tw-prose-quote-borders: var(--card-border);
+  --tw-prose-code: var(--text-primary);
+}
+
 /* ===== Buttons ===== */
 .btn-primary {
   background: linear-gradient(135deg, #7c3aed, #6d28d9);
