@@ -32,6 +32,8 @@ from .views import (
     CounselorApplyView,
     CounselorListView,
     CounselorMyProfileView,
+    CounselorReviewCreateView,
+    CounselorReviewListView,
     DeleteAccountView,
     ExportCSVView,
     ExportDataView,
@@ -62,8 +64,10 @@ from .views import (
     SelfAssessmentListCreateView,
     ShareAssessmentView,
     SharedAssessmentsReceivedView,
+    NoteSharesListView,
     ShareNoteView,
     SharedNotesReceivedView,
+    UnshareNoteView,
     SubscriptionPlanListView,
     TOTPDisableView,
     TOTPSetupView,
@@ -111,6 +115,9 @@ urlpatterns = [
     path('counselors/', CounselorListView.as_view(), name='counselor-list'),
     path('counselors/apply/', CounselorApplyView.as_view(), name='counselor-apply'),
     path('counselors/me/', CounselorMyProfileView.as_view(), name='counselor-me'),
+    # Reviews
+    path('reviews/', CounselorReviewCreateView.as_view(), name='review-create'),
+    path('counselors/<int:counselor_id>/reviews/', CounselorReviewListView.as_view(), name='counselor-reviews'),
     # Messaging
     path('conversations/', ConversationListView.as_view(), name='conversation-list'),
     path('conversations/create/', ConversationCreateView.as_view(), name='conversation-create'),
@@ -137,6 +144,8 @@ urlpatterns = [
     path('counselors/<int:counselor_id>/available/', AvailableSlotsView.as_view(), name='available-slots'),
     # Sharing
     path('notes/<int:note_id>/share/', ShareNoteView.as_view(), name='share-note'),
+    path('notes/<int:note_id>/shares/', NoteSharesListView.as_view(), name='note-shares'),
+    path('notes/<int:note_id>/unshare/<int:share_id>/', UnshareNoteView.as_view(), name='unshare-note'),
     path('shared-notes/', SharedNotesReceivedView.as_view(), name='shared-notes'),
     # Feedback
     path('feedback/', FeedbackCreateView.as_view(), name='feedback-create'),

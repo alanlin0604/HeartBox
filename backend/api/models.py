@@ -306,6 +306,38 @@ class Booking(models.Model):
         return f'{self.user.username} → {self.counselor.username} {self.date} {self.start_time}'
 
 
+class CounselorReview(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='given_reviews',
+    )
+    counselor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='received_reviews',
+    )
+    booking = models.OneToOneField(
+        Booking,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='review',
+    )
+    rating = models.PositiveSmallIntegerField()  # 1-5
+    content = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['counselor', 'created_at'], name='review_counselor_date'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} → {self.counselor.username} ({self.rating}/5)'
+
+
 class Feedback(models.Model):
     RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]
 

@@ -11,7 +11,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import Avg
+from django.db.models import Avg, Count
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db.models import Q
@@ -34,7 +34,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import (
     AIChatMessage, AIChatSession,
-    Booking, Conversation, Course, CounselorProfile, DailySleep, Feedback,
+    Booking, Conversation, CounselorReview, Course, CounselorProfile, DailySleep, Feedback,
     Message, MoodNote, NoteAttachment, Notification, NotificationPreference,
     PsychoArticle, PushSubscription,
     SelfAssessment, SharedAssessment, SharedNote, SubscriptionPlan,
@@ -53,6 +53,7 @@ from .serializers import (
     CourseListSerializer,
     CounselorListSerializer,
     CounselorProfileSerializer,
+    CounselorReviewSerializer,
     DailySleepSerializer,
     FeedbackSerializer,
     MessageSerializer,
@@ -686,7 +687,10 @@ class CounselorListView(generics.ListAPIView):
     serializer_class = CounselorListSerializer
 
     def get_queryset(self):
-        qs = CounselorProfile.objects.filter(status='approved').exclude(user=self.request.user).select_related('user')
+        qs = CounselorProfile.objects.filter(status='approved').exclude(user=self.request.user).select_related('user').annotate(
+            avg_rating=Avg('user__received_reviews__rating'),
+            review_count=Count('user__received_reviews'),
+        )
 
         if self.request.query_params.get('recommended') == 'true' and self.request.user.is_authenticated:
             # Get user's frequently used tags
@@ -712,6 +716,53 @@ class CounselorListView(generics.ListAPIView):
                 ).order_by('-is_recommended', '-created_at')
 
         return qs
+
+
+class CounselorReviewCreateView(APIView):
+    """POST /reviews/ — leave a review for a completed booking."""
+
+    def post(self, request):
+        booking_id = request.data.get('booking_id')
+        rating = request.data.get('rating')
+        content = request.data.get('content', '')
+
+        if not booking_id or not rating:
+            return error_response('missing_fields', 'booking_id and rating are required.', 400)
+
+        try:
+            rating = int(rating)
+            if rating < 1 or rating > 5:
+                raise ValueError
+        except (ValueError, TypeError):
+            return error_response('invalid_rating', 'Rating must be between 1 and 5.', 400)
+
+        try:
+            booking = Booking.objects.get(id=booking_id, user=request.user, status='completed')
+        except Booking.DoesNotExist:
+            return error_response('booking_not_found', 'Completed booking not found.', 404)
+
+        if CounselorReview.objects.filter(booking=booking).exists():
+            return error_response('already_reviewed', 'This booking has already been reviewed.', 400)
+
+        review = CounselorReview.objects.create(
+            user=request.user,
+            counselor=booking.counselor,
+            booking=booking,
+            rating=rating,
+            content=content,
+        )
+        return Response(CounselorReviewSerializer(review).data, status=status.HTTP_201_CREATED)
+
+
+class CounselorReviewListView(generics.ListAPIView):
+    """GET /counselors/{id}/reviews/ — list reviews for a counselor."""
+    serializer_class = CounselorReviewSerializer
+
+    def get_queryset(self):
+        counselor_id = self.kwargs['counselor_id']
+        return CounselorReview.objects.filter(
+            counselor_id=counselor_id,
+        ).select_related('user')
 
 
 # ===== Messaging Views =====
@@ -1402,6 +1453,31 @@ class SharedNotesReceivedView(generics.ListAPIView):
 
     def get_queryset(self):
         return SharedNote.objects.filter(shared_with=self.request.user).select_related('note', 'note__user')
+
+
+class NoteSharesListView(generics.ListAPIView):
+    """GET /notes/{note_id}/shares/ — list shares for a note (owner only)."""
+    serializer_class = SharedNoteSerializer
+
+    def get_queryset(self):
+        note_id = self.kwargs['note_id']
+        return SharedNote.objects.filter(
+            note_id=note_id, note__user=self.request.user,
+        ).select_related('note', 'note__user', 'shared_with')
+
+
+class UnshareNoteView(APIView):
+    """DELETE /notes/{note_id}/unshare/{share_id}/ — remove a share (owner only)."""
+
+    def delete(self, request, note_id, share_id):
+        try:
+            share = SharedNote.objects.get(
+                id=share_id, note_id=note_id, note__user=request.user,
+            )
+        except SharedNote.DoesNotExist:
+            return error_response('share_not_found', 'Share not found.', 404)
+        share.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ===== Account Management Views =====

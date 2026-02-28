@@ -5,7 +5,8 @@ from rest_framework import serializers
 
 from .models import (
     AIChatMessage, AIChatSession,
-    Booking, Conversation, Course, CounselorProfile, DailySleep, Feedback,
+    Booking, Conversation, CounselorReview, Course, CounselorProfile,
+    DailySleep, Feedback,
     Message, MoodNote, NoteAttachment, Notification, NotificationPreference,
     PushSubscription, PsychoArticle,
     SelfAssessment, SharedAssessment, SharedNote, SubscriptionPlan,
@@ -102,15 +103,31 @@ class CounselorProfileSerializer(serializers.ModelSerializer):
                   'hourly_rate', 'currency', 'status', 'created_at')
         read_only_fields = ('id', 'status', 'created_at')
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and getattr(self.instance, 'status', None) == 'approved':
+            self.fields['license_number'].read_only = True
+
 
 class CounselorListSerializer(serializers.ModelSerializer):
     """Public listing of approved counselors."""
     username = serializers.CharField(source='user.username', read_only=True)
     avatar = serializers.ImageField(source='user.avatar', read_only=True)
+    avg_rating = serializers.FloatField(read_only=True, default=None)
+    review_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = CounselorProfile
-        fields = ('id', 'username', 'avatar', 'display_name', 'specialty', 'introduction', 'hourly_rate', 'currency')
+        fields = ('id', 'username', 'avatar', 'display_name', 'specialty', 'introduction', 'hourly_rate', 'currency', 'avg_rating', 'review_count')
+
+
+class CounselorReviewSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = CounselorReview
+        fields = ('id', 'username', 'rating', 'content', 'created_at')
+        read_only_fields = ('id', 'username', 'created_at')
 
 
 # ===== Messaging =====
@@ -239,13 +256,17 @@ class TimeSlotSerializer(serializers.ModelSerializer):
 class BookingSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.username', read_only=True)
     counselor_name = serializers.CharField(source='counselor.username', read_only=True)
+    has_review = serializers.SerializerMethodField()
 
     class Meta:
         model = Booking
         fields = ('id', 'user', 'user_name', 'counselor', 'counselor_name',
                   'date', 'start_time', 'end_time', 'status',
-                  'price', 'payment_note', 'created_at')
+                  'price', 'payment_note', 'created_at', 'has_review')
         read_only_fields = ('id', 'user', 'counselor', 'status', 'price', 'payment_note', 'created_at')
+
+    def get_has_review(self, obj):
+        return hasattr(obj, 'review') and obj.review is not None
 
 
 # ===== Feedback =====
@@ -270,12 +291,13 @@ class SharedNoteSerializer(serializers.ModelSerializer):
     note_created_at = serializers.DateTimeField(source='note.created_at', read_only=True)
     note_tags = serializers.SerializerMethodField()
     note_ai_feedback = serializers.CharField(source='note.ai_feedback', read_only=True)
+    shared_with_username = serializers.CharField(source='shared_with.username', read_only=True)
 
     class Meta:
         model = SharedNote
         fields = ('id', 'note', 'author', 'note_preview', 'note_content',
                   'sentiment_score', 'stress_index', 'is_anonymous', 'shared_at',
-                  'note_created_at', 'note_tags', 'note_ai_feedback')
+                  'note_created_at', 'note_tags', 'note_ai_feedback', 'shared_with_username')
         read_only_fields = fields
 
     def get_author(self, obj):

@@ -65,3 +65,9 @@ export const deleteConversation = (convId) => {
   invalidate('conversations')
   return api.delete(`/conversations/${convId}/`)
 }
+
+export const createReview = (bookingId, rating, content = '') =>
+  api.post('/reviews/', { booking_id: bookingId, rating, content })
+
+export const getCounselorReviews = (counselorId) =>
+  api.get(`/counselors/${counselorId}/reviews/`)

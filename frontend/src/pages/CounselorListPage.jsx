@@ -9,9 +9,10 @@ import {
   createConversation,
   getConversations,
   deleteConversation,
+  createReview,
 } from '../api/counselors'
 import { getSharedNotes } from '../api/notes'
-import { getSharedAssessments } from '../api/wellness'
+import { getSharedAssessments, createTherapistReport, getTherapistReports } from '../api/wellness'
 import { getBookings, bookingAction, cancelBooking } from '../api/schedule'
 import { useLang } from '../context/LanguageContext'
 import SkeletonCard from '../components/SkeletonCard'
@@ -78,6 +79,19 @@ export default function CounselorListPage() {
   const [expandedNoteId, setExpandedNoteId] = useState(null)
   const [expandedAssessmentId, setExpandedAssessmentId] = useState(null)
 
+  // Reports tab state
+  const [reports, setReports] = useState([])
+  const [reportTitle, setReportTitle] = useState('')
+  const [reportStartDate, setReportStartDate] = useState('')
+  const [reportEndDate, setReportEndDate] = useState('')
+  const [reportGenerating, setReportGenerating] = useState(false)
+
+  // Review state
+  const [reviewingBookingId, setReviewingBookingId] = useState(null)
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewContent, setReviewContent] = useState('')
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+
   // Context menu state
   const [contextMenu, setContextMenu] = useState(null) // { x, y, type, id }
   const [failedAvatars, setFailedAvatars] = useState(new Set())
@@ -129,16 +143,18 @@ export default function CounselorListPage() {
     setLoading(true)
     setError('')
     try {
-      const [counselorRes, convRes, bookingRes, recRes] = await Promise.all([
+      const [counselorRes, convRes, bookingRes, recRes, reportsRes] = await Promise.all([
         getCounselors(),
         getConversations(),
         getBookings(),
         getRecommendedCounselors().catch(() => ({ data: [] })),
+        getTherapistReports().catch(() => ({ data: [] })),
       ])
       setCounselors(counselorRes.data.results || counselorRes.data)
       setConversations(convRes.data.results || convRes.data)
       setBookings(bookingRes.data)
       setRecommended(recRes.data.results || recRes.data || [])
+      setReports(reportsRes.data.results || reportsRes.data || [])
 
       try {
         const profileRes = await getMyCounselorProfile()
@@ -258,6 +274,54 @@ export default function CounselorListPage() {
     }
   }
 
+  const handleGenerateReport = async (e) => {
+    e.preventDefault()
+    setReportGenerating(true)
+    try {
+      await createTherapistReport({
+        title: reportTitle,
+        start_date: reportStartDate,
+        end_date: reportEndDate,
+      })
+      toast?.success(t('report.generateSuccess'))
+      setReportTitle('')
+      setReportStartDate('')
+      setReportEndDate('')
+      const res = await getTherapistReports()
+      setReports(res.data.results || res.data || [])
+    } catch {
+      toast?.error(t('report.generateFailed'))
+    } finally {
+      setReportGenerating(false)
+    }
+  }
+
+  const handleCopyReportLink = (token) => {
+    const url = `${window.location.origin}/report/${token}`
+    navigator.clipboard.writeText(url)
+    toast?.success(t('report.linkCopied'))
+  }
+
+  const handleSubmitReview = async (bookingId) => {
+    if (reviewRating < 1) return
+    setReviewSubmitting(true)
+    try {
+      await createReview(bookingId, reviewRating, reviewContent)
+      toast?.success(t('review.submitSuccess'))
+      setReviewingBookingId(null)
+      setReviewRating(0)
+      setReviewContent('')
+      // Mark booking as reviewed locally
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, has_review: true } : b))
+      )
+    } catch {
+      toast?.error(t('review.submitFailed'))
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
+
   if (loading) return (
     <div className="space-y-4 mt-4">
       {[1, 2, 3].map((i) => <SkeletonCard key={i} lines={3} showAvatar />)}
@@ -312,6 +376,14 @@ export default function CounselorListPage() {
           }`}
         >
           {t('booking.myBookings')}
+        </button>
+        <button
+          onClick={() => setTab('reports')}
+          className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
+            tab === 'reports' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+          }`}
+        >
+          {t('report.tab')}
         </button>
         <button
           onClick={() => setTab('apply')}
@@ -446,13 +518,20 @@ export default function CounselorListPage() {
                     </div>
                   </div>
                   <p className="text-sm leading-relaxed opacity-80 whitespace-pre-line">{c.introduction}</p>
-                  <div className="text-sm font-medium">
-                    {c.hourly_rate ? (
-                      <span className="text-purple-500">
-                        {formatPrice(c.hourly_rate, c.currency)} / {t('pricing.perHour')}
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm font-medium">
+                      {c.hourly_rate ? (
+                        <span className="text-purple-500">
+                          {formatPrice(c.hourly_rate, c.currency)} / {t('pricing.perHour')}
+                        </span>
+                      ) : (
+                        <span className="opacity-50">{t('pricing.notSet')}</span>
+                      )}
+                    </div>
+                    {c.review_count > 0 && (
+                      <span className="text-sm text-yellow-400 font-medium">
+                        ★ {c.avg_rating?.toFixed(1)} ({c.review_count})
                       </span>
-                    ) : (
-                      <span className="opacity-50">{t('pricing.notSet')}</span>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -556,7 +635,7 @@ export default function CounselorListPage() {
               {bookings.map((b) => (
                 <div
                   key={b.id}
-                  className="glass-card p-4 flex justify-between items-center"
+                  className="glass-card p-4"
                   onContextMenu={(e) => {
                     if (b.status === 'pending' || b.status === 'confirmed') {
                       e.preventDefault()
@@ -564,6 +643,7 @@ export default function CounselorListPage() {
                     }
                   }}
                 >
+                  <div className="flex justify-between items-center">
                   <div>
                     <p className="font-medium">
                       {b.counselor_name} — {b.date}
@@ -607,7 +687,128 @@ export default function CounselorListPage() {
                         {t('booking.cancel')}
                       </button>
                     )}
+                    {b.status === 'completed' && !isCounselor && !b.has_review && (
+                      <button
+                        onClick={() => {
+                          setReviewingBookingId(reviewingBookingId === b.id ? null : b.id)
+                          setReviewRating(0)
+                          setReviewContent('')
+                        }}
+                        className="btn-secondary text-xs"
+                      >
+                        {t('review.leaveReview')}
+                      </button>
+                    )}
+                    {b.status === 'completed' && b.has_review && (
+                      <span className="text-xs text-green-500 font-medium">{t('review.alreadyReviewed')}</span>
+                    )}
                   </div>
+                  </div>
+                  {reviewingBookingId === b.id && (
+                    <div className="mt-3 p-3 rounded-xl bg-white/5 border border-white/10 space-y-3">
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setReviewRating(star)}
+                            className={`text-xl cursor-pointer transition-colors ${star <= reviewRating ? 'text-yellow-400' : 'text-white/20'}`}
+                          >
+                            ★
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={reviewContent}
+                        onChange={(e) => setReviewContent(e.target.value)}
+                        placeholder={t('review.contentPlaceholder')}
+                        className="glass-input text-sm min-h-[60px] resize-y"
+                      />
+                      <button
+                        onClick={() => handleSubmitReview(b.id)}
+                        disabled={reviewSubmitting || reviewRating < 1}
+                        className="btn-primary text-xs"
+                      >
+                        {reviewSubmitting ? t('common.loading') : t('review.submit')}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Reports Tab */}
+      {tab === 'reports' && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xl font-semibold">{t('report.title')}</h2>
+            <p className="text-sm opacity-60 mt-1">{t('report.description')}</p>
+          </div>
+
+          <form onSubmit={handleGenerateReport} className="glass p-6 space-y-4 max-w-lg">
+            <input
+              type="text"
+              value={reportTitle}
+              onChange={(e) => setReportTitle(e.target.value)}
+              placeholder={t('report.reportTitle')}
+              className="glass-input"
+              required
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm opacity-60 block mb-1">{t('report.startDate')}</label>
+                <input
+                  type="date"
+                  value={reportStartDate}
+                  onChange={(e) => setReportStartDate(e.target.value)}
+                  className="glass-input"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm opacity-60 block mb-1">{t('report.endDate')}</label>
+                <input
+                  type="date"
+                  value={reportEndDate}
+                  onChange={(e) => setReportEndDate(e.target.value)}
+                  className="glass-input"
+                  required
+                />
+              </div>
+            </div>
+            <button type="submit" disabled={reportGenerating} className="btn-primary">
+              {reportGenerating ? t('common.loading') : t('report.generate')}
+            </button>
+          </form>
+
+          {reports.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">{t('report.existingReports')}</h3>
+              {reports.map((r) => (
+                <div key={r.id} className="glass-card p-4 flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">{r.title}</p>
+                    <p className="text-sm opacity-60">
+                      {r.start_date} — {r.end_date}
+                    </p>
+                    <p className="text-xs opacity-40">
+                      {t('report.expires')}: {new Date(r.expires_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
+                        timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleCopyReportLink(r.token)}
+                    className="btn-secondary text-xs"
+                  >
+                    {t('report.copyLink')}
+                  </button>
                 </div>
               ))}
             </div>

@@ -111,6 +111,12 @@ export const restoreNote = (id) => {
 export const permanentDeleteNote = (id) =>
   api.delete(`/notes/${id}/permanent-delete/`);
 
+export const getNoteShares = (noteId) =>
+  api.get(`/notes/${noteId}/shares/`);
+
+export const unshareNote = (noteId, shareId) =>
+  api.delete(`/notes/${noteId}/unshare/${shareId}/`);
+
 export const importCSV = (file) => {
   const formData = new FormData();
   formData.append('file', file);

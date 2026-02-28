@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import { getNote, deleteNote, updateNote, togglePin } from '../api/notes'
+import { getNote, deleteNote, updateNote, togglePin, getNoteShares, unshareNote } from '../api/notes'
 import { useLang } from '../context/LanguageContext'
 import MoodBadge from '../components/MoodBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -31,6 +31,8 @@ export default function NoteDetailPage() {
   const [editTemp, setEditTemp] = useState('')
   const [editTags, setEditTags] = useState('')
   const [saving, setSaving] = useState(false)
+  const [shares, setShares] = useState([])
+  const [sharesLoading, setSharesLoading] = useState(false)
 
   // Tiptap editor for edit mode
   const editor = useEditor({
@@ -52,6 +54,18 @@ export default function NoteDetailPage() {
       })
       .finally(() => setLoading(false))
   }, [id, navigate])
+
+  const loadShares = () => {
+    setSharesLoading(true)
+    getNoteShares(id)
+      .then((res) => setShares(res.data.results || res.data))
+      .catch(() => {})
+      .finally(() => setSharesLoading(false))
+  }
+
+  useEffect(() => {
+    loadShares()
+  }, [id])
 
   // Warn before leaving if editing
   useEffect(() => {
@@ -115,6 +129,16 @@ export default function NoteDetailPage() {
       toast?.error(t('noteDetail.editSaveFailed'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleUnshare = async (shareId) => {
+    try {
+      await unshareNote(id, shareId)
+      setShares((prev) => prev.filter((s) => s.id !== shareId))
+      toast?.success(t('share.unshareSuccess'))
+    } catch {
+      toast?.error(t('common.operationFailed'))
     }
   }
 
@@ -265,6 +289,27 @@ export default function NoteDetailPage() {
             <p className="text-xs opacity-40 mt-3 italic">
               {t('noteDetail.aiDisclaimer')}
             </p>
+          </div>
+        )}
+
+        {/* Shared With */}
+        {shares.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold opacity-60">{t('share.sharedWith')}</h3>
+            <div className="flex flex-wrap gap-2">
+              {shares.map((s) => (
+                <span key={s.id} className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                  {s.shared_with_username}
+                  <button
+                    onClick={() => handleUnshare(s.id)}
+                    className="hover:text-red-400 transition-colors cursor-pointer"
+                    title={t('share.unshare')}
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
