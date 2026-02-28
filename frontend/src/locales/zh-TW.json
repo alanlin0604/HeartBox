@@ -939,6 +939,8 @@
   "twofa.setupFailed": "設定 2FA 失敗",
   "twofa.loginTitle": "雙因素驗證",
   "oauth.google": "使用 Google 登入",
+  "oauth.googleLogin": "使用 Google 註冊",
+  "oauth.or": "或",
   "oauth.failed": "Google 登入失敗",
   "subscription.title": "訂閱方案",
   "subscription.pricingTitle": "定價方案",

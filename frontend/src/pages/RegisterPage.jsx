@@ -153,7 +153,7 @@ export default function RegisterPage() {
           onClick={() => {
             if (window.google?.accounts?.id) {
               window.google.accounts.id.initialize({
-                client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+                client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
                 callback: async (response) => {
                   try {
                     const { data } = await googleLogin(response.credential)

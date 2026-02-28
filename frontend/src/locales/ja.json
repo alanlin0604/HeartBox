@@ -939,6 +939,8 @@
   "twofa.setupFailed": "2FAの設定に失敗しました",
   "twofa.loginTitle": "二要素認証",
   "oauth.google": "Googleでログイン",
+  "oauth.googleLogin": "Googleで登録",
+  "oauth.or": "または",
   "oauth.failed": "Googleログインに失敗しました",
   "subscription.title": "サブスクリプション",
   "subscription.pricingTitle": "料金プラン",

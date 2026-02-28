@@ -155,7 +155,7 @@ export default function LoginPage() {
             </form>
             <div className="text-center my-4">
               <div className="border-t border-[var(--card-border)] relative">
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 bg-[var(--tooltip-bg)] text-xs opacity-50">or</span>
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 bg-[var(--tooltip-bg)] text-xs opacity-50">{t('oauth.or')}</span>
               </div>
             </div>
             <button

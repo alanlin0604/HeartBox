@@ -939,6 +939,8 @@
   "twofa.setupFailed": "Failed to set up 2FA",
   "twofa.loginTitle": "Two-Factor Authentication",
   "oauth.google": "Sign in with Google",
+  "oauth.googleLogin": "Sign up with Google",
+  "oauth.or": "or",
   "oauth.failed": "Google login failed",
   "subscription.title": "Subscription",
   "subscription.pricingTitle": "Pricing Plans",
