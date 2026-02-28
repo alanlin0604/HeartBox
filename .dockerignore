@@ -9,3 +9,9 @@ node_modules/
 backend/chroma_db/
 backend/media/
 backend/staticfiles/
+backend/venv/
+docs/
+*.md
+*.png
+render.yaml
+.editorconfig
