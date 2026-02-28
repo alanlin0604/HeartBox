@@ -910,7 +910,7 @@
   "onboarding.next": "Next",
   "onboarding.complete": "Let's Go!",
   "import.title": "Import Data",
-  "import.desc": "Upload a CSV file to import journal entries.",
+  "import.desc": "Upload a CSV file to import journal entries. Re-importing exported CSVs is also supported.",
   "import.format": "CSV format: date, content, mood, stress, tags",
   "import.button": "Import CSV",
   "import.importing": "Importing...",

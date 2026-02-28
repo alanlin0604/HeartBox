@@ -2387,7 +2387,9 @@ class GoogleLoginCallbackView(APIView):
 
         # Find or create user
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.filter(email=email).first()
+            if user is None:
+                raise User.DoesNotExist
         except User.DoesNotExist:
             # Create new user with Google info
             username = email.split('@')[0]
@@ -2426,6 +2428,15 @@ class ImportCSVView(APIView):
         except Exception:
             return error_response('csv_parse_error', 'Invalid CSV file.', 400)
 
+        # Normalize column names to lowercase for case-insensitive matching
+        # Also map export column names to import column names:
+        #   Export: ID, Content, Sentiment, Stress, Tags, Weather, Temperature, Pinned, Created
+        #   Import: date, content, mood, stress, tags
+        COLUMN_MAP = {
+            'created': 'date',
+            'sentiment': 'mood',
+        }
+
         created_count = 0
         errors = []
 
@@ -2433,10 +2444,19 @@ class ImportCSVView(APIView):
             if i > 1000:  # Limit to 1000 rows
                 break
 
-            date_str = row.get('date', '').strip()
-            content_text = row.get('content', '').strip()
-            mood = row.get('mood', '').strip()
-            stress = row.get('stress', '').strip()
+            # Normalize keys: lowercase + map export names to import names
+            normalized = {}
+            for k, v in row.items():
+                if k is None:
+                    continue
+                key = k.strip().lower()
+                key = COLUMN_MAP.get(key, key)
+                normalized[key] = (v or '').strip()
+
+            date_str = normalized.get('date', '')
+            content_text = normalized.get('content', '')
+            mood = normalized.get('mood', '')
+            stress = normalized.get('stress', '')
 
             if not content_text:
                 errors.append(f'Row {i}: missing content')
@@ -2449,9 +2469,15 @@ class ImportCSVView(APIView):
             metadata = {}
             if mood:
                 metadata['imported_mood'] = mood
-            tags = row.get('tags', '').strip()
+            tags = normalized.get('tags', '')
             if tags:
                 metadata['tags'] = [t.strip() for t in tags.split(',') if t.strip()]
+            weather = normalized.get('weather', '')
+            if weather:
+                metadata['weather'] = weather
+            temperature = normalized.get('temperature', '')
+            if temperature:
+                metadata['temperature'] = temperature
             note.metadata = metadata
 
             # Parse stress
@@ -2460,6 +2486,16 @@ class ImportCSVView(APIView):
                     stress_val = int(stress)
                     if 0 <= stress_val <= 10:
                         note.stress_index = stress_val
+                except ValueError:
+                    pass
+
+            # Parse sentiment score (from export format)
+            sentiment = normalized.get('mood', '')
+            if sentiment:
+                try:
+                    score = float(sentiment)
+                    if -1.0 <= score <= 1.0:
+                        note.sentiment_score = score
                 except ValueError:
                     pass
 

@@ -910,7 +910,7 @@
   "onboarding.next": "下一步",
   "onboarding.complete": "開始使用！",
   "import.title": "匯入資料",
-  "import.desc": "上傳 CSV 檔案以匯入日記資料。",
+  "import.desc": "上傳 CSV 檔案以匯入日記資料，也支援匯入本系統匯出的 CSV。",
   "import.format": "CSV 格式：date, content, mood, stress, tags",
   "import.button": "匯入 CSV",
   "import.importing": "匯入中...",

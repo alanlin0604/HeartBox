@@ -910,7 +910,7 @@
   "onboarding.next": "次へ",
   "onboarding.complete": "始めましょう！",
   "import.title": "データインポート",
-  "import.desc": "CSVファイルをアップロードして日記データをインポートします。",
+  "import.desc": "CSVファイルをアップロードして日記データをインポートします。エクスポートしたCSVの再インポートにも対応しています。",
   "import.format": "CSV形式：date, content, mood, stress, tags",
   "import.button": "CSVインポート",
   "import.importing": "インポート中...",
