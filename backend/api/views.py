@@ -182,11 +182,32 @@ class RegisterView(generics.CreateAPIView):
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             frontend_url = os.environ.get('FRONTEND_URL', 'https://heartbox.pages.dev')
             verify_url = f'{frontend_url}/verify-email?uid={uid}&token={token}'
+            plain_message = (
+                f'您好 {user.username}，\n\n'
+                f'感謝您註冊 HeartBox 心事盒！請點擊以下連結驗證您的電子信箱：\n'
+                f'{verify_url}\n\n'
+                f'如果您並未註冊，請忽略此信。\n\n'
+                f'— HeartBox 心事盒團隊'
+            )
+            html_message = (
+                f'<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">'
+                f'<h2 style="color:#7c3aed">HeartBox 心事盒</h2>'
+                f'<p>您好 {user.username}，</p>'
+                f'<p>感謝您註冊 HeartBox！請點擊下方按鈕驗證您的電子信箱：</p>'
+                f'<p style="text-align:center;margin:28px 0">'
+                f'<a href="{verify_url}" style="background:#7c3aed;color:#fff;padding:12px 32px;'
+                f'border-radius:8px;text-decoration:none;font-weight:600">驗證信箱</a></p>'
+                f'<p style="color:#888;font-size:13px">如果您並未註冊，請忽略此信。</p>'
+                f'<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
+                f'<p style="color:#aaa;font-size:12px">HeartBox 心事盒 — 您的心理健康夥伴</p>'
+                f'</div>'
+            )
             send_mail(
-                'Verify your HeartBox email',
-                f'Click this link to verify your email: {verify_url}',
+                'HeartBox 心事盒 — 驗證您的電子信箱',
+                plain_message,
                 settings.DEFAULT_FROM_EMAIL,
                 [user.email],
+                html_message=html_message,
             )
         except Exception:
             logger.exception('Failed to send verification email to %s', user.email)
@@ -264,29 +285,29 @@ class ForgotPasswordView(APIView):
             frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
             reset_url = f'{frontend_url.rstrip("/")}/reset-password?uid={uid}&token={token}'
             plain_message = (
-                f'Hi {user.username},\n\n'
-                f'Use this link to reset your HeartBox password:\n{reset_url}\n\n'
-                f'This link expires in 15 minutes.\n'
-                f'If you did not request this, please ignore this email.\n\n'
-                f'— HeartBox Team'
+                f'您好 {user.username}，\n\n'
+                f'我們收到了重設您 HeartBox 密碼的請求。請使用以下連結：\n{reset_url}\n\n'
+                f'此連結將在 15 分鐘後失效。\n'
+                f'如果您並未提出此請求，請忽略此信。\n\n'
+                f'— HeartBox 心事盒團隊'
             )
             html_message = (
                 f'<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">'
-                f'<h2 style="color:#7c3aed">HeartBox</h2>'
-                f'<p>Hi {user.username},</p>'
-                f'<p>We received a request to reset your password. Click the button below:</p>'
+                f'<h2 style="color:#7c3aed">HeartBox 心事盒</h2>'
+                f'<p>您好 {user.username}，</p>'
+                f'<p>我們收到了重設您密碼的請求，請點擊下方按鈕：</p>'
                 f'<p style="text-align:center;margin:28px 0">'
                 f'<a href="{reset_url}" style="background:#7c3aed;color:#fff;padding:12px 32px;'
-                f'border-radius:8px;text-decoration:none;font-weight:600">Reset Password</a></p>'
-                f'<p style="color:#888;font-size:13px">This link expires in 15 minutes. '
-                f'If you did not request this, please ignore this email.</p>'
+                f'border-radius:8px;text-decoration:none;font-weight:600">重設密碼</a></p>'
+                f'<p style="color:#888;font-size:13px">此連結將在 15 分鐘後失效。'
+                f'如果您並未提出此請求，請忽略此信。</p>'
                 f'<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
-                f'<p style="color:#aaa;font-size:12px">HeartBox — Your Mental Health Companion</p>'
+                f'<p style="color:#aaa;font-size:12px">HeartBox 心事盒 — 您的心理健康夥伴</p>'
                 f'</div>'
             )
             try:
                 send_mail(
-                    'HeartBox — Reset Your Password',
+                    'HeartBox 心事盒 — 重設您的密碼',
                     plain_message,
                     getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@heartbox.local'),
                     [user.email],
@@ -2351,12 +2372,33 @@ class ResendVerificationView(APIView):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         frontend_url = os.environ.get('FRONTEND_URL', 'https://heartbox.pages.dev')
         verify_url = f'{frontend_url}/verify-email?uid={uid}&token={token}'
+        plain_message = (
+            f'您好 {user.username}，\n\n'
+            f'請點擊以下連結驗證您的電子信箱：\n'
+            f'{verify_url}\n\n'
+            f'如果您並未註冊，請忽略此信。\n\n'
+            f'— HeartBox 心事盒團隊'
+        )
+        html_message = (
+            f'<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">'
+            f'<h2 style="color:#7c3aed">HeartBox 心事盒</h2>'
+            f'<p>您好 {user.username}，</p>'
+            f'<p>請點擊下方按鈕驗證您的電子信箱：</p>'
+            f'<p style="text-align:center;margin:28px 0">'
+            f'<a href="{verify_url}" style="background:#7c3aed;color:#fff;padding:12px 32px;'
+            f'border-radius:8px;text-decoration:none;font-weight:600">驗證信箱</a></p>'
+            f'<p style="color:#888;font-size:13px">如果您並未註冊，請忽略此信。</p>'
+            f'<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
+            f'<p style="color:#aaa;font-size:12px">HeartBox 心事盒 — 您的心理健康夥伴</p>'
+            f'</div>'
+        )
         try:
             send_mail(
-                'Verify your HeartBox email',
-                f'Click this link to verify your email: {verify_url}',
+                'HeartBox 心事盒 — 驗證您的電子信箱',
+                plain_message,
                 settings.DEFAULT_FROM_EMAIL,
                 [user.email],
+                html_message=html_message,
             )
         except Exception:
             logger.exception('Failed to send verification email to %s', user.email)
