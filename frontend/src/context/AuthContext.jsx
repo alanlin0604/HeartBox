@@ -49,7 +49,14 @@ export function AuthProvider({ children }) {
     window.location.href = '/login';
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, register: registerUser, logout }), [user, loading, login, registerUser, logout]);
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await getProfile();
+      setUser(res.data);
+    } catch { /* ignore */ }
+  }, []);
+
+  const value = useMemo(() => ({ user, loading, login, register: registerUser, logout, refreshUser }), [user, loading, login, registerUser, logout, refreshUser]);
 
   return (
     <AuthContext.Provider value={value}>

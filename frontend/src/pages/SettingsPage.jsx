@@ -12,7 +12,7 @@ import { isRememberedLogin, setAuthTokens } from '../utils/tokenStorage'
 import { subscribeToPush, unsubscribePush } from '../utils/pushNotifications'
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const { t, lang } = useLang()
   const { theme } = useTheme()
   const toast = useToast()
@@ -81,6 +81,7 @@ export default function SettingsPage() {
       formData.append('bio', bio)
       if (avatar) formData.append('avatar', avatar)
       await updateProfile(formData)
+      await refreshUser()
       // Update initial values so beforeunload guard is cleared
       initialProfile.current = { email, bio }
       setAvatar(null)
@@ -373,6 +374,7 @@ export default function SettingsPage() {
             setUserTimezone(tz)
             try {
               await updateProfile({ timezone: tz })
+              await refreshUser()
               toast?.success(t('settings.saveSuccess'))
             } catch { toast?.error(t('settings.saveFailed')) }
           }}
