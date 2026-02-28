@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
@@ -599,7 +600,7 @@ export default function SettingsPage() {
         ) : (
           <p className="text-sm opacity-60">{t('subscription.noPlan')}</p>
         )}
-        <a href="/pricing" className="btn-secondary inline-block">{t('subscription.viewPlans')}</a>
+        <Link to="/pricing" className="btn-secondary inline-block">{t('subscription.viewPlans')}</Link>
       </div>
 
       {/* Danger Zone - Delete Account */}

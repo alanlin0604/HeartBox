@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -64,8 +64,9 @@ function LazyRoute({ children }) {
 }
 
 export default function App() {
+  const location = useLocation()
   return (
-    <ErrorBoundary>
+    <ErrorBoundary key={location.pathname}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
