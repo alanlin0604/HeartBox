@@ -2,35 +2,35 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://heartbox.pages.dev/</loc>
-    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://heartbox.pages.dev/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://heartbox.pages.dev/" />
-    <xhtml:link rel="alternate" hreflang="ja" href="https://heartbox.pages.dev/" />
+    <loc>https://heartbox.alan930604.workers.dev/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://heartbox.alan930604.workers.dev/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://heartbox.alan930604.workers.dev/" />
+    <xhtml:link rel="alternate" hreflang="ja" href="https://heartbox.alan930604.workers.dev/" />
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://heartbox.pages.dev/login</loc>
+    <loc>https://heartbox.alan930604.workers.dev/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://heartbox.pages.dev/register</loc>
+    <loc>https://heartbox.alan930604.workers.dev/register</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://heartbox.pages.dev/privacy</loc>
+    <loc>https://heartbox.alan930604.workers.dev/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://heartbox.pages.dev/terms</loc>
+    <loc>https://heartbox.alan930604.workers.dev/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://heartbox.pages.dev/pricing</loc>
+    <loc>https://heartbox.alan930604.workers.dev/pricing</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
