@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { getArticleDetail, getCourseDetail, completeLesson } from '../api/wellness'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 /** Minimal markdown → HTML */
@@ -32,6 +33,7 @@ export default function LessonPage() {
   const { courseId, lessonId } = useParams()
   const navigate = useNavigate()
   const { t, lang } = useLang()
+  const toast = useToast()
   const [article, setArticle] = useState(null)
   const [course, setCourse] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -54,7 +56,7 @@ export default function LessonPage() {
         const thisLesson = lessons.find(l => l.id === Number(lessonId))
         if (thisLesson?.is_completed) setCompleted(true)
       })
-      .catch(() => {})
+      .catch(() => toast?.error(t('common.operationFailed')))
       .finally(() => setLoading(false))
   }, [courseId, lessonId])
 
@@ -70,7 +72,9 @@ export default function LessonPage() {
     try {
       await completeLesson(lessonId)
       setCompleted(true)
-    } catch {}
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
     setCompleting(false)
   }
 

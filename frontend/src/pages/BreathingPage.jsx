@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 import { getWellnessSessions, createWellnessSession } from '../api/breathe'
 import { getCourses } from '../api/wellness'
 
@@ -27,6 +28,7 @@ const MEDITATION_DURATIONS = [1, 3, 5, 10, 15]
 
 export default function BreathingPage() {
   const { t } = useLang()
+  const toast = useToast()
   const navigate = useNavigate()
   const [tab, setTab] = useState('breathing')
   const [sessions, setSessions] = useState([])
@@ -144,7 +146,9 @@ export default function BreathingPage() {
       setSessions(res.data?.results || res.data || [])
       setBreathComplete(false)
       setSelectedExercise(null)
-    } catch {}
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
   }
 
   // --- Meditation logic ---
@@ -181,7 +185,9 @@ export default function BreathingPage() {
       const res = await getWellnessSessions()
       setSessions(res.data?.results || res.data || [])
       setMedComplete(false)
-    } catch {}
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    }
   }
 
   // --- Ambient sound ---

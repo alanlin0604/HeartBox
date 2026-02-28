@@ -280,8 +280,8 @@ export default function CounselorListPage() {
     try {
       await createTherapistReport({
         title: reportTitle,
-        start_date: reportStartDate,
-        end_date: reportEndDate,
+        period_start: reportStartDate,
+        period_end: reportEndDate,
       })
       toast?.success(t('report.generateSuccess'))
       setReportTitle('')
@@ -344,7 +344,7 @@ export default function CounselorListPage() {
   const isCounselor = myProfile?.status === 'approved'
 
   return (
-    <div className="space-y-6 mt-4">
+    <div className="space-y-6 mt-4 max-w-4xl mx-auto">
       {error && (
         <div className="glass-card p-4 text-red-500 text-sm border border-red-500/20">
           {error}
@@ -758,7 +758,7 @@ export default function CounselorListPage() {
             </ul>
           </div>
 
-          <form onSubmit={handleGenerateReport} className="glass p-6 space-y-4 max-w-lg">
+          <form onSubmit={handleGenerateReport} className="glass p-6 space-y-4">
             <input
               type="text"
               value={reportTitle}
@@ -802,7 +802,7 @@ export default function CounselorListPage() {
                   <div>
                     <p className="font-medium">{r.title}</p>
                     <p className="text-sm opacity-60">
-                      {r.start_date} — {r.end_date}
+                      {r.period_start} — {r.period_end}
                     </p>
                     <p className="text-xs opacity-40">
                       {t('report.expires')}: {new Date(r.expires_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
@@ -1004,7 +1004,7 @@ export default function CounselorListPage() {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">{t('counselor.editProfile')}</h2>
           <p className="text-sm opacity-60">{t('counselor.editProfileDesc')}</p>
-          <form onSubmit={handleSaveProfile} className="glass p-6 space-y-4 max-w-lg">
+          <form onSubmit={handleSaveProfile} className="glass p-6 space-y-4">
             <div>
               <label className="text-sm opacity-60 block mb-1">{t('counselor.displayNameLabel')}</label>
               <input
