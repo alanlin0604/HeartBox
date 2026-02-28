@@ -169,6 +169,78 @@ def _push_ws_notification(recipient_id, notif):
         logger.debug('Channel layer push failed: %s', e)
 
 
+# ===== Email i18n =====
+
+_EMAIL_STRINGS = {
+    'zh-TW': {
+        'verify_subject': 'HeartBox 心事盒 — 驗證您的電子信箱',
+        'verify_greeting': '您好 {username}，',
+        'verify_register_body': '感謝您註冊 HeartBox 心事盒！請點擊以下連結驗證您的電子信箱：',
+        'verify_resend_body': '請點擊以下連結驗證您的電子信箱：',
+        'verify_ignore': '如果您並未註冊，請忽略此信。',
+        'verify_btn': '驗證信箱',
+        'team': '— HeartBox 心事盒團隊',
+        'tagline': 'HeartBox 心事盒 — 您的心理健康夥伴',
+        'reset_subject': 'HeartBox 心事盒 — 重設您的密碼',
+        'reset_body': '我們收到了重設您 HeartBox 密碼的請求。請使用以下連結：',
+        'reset_html_body': '我們收到了重設您密碼的請求，請點擊下方按鈕：',
+        'reset_expire': '此連結將在 15 分鐘後失效。',
+        'reset_ignore': '如果您並未提出此請求，請忽略此信。',
+        'reset_btn': '重設密碼',
+    },
+    'en': {
+        'verify_subject': 'HeartBox — Verify Your Email',
+        'verify_greeting': 'Hi {username},',
+        'verify_register_body': 'Thanks for signing up for HeartBox! Please click the link below to verify your email:',
+        'verify_resend_body': 'Please click the link below to verify your email:',
+        'verify_ignore': 'If you did not sign up, please ignore this email.',
+        'verify_btn': 'Verify Email',
+        'team': '— The HeartBox Team',
+        'tagline': 'HeartBox — Your Mental Wellness Companion',
+        'reset_subject': 'HeartBox — Reset Your Password',
+        'reset_body': 'We received a request to reset your HeartBox password. Please use the link below:',
+        'reset_html_body': 'We received a request to reset your password. Click the button below:',
+        'reset_expire': 'This link will expire in 15 minutes.',
+        'reset_ignore': 'If you did not request this, please ignore this email.',
+        'reset_btn': 'Reset Password',
+    },
+    'ja': {
+        'verify_subject': 'HeartBox — メール認証',
+        'verify_greeting': '{username} さん、こんにちは。',
+        'verify_register_body': 'HeartBox にご登録いただきありがとうございます！以下のリンクをクリックしてメールアドレスを認証してください：',
+        'verify_resend_body': '以下のリンクをクリックしてメールアドレスを認証してください：',
+        'verify_ignore': '心当たりがない場合は、このメールを無視してください。',
+        'verify_btn': 'メールを認証',
+        'team': '— HeartBox チーム',
+        'tagline': 'HeartBox — あなたのメンタルウェルネスパートナー',
+        'reset_subject': 'HeartBox — パスワードのリセット',
+        'reset_body': 'HeartBox のパスワードリセットのリクエストを受け付けました。以下のリンクをご利用ください：',
+        'reset_html_body': 'パスワードリセットのリクエストを受け付けました。下のボタンをクリックしてください：',
+        'reset_expire': 'このリンクは 15 分後に無効になります。',
+        'reset_ignore': 'リクエストした覚えがない場合は、このメールを無視してください。',
+        'reset_btn': 'パスワードをリセット',
+    },
+}
+
+
+def _get_email_lang(request):
+    """Detect user language from Accept-Language header, default to zh-TW."""
+    accept = getattr(request, 'META', {}).get('HTTP_ACCEPT_LANGUAGE', '') if request else ''
+    if not accept:
+        return 'zh-TW'
+    lang = accept.split(',')[0].strip().lower()
+    if lang.startswith('ja'):
+        return 'ja'
+    if lang.startswith('en'):
+        return 'en'
+    return 'zh-TW'
+
+
+def _email_strings(request):
+    """Return the email string dict for the request's language."""
+    return _EMAIL_STRINGS[_get_email_lang(request)]
+
+
 class RegisterView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
@@ -178,32 +250,34 @@ class RegisterView(generics.CreateAPIView):
         user = serializer.save()
         # Send verification email
         try:
+            s = _email_strings(self.request)
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             frontend_url = os.environ.get('FRONTEND_URL', 'https://heartbox.pages.dev')
             verify_url = f'{frontend_url}/verify-email?uid={uid}&token={token}'
+            greeting = s['verify_greeting'].format(username=user.username)
             plain_message = (
-                f'您好 {user.username}，\n\n'
-                f'感謝您註冊 HeartBox 心事盒！請點擊以下連結驗證您的電子信箱：\n'
+                f'{greeting}\n\n'
+                f'{s["verify_register_body"]}\n'
                 f'{verify_url}\n\n'
-                f'如果您並未註冊，請忽略此信。\n\n'
-                f'— HeartBox 心事盒團隊'
+                f'{s["verify_ignore"]}\n\n'
+                f'{s["team"]}'
             )
             html_message = (
                 f'<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">'
-                f'<h2 style="color:#7c3aed">HeartBox 心事盒</h2>'
-                f'<p>您好 {user.username}，</p>'
-                f'<p>感謝您註冊 HeartBox！請點擊下方按鈕驗證您的電子信箱：</p>'
+                f'<h2 style="color:#7c3aed">HeartBox</h2>'
+                f'<p>{greeting}</p>'
+                f'<p>{s["verify_register_body"]}</p>'
                 f'<p style="text-align:center;margin:28px 0">'
                 f'<a href="{verify_url}" style="background:#7c3aed;color:#fff;padding:12px 32px;'
-                f'border-radius:8px;text-decoration:none;font-weight:600">驗證信箱</a></p>'
-                f'<p style="color:#888;font-size:13px">如果您並未註冊，請忽略此信。</p>'
+                f'border-radius:8px;text-decoration:none;font-weight:600">{s["verify_btn"]}</a></p>'
+                f'<p style="color:#888;font-size:13px">{s["verify_ignore"]}</p>'
                 f'<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
-                f'<p style="color:#aaa;font-size:12px">HeartBox 心事盒 — 您的心理健康夥伴</p>'
+                f'<p style="color:#aaa;font-size:12px">{s["tagline"]}</p>'
                 f'</div>'
             )
             send_mail(
-                'HeartBox 心事盒 — 驗證您的電子信箱',
+                s['verify_subject'],
                 plain_message,
                 settings.DEFAULT_FROM_EMAIL,
                 [user.email],
@@ -279,35 +353,37 @@ class ForgotPasswordView(APIView):
         email = (request.data.get('email') or '').strip()
         user = User.objects.filter(email__iexact=email).first()
         if user:
+            s = _email_strings(request)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
             from django.conf import settings
             frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
             reset_url = f'{frontend_url.rstrip("/")}/reset-password?uid={uid}&token={token}'
+            greeting = s['verify_greeting'].format(username=user.username)
             plain_message = (
-                f'您好 {user.username}，\n\n'
-                f'我們收到了重設您 HeartBox 密碼的請求。請使用以下連結：\n{reset_url}\n\n'
-                f'此連結將在 15 分鐘後失效。\n'
-                f'如果您並未提出此請求，請忽略此信。\n\n'
-                f'— HeartBox 心事盒團隊'
+                f'{greeting}\n\n'
+                f'{s["reset_body"]}\n{reset_url}\n\n'
+                f'{s["reset_expire"]}\n'
+                f'{s["reset_ignore"]}\n\n'
+                f'{s["team"]}'
             )
             html_message = (
                 f'<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">'
-                f'<h2 style="color:#7c3aed">HeartBox 心事盒</h2>'
-                f'<p>您好 {user.username}，</p>'
-                f'<p>我們收到了重設您密碼的請求，請點擊下方按鈕：</p>'
+                f'<h2 style="color:#7c3aed">HeartBox</h2>'
+                f'<p>{greeting}</p>'
+                f'<p>{s["reset_html_body"]}</p>'
                 f'<p style="text-align:center;margin:28px 0">'
                 f'<a href="{reset_url}" style="background:#7c3aed;color:#fff;padding:12px 32px;'
-                f'border-radius:8px;text-decoration:none;font-weight:600">重設密碼</a></p>'
-                f'<p style="color:#888;font-size:13px">此連結將在 15 分鐘後失效。'
-                f'如果您並未提出此請求，請忽略此信。</p>'
+                f'border-radius:8px;text-decoration:none;font-weight:600">{s["reset_btn"]}</a></p>'
+                f'<p style="color:#888;font-size:13px">{s["reset_expire"]} '
+                f'{s["reset_ignore"]}</p>'
                 f'<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
-                f'<p style="color:#aaa;font-size:12px">HeartBox 心事盒 — 您的心理健康夥伴</p>'
+                f'<p style="color:#aaa;font-size:12px">{s["tagline"]}</p>'
                 f'</div>'
             )
             try:
                 send_mail(
-                    'HeartBox 心事盒 — 重設您的密碼',
+                    s['reset_subject'],
                     plain_message,
                     getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@heartbox.local'),
                     [user.email],
@@ -2372,29 +2448,31 @@ class ResendVerificationView(APIView):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         frontend_url = os.environ.get('FRONTEND_URL', 'https://heartbox.pages.dev')
         verify_url = f'{frontend_url}/verify-email?uid={uid}&token={token}'
+        s = _email_strings(request)
+        greeting = s['verify_greeting'].format(username=user.username)
         plain_message = (
-            f'您好 {user.username}，\n\n'
-            f'請點擊以下連結驗證您的電子信箱：\n'
+            f'{greeting}\n\n'
+            f'{s["verify_resend_body"]}\n'
             f'{verify_url}\n\n'
-            f'如果您並未註冊，請忽略此信。\n\n'
-            f'— HeartBox 心事盒團隊'
+            f'{s["verify_ignore"]}\n\n'
+            f'{s["team"]}'
         )
         html_message = (
             f'<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">'
-            f'<h2 style="color:#7c3aed">HeartBox 心事盒</h2>'
-            f'<p>您好 {user.username}，</p>'
-            f'<p>請點擊下方按鈕驗證您的電子信箱：</p>'
+            f'<h2 style="color:#7c3aed">HeartBox</h2>'
+            f'<p>{greeting}</p>'
+            f'<p>{s["verify_resend_body"]}</p>'
             f'<p style="text-align:center;margin:28px 0">'
             f'<a href="{verify_url}" style="background:#7c3aed;color:#fff;padding:12px 32px;'
-            f'border-radius:8px;text-decoration:none;font-weight:600">驗證信箱</a></p>'
-            f'<p style="color:#888;font-size:13px">如果您並未註冊，請忽略此信。</p>'
+            f'border-radius:8px;text-decoration:none;font-weight:600">{s["verify_btn"]}</a></p>'
+            f'<p style="color:#888;font-size:13px">{s["verify_ignore"]}</p>'
             f'<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
-            f'<p style="color:#aaa;font-size:12px">HeartBox 心事盒 — 您的心理健康夥伴</p>'
+            f'<p style="color:#aaa;font-size:12px">{s["tagline"]}</p>'
             f'</div>'
         )
         try:
             send_mail(
-                'HeartBox 心事盒 — 驗證您的電子信箱',
+                s['verify_subject'],
                 plain_message,
                 settings.DEFAULT_FROM_EMAIL,
                 [user.email],
