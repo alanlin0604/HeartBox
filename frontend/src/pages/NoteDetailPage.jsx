@@ -13,11 +13,13 @@ import ShareNoteButton from '../components/ShareNoteButton'
 import EditorToolbar from '../components/EditorToolbar'
 import { useToast } from '../context/ToastContext'
 
-import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
+import { LOCALE_MAP } from '../utils/locales'
+import { useAuth } from '../context/AuthContext'
 
 export default function NoteDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { lang, t } = useLang()
   const toast = useToast()
   const [note, setNote] = useState(null)
@@ -125,7 +127,7 @@ export default function NoteDetailPage() {
   if (!note) return null
 
   const date = new Date(note.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
-    timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+    timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
     year: 'numeric',
     month: 'long',
     day: 'numeric',

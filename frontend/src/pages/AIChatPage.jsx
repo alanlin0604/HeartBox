@@ -12,9 +12,11 @@ import {
 import EmptyState from '../components/EmptyState'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ConfirmModal from '../components/ConfirmModal'
-import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
+import { LOCALE_MAP } from '../utils/locales'
+import { useAuth } from '../context/AuthContext'
 
 const AIChatMessage = memo(function AIChatMessage({ msg, lang }) {
+  const { user } = useAuth()
   const isUser = msg.role === 'user'
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -35,7 +37,7 @@ const AIChatMessage = memo(function AIChatMessage({ msg, lang }) {
           {new Date(msg.created_at).toLocaleTimeString(
             LOCALE_MAP[lang] || lang,
             {
-              timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+              timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
               hour: '2-digit',
               minute: '2-digit',
             }

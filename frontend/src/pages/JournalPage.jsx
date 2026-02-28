@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getNotes, createNote, uploadAttachment, reanalyzeNote, batchDeleteNotes, getTrashNotes, restoreNote, permanentDeleteNote, togglePin, deleteNote } from '../api/notes'
 import { getAnalytics } from '../api/analytics'
+import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
 import { getDailyPrompt } from '../api/wellness'
 import { LOCALE_MAP } from '../utils/locales'
@@ -18,6 +19,7 @@ import { useToast } from '../context/ToastContext'
 import FeedbackWidget from '../components/FeedbackWidget'
 
 export default function JournalPage() {
+  const { user } = useAuth()
   const { t, lang } = useLang()
   const toast = useToast()
   const [searchParams] = useSearchParams()
@@ -361,7 +363,7 @@ export default function JournalPage() {
                     <div key={note.id} className="glass-card p-4 opacity-70">
                       <p className="text-sm mb-2">{(note.content_preview || '').replace(/<[^>]*>/g, '')}</p>
                       <div className="flex items-center justify-between text-xs opacity-60">
-                        <span>{t('journal.deletedAt')}: {new Date(note.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
+                        <span>{t('journal.deletedAt')}: {new Date(note.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang, { timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone })}</span>
                         <div className="flex gap-2">
                           <button onClick={() => handleRestore(note.id)} className="text-purple-500 hover:text-purple-400">{t('journal.restore')}</button>
                           <button onClick={() => setPermanentDeleteId(note.id)} className="text-red-500 hover:text-red-400">{t('journal.permanentDelete')}</button>

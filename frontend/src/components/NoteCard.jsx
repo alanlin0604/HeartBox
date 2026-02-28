@@ -1,7 +1,8 @@
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
-import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
+import { LOCALE_MAP } from '../utils/locales'
 import MoodBadge from './MoodBadge'
 import HighlightText from './HighlightText'
 
@@ -9,10 +10,11 @@ import HighlightText from './HighlightText'
 const stripHtml = (str) => str ? str.replace(/<[^>]*>/g, '').replace(/&lt;|&gt;|&amp;|&quot;|&#39;/g, m => ({ '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" })[m] || m) : ''
 
 export default memo(function NoteCard({ note, highlight }) {
+  const { user } = useAuth()
   const { lang, t } = useLang()
 
   const date = new Date(note.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
-    timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+    timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
     year: 'numeric',
     month: 'short',
     day: 'numeric',

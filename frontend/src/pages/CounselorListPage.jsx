@@ -20,7 +20,8 @@ import ScheduleManager from '../components/ScheduleManager'
 import EmptyState from '../components/EmptyState'
 import ConfirmModal from '../components/ConfirmModal'
 import { useToast } from '../context/ToastContext'
-import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
+import { LOCALE_MAP } from '../utils/locales'
+import { useAuth } from '../context/AuthContext'
 
 function formatPrice(amount, currency = 'TWD') {
   const num = Number(amount)
@@ -34,6 +35,7 @@ export default function CounselorListPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { user } = useAuth()
   const { lang, t } = useLang()
   const toast = useToast()
   const [counselors, setCounselors] = useState([])
@@ -515,7 +517,7 @@ export default function CounselorListPage() {
                       )}
                       <p className="text-xs opacity-40 mt-1">
                         {new Date(conv.updated_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
-                          timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+                          timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
                           month: 'short',
                           day: 'numeric',
                           hour: '2-digit',
@@ -644,7 +646,7 @@ export default function CounselorListPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs opacity-40">
                         {new Date(sn.shared_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
-                          timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+                          timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
@@ -720,7 +722,7 @@ export default function CounselorListPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs opacity-40">
                           {new Date(sa.shared_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
-                            timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+                            timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric',

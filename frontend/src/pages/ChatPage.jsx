@@ -8,7 +8,7 @@ import { getAccessToken } from '../utils/tokenStorage'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ConfirmModal from '../components/ConfirmModal'
 
-import { LOCALE_MAP, TZ_MAP } from '../utils/locales'
+import { LOCALE_MAP } from '../utils/locales'
 
 const MessageItem = memo(function MessageItem({ msg, user, lang, t, onQuoteAction }) {
   const isMine = msg.sender === user?.id
@@ -42,7 +42,7 @@ const MessageItem = memo(function MessageItem({ msg, user, lang, t, onQuoteActio
         <p className="text-xs opacity-40 mt-1 text-right flex items-center justify-end gap-1">
           <span>
             {new Date(msg.created_at).toLocaleTimeString(LOCALE_MAP[lang] || lang, {
-              timeZone: TZ_MAP[lang] || 'Asia/Taipei',
+              timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
               hour: '2-digit',
               minute: '2-digit',
             })}
