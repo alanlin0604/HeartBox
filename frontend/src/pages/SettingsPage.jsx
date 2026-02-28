@@ -377,9 +377,40 @@ export default function SettingsPage() {
           }}
           className="glass-input"
         >
-          {Intl.supportedValuesOf('timeZone').map(tz => (
-            <option key={tz} value={tz}>{tz}</option>
-          ))}
+          {(() => {
+            const COMMON_TIMEZONES = [
+              { id: 'Asia/Taipei', 'zh-TW': '台北', en: 'Taipei', ja: '台北' },
+              { id: 'Asia/Tokyo', 'zh-TW': '東京', en: 'Tokyo', ja: '東京' },
+              { id: 'Asia/Shanghai', 'zh-TW': '上海', en: 'Shanghai', ja: '上海' },
+              { id: 'Asia/Hong_Kong', 'zh-TW': '香港', en: 'Hong Kong', ja: '香港' },
+              { id: 'Asia/Singapore', 'zh-TW': '新加坡', en: 'Singapore', ja: 'シンガポール' },
+              { id: 'Asia/Seoul', 'zh-TW': '首爾', en: 'Seoul', ja: 'ソウル' },
+              { id: 'Asia/Bangkok', 'zh-TW': '曼谷', en: 'Bangkok', ja: 'バンコク' },
+              { id: 'Asia/Kolkata', 'zh-TW': '加爾各答', en: 'Kolkata', ja: 'コルカタ' },
+              { id: 'Asia/Dubai', 'zh-TW': '杜拜', en: 'Dubai', ja: 'ドバイ' },
+              { id: 'Asia/Jakarta', 'zh-TW': '雅加達', en: 'Jakarta', ja: 'ジャカルタ' },
+              { id: 'Australia/Sydney', 'zh-TW': '雪梨', en: 'Sydney', ja: 'シドニー' },
+              { id: 'Australia/Melbourne', 'zh-TW': '墨爾本', en: 'Melbourne', ja: 'メルボルン' },
+              { id: 'Pacific/Auckland', 'zh-TW': '奧克蘭', en: 'Auckland', ja: 'オークランド' },
+              { id: 'Europe/London', 'zh-TW': '倫敦', en: 'London', ja: 'ロンドン' },
+              { id: 'Europe/Paris', 'zh-TW': '巴黎', en: 'Paris', ja: 'パリ' },
+              { id: 'Europe/Berlin', 'zh-TW': '柏林', en: 'Berlin', ja: 'ベルリン' },
+              { id: 'Europe/Moscow', 'zh-TW': '莫斯科', en: 'Moscow', ja: 'モスクワ' },
+              { id: 'Europe/Istanbul', 'zh-TW': '伊斯坦堡', en: 'Istanbul', ja: 'イスタンブール' },
+              { id: 'America/New_York', 'zh-TW': '紐約', en: 'New York', ja: 'ニューヨーク' },
+              { id: 'America/Chicago', 'zh-TW': '芝加哥', en: 'Chicago', ja: 'シカゴ' },
+              { id: 'America/Denver', 'zh-TW': '丹佛', en: 'Denver', ja: 'デンバー' },
+              { id: 'America/Los_Angeles', 'zh-TW': '洛杉磯', en: 'Los Angeles', ja: 'ロサンゼルス' },
+              { id: 'America/Sao_Paulo', 'zh-TW': '聖保羅', en: 'São Paulo', ja: 'サンパウロ' },
+              { id: 'America/Vancouver', 'zh-TW': '溫哥華', en: 'Vancouver', ja: 'バンクーバー' },
+              { id: 'Pacific/Honolulu', 'zh-TW': '檀香山', en: 'Honolulu', ja: 'ホノルル' },
+            ]
+            const isInList = COMMON_TIMEZONES.some(tz => tz.id === userTimezone)
+            const items = isInList ? COMMON_TIMEZONES : [{ id: userTimezone, 'zh-TW': userTimezone, en: userTimezone, ja: userTimezone }, ...COMMON_TIMEZONES]
+            return items.map(tz => (
+              <option key={tz.id} value={tz.id}>{tz[lang] || tz.en} ({tz.id})</option>
+            ))
+          })()}
         </select>
       </div>
 
@@ -496,9 +527,19 @@ export default function SettingsPage() {
             </button>
           </div>
         ) : setupQR ? (
-          <div className="space-y-3 text-center">
-            <img src={setupQR.qr_code} alt="QR Code" className="mx-auto w-48 h-48" />
-            <p className="text-xs opacity-60 break-all">{t('twofa.secretKey')}: {setupQR.secret}</p>
+          <div className="space-y-3">
+            <div className="text-sm opacity-70 space-y-1">
+              <p>{t('twofa.step1')}</p>
+              <p>{t('twofa.step2')}</p>
+              <p>{t('twofa.step3')}</p>
+            </div>
+            <div className="text-center">
+              <img src={setupQR.qr_code} alt="QR Code" className="mx-auto w-48 h-48" />
+            </div>
+            <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm">
+              <p className="font-medium text-yellow-500">{t('twofa.secretKey')}: <span className="break-all font-mono">{setupQR.secret}</span></p>
+              <p className="text-xs opacity-70 mt-1">{t('twofa.backupWarning')}</p>
+            </div>
             <input
               type="text"
               value={totpCode}
@@ -528,18 +569,22 @@ export default function SettingsPage() {
             </div>
           </div>
         ) : (
-          <button
-            onClick={async () => {
-              try {
-                const { default: api } = await import('../api/axios')
-                const { data } = await api.post('/auth/2fa/setup/')
-                setSetupQR(data)
-              } catch { toast?.error(t('twofa.setupFailed')) }
-            }}
-            className="btn-primary"
-          >
-            {t('twofa.enable')}
-          </button>
+          <div className="space-y-3">
+            <p className="text-sm opacity-70">{t('twofa.description')}</p>
+            <p className="text-xs opacity-50">{t('twofa.recommendedApps')}</p>
+            <button
+              onClick={async () => {
+                try {
+                  const { default: api } = await import('../api/axios')
+                  const { data } = await api.post('/auth/2fa/setup/')
+                  setSetupQR(data)
+                } catch { toast?.error(t('twofa.setupFailed')) }
+              }}
+              className="btn-primary"
+            >
+              {t('twofa.enable')}
+            </button>
+          </div>
         )}
       </div>
 

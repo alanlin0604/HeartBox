@@ -151,21 +151,36 @@ export default function RegisterPage() {
         <button
           type="button"
           onClick={() => {
-            if (window.google?.accounts?.id) {
-              window.google.accounts.id.initialize({
-                client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
-                callback: async (response) => {
-                  try {
-                    const { data } = await googleLogin(response.credential)
-                    setAuthTokens(data.access, data.refresh, true)
-                    window.location.href = '/'
-                  } catch {
-                    setError(t('oauth.failed'))
-                  }
-                },
-              })
-              window.google.accounts.id.prompt()
+            if (!window.google?.accounts?.id) {
+              setError(t('oauth.unavailable'))
+              toast?.error(t('oauth.unavailable'))
+              return
             }
+            const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+            if (!clientId) {
+              setError(t('oauth.unavailable'))
+              toast?.error(t('oauth.unavailable'))
+              return
+            }
+            window.google.accounts.id.initialize({
+              client_id: clientId,
+              callback: async (response) => {
+                try {
+                  const { data } = await googleLogin(response.credential)
+                  setAuthTokens(data.access, data.refresh, true)
+                  window.location.href = '/'
+                } catch {
+                  setError(t('oauth.failed'))
+                  toast?.error(t('oauth.failed'))
+                }
+              },
+            })
+            window.google.accounts.id.prompt((notification) => {
+              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                setError(t('oauth.popupBlocked'))
+                toast?.error(t('oauth.popupBlocked'))
+              }
+            })
           }}
           className="w-full py-2.5 px-4 rounded-xl border border-white/10 hover:border-white/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
         >

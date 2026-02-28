@@ -21,7 +21,8 @@ api.interceptors.request.use((config) => {
   config.headers['Accept-Language'] = lang;
   // Cancel duplicate GET requests
   if (config.method === 'get') {
-    const key = `${config.method}:${config.baseURL}${config.url}`;
+    const params = config.params ? '?' + new URLSearchParams(config.params).toString() : '';
+    const key = `${config.method}:${config.baseURL}${config.url}${params}`;
     if (pendingGets.has(key)) {
       pendingGets.get(key).abort();
     }
@@ -37,7 +38,8 @@ api.interceptors.response.use(
   (res) => {
     // Clean up completed GET requests
     if (res.config.method === 'get') {
-      const key = `${res.config.method}:${res.config.baseURL}${res.config.url}`;
+      const resParams = res.config.params ? '?' + new URLSearchParams(res.config.params).toString() : '';
+      const key = `${res.config.method}:${res.config.baseURL}${res.config.url}${resParams}`;
       pendingGets.delete(key);
     }
     return res;
@@ -45,7 +47,8 @@ api.interceptors.response.use(
   async (error) => {
     // Clean up failed GET requests
     if (error.config?.method === 'get') {
-      const key = `${error.config.method}:${error.config.baseURL}${error.config.url}`;
+      const errParams = error.config.params ? '?' + new URLSearchParams(error.config.params).toString() : '';
+      const key = `${error.config.method}:${error.config.baseURL}${error.config.url}${errParams}`;
       pendingGets.delete(key);
     }
 

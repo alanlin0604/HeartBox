@@ -161,10 +161,19 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={async () => {
-                // Google login (requires Google Identity Services loaded)
-                if (!window.google?.accounts) return
+                if (!window.google?.accounts?.id) {
+                  setError(t('oauth.unavailable'))
+                  toast?.error(t('oauth.unavailable'))
+                  return
+                }
+                const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+                if (!clientId) {
+                  setError(t('oauth.unavailable'))
+                  toast?.error(t('oauth.unavailable'))
+                  return
+                }
                 window.google.accounts.id.initialize({
-                  client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+                  client_id: clientId,
                   callback: async (response) => {
                     try {
                       const { default: api } = await import('../api/axios')
@@ -172,10 +181,18 @@ export default function LoginPage() {
                       const { setAuthTokens } = await import('../utils/tokenStorage')
                       setAuthTokens(data.access, data.refresh, true)
                       window.location.href = '/'
-                    } catch { setError(t('oauth.failed')) }
+                    } catch {
+                      setError(t('oauth.failed'))
+                      toast?.error(t('oauth.failed'))
+                    }
                   }
                 })
-                window.google.accounts.id.prompt()
+                window.google.accounts.id.prompt((notification) => {
+                  if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                    setError(t('oauth.popupBlocked'))
+                    toast?.error(t('oauth.popupBlocked'))
+                  }
+                })
               }}
               className="btn-secondary w-full flex items-center justify-center gap-2"
             >
