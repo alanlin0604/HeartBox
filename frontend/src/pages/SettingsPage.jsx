@@ -320,7 +320,7 @@ export default function SettingsPage() {
       {activeTab === 'preferences' && (
         <div className="space-y-6">
           {/* Font Size */}
-          <div className="glass p-4 sm:p-6 space-y-3">
+          <div className="glass p-4 sm:p-6 space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.fontSize')}</h2>
             <div className="flex gap-3">
               {[
@@ -349,7 +349,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Timezone */}
-          <div className="glass p-4 sm:p-6 space-y-3">
+          <div className="glass p-4 sm:p-6 space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.timezone')}</h2>
             <select
               value={userTimezone}
@@ -402,7 +402,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Idle Auto-Logout */}
-          <div className="glass p-4 sm:p-6 space-y-3">
+          <div className="glass p-4 sm:p-6 space-y-4">
             <h2 className="text-lg font-semibold">{t('idle.settingsTitle')}</h2>
             <div className="flex gap-3">
               {[
@@ -431,7 +431,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Notification Preferences */}
-          <div className="glass p-4 sm:p-6 space-y-3">
+          <div className="glass p-4 sm:p-6 space-y-4">
             <h2 className="text-lg font-semibold">{t('notifPref.title')}</h2>
             {['message', 'booking', 'share', 'weekly_report', 'achievement', 'system'].map(type => {
               const pref = notifPrefs.find(p => p.notification_type === type)
@@ -462,7 +462,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Push Notifications */}
-          <div className="glass p-4 sm:p-6 space-y-3">
+          <div className="glass p-4 sm:p-6 space-y-4">
             <h2 className="text-lg font-semibold">{t('push.title')}</h2>
             <label className="flex items-center justify-between">
               <span className="text-sm">{t('push.enableDesc')}</span>
@@ -490,16 +490,16 @@ export default function SettingsPage() {
       {activeTab === 'data' && (
         <div className="space-y-6">
           {/* Data Import */}
-          <div className="glass p-4 sm:p-6 space-y-3">
+          <div className="glass p-4 sm:p-6 space-y-4">
             <h2 className="text-lg font-semibold">{t('import.title')}</h2>
             <p className="text-sm opacity-60">{t('import.settingsDesc')}</p>
-            <button onClick={() => setImportOpen(true)} className="btn-secondary">{t('import.button')}</button>
+            <button onClick={() => setImportOpen(true)} className="btn-secondary w-full">{t('import.button')}</button>
           </div>
 
           {importOpen && <ImportModal onClose={() => setImportOpen(false)} onSuccess={() => {}} />}
 
           {/* Account Info */}
-          <div className="glass p-4 sm:p-6 space-y-3">
+          <div className="glass p-4 sm:p-6 space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.accountInfo')}</h2>
             <div className="text-sm space-y-2 opacity-70">
               <p>{t('settings.joined')}: {user?.created_at ? new Date(user.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang) : '-'}</p>
@@ -508,7 +508,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Subscription */}
-          <div className="glass p-4 sm:p-6 space-y-3">
+          <div className="glass p-4 sm:p-6 space-y-4">
             <h2 className="text-lg font-semibold">{t('subscription.title')}</h2>
             {currentSub?.plan ? (
               <div className="text-sm space-y-1">
@@ -518,7 +518,7 @@ export default function SettingsPage() {
             ) : (
               <p className="text-sm opacity-60">{t('subscription.noPlan')}</p>
             )}
-            <Link to="/pricing" className="btn-secondary inline-block">{t('subscription.viewPlans')}</Link>
+            <Link to="/pricing" className="btn-secondary block w-full text-center">{t('subscription.viewPlans')}</Link>
           </div>
         </div>
       )}
@@ -527,18 +527,25 @@ export default function SettingsPage() {
       {activeTab === 'security' && (
         <div className="space-y-6">
           {/* Two-Factor Authentication */}
-          <div className="glass p-4 sm:p-6 space-y-3">
-            <h2 className="text-lg font-semibold">{t('twofa.title')}</h2>
+          <div className="glass p-4 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">{t('twofa.title')}</h2>
+              {twoFAEnabled && (
+                <span className="text-xs font-medium text-green-500 px-2 py-1 rounded-lg bg-green-500/10">{t('twofa.enabled')}</span>
+              )}
+            </div>
             {twoFAEnabled ? (
-              <div className="space-y-3">
-                <p className="text-sm text-green-500">{t('twofa.enabled')}</p>
-                <input
-                  type="password"
-                  value={disablePassword}
-                  onChange={e => setDisablePassword(e.target.value)}
-                  placeholder={t('twofa.passwordToDisable')}
-                  className="glass-input"
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium opacity-60 mb-1">{t('twofa.passwordToDisable')}</label>
+                  <input
+                    type="password"
+                    value={disablePassword}
+                    onChange={e => setDisablePassword(e.target.value)}
+                    placeholder={t('twofa.passwordToDisable')}
+                    className="glass-input"
+                  />
+                </div>
                 <button
                   onClick={async () => {
                     try {
@@ -550,13 +557,13 @@ export default function SettingsPage() {
                     } catch { toast?.error(t('twofa.disableFailed')) }
                   }}
                   disabled={!disablePassword}
-                  className="btn-danger"
+                  className="btn-danger w-full"
                 >
                   {t('twofa.disable')}
                 </button>
               </div>
             ) : setupQR ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="text-sm opacity-70 space-y-1">
                   <p>{t('twofa.step1')}</p>
                   <p>{t('twofa.step2')}</p>
@@ -569,16 +576,19 @@ export default function SettingsPage() {
                   <p className="font-medium text-yellow-500">{t('twofa.secretKey')}: <span className="break-all font-mono">{setupQR.secret}</span></p>
                   <p className="text-xs opacity-70 mt-1">{t('twofa.backupWarning')}</p>
                 </div>
-                <input
-                  type="text"
-                  value={totpCode}
-                  onChange={e => setTotpCode(e.target.value)}
-                  placeholder={t('twofa.enterCode')}
-                  maxLength={6}
-                  className="glass-input text-center text-lg tracking-widest"
-                />
-                <div className="flex gap-3 justify-center">
-                  <button onClick={() => setSetupQR(null)} className="btn-secondary">{t('common.cancel')}</button>
+                <div>
+                  <label className="block text-sm font-medium opacity-60 mb-1">{t('twofa.enterCode')}</label>
+                  <input
+                    type="text"
+                    value={totpCode}
+                    onChange={e => setTotpCode(e.target.value)}
+                    placeholder={t('twofa.enterCode')}
+                    maxLength={6}
+                    className="glass-input text-center text-lg tracking-widest"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setSetupQR(null)} className="btn-secondary flex-1">{t('common.cancel')}</button>
                   <button
                     onClick={async () => {
                       try {
@@ -591,14 +601,14 @@ export default function SettingsPage() {
                       } catch { toast?.error(t('twofa.verifyFailed')) }
                     }}
                     disabled={totpCode.length !== 6}
-                    className="btn-primary"
+                    className="btn-primary flex-1"
                   >
                     {t('twofa.verify')}
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <p className="text-sm opacity-70">{t('twofa.description')}</p>
                 <p className="text-xs opacity-50">{t('twofa.recommendedApps')}</p>
                 <button
@@ -609,7 +619,7 @@ export default function SettingsPage() {
                       setSetupQR(data)
                     } catch { toast?.error(t('twofa.setupFailed')) }
                   }}
-                  className="btn-primary"
+                  className="btn-primary w-full"
                 >
                   {t('twofa.enable')}
                 </button>
@@ -618,12 +628,12 @@ export default function SettingsPage() {
           </div>
 
           {/* Danger Zone - Delete Account */}
-          <div className="glass p-4 sm:p-6 space-y-3 border border-red-500/20">
+          <div className="glass p-4 sm:p-6 space-y-4 border border-red-500/20">
             <h2 className="text-lg font-semibold text-red-500">{t('settings.dangerZone')}</h2>
             <p className="text-sm opacity-60">{t('settings.deleteAccountDesc')}</p>
             <button
               onClick={() => setDeleteModalOpen(true)}
-              className="btn-danger"
+              className="btn-danger w-full"
             >
               {t('settings.deleteAccount')}
             </button>
