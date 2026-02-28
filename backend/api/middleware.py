@@ -41,6 +41,39 @@ class JWTAuthMiddleware(BaseMiddleware):
         return await super().__call__(scope, receive, send)
 
 
+class UserTimezoneMiddleware:
+    """Activate the authenticated user's timezone for each request.
+
+    DRF JWT authentication happens at the view layer (after middleware),
+    so we parse the JWT token directly from the Authorization header to
+    look up the user's timezone and activate it before the view runs.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.utils import timezone as tz
+        tz.deactivate()  # Start with server default
+
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Bearer '):
+            try:
+                from django.contrib.auth import get_user_model
+                token = AccessToken(auth_header.split(' ', 1)[1])
+                User = get_user_model()
+                user_tz = User.objects.filter(id=token['user_id']).values_list('timezone', flat=True).first()
+                if user_tz:
+                    import zoneinfo
+                    tz.activate(zoneinfo.ZoneInfo(user_tz))
+            except Exception:
+                pass
+
+        response = self.get_response(request)
+        tz.deactivate()
+        return response
+
+
 class ContentSecurityPolicyMiddleware:
     """Injects Content-Security-Policy header from CSP_* settings."""
 
