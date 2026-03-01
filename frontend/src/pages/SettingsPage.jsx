@@ -622,7 +622,7 @@ export default function SettingsPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <p className="text-sm opacity-70">{t('twofa.description')}</p>
                 <p className="text-xs opacity-50">{t('twofa.recommendedApps')}</p>
                 <button
@@ -644,7 +644,7 @@ export default function SettingsPage() {
           <div className="border-t border-[var(--card-border)]" />
 
           {/* Danger Zone - Delete Account */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h2 className="text-lg font-semibold text-red-500">{t('settings.dangerZone')}</h2>
             <p className="text-sm opacity-60">{t('settings.deleteAccountDesc')}</p>
             <button
