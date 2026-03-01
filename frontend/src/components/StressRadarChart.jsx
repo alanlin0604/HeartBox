@@ -34,12 +34,12 @@ export default memo(function StressRadarChart({ data }) {
           <PolarGrid stroke={theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} />
           <PolarAngleAxis
             dataKey="tag"
-            tick={{ fill: theme === 'dark' ? '#9ca3af' : '#475569', fontSize: 12, dy: 4 }}
+            tick={{ fill: theme === 'dark' ? '#9ca3af' : '#475569', fontSize: 13 }}
           />
           <PolarRadiusAxis
             angle={90}
             domain={[0, 10]}
-            tick={{ fill: theme === 'dark' ? '#9ca3af' : '#475569', fontSize: 11 }}
+            tick={false}
           />
           <Tooltip contentStyle={tooltipStyle} />
           <Radar
