@@ -152,7 +152,7 @@ export default function CounselorListPage() {
       ])
       setCounselors(counselorRes.data.results || counselorRes.data)
       setConversations(convRes.data.results || convRes.data)
-      setBookings(bookingRes.data)
+      setBookings(bookingRes.data.results || bookingRes.data || [])
       setRecommended(recRes.data.results || recRes.data || [])
       setReports(reportsRes.data.results || reportsRes.data || [])
 
@@ -344,7 +344,7 @@ export default function CounselorListPage() {
   const isCounselor = myProfile?.status === 'approved'
 
   return (
-    <div className="space-y-6 mt-4 max-w-4xl mx-auto">
+    <div className="space-y-6 mt-4">
       {error && (
         <div className="glass-card p-4 text-red-500 text-sm border border-red-500/20">
           {error}
@@ -758,7 +758,7 @@ export default function CounselorListPage() {
             </ul>
           </div>
 
-          <form onSubmit={handleGenerateReport} className="glass p-6 space-y-4">
+          <form onSubmit={handleGenerateReport} className="glass p-6 space-y-4 max-w-lg">
             <input
               type="text"
               value={reportTitle}
@@ -1004,7 +1004,7 @@ export default function CounselorListPage() {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">{t('counselor.editProfile')}</h2>
           <p className="text-sm opacity-60">{t('counselor.editProfileDesc')}</p>
-          <form onSubmit={handleSaveProfile} className="glass p-6 space-y-4">
+          <form onSubmit={handleSaveProfile} className="glass p-6 space-y-4 max-w-lg">
             <div>
               <label className="text-sm opacity-60 block mb-1">{t('counselor.displayNameLabel')}</label>
               <input

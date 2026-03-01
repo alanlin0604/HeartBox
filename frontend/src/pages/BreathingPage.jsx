@@ -287,7 +287,7 @@ export default function BreathingPage() {
   const circumference = 2 * Math.PI * 90
 
   return (
-    <div className="space-y-6 mt-4 max-w-3xl mx-auto">
+    <div className="space-y-6 mt-4 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold">{t('breathe.title')}</h1>
 
       {/* Learn More Banner */}
