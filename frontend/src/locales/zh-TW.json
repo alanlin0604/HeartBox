@@ -552,6 +552,7 @@
   "aria.previousMonth": "上個月",
   "aria.nextMonth": "下個月",
   "aria.skipToContent": "跳到主要內容",
+  "aria.dismiss": "關閉",
   "journal.trash": "垃圾桶",
   "journal.trashEmpty": "垃圾桶是空的",
   "journal.trashEmptyDesc": "已刪除的日誌會在這裡顯示",

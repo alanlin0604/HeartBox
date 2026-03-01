@@ -18,7 +18,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    document.title = `${t('subscription.pricingTitle')} — HeartBox`
+    document.title = `${t('subscription.pricingTitle')} — ${t('app.name')}`
     Promise.all([
       getPlans().catch(() => ({ data: { results: [] } })),
       user ? getMySubscription().catch(() => ({ data: {} })) : Promise.resolve({ data: {} }),

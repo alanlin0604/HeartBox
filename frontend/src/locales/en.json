@@ -552,6 +552,7 @@
   "aria.previousMonth": "Previous month",
   "aria.nextMonth": "Next month",
   "aria.skipToContent": "Skip to main content",
+  "aria.dismiss": "Dismiss",
   "journal.trash": "Trash",
   "journal.trashEmpty": "Trash is empty",
   "journal.trashEmptyDesc": "Deleted notes will appear here",

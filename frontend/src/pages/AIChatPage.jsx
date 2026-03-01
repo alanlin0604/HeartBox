@@ -227,7 +227,7 @@ export default function AIChatPage() {
       setSessions((prev) =>
         prev.map((s) =>
           s.id === activeSessionId
-            ? { ...s, title: user_message.content.slice(0, 50), message_count: (s.message_count || 0) + 2, last_message_preview: ai_message.content.slice(0, 80) }
+            ? { ...s, title: user_message?.content?.slice(0, 50) || s.title, message_count: (s.message_count || 0) + 2, last_message_preview: ai_message?.content?.slice(0, 80) || '' }
             : s
         )
       )

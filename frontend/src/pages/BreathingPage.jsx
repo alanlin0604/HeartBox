@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
+import { LOCALE_MAP } from '../utils/locales'
 import { useToast } from '../context/ToastContext'
 import { getWellnessSessions, createWellnessSession } from '../api/breathe'
 import { getCourses } from '../api/wellness'
@@ -27,7 +28,7 @@ const BREATHING_EXERCISES = [
 const MEDITATION_DURATIONS = [1, 3, 5, 10, 15]
 
 export default function BreathingPage() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const toast = useToast()
   const navigate = useNavigate()
   const [tab, setTab] = useState('breathing')
@@ -482,7 +483,7 @@ export default function BreathingPage() {
                 </div>
                 <div className="flex items-center gap-3 opacity-60">
                   <span>{formatTime(s.duration_seconds)}</span>
-                  <span>{new Date(s.completed_at).toLocaleDateString()}</span>
+                  <span>{new Date(s.completed_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
                 </div>
               </div>
             ))}
