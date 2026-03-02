@@ -34,7 +34,20 @@ export default function EditorToolbar({ editor, showVoice = false, isListening =
           <button type="button" onClick={onToggleVoice}
             className={`p-1.5 rounded text-sm transition-colors ${isListening ? 'bg-red-500/30 text-red-400 animate-pulse' : 'opacity-50 hover:opacity-100'}`}
             title={t('noteForm.voiceInput')}>
-            {isListening ? '\u{1F534}' : '\u{1F3A4}'}
+            <span
+              className="inline-block w-4 h-4"
+              style={{
+                backgroundColor: 'currentColor',
+                maskImage: 'url(/icons/microphone-black-shape.png)',
+                maskSize: 'contain',
+                maskRepeat: 'no-repeat',
+                maskPosition: 'center',
+                WebkitMaskImage: 'url(/icons/microphone-black-shape.png)',
+                WebkitMaskSize: 'contain',
+                WebkitMaskRepeat: 'no-repeat',
+                WebkitMaskPosition: 'center',
+              }}
+            />
           </button>
         </>
       )}
