@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from .models import (
     AIChatMessage, AIChatSession, AuditLog, Booking, Conversation,
-    CounselorProfile, Course, CustomUser, DailySleep, Feedback,
+    CounselorProfile, Course, CustomUser, DailySleep, Feedback, HealthMetric,
     Message, MoodNote, NoteAttachment, Notification,
     NotificationPreference, PsychoArticle, PushSubscription,
     SelfAssessment, SharedAssessment, SharedNote,
@@ -156,8 +156,16 @@ class WeeklySummaryAdmin(admin.ModelAdmin):
 
 @admin.register(DailySleep)
 class DailySleepAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'date', 'sleep_hours', 'sleep_quality')
-    list_filter = ('sleep_quality',)
+    list_display = ('id', 'user', 'date', 'sleep_hours', 'sleep_quality', 'source')
+    list_filter = ('sleep_quality', 'source')
+    search_fields = ('user__username',)
+    list_per_page = 50
+
+
+@admin.register(HealthMetric)
+class HealthMetricAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'date', 'metric_type', 'value', 'source')
+    list_filter = ('metric_type', 'source')
     search_fields = ('user__username',)
     list_per_page = 50
 

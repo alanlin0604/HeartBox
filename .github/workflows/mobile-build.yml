@@ -1,0 +1,208 @@
+name: Mobile Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Build platform"
+        required: true
+        type: choice
+        options:
+          - both
+          - android
+          - ios
+      build_type:
+        description: "Build type"
+        required: true
+        type: choice
+        options:
+          - debug
+          - release
+
+env:
+  VITE_API_URL: ${{ secrets.VITE_API_URL }}
+  VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+  VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+
+jobs:
+  # ===== Build Web Assets (shared) =====
+  web-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: frontend/dist
+
+  # ===== Android Build =====
+  android:
+    needs: web-build
+    if: inputs.platform == 'android' || inputs.platform == 'both'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: frontend/dist
+
+      - run: npm ci
+
+      # Add Android platform if not committed
+      - run: npx cap sync android
+
+      # Decode keystore for release builds
+      - name: Decode keystore
+        if: inputs.build_type == 'release'
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/heartbox.keystore
+        working-directory: frontend
+
+      # Build APK
+      - name: Build debug APK
+        if: inputs.build_type == 'debug'
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+        working-directory: frontend
+
+      - name: Build release APK
+        if: inputs.build_type == 'release'
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=heartbox.keystore \
+            -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
+        working-directory: frontend
+
+      # Upload APK
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: |
+            frontend/android/app/build/outputs/apk/debug/*.apk
+            frontend/android/app/build/outputs/apk/release/*.apk
+
+  # ===== iOS Build =====
+  ios:
+    needs: web-build
+    if: inputs.platform == 'ios' || inputs.platform == 'both'
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: frontend/dist
+
+      - run: npm ci
+
+      # Add iOS platform and sync
+      - run: npx cap sync ios
+
+      # Install CocoaPods dependencies
+      - run: cd ios/App && pod install
+
+      # Import signing certificate
+      - name: Import certificate and provisioning profile
+        if: inputs.build_type == 'release'
+        env:
+          P12_BASE64: ${{ secrets.IOS_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ci-keychain-password
+        run: |
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+
+          # Import certificate
+          echo "$P12_BASE64" | base64 --decode > cert.p12
+          security import cert.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+
+          # Import provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROVISION_PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+
+      # Build
+      - name: Build debug
+        if: inputs.build_type == 'debug'
+        run: |
+          cd ios/App
+          xcodebuild build \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Build release archive
+        if: inputs.build_type == 'release'
+        run: |
+          cd ios/App
+          xcodebuild archive \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -archivePath build/HeartBox.xcarchive \
+            -destination "generic/platform=iOS"
+
+      - name: Export IPA
+        if: inputs.build_type == 'release'
+        run: |
+          cd ios/App
+          xcodebuild -exportArchive \
+            -archivePath build/HeartBox.xcarchive \
+            -exportPath build/output \
+            -exportOptionsPlist ../../exportOptions.plist
+
+      # Upload
+      - uses: actions/upload-artifact@v4
+        if: inputs.build_type == 'release'
+        with:
+          name: ios-ipa
+          path: frontend/ios/App/build/output/*.ipa

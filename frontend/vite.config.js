@@ -17,6 +17,10 @@ export default defineConfig({
     reportCompressedSize: false,
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
+      external: [
+        'capacitor-apple-health',
+        'capacitor-health-connect',
+      ],
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],

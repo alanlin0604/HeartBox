@@ -6,7 +6,7 @@ from rest_framework import serializers
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorReview, Course, CounselorProfile,
-    DailySleep, Feedback,
+    DailySleep, Feedback, HealthMetric,
     Message, MoodNote, NoteAttachment, Notification, NotificationPreference,
     PushSubscription, PsychoArticle,
     SelfAssessment, SharedAssessment, SharedNote, SubscriptionPlan,
@@ -412,7 +412,10 @@ class WeeklySummarySerializer(serializers.ModelSerializer):
 class DailySleepSerializer(serializers.ModelSerializer):
     class Meta:
         model = DailySleep
-        fields = ('id', 'date', 'sleep_hours', 'sleep_quality', 'created_at', 'updated_at')
+        fields = ('id', 'date', 'sleep_hours', 'sleep_quality',
+                  'bedtime', 'wake_time', 'deep_sleep_minutes',
+                  'light_sleep_minutes', 'rem_sleep_minutes', 'source',
+                  'created_at', 'updated_at')
         read_only_fields = ('id', 'created_at', 'updated_at')
 
     def validate_sleep_hours(self, value):
@@ -424,6 +427,27 @@ class DailySleepSerializer(serializers.ModelSerializer):
         if value < 1 or value > 5:
             raise serializers.ValidationError('Sleep quality must be between 1 and 5.')
         return value
+
+
+class HealthMetricSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HealthMetric
+        fields = ('id', 'date', 'metric_type', 'value', 'source',
+                  'created_at', 'updated_at')
+        read_only_fields = ('id', 'created_at', 'updated_at')
+
+    def validate_metric_type(self, value):
+        valid_types = [c[0] for c in HealthMetric.METRIC_CHOICES]
+        if value not in valid_types:
+            raise serializers.ValidationError(
+                f'Invalid metric type. Choose from: {", ".join(valid_types)}')
+        return value
+
+
+class HealthSyncSerializer(serializers.Serializer):
+    """Accepts a batch of health metrics + sleep data for sync."""
+    metrics = HealthMetricSerializer(many=True, required=False, default=[])
+    sleep = DailySleepSerializer(many=True, required=False, default=[])
 
 
 class TherapistReportSerializer(serializers.ModelSerializer):

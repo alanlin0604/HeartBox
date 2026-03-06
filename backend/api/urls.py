@@ -28,6 +28,9 @@ from .views import (
     DailyPromptView,
     DailySleepListView,
     DailySleepView,
+    HealthMetricListView,
+    HealthSummaryView,
+    HealthSyncView,
     QuoteActionView,
     CounselorApplyView,
     CounselorListView,
@@ -166,6 +169,10 @@ urlpatterns = [
     # Sleep Tracking
     path('sleep/', DailySleepView.as_view(), name='daily-sleep'),
     path('sleep/list/', DailySleepListView.as_view(), name='daily-sleep-list'),
+    # Health Data
+    path('health/sync/', HealthSyncView.as_view(), name='health-sync'),
+    path('health/metrics/', HealthMetricListView.as_view(), name='health-metrics'),
+    path('health/summary/', HealthSummaryView.as_view(), name='health-summary'),
     # Therapist Reports
     path('reports/', TherapistReportCreateView.as_view(), name='report-create'),
     path('reports/list/', TherapistReportListView.as_view(), name='report-list'),

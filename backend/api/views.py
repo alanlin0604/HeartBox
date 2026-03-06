@@ -34,7 +34,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .models import (
     AIChatMessage, AIChatSession,
-    Booking, Conversation, CounselorReview, Course, CounselorProfile, DailySleep, Feedback,
+    Booking, Conversation, CounselorReview, Course, CounselorProfile,
+    DailySleep, Feedback, HealthMetric,
     Message, MoodNote, NoteAttachment, Notification, NotificationPreference,
     PsychoArticle, PushSubscription,
     SelfAssessment, SharedAssessment, SharedNote, SubscriptionPlan,
@@ -55,6 +56,8 @@ from .serializers import (
     CounselorProfileSerializer,
     CounselorReviewSerializer,
     DailySleepSerializer,
+    HealthMetricSerializer,
+    HealthSyncSerializer,
     FeedbackSerializer,
     MessageSerializer,
     MoodNoteListSerializer,
@@ -2914,3 +2917,122 @@ def send_push_notification(user, title, body, url='/'):
         except Exception:
             logger.exception('Web push failed for subscription %s, removing', sub.endpoint[:50])
             sub.delete()  # Remove invalid subscriptions
+
+
+# ===== Health Metric Views =====
+
+class HealthMetricListView(generics.ListAPIView):
+    """List health metrics for the authenticated user, filterable by type and date range."""
+    serializer_class = HealthMetricSerializer
+
+    def get_queryset(self):
+        qs = HealthMetric.objects.filter(user=self.request.user)
+        metric_type = self.request.query_params.get('type')
+        if metric_type:
+            qs = qs.filter(metric_type=metric_type)
+        date_from = self.request.query_params.get('from')
+        date_to = self.request.query_params.get('to')
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+        return qs
+
+
+class HealthSyncView(APIView):
+    """Batch upsert health metrics and sleep data from native health apps."""
+
+    def post(self, request):
+        serializer = HealthSyncSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        metrics_synced = 0
+        sleep_synced = 0
+
+        with transaction.atomic():
+            # Upsert health metrics
+            for metric_data in serializer.validated_data.get('metrics', []):
+                HealthMetric.objects.update_or_create(
+                    user=request.user,
+                    date=metric_data['date'],
+                    metric_type=metric_data['metric_type'],
+                    defaults={
+                        'value': metric_data['value'],
+                        'source': metric_data.get('source', 'health_app'),
+                    },
+                )
+                metrics_synced += 1
+
+            # Upsert sleep data
+            for sleep_data in serializer.validated_data.get('sleep', []):
+                defaults = {
+                    'sleep_hours': sleep_data['sleep_hours'],
+                    'sleep_quality': sleep_data['sleep_quality'],
+                    'source': sleep_data.get('source', 'health_app'),
+                }
+                for field in ('bedtime', 'wake_time', 'deep_sleep_minutes',
+                              'light_sleep_minutes', 'rem_sleep_minutes'):
+                    if field in sleep_data and sleep_data[field] is not None:
+                        defaults[field] = sleep_data[field]
+
+                DailySleep.objects.update_or_create(
+                    user=request.user,
+                    date=sleep_data['date'],
+                    defaults=defaults,
+                )
+                sleep_synced += 1
+
+        return Response({
+            'metrics_synced': metrics_synced,
+            'sleep_synced': sleep_synced,
+        }, status=status.HTTP_200_OK)
+
+
+class HealthSummaryView(APIView):
+    """Get a summary of recent health data for dashboard display."""
+
+    def get(self, request):
+        days = int(request.query_params.get('days', 30))
+        cutoff = timezone.localdate() - timedelta(days=days)
+        user = request.user
+
+        metrics = HealthMetric.objects.filter(user=user, date__gte=cutoff)
+
+        # Aggregate by metric type
+        summary = {}
+        for metric_type, label in HealthMetric.METRIC_CHOICES:
+            type_metrics = metrics.filter(metric_type=metric_type).order_by('date')
+            if type_metrics.exists():
+                agg = type_metrics.aggregate(
+                    avg=Avg('value'),
+                )
+                summary[metric_type] = {
+                    'avg': round(agg['avg'], 1) if agg['avg'] else None,
+                    'latest': type_metrics.last().value if type_metrics.exists() else None,
+                    'trend': list(type_metrics.values('date', 'value')),
+                }
+
+        # Sleep summary
+        sleep_records = DailySleep.objects.filter(user=user, date__gte=cutoff).order_by('date')
+        if sleep_records.exists():
+            sleep_agg = sleep_records.aggregate(
+                avg_hours=Avg('sleep_hours'),
+                avg_quality=Avg('sleep_quality'),
+            )
+            summary['sleep'] = {
+                'avg_hours': round(sleep_agg['avg_hours'], 1) if sleep_agg['avg_hours'] else None,
+                'avg_quality': round(sleep_agg['avg_quality'], 1) if sleep_agg['avg_quality'] else None,
+                'trend': list(sleep_records.values(
+                    'date', 'sleep_hours', 'sleep_quality',
+                    'deep_sleep_minutes', 'light_sleep_minutes', 'rem_sleep_minutes',
+                )),
+            }
+
+        # Health-mood correlation: average sentiment on days with health data
+        from .services.analytics import get_health_mood_correlation
+        health_mood = get_health_mood_correlation(user, days)
+
+        return Response({
+            'summary': summary,
+            'health_mood_correlation': health_mood,
+        })

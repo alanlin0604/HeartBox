@@ -370,3 +370,61 @@ def get_year_pixels(queryset, year):
 
     grouped = df.groupby('date')['sentiment_score'].mean().round(2)
     return _sanitize({str(date): float(val) for date, val in grouped.items()})
+
+
+def get_health_mood_correlation(user, days=30):
+    """Correlate health metrics (steps, heart_rate, hrv, exercise) with daily mood."""
+    from ..models import HealthMetric, MoodNote
+
+    cutoff = timezone.localdate() - timedelta(days=days)
+
+    # Get daily average sentiment
+    notes = MoodNote.objects.filter(
+        user=user, is_deleted=False,
+        created_at__date__gte=cutoff,
+        sentiment_score__isnull=False,
+    ).values('created_at', 'sentiment_score')
+
+    if not notes:
+        return {}
+
+    note_df = pd.DataFrame(list(notes))
+    note_df['date'] = pd.to_datetime(note_df['created_at']).dt.date
+    daily_mood = note_df.groupby('date')['sentiment_score'].mean()
+
+    # Get health metrics
+    metrics = HealthMetric.objects.filter(
+        user=user, date__gte=cutoff,
+    ).values('date', 'metric_type', 'value')
+
+    if not metrics:
+        return {}
+
+    metric_df = pd.DataFrame(list(metrics))
+
+    result = {}
+    for metric_type in metric_df['metric_type'].unique():
+        type_data = metric_df[metric_df['metric_type'] == metric_type].set_index('date')['value']
+
+        # Join with mood data
+        joined = pd.DataFrame({
+            'metric': type_data,
+            'sentiment': daily_mood,
+        }).dropna()
+
+        if len(joined) >= 3:
+            try:
+                r, p = stats.pearsonr(joined['metric'], joined['sentiment'])
+                result[metric_type] = {
+                    'correlation': round(r, 3),
+                    'p_value': round(p, 4),
+                    'sample_size': len(joined),
+                    'scatter_data': [
+                        {'value': float(row['metric']), 'sentiment': round(float(row['sentiment']), 3)}
+                        for _, row in joined.iterrows()
+                    ],
+                }
+            except Exception:
+                pass
+
+    return _sanitize(result)

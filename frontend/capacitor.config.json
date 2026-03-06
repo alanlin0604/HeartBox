@@ -1,0 +1,14 @@
+{
+  "appId": "com.heartbox.app",
+  "appName": "HeartBox",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#7c3aed"
+    }
+  }
+}

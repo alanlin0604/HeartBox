@@ -5,6 +5,7 @@ import {
   ScatterChart, Scatter, BarChart, Bar, Legend,
 } from 'recharts'
 import { getAnalytics } from '../api/analytics'
+import { getHealthSummary } from '../api/health'
 import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
@@ -20,6 +21,7 @@ export default function DashboardPage() {
   const { t } = useLang()
   const toast = useToast()
   const [data, setData] = useState(null)
+  const [healthData, setHealthData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [period, setPeriod] = useState('week')
@@ -32,11 +34,17 @@ export default function DashboardPage() {
     const fetchId = ++fetchIdRef.current
     setLoading(true)
     setError(false)
-    getAnalytics(period, lookback)
-      .then((res) => {
-        if (fetchId === fetchIdRef.current) setData(res.data)
+    Promise.all([
+      getAnalytics(period, lookback),
+      getHealthSummary(lookback).catch(() => null),
+    ])
+      .then(([analyticsRes, healthRes]) => {
+        if (fetchId === fetchIdRef.current) {
+          setData(analyticsRes.data)
+          if (healthRes) setHealthData(healthRes.data)
+        }
       })
-      .catch((err) => {
+      .catch(() => {
         if (fetchId === fetchIdRef.current) {
           setError(true)
           toast?.error(t('common.operationFailed'))
@@ -292,6 +300,126 @@ export default function DashboardPage() {
               <Scatter data={sleepCorrelation.scatter_data} fill="#60a5fa" />
             </ScatterChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Health Overview */}
+      {healthData?.summary && Object.keys(healthData.summary).length > 0 && (
+        <div className="glass p-6">
+          <h2 className="text-lg font-semibold mb-4">{t('health.dashboardTitle')}</h2>
+
+          {/* Health metric cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+            {healthData.summary.steps && (
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <p className="text-xs opacity-60">{t('health.steps')}</p>
+                <p className="text-lg font-bold text-blue-400">
+                  {Math.round(healthData.summary.steps.latest || 0).toLocaleString()}
+                </p>
+                <p className="text-xs opacity-50">
+                  {t('health.avg')}: {Math.round(healthData.summary.steps.avg || 0).toLocaleString()}
+                </p>
+              </div>
+            )}
+            {healthData.summary.heart_rate && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                <p className="text-xs opacity-60">{t('health.heartRate')}</p>
+                <p className="text-lg font-bold text-red-400">
+                  {Math.round(healthData.summary.heart_rate.latest || 0)} bpm
+                </p>
+                <p className="text-xs opacity-50">
+                  {t('health.avg')}: {Math.round(healthData.summary.heart_rate.avg || 0)} bpm
+                </p>
+              </div>
+            )}
+            {healthData.summary.hrv && (
+              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                <p className="text-xs opacity-60">{t('health.hrv')}</p>
+                <p className="text-lg font-bold text-purple-400">
+                  {Math.round(healthData.summary.hrv.latest || 0)} ms
+                </p>
+                <p className="text-xs opacity-50">
+                  {t('health.avg')}: {Math.round(healthData.summary.hrv.avg || 0)} ms
+                </p>
+              </div>
+            )}
+            {healthData.summary.active_calories && (
+              <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
+                <p className="text-xs opacity-60">{t('health.calories')}</p>
+                <p className="text-lg font-bold text-orange-400">
+                  {Math.round(healthData.summary.active_calories.latest || 0)} kcal
+                </p>
+                <p className="text-xs opacity-50">
+                  {t('health.avg')}: {Math.round(healthData.summary.active_calories.avg || 0)} kcal
+                </p>
+              </div>
+            )}
+            {healthData.summary.exercise_minutes && (
+              <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                <p className="text-xs opacity-60">{t('health.exerciseMinutes')}</p>
+                <p className="text-lg font-bold text-green-400">
+                  {Math.round(healthData.summary.exercise_minutes.latest || 0)} {t('health.min')}
+                </p>
+                <p className="text-xs opacity-50">
+                  {t('health.avg')}: {Math.round(healthData.summary.exercise_minutes.avg || 0)} {t('health.min')}
+                </p>
+              </div>
+            )}
+            {healthData.summary.sleep && (
+              <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                <p className="text-xs opacity-60">{t('health.sleepData')}</p>
+                <p className="text-lg font-bold text-indigo-400">
+                  {healthData.summary.sleep.avg_hours || '-'} h
+                </p>
+                <p className="text-xs opacity-50">
+                  {t('health.quality')}: {healthData.summary.sleep.avg_quality || '-'}/5
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Steps trend chart */}
+          {healthData.summary.steps?.trend?.length > 1 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-medium mb-2 opacity-70">{t('health.stepsTrend')}</h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={healthData.summary.steps.trend.map(d => ({
+                  name: d.date?.slice(5),
+                  value: d.value,
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis dataKey="name" stroke={axisStroke} fontSize={11} />
+                  <YAxis stroke={axisStroke} fontSize={11} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Line type="monotone" dataKey="value" stroke="#60a5fa" strokeWidth={2} name={t('health.steps')} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Health-Mood Correlation */}
+      {healthData?.health_mood_correlation && Object.keys(healthData.health_mood_correlation).length > 0 && (
+        <div className="glass p-6">
+          <h2 className="text-lg font-semibold mb-4">{t('health.moodCorrelation')}</h2>
+          <div className="space-y-3">
+            {Object.entries(healthData.health_mood_correlation).map(([type, data]) => (
+              <div key={type} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                <span className="text-sm font-medium">{t(`health.metric_${type}`)}</span>
+                <div className="text-right">
+                  <span className={`text-sm font-bold ${
+                    data.correlation > 0.2 ? 'text-green-400' :
+                    data.correlation < -0.2 ? 'text-red-400' : 'opacity-60'
+                  }`}>
+                    r = {data.correlation}
+                  </span>
+                  <span className="text-xs opacity-50 ml-2">(n={data.sample_size})</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs opacity-40 mt-3">{t('health.correlationHint')}</p>
         </div>
       )}
 

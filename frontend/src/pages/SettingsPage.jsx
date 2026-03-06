@@ -10,6 +10,7 @@ import ImportModal from '../components/ImportModal'
 import { useToast } from '../context/ToastContext'
 import { isRememberedLogin, setAuthTokens } from '../utils/tokenStorage'
 import { subscribeToPush, unsubscribePush } from '../utils/pushNotifications'
+import useHealthSync from '../hooks/useHealthSync'
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth()
@@ -61,6 +62,7 @@ export default function SettingsPage() {
   const [disablePassword, setDisablePassword] = useState('')
   const [currentSub, setCurrentSub] = useState(null)
   const [userTimezone, setUserTimezone] = useState(user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone)
+  const health = useHealthSync()
   const [activeTab, setActiveTab] = useState('profile')
 
   useEffect(() => {
@@ -163,6 +165,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'profile', label: t('settings.tabProfile') },
     { id: 'preferences', label: t('settings.tabPreferences') },
+    { id: 'health', label: t('settings.tabHealth') },
     { id: 'data', label: t('settings.tabData') },
     { id: 'security', label: t('settings.tabSecurity') },
   ]
@@ -492,6 +495,114 @@ export default function SettingsPage() {
                 className="w-5 h-5 accent-purple-500"
               />
             </label>
+          </div>
+        </div>
+      )}
+
+      {/* === Health Tab === */}
+      {activeTab === 'health' && (
+        <div className="glass p-4 sm:p-6 space-y-6">
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">{t('health.connectionTitle')}</h2>
+            <p className="text-sm opacity-60">{t('health.connectionDesc')}</p>
+
+            {health.available ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${health.enabled ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    <span className="text-sm font-medium">
+                      {health.platform === 'ios' ? 'Apple Health' : 'Health Connect'}
+                    </span>
+                  </div>
+                  {health.enabled ? (
+                    <button
+                      onClick={health.disconnect}
+                      className="btn-secondary text-sm"
+                    >
+                      {t('health.disconnect')}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        const ok = await health.connect()
+                        if (ok) toast?.success(t('health.connected'))
+                        else toast?.error(t('health.connectFailed'))
+                      }}
+                      className="btn-primary text-sm"
+                    >
+                      {t('health.connect')}
+                    </button>
+                  )}
+                </div>
+
+                {health.enabled && (
+                  <>
+                    <div className="border-t border-[var(--card-border)]" />
+
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">{t('health.syncStatus')}</h3>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="opacity-60">{t('health.lastSync')}</span>
+                        <span>
+                          {health.lastSync
+                            ? new Date(health.lastSync).toLocaleString()
+                            : t('health.never')}
+                        </span>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const ok = await health.syncNow()
+                          if (ok) toast?.success(t('health.syncSuccess'))
+                          else toast?.error(t('health.syncFailed'))
+                        }}
+                        disabled={health.syncing}
+                        className="btn-secondary text-sm"
+                      >
+                        {health.syncing ? t('health.syncing') : t('health.syncNow')}
+                      </button>
+                    </div>
+
+                    <div className="border-t border-[var(--card-border)]" />
+
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium">{t('health.dataTypes')}</h3>
+                      <div className="grid grid-cols-2 gap-2 text-sm opacity-70">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-400" />
+                          {t('health.steps')}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-400" />
+                          {t('health.heartRate')}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-purple-400" />
+                          {t('health.hrv')}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-orange-400" />
+                          {t('health.calories')}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-400" />
+                          {t('health.exerciseMinutes')}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                          {t('health.sleepData')}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                <p className="text-sm text-yellow-500">{t('health.notAvailable')}</p>
+                <p className="text-xs opacity-60 mt-1">{t('health.notAvailableDesc')}</p>
+              </div>
+            )}
           </div>
         </div>
       )}

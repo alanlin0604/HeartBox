@@ -572,6 +572,12 @@ class DailySleep(models.Model):
     sleep_quality = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)],
     )
+    bedtime = models.DateTimeField(null=True, blank=True)
+    wake_time = models.DateTimeField(null=True, blank=True)
+    deep_sleep_minutes = models.IntegerField(null=True, blank=True)
+    light_sleep_minutes = models.IntegerField(null=True, blank=True)
+    rem_sleep_minutes = models.IntegerField(null=True, blank=True)
+    source = models.CharField(max_length=50, default='manual')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -798,6 +804,39 @@ class NotificationPreference(models.Model):
 
     def __str__(self):
         return f'{self.user.username} — {self.notification_type}: {"on" if self.enabled else "off"}'
+
+
+class HealthMetric(models.Model):
+    METRIC_CHOICES = [
+        ('steps', 'Steps'),
+        ('heart_rate', 'Heart Rate'),
+        ('hrv', 'Heart Rate Variability'),
+        ('active_calories', 'Active Calories'),
+        ('exercise_minutes', 'Exercise Minutes'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='health_metrics',
+    )
+    date = models.DateField()
+    metric_type = models.CharField(max_length=30, choices=METRIC_CHOICES)
+    value = models.FloatField()
+    source = models.CharField(max_length=50, default='manual')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['user', 'date', 'metric_type']
+        ordering = ['-date']
+        indexes = [
+            models.Index(fields=['user', 'date'], name='healthmetric_user_date'),
+            models.Index(fields=['user', 'metric_type', '-date'], name='healthmetric_user_type_date'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} {self.date} — {self.metric_type}: {self.value}'
 
 
 class PushSubscription(models.Model):

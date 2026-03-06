@@ -5,8 +5,12 @@ import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { LanguageProvider } from './context/LanguageContext'
 import { ToastProvider } from './context/ToastContext'
+import { initHealthService } from './services/healthKit'
 import './index.css'
 import App from './App.jsx'
+
+// Initialize Capacitor health service (no-op on web)
+initHealthService()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

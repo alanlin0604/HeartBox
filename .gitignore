@@ -47,6 +47,21 @@ nul
 # Claude Code
 .claude/
 
+# Capacitor native build artifacts
+frontend/android/.gradle/
+frontend/android/app/build/
+frontend/android/build/
+frontend/android/.idea/
+frontend/android/local.properties
+frontend/android/app/heartbox.keystore
+frontend/ios/App/Pods/
+frontend/ios/App/build/
+frontend/ios/App/DerivedData/
+*.xcuserdata
+*.ipa
+*.apk
+*.aab
+
 # Coverage
 htmlcov/
 .coverage

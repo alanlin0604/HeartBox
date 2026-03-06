@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">HeartBox</string>
+    <string name="title_activity_main">HeartBox</string>
+    <string name="package_name">com.heartbox.app</string>
+    <string name="custom_url_scheme">com.heartbox.app</string>
+</resources>
