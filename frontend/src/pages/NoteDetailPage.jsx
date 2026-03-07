@@ -173,13 +173,11 @@ export default function NoteDetailPage() {
       </button>
 
       <div className="glass p-4 sm:p-6 space-y-4">
-        {/* Header: date + mood on top, actions below on mobile */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm opacity-60">{date}</span>
-            <MoodBadge score={note.sentiment_score} />
-          </div>
+        {/* Header */}
+        <div className="space-y-2">
+          <div className="text-sm opacity-60">{date}</div>
           <div className="flex flex-wrap items-center gap-2">
+            <MoodBadge score={note.sentiment_score} />
             <button
               onClick={handleTogglePin}
               className={`text-xs px-2 py-1 rounded-lg border cursor-pointer transition-colors ${note.is_pinned ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-500' : 'border-white/10 opacity-60 hover:opacity-100'}`}
@@ -187,6 +185,7 @@ export default function NoteDetailPage() {
             >
               📌
             </button>
+            <div className="flex-1" />
             <button onClick={handleStartEdit} className="btn-secondary text-xs">
               {t('noteDetail.edit')}
             </button>
