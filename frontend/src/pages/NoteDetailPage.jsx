@@ -164,7 +164,7 @@ export default function NoteDetailPage() {
   const attachments = note.attachments || []
 
   return (
-    <div className="max-w-3xl mx-auto mt-4 space-y-4">
+    <div className="max-w-3xl mx-auto mt-2 sm:mt-4 px-2 sm:px-0 space-y-3 sm:space-y-4 pb-6">
       <button
         onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
         className="text-sm opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
@@ -172,12 +172,14 @@ export default function NoteDetailPage() {
         &larr; {t('noteDetail.back')}
       </button>
 
-      <div className="glass p-6 space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm opacity-60">{date}</span>
-          <div className="flex items-center gap-3">
+      <div className="glass p-4 sm:p-6 space-y-4">
+        {/* Header: date + mood on top, actions below on mobile */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm opacity-60">{date}</span>
             <MoodBadge score={note.sentiment_score} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleTogglePin}
               className={`text-xs px-2 py-1 rounded-lg border cursor-pointer transition-colors ${note.is_pinned ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-500' : 'border-white/10 opacity-60 hover:opacity-100'}`}
@@ -197,10 +199,10 @@ export default function NoteDetailPage() {
 
         {/* Content */}
         {editing ? (
-          <div className="glass-card p-4 space-y-3">
+          <div className="glass-card p-3 sm:p-4 space-y-3">
             <div className="rounded-xl overflow-hidden border border-[var(--card-border)]">
               <EditorToolbar editor={editor} />
-              <EditorContent editor={editor} className="prose prose-invert max-w-none px-4 py-3 min-h-[140px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[120px]" />
+              <EditorContent editor={editor} className="prose prose-invert max-w-none px-3 sm:px-4 py-3 min-h-[140px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[120px]" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <input value={editWeather} onChange={(e) => setEditWeather(e.target.value)} placeholder={t('noteForm.weather')} className="glass-input" />
@@ -217,7 +219,7 @@ export default function NoteDetailPage() {
             </div>
           </div>
         ) : (
-          <div className="glass-card p-4 prose prose-invert max-w-none"
+          <div className="glass-card p-3 sm:p-4 prose prose-invert max-w-none break-words"
             dangerouslySetInnerHTML={{ __html: sanitizedContent }}
           />
         )}
@@ -234,16 +236,16 @@ export default function NoteDetailPage() {
                   alt={att.original_name}
                   loading="lazy"
                   decoding="async"
-                  className="max-w-xs rounded-xl border border-white/10"
+                  className="max-w-full sm:max-w-xs rounded-xl border border-white/10"
                 />
               ))}
             </div>
           </div>
         )}
 
-        {/* Metadata */}
+        {/* Metadata: weather, temperature, tags */}
         {(note.metadata?.weather || note.metadata?.temperature != null || tags.length > 0) && (
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {note.metadata?.weather && (
               <span className="text-xs px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-500 border border-blue-500/20">
                 {note.metadata.weather}
@@ -268,14 +270,28 @@ export default function NoteDetailPage() {
         {/* Stress Index */}
         {note.stress_index != null && (
           <div className="flex items-center gap-3">
-            <span className="text-sm opacity-60">{t('noteDetail.stressIndex')}</span>
+            <span className="text-sm opacity-60 shrink-0">{t('noteDetail.stressIndex')}</span>
             <div className="flex-1 h-2 rounded-full max-w-xs" style={{ background: 'var(--stress-bar-bg)' }}>
               <div
                 className="h-full rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500"
                 style={{ width: `${note.stress_index * 10}%` }}
               />
             </div>
-            <span className="text-sm font-medium opacity-70">{note.stress_index}/10</span>
+            <span className="text-sm font-medium opacity-70 shrink-0">{note.stress_index}/10</span>
+          </div>
+        )}
+
+        {/* Sentiment Score */}
+        {note.sentiment_score != null && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm opacity-60 shrink-0">{t('noteDetail.sentimentScore')}</span>
+            <div className="flex-1 h-2 rounded-full max-w-xs" style={{ background: 'var(--stress-bar-bg)' }}>
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-500"
+                style={{ width: `${((note.sentiment_score + 1) / 2) * 100}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium opacity-70 shrink-0">{note.sentiment_score.toFixed(2)}</span>
           </div>
         )}
 

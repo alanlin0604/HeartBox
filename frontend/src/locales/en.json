@@ -65,6 +65,7 @@
   "noteDetail.editSaved": "Note updated",
   "noteDetail.editSaveFailed": "Failed to update note",
   "noteDetail.stressIndex": "Stress Index:",
+  "noteDetail.sentimentScore": "Sentiment:",
   "noteDetail.aiFeedback": "AI Analysis",
   "mood.positive": "Positive",
   "mood.neutral": "Neutral",

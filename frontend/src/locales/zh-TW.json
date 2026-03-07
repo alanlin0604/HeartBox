@@ -51,6 +51,7 @@
   "noteDetail.deleting": "刪除中...",
   "noteDetail.confirmDelete": "確定要刪除這篇日誌嗎？",
   "noteDetail.stressIndex": "壓力指數：",
+  "noteDetail.sentimentScore": "情緒分數：",
   "noteDetail.aiFeedback": "AI 分析回饋",
   "mood.positive": "正面",
   "mood.neutral": "中性",

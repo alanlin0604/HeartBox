@@ -51,6 +51,7 @@
   "noteDetail.deleting": "削除中...",
   "noteDetail.confirmDelete": "この日記を削除してもよろしいですか？",
   "noteDetail.stressIndex": "ストレス指数：",
+  "noteDetail.sentimentScore": "感情スコア：",
   "noteDetail.aiFeedback": "AI分析フィードバック",
   "mood.positive": "ポジティブ",
   "mood.neutral": "ニュートラル",
