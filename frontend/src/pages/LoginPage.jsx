@@ -123,6 +123,8 @@ export default function LoginPage() {
             <button
               key={opt.code}
               onClick={() => setLang(opt.code)}
+              aria-label={`Switch to ${opt.name}`}
+              aria-pressed={lang === opt.code}
               className={`
                 px-3 py-1 text-xs rounded-lg cursor-pointer transition-all
                 ${lang === opt.code

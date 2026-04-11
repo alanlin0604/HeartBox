@@ -71,7 +71,7 @@ export default function BookingPanel({ counselorId, counselorName, hourlyRate, c
           <h3 className="text-lg font-semibold">
             {t('booking.title')} — {counselorName}
           </h3>
-          <button onClick={onClose} className="opacity-60 hover:opacity-100 cursor-pointer text-xl">
+          <button onClick={onClose} aria-label={t('aria.close') || 'Close'} className="opacity-60 hover:opacity-100 cursor-pointer text-xl">
             &times;
           </button>
         </div>

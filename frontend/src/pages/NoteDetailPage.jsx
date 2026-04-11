@@ -318,6 +318,7 @@ export default function NoteDetailPage() {
                     onClick={() => handleUnshare(s.id)}
                     className="hover:text-red-400 transition-colors cursor-pointer"
                     title={t('share.unshare')}
+                    aria-label={t('share.unshare')}
                   >
                     &times;
                   </button>

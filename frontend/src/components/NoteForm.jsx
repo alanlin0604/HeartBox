@@ -294,6 +294,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
                 onClick={() => deleteTemplate(tpl.id)}
                 className="absolute right-1 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer w-4 h-4 flex items-center justify-center"
                 title={t('noteForm.deleteTemplate')}
+                aria-label={t('noteForm.deleteTemplate')}
               >
                 &times;
               </button>
@@ -438,6 +439,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); removeFile(idx) }}
                 className="text-red-500 hover:text-red-400 cursor-pointer"
+                aria-label={t('aria.removeFile') || 'Remove file'}
               >
                 &times;
               </button>
