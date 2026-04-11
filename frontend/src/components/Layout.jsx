@@ -8,6 +8,7 @@ import NotificationBell from './NotificationBell'
 import useIdleTimer from '../hooks/useIdleTimer'
 import OnboardingModal from './OnboardingModal'
 import { useToast } from '../context/ToastContext'
+import haptics from '../utils/haptics'
 
 const ROUTE_PRELOADS = {
   '/': () => import('../pages/JournalPage'),
@@ -148,9 +149,9 @@ export default function Layout() {
         </div>
       )}
 
-      <nav className="nav-bar sticky top-0 z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between">
+      <nav className="nav-bar sticky top-0 z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between" role="navigation" aria-label={t('aria.mainNavigation')}>
         <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent flex items-center gap-2 flex-shrink-0">
-          <img src="/logo.png" alt="HeartBox" decoding="async" className="w-12 h-12 object-contain" />
+          <img src="/logo.png" alt="HeartBox" decoding="async" loading="eager" className="w-12 h-12 object-contain" />
           {t('app.displayName')}
         </h1>
 
@@ -158,9 +159,14 @@ export default function Layout() {
         <div className="md:hidden flex items-center gap-3">
           <NotificationBell />
           <button
-            onClick={() => setMobileNavOpen(!mobileNavOpen)}
-            className="opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+            onClick={() => {
+              haptics.buttonTap()
+              setMobileNavOpen(!mobileNavOpen)
+            }}
+            className="opacity-70 hover:opacity-100 transition-opacity cursor-pointer icon-button"
             aria-label={t('aria.toggleMenu')}
+            aria-expanded={mobileNavOpen}
+            aria-controls="mobile-nav-menu"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               {mobileNavOpen ? (
@@ -190,8 +196,9 @@ export default function Layout() {
               className={({ isActive }) =>
                 `font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
               }
+              aria-current={({ isActive }) => (isActive ? 'page' : undefined)}
             >
-              <img src={link.icon} alt="" className="w-6 h-6 lg:w-7 lg:h-7 object-contain flex-shrink-0" />
+              <img src={link.icon} alt="" aria-hidden="true" className="w-6 h-6 lg:w-7 lg:h-7 object-contain flex-shrink-0" loading="lazy" />
               {link.label}
             </NavLink>
           ))}
@@ -212,6 +219,9 @@ export default function Layout() {
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="flex items-center gap-1.5 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+              aria-label={`${t('aria.userMenu')} - ${user?.username}`}
+              aria-expanded={menuOpen}
+              aria-haspopup="true"
             >
               {user?.avatar ? (
                 <img src={user.avatar} alt={user.username} loading="lazy" decoding="async" className="w-7 h-7 rounded-full object-cover border border-white/20" />
@@ -238,7 +248,11 @@ export default function Layout() {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-8 w-56 rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)] py-2">
+              <div
+                className="absolute right-0 top-8 w-56 rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)] py-2"
+                role="menu"
+                aria-label={t('aria.userMenu')}
+              >
                 {/* Settings */}
                 <button
                   onClick={() => { navigate('/settings'); setMenuOpen(false) }}
@@ -253,7 +267,11 @@ export default function Layout() {
 
                 {/* Theme toggle */}
                 <button
-                  onClick={() => { toggleTheme(); setMenuOpen(false) }}
+                  onClick={() => {
+                    haptics.toggle()
+                    toggleTheme()
+                    setMenuOpen(false)
+                  }}
                   className="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer flex items-center gap-2"
                   aria-label={theme === 'dark' ? t('aria.switchToLight') : t('aria.switchToDark')}
                 >
@@ -289,7 +307,11 @@ export default function Layout() {
 
                 {/* Logout */}
                 <button
-                  onClick={() => { logout(); setMenuOpen(false) }}
+                  onClick={() => {
+                    haptics.buttonTap()
+                    logout()
+                    setMenuOpen(false)
+                  }}
                   className="w-full text-left px-4 py-2.5 text-sm hover:bg-red-500/10 text-red-500 transition-colors cursor-pointer flex items-center gap-2"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -307,7 +329,12 @@ export default function Layout() {
 
       {/* Mobile nav dropdown */}
       {mobileNavOpen && (
-        <div className="md:hidden nav-bar mx-4 mt-2 p-4 space-y-3 z-40">
+        <div
+          id="mobile-nav-menu"
+          className="md:hidden nav-bar mx-4 mt-2 p-4 space-y-3 z-40"
+          role="navigation"
+          aria-label={t('aria.mobileNavigation')}
+        >
           {navLinks.map((link) => (
             <NavLink
               key={link.to}
@@ -317,8 +344,9 @@ export default function Layout() {
               className={({ isActive }) =>
                 `block font-medium transition-colors py-1 flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
               }
+              aria-current={({ isActive }) => (isActive ? 'page' : undefined)}
             >
-              <img src={link.icon} alt="" className="w-7 h-7 object-contain" />
+              <img src={link.icon} alt="" aria-hidden="true" className="w-7 h-7 object-contain" loading="lazy" />
               {link.label}
             </NavLink>
           ))}
@@ -341,7 +369,11 @@ export default function Layout() {
               {t('settings.title')}
             </button>
             <button
-              onClick={() => { toggleTheme(); setMobileNavOpen(false) }}
+              onClick={() => {
+                haptics.toggle()
+                toggleTheme()
+                setMobileNavOpen(false)
+              }}
               className="text-sm opacity-70 hover:opacity-100 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--card-border)] transition-colors"
               aria-label={theme === 'dark' ? t('aria.switchToLight') : t('aria.switchToDark')}
             >
@@ -363,7 +395,12 @@ export default function Layout() {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 nav-bar safe-area-bottom" style={{ borderRadius: 0 }}>
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 nav-bar safe-area-bottom"
+        style={{ borderRadius: 0 }}
+        role="navigation"
+        aria-label={t('aria.bottomNavigation')}
+      >
         <div className="flex items-center justify-around py-2">
           {bottomNavLinks.map((link) => (
             <NavLink
@@ -372,10 +409,12 @@ export default function Layout() {
               end={link.end}
               onClick={() => { setMobileNavOpen(false); setMoreOpen(false) }}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors ${isActive ? 'text-purple-500' : 'opacity-60'}`
+                `flex flex-col items-center gap-0.5 px-3 py-2 text-xs transition-colors icon-button ${isActive ? 'text-purple-500' : 'opacity-60'}`
               }
+              aria-current={({ isActive }) => (isActive ? 'page' : undefined)}
+              aria-label={link.label}
             >
-              <img src={link.icon} alt="" className="w-8 h-8 object-contain" />
+              <img src={link.icon} alt="" aria-hidden="true" className="w-8 h-8 object-contain" loading="lazy" />
               <span className="truncate max-w-[4.5rem]">{link.label}</span>
             </NavLink>
           ))}
@@ -383,13 +422,20 @@ export default function Layout() {
           <div className="relative" ref={moreRef}>
             <button
               onClick={() => setMoreOpen(!moreOpen)}
-              className={`flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors cursor-pointer ${moreOpen ? 'text-purple-500' : 'opacity-60'}`}
+              className={`flex flex-col items-center gap-0.5 px-3 py-2 text-xs transition-colors cursor-pointer icon-button ${moreOpen ? 'text-purple-500' : 'opacity-60'}`}
+              aria-label={t('nav.more')}
+              aria-expanded={moreOpen}
+              aria-haspopup="true"
             >
               <span className="text-lg">{'\u2630'}</span>
               <span>{t('nav.more')}</span>
             </button>
             {moreOpen && (
-              <div className="absolute bottom-full right-0 mb-2 w-48 rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)] py-2">
+              <div
+                className="absolute bottom-full right-0 mb-2 w-48 rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)] py-2"
+                role="menu"
+                aria-label={t('nav.more')}
+              >
                 {moreNavLinks.map((link) => (
                   <NavLink
                     key={link.to}
@@ -398,8 +444,9 @@ export default function Layout() {
                     className={({ isActive }) =>
                       `block px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-70 hover:opacity-100'}`
                     }
+                    aria-current={({ isActive }) => (isActive ? 'page' : undefined)}
                   >
-                    <img src={link.icon} alt="" className="w-7 h-7 object-contain" />
+                    <img src={link.icon} alt="" aria-hidden="true" className="w-7 h-7 object-contain" loading="lazy" />
                     {link.label}
                   </NavLink>
                 ))}
@@ -435,7 +482,15 @@ export default function Layout() {
             <h2 className="text-lg font-semibold">{t('idle.warningTitle')}</h2>
             <p className="opacity-70">{t('idle.warningDesc')}</p>
             <p className="text-3xl font-bold text-purple-500">{idleCountdown}s</p>
-            <button onClick={dismissIdle} className="btn-primary">{t('idle.stayLoggedIn')}</button>
+            <button
+              onClick={() => {
+                haptics.buttonTap()
+                dismissIdle()
+              }}
+              className="btn-primary"
+            >
+              {t('idle.stayLoggedIn')}
+            </button>
           </div>
         </div>
       )}

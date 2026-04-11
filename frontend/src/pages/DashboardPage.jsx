@@ -67,14 +67,20 @@ export default function DashboardPage() {
   [data, t])
   const sleepCorrelation = useMemo(() => data?.sleep_correlation || {}, [data])
 
-  // Theme-aware chart colors
-  const gridStroke = useMemo(() => theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', [theme])
-  const axisStroke = useMemo(() => theme === 'dark' ? '#9ca3af' : '#475569', [theme])
+  // Theme-aware chart colors using CSS variables
+  const gridStroke = useMemo(() =>
+    getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim() ||
+    (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'),
+  [theme])
+  const axisStroke = useMemo(() =>
+    getComputedStyle(document.documentElement).getPropertyValue('--chart-axis').trim() ||
+    (theme === 'dark' ? '#cbd5e1' : '#475569'),
+  [theme])
   const tooltipStyle = useMemo(() => ({
-    background: theme === 'dark' ? 'rgba(30,20,60,0.9)' : 'rgba(255,255,255,0.95)',
-    border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'}`,
+    background: getComputedStyle(document.documentElement).getPropertyValue('--tooltip-bg').trim(),
+    border: `1px solid ${getComputedStyle(document.documentElement).getPropertyValue('--tooltip-border').trim()}`,
     borderRadius: '8px',
-    color: theme === 'dark' ? '#e2e8f0' : '#1e293b',
+    color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim(),
   }), [theme])
 
   if (loading && !data) return (
@@ -194,11 +200,39 @@ export default function DashboardPage() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <table className="sr-only">
-              <caption>{t('dashboard.moodTrends')}</caption>
-              <thead><tr><th>Period</th><th>{t('dashboard.avgSentiment')}</th><th>{t('dashboard.avgStress')}</th></tr></thead>
-              <tbody>{trends.map((r, i) => <tr key={i}><td>{r.name}</td><td>{r.avg_sentiment}</td><td>{r.avg_stress}</td></tr>)}</tbody>
-            </table>
+            {/* Accessible data table alternative */}
+            <details className="mt-3">
+              <summary className="text-sm cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                </svg>
+                {t('common.viewDataTable') || '查看數據表格'}
+              </summary>
+              <div className="mt-2 overflow-x-auto">
+                <table className="w-full text-sm border-collapse" style={{ borderColor: 'var(--border-primary)' }}>
+                  <caption className="sr-only">{t('dashboard.moodTrends')}</caption>
+                  <thead>
+                    <tr style={{ background: 'var(--surface-primary)' }}>
+                      <th className="px-3 py-2 text-left border" style={{ borderColor: 'var(--border-primary)' }}>Period</th>
+                      <th className="px-3 py-2 text-left border" style={{ borderColor: 'var(--border-primary)' }}>{t('dashboard.avgSentiment')}</th>
+                      <th className="px-3 py-2 text-left border" style={{ borderColor: 'var(--border-primary)' }}>{t('dashboard.avgStress')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trends.map((r, i) => (
+                      <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--surface-secondary)' }}>
+                        <td className="px-3 py-2 border" style={{ borderColor: 'var(--border-primary)' }}>{r.name}</td>
+                        <td className="px-3 py-2 border" style={{ borderColor: 'var(--border-primary)' }}>{r.avg_sentiment?.toFixed(2)}</td>
+                        <td className="px-3 py-2 border" style={{ borderColor: 'var(--border-primary)' }}>{r.avg_stress?.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
           </>
         )}
       </div>
@@ -215,15 +249,17 @@ export default function DashboardPage() {
                 n: correlation.sample_size,
               })}
             </p>
-            <ResponsiveContainer width="100%" height={250}>
-              <ScatterChart>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-                <XAxis dataKey="temperature" name={t('dashboard.temperatureLabel')} unit="°C" stroke={axisStroke} fontSize={12} />
-                <YAxis dataKey="sentiment" name={t('dashboard.sentimentLabel')} stroke={axisStroke} fontSize={12} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Scatter data={correlation.scatter_data} fill="#a78bfa" />
-              </ScatterChart>
-            </ResponsiveContainer>
+            <div role="img" aria-label={`${t('dashboard.weatherCorrelation')} - r=${correlation.correlation}`}>
+              <ResponsiveContainer width="100%" height={250}>
+                <ScatterChart>
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis dataKey="temperature" name={t('dashboard.temperatureLabel')} unit="°C" stroke={axisStroke} fontSize={12} />
+                  <YAxis dataKey="sentiment" name={t('dashboard.sentimentLabel')} stroke={axisStroke} fontSize={12} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Scatter data={correlation.scatter_data} fill="#a78bfa" />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
           </>
         ) : (
           <EmptyState
@@ -266,15 +302,17 @@ export default function DashboardPage() {
       {activityCorrelation.length > 0 && (
         <div className="glass p-6">
           <h2 className="text-lg font-semibold mb-4">{t('dashboard.activityCorrelation')}</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={activityCorrelation}>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-              <XAxis dataKey="name" stroke={axisStroke} fontSize={11} />
-              <YAxis stroke={axisStroke} fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="avg_sentiment" name={t('dashboard.avgSentiment')} fill="#a78bfa" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div role="img" aria-label={t('dashboard.activityCorrelation')}>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={activityCorrelation}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                <XAxis dataKey="name" stroke={axisStroke} fontSize={11} />
+                <YAxis stroke={axisStroke} fontSize={12} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Bar dataKey="avg_sentiment" name={t('dashboard.avgSentiment')} fill="#a78bfa" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 
@@ -291,15 +329,17 @@ export default function DashboardPage() {
               })}
             </p>
           )}
-          <ResponsiveContainer width="100%" height={250}>
-            <ScatterChart>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-              <XAxis dataKey="sleep_hours" name={t('dashboard.sleepHoursLabel')} unit="h" stroke={axisStroke} fontSize={12} />
-              <YAxis dataKey="sentiment" name={t('dashboard.sentimentLabel')} stroke={axisStroke} fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} />
+          <div role="img" aria-label={`${t('dashboard.sleepCorrelation')} - r=${sleepCorrelation.hours_correlation || 'N/A'}`}>
+            <ResponsiveContainer width="100%" height={250}>
+              <ScatterChart>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                <XAxis dataKey="sleep_hours" name={t('dashboard.sleepHoursLabel')} unit="h" stroke={axisStroke} fontSize={12} />
+                <YAxis dataKey="sentiment" name={t('dashboard.sentimentLabel')} stroke={axisStroke} fontSize={12} />
+                <Tooltip contentStyle={tooltipStyle} />
               <Scatter data={sleepCorrelation.scatter_data} fill="#60a5fa" />
             </ScatterChart>
           </ResponsiveContainer>
+          </div>
         </div>
       )}
 
@@ -383,34 +423,41 @@ export default function DashboardPage() {
           {healthData.summary.steps?.trend?.length > 1 && (
             <div className="mt-4">
               <h3 className="text-sm font-medium mb-2 opacity-70">{t('health.stepsTrend')}</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={healthData.summary.steps.trend.map(d => ({
-                  name: d.date?.slice(5),
-                  value: d.value,
-                }))}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-                  <XAxis dataKey="name" stroke={axisStroke} fontSize={11} />
-                  <YAxis stroke={axisStroke} fontSize={11} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Line type="monotone" dataKey="value" stroke="#60a5fa" strokeWidth={2} name={t('health.steps')} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
+              <div role="img" aria-label={t('health.stepsTrend')}>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={healthData.summary.steps.trend.map(d => ({
+                    name: d.date?.slice(5),
+                    value: d.value,
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                    <XAxis dataKey="name" stroke={axisStroke} fontSize={11} />
+                    <YAxis stroke={axisStroke} fontSize={11} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Line type="monotone" dataKey="value" stroke="#60a5fa" strokeWidth={2} name={t('health.steps')} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
           </>
         ) : (
           /* Empty state when no health data */
-          <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
-              <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center py-8" role="status">
+            <div
+              className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
+              style={{ background: 'linear-gradient(135deg, var(--color-info) 0%, var(--color-primary) 100%)', opacity: 0.15 }}
+              aria-hidden="true"
+            >
+              <svg className="w-8 h-8" style={{ color: 'var(--color-info)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold mb-2">{t('health.noData')}</h3>
-            <p className="text-sm opacity-60 mb-4 max-w-md mx-auto">{t('health.noDataDesc')}</p>
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>{t('health.noData')}</h3>
+            <p className="text-sm mb-4 max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>{t('health.noDataDesc')}</p>
             <button
               onClick={() => navigate('/settings', { state: { tab: 'health' } })}
               className="btn-primary text-sm"
+              aria-label={`${t('health.goToSettings')} - ${t('health.noDataDesc')}`}
             >
               {t('health.goToSettings')}
             </button>

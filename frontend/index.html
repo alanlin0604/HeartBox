@@ -5,7 +5,7 @@
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#7c3aed" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
@@ -31,13 +31,20 @@
     <link rel="alternate" hreflang="x-default" href="https://heartbox.tw/" />
 
     <!-- Font & API preconnect / preload -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" /></noscript>
+    <!-- Subset: Latin + Chinese characters, variable font for better compression -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&subset=latin,chinese-traditional&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&subset=latin,chinese-traditional&display=swap" /></noscript>
+    <link rel="dns-prefetch" href="https://heartbox-api-598139488748.asia-east1.run.app" />
     <link rel="preconnect" href="https://heartbox-api-598139488748.asia-east1.run.app" crossorigin />
 
     <title>HeartBox — 心事盒</title>
+
+    <!-- Prefetch likely next pages for faster navigation -->
+    <link rel="prefetch" href="/dashboard" as="document" />
+    <link rel="prefetch" href="/settings" as="document" />
 
     <!-- Google Identity Services (for OAuth login) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
