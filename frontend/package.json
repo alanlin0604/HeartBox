@@ -9,7 +9,8 @@
     "build:mobile": "vite build && npx cap sync",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "optimize:images": "node scripts/optimize-images.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
@@ -45,6 +46,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^28.0.0",
+    "sharp": "^0.34.5",
     "vite": "^7.3.1",
     "vite-plugin-compression": "^0.5.1",
     "vitest": "^4.0.18"
