@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
+import { Card, Button } from '../components/ui'
 
 export default function TermsPage() {
   const { t } = useLang()
@@ -7,7 +8,7 @@ export default function TermsPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="glass p-8 w-full max-w-3xl space-y-6">
+      <Card variant="default" padding="lg" className="w-full max-w-3xl space-y-6" animate staggerDelay={0.1}>
         <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
           {t('terms.heading')}
         </h1>
@@ -50,14 +51,16 @@ export default function TermsPage() {
         </section>
 
         <div className="pt-4 flex gap-4 text-sm">
-          <Link to="/privacy" className="text-purple-500 hover:text-purple-400">
-            {t('legal.privacy')}
+          <Link to="/privacy">
+            <Button variant="ghost" size="sm">
+              {t('legal.privacy')}
+            </Button>
           </Link>
-          <button onClick={() => navigate(-1)} className="text-purple-500 hover:text-purple-400 cursor-pointer">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             {t('legal.back')}
-          </button>
+          </Button>
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

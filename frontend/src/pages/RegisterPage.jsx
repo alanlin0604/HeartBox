@@ -6,6 +6,7 @@ import PasswordField from '../components/PasswordField'
 import { useToast } from '../context/ToastContext'
 import { googleLogin } from '../api/auth'
 import { setAuthTokens } from '../utils/tokenStorage'
+import { Card, Button, Input, Alert, Badge } from '../components/ui'
 
 const LANG_OPTIONS = [
   { code: 'zh-TW', label: 'ZH' },
@@ -112,20 +113,18 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="glass p-8 w-full max-w-md">
-        <div className="flex justify-end mb-4 gap-1">
-          {LANG_OPTIONS.map((opt) => (
-            <button
+      <Card variant="default" padding="lg" className="w-full max-w-md" animate staggerDelay={0.1}>
+        <div className="flex justify-end mb-4 gap-2">
+          {LANG_OPTIONS.map((opt, index) => (
+            <Badge
               key={opt.code}
+              variant={lang === opt.code ? 'primary' : 'outline'}
+              size="sm"
+              className="cursor-pointer"
               onClick={() => setLang(opt.code)}
-              className={`px-1.5 py-0.5 text-xs rounded cursor-pointer transition-all ${
-                lang === opt.code
-                  ? 'bg-purple-500/30 text-purple-500 font-bold'
-                  : 'opacity-50 hover:opacity-100'
-              }`}
             >
               {opt.label}
-            </button>
+            </Badge>
           ))}
         </div>
         <div className="flex justify-center mb-3">
@@ -137,35 +136,39 @@ export default function RegisterPage() {
         <p className="text-center opacity-60 text-sm mb-6">{t('register.title')}</p>
 
         {error && (
-          <div role="alert" className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+          <Alert
+            variant="danger"
+            dismissible
+            onClose={() => setError('')}
+            className="mb-4"
+          >
             {error}
-          </div>
+          </Alert>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="register-username" className="sr-only">{t('register.username')}</label>
-            <input
+            <Input
               id="register-username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder={t('register.username')}
-              className="glass-input"
               autoComplete="username"
               required
             />
           </div>
           <div>
             <label htmlFor="register-email" className="sr-only">{t('register.email')}</label>
-            <input
+            <Input
               id="register-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setEmailTouched(true)}
               placeholder={t('register.email')}
-              className={`glass-input ${emailTouched && !emailValid ? 'border-red-500/60' : ''}`}
+              error={emailTouched && !emailValid}
               autoComplete="email"
               required
             />
@@ -181,9 +184,9 @@ export default function RegisterPage() {
             minLength={8}
             showStrength
           />
-          <button type="submit" disabled={loading} className="btn-primary w-full">
+          <Button type="submit" disabled={loading} loading={loading} fullWidth>
             {loading ? t('register.loading') : t('register.submit')}
-          </button>
+          </Button>
         </form>
 
         <div className="relative my-6">
@@ -199,7 +202,7 @@ export default function RegisterPage() {
             {t('register.login')}
           </Link>
         </p>
-      </div>
+      </Card>
       <div className="mt-6 text-center text-xs opacity-40 space-x-3">
         <Link to="/privacy" className="hover:opacity-70">{t('legal.privacy')}</Link>
         <span>|</span>
