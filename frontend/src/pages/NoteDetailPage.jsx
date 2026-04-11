@@ -1,17 +1,15 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Placeholder from '@tiptap/extension-placeholder'
 import { getNote, deleteNote, updateNote, togglePin, getNoteShares, unshareNote } from '../api/notes'
 import { useLang } from '../context/LanguageContext'
 import MoodBadge from '../components/MoodBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ConfirmModal from '../components/ConfirmModal'
 import ShareNoteButton from '../components/ShareNoteButton'
-import EditorToolbar from '../components/EditorToolbar'
 import { useToast } from '../context/ToastContext'
+
+const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
 
 import { LOCALE_MAP } from '../utils/locales'
 import { useAuth } from '../context/AuthContext'
@@ -33,15 +31,8 @@ export default function NoteDetailPage() {
   const [saving, setSaving] = useState(false)
   const [shares, setShares] = useState([])
   const [sharesLoading, setSharesLoading] = useState(false)
-
-  // Tiptap editor for edit mode
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Placeholder.configure({ placeholder: t('noteForm.placeholder') }),
-    ],
-    content: '',
-  })
+  const editorRef = useRef(null)
+  const [editorContent, setEditorContent] = useState('')
 
   useEffect(() => { document.title = `${t('nav.journal')} — ${t('app.name')}` }, [t])
 
@@ -102,9 +93,7 @@ export default function NoteDetailPage() {
   }
 
   const handleStartEdit = () => {
-    if (editor) {
-      editor.commands.setContent(note.decrypted_content || '')
-    }
+    setEditorContent(note.decrypted_content || '')
     setEditWeather(note.metadata?.weather || '')
     setEditTemp(note.metadata?.temperature ?? '')
     setEditTags((note.metadata?.tags || []).join(', '))
@@ -112,7 +101,7 @@ export default function NoteDetailPage() {
   }
 
   const handleSaveEdit = async () => {
-    const content = editor?.getHTML() || ''
+    const content = editorRef.current?.getHTML() || ''
     const textOnly = content.replace(/<[^>]*>/g, '').trim()
     if (!textOnly) return
     setSaving(true)
@@ -200,8 +189,18 @@ export default function NoteDetailPage() {
         {editing ? (
           <div className="glass-card p-3 sm:p-4 space-y-3">
             <div className="rounded-xl overflow-hidden border border-[var(--card-border)]">
-              <EditorToolbar editor={editor} />
-              <EditorContent editor={editor} className="prose prose-invert max-w-none px-3 sm:px-4 py-3 min-h-[140px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[120px]" />
+              <Suspense fallback={
+                <div className="prose prose-invert max-w-none px-3 sm:px-4 py-3 min-h-[140px] flex items-center justify-center opacity-50">
+                  <div className="animate-pulse text-sm">Loading editor...</div>
+                </div>
+              }>
+                <RichTextEditor
+                  ref={editorRef}
+                  initialContent={editorContent}
+                  placeholder={t('noteForm.placeholder')}
+                  className="prose prose-invert max-w-none px-3 sm:px-4 py-3 min-h-[140px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[120px]"
+                />
+              </Suspense>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <input value={editWeather} onChange={(e) => setEditWeather(e.target.value)} placeholder={t('noteForm.weather')} className="glass-input" />

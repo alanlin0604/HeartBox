@@ -1,10 +1,8 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import Placeholder from '@tiptap/extension-placeholder'
+import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { getAnalytics } from '../api/analytics'
-import EditorToolbar from './EditorToolbar'
+
+const RichTextEditor = lazy(() => import('./RichTextEditor'))
 
 const WEATHER_LABEL_KEYS = [
   { labelKey: 'noteForm.weather', isEmpty: true },
@@ -83,7 +81,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const [templateName, setTemplateName] = useState('')
 
   const saveTemplate = () => {
-    const content = editor?.getHTML() || ''
+    const content = editorRef.current?.getHTML() || ''
     const textOnly = content.replace(/<[^>]*>/g, '').trim()
     if (!textOnly) return
     if (!templateName.trim()) return
@@ -111,28 +109,25 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const [metadataType, setMetadataType] = useState(null)
   const fileInputRef = useRef(null)
   const recognitionRef = useRef(null)
+  const editorRef = useRef(null)
 
-  // Tiptap editor
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Placeholder.configure({ placeholder: t('noteForm.placeholder') }),
-    ],
-    content: (() => {
-      try { return localStorage.getItem('heartbox_draft') || '' } catch { return '' }
-    })(),
-    onUpdate: ({ editor }) => {
-      try { localStorage.setItem('heartbox_draft', editor.getHTML()) } catch { /* quota */ }
-    },
+  // Initial content from localStorage draft
+  const [initialContent] = useState(() => {
+    try { return localStorage.getItem('heartbox_draft') || '' } catch { return '' }
   })
+
+  // Handle editor updates
+  const handleEditorUpdate = useCallback((html) => {
+    try { localStorage.setItem('heartbox_draft', html) } catch { /* quota */ }
+  }, [])
 
   // Set initial prompt content if provided
   useEffect(() => {
-    if (initialPrompt && editor) {
-      editor.commands.setContent(`<p>${initialPrompt}</p>`)
-      editor.commands.focus('end')
+    if (initialPrompt && editorRef.current) {
+      editorRef.current.setContent(`<p>${initialPrompt}</p>`)
+      editorRef.current.focus('end')
     }
-  }, [initialPrompt, editor])
+  }, [initialPrompt])
 
   // Speech recognition support
   const speechSupported = useMemo(() => {
@@ -159,8 +154,8 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
           transcript += event.results[i][0].transcript
         }
       }
-      if (transcript && editor) {
-        editor.commands.insertContent(addPunctuation(transcript, speechLang))
+      if (transcript && editorRef.current) {
+        editorRef.current.insertContent(addPunctuation(transcript, speechLang))
       }
     }
     recognition.onerror = () => setIsRecording(false)
@@ -168,7 +163,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     recognitionRef.current = recognition
     recognition.start()
     setIsRecording(true)
-  }, [isRecording, lang, editor])
+  }, [isRecording, lang])
 
   // Stop speech recognition on unmount
   useEffect(() => {
@@ -199,7 +194,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault()
-    const content = editor?.getHTML() || ''
+    const content = editorRef.current?.getHTML() || ''
     if (!content.trim() || content === '<p></p>') return
 
     const metadata = {}
@@ -217,14 +212,14 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
 
     onSubmit(content, metadata, files)
     try { localStorage.removeItem('heartbox_draft') } catch { /* ignore */ }
-    editor?.commands.clearContent()
+    editorRef.current?.clear()
     setWeather('')
     setTemperature('')
     setTagsInput('')
     setFiles([])
     setSelectedActivities([])
     setMetadataType(null)
-  }, [editor, weather, temperature, tagsInput, files, selectedActivities, metadataType, onSubmit])
+  }, [weather, temperature, tagsInput, files, selectedActivities, metadataType, onSubmit])
 
   const handleFileChange = useCallback((e) => {
     const selected = Array.from(e.target.files)
@@ -265,8 +260,8 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
               key={tpl.id}
               type="button"
               onClick={() => {
-                if (editor) {
-                  editor.chain().clearContent().setContent(t(tpl.contentKey)).focus('end').run()
+                if (editorRef.current?.editor) {
+                  editorRef.current.editor.chain().clearContent().setContent(t(tpl.contentKey)).focus('end').run()
                   setMetadataType('gratitude')
                 }
               }}
@@ -285,8 +280,8 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
               <button
                 type="button"
                 onClick={() => {
-                  if (editor && tpl.content) {
-                    editor.chain().clearContent().setContent(tpl.content).focus('end').run()
+                  if (editorRef.current?.editor && tpl.content) {
+                    editorRef.current.editor.chain().clearContent().setContent(tpl.content).focus('end').run()
                   }
                 }}
                 className="text-sm px-3 py-1.5 rounded-full bg-purple-500/25 border border-purple-400/40 hover:bg-purple-500/35 font-medium transition-colors cursor-pointer pr-7"
@@ -332,13 +327,22 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
 
       {/* Rich text editor toolbar + editor */}
       <div className="glass-card rounded-xl overflow-hidden">
-        <EditorToolbar
-          editor={editor}
-          showVoice={speechSupported}
-          isListening={isRecording}
-          onToggleVoice={toggleSpeechRecognition}
-        />
-        <EditorContent editor={editor} className="prose prose-invert max-w-none px-4 py-3 min-h-[140px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[120px]" />
+        <Suspense fallback={
+          <div className="prose prose-invert max-w-none px-4 py-3 min-h-[140px] flex items-center justify-center opacity-50">
+            <div className="animate-pulse text-sm">Loading editor...</div>
+          </div>
+        }>
+          <RichTextEditor
+            ref={editorRef}
+            initialContent={initialContent}
+            placeholder={t('noteForm.placeholder')}
+            onUpdate={handleEditorUpdate}
+            showVoice={speechSupported}
+            isListening={isRecording}
+            onToggleVoice={toggleSpeechRecognition}
+            className="prose prose-invert max-w-none px-4 py-3 min-h-[140px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[120px]"
+          />
+        </Suspense>
       </div>
 
       {/* Activities */}
