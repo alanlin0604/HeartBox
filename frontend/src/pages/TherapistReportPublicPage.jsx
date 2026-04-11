@@ -1,11 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useParams } from 'react-router-dom'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getPublicReport } from '../api/wellness'
 import { useLang } from '../context/LanguageContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 
 import { LOCALE_MAP } from '../utils/locales'
+
+const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
+
+const ChartSkeleton = () => (
+  <div className="w-full h-[250px] flex items-center justify-center opacity-50">
+    <div className="animate-pulse text-sm">{/* Loading chart... */}</div>
+  </div>
+)
 
 export default function TherapistReportPublicPage() {
   const { token } = useParams()
@@ -78,16 +85,20 @@ export default function TherapistReportPublicPage() {
       {moodData.length > 1 && (
         <div className="glass p-6">
           <h2 className="text-lg font-semibold mb-4">{t('publicReport.moodTrends')}</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={moodData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-              <YAxis stroke="#9ca3af" fontSize={12} />
-              <Tooltip />
-              <Line type="monotone" dataKey="sentiment" stroke="#a78bfa" strokeWidth={2} name={t('publicReport.sentiment')} />
-              <Line type="monotone" dataKey="stress" stroke="#f87171" strokeWidth={2} name={t('publicReport.stress')} />
-            </LineChart>
-          </ResponsiveContainer>
+          <Suspense fallback={<ChartSkeleton />}>
+            <LazyLineChart
+              data={moodData}
+              xAxisKey="date"
+              height={250}
+              gridStroke="rgba(255,255,255,0.1)"
+              axisStroke="#9ca3af"
+              tooltipStyle={{}}
+              lines={[
+                { dataKey: 'sentiment', stroke: '#a78bfa', strokeWidth: 2, name: t('publicReport.sentiment') },
+                { dataKey: 'stress', stroke: '#f87171', strokeWidth: 2, name: t('publicReport.stress') },
+              ]}
+            />
+          </Suspense>
         </div>
       )}
 

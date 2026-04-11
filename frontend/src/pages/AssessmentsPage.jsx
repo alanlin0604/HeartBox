@@ -1,11 +1,18 @@
-import { useState, useEffect, useMemo } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
 import { getAssessments, createAssessment, shareAssessment } from '../api/wellness'
 import { getCounselors } from '../api/counselors'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
 import { LOCALE_MAP } from '../utils/locales'
+
+const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
+
+const ChartSkeleton = () => (
+  <div className="w-full h-[200px] flex items-center justify-center opacity-50">
+    <div className="animate-pulse text-sm">{/* Loading chart... */}</div>
+  </div>
+)
 
 const SCORE_LABELS = {
   phq9: [
@@ -256,15 +263,19 @@ export default function AssessmentsPage() {
             {chartData.length > 1 && (
               <div className="glass p-6">
                 <h2 className="text-lg font-semibold mb-4">{t('assessment.history')}</h2>
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-                    <XAxis dataKey="date" stroke={axisStroke} fontSize={11} />
-                    <YAxis stroke={axisStroke} fontSize={11} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Line type="monotone" dataKey="score" stroke="#a78bfa" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<ChartSkeleton />}>
+                  <LazyLineChart
+                    data={chartData}
+                    xAxisKey="date"
+                    height={200}
+                    gridStroke={gridStroke}
+                    axisStroke={axisStroke}
+                    tooltipStyle={tooltipStyle}
+                    lines={[
+                      { dataKey: 'score', stroke: '#a78bfa', strokeWidth: 2 },
+                    ]}
+                  />
+                </Suspense>
               </div>
             )}
           </div>

@@ -1,9 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ScatterChart, Scatter, BarChart, Bar, Legend,
-} from 'recharts'
 import { getAnalytics } from '../api/analytics'
 import { getHealthSummary } from '../api/health'
 import { useTheme } from '../context/ThemeContext'
@@ -12,8 +8,18 @@ import { useToast } from '../context/ToastContext'
 import SkeletonCard from '../components/SkeletonCard'
 import MoodCalendar from '../components/MoodCalendar'
 import YearInPixels from '../components/YearInPixels'
-import StressRadarChart from '../components/StressRadarChart'
 import EmptyState from '../components/EmptyState'
+
+const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
+const LazyScatterChart = lazy(() => import('../components/charts/LazyScatterChart'))
+const LazyBarChart = lazy(() => import('../components/charts/LazyBarChart'))
+const StressRadarChart = lazy(() => import('../components/StressRadarChart'))
+
+const ChartSkeleton = () => (
+  <div className="w-full h-[300px] flex items-center justify-center opacity-50">
+    <div className="animate-pulse text-sm">{/* Loading chart... */}</div>
+  </div>
+)
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -182,17 +188,21 @@ export default function DashboardPage() {
         ) : (
           <>
             <div role="img" aria-label={t('dashboard.moodTrends')}>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={trends}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-                  <XAxis dataKey="name" stroke={axisStroke} fontSize={12} />
-                  <YAxis stroke={axisStroke} fontSize={12} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Legend />
-                  <Line type="monotone" dataKey="avg_sentiment" stroke="#a78bfa" name={t('dashboard.avgSentiment')} strokeWidth={2} />
-                  <Line type="monotone" dataKey="avg_stress" stroke="#f87171" name={t('dashboard.avgStress')} strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<ChartSkeleton />}>
+                <LazyLineChart
+                  data={trends}
+                  xAxisKey="name"
+                  height={300}
+                  gridStroke={gridStroke}
+                  axisStroke={axisStroke}
+                  tooltipStyle={tooltipStyle}
+                  showLegend
+                  lines={[
+                    { dataKey: 'avg_sentiment', stroke: '#a78bfa', name: t('dashboard.avgSentiment'), strokeWidth: 2 },
+                    { dataKey: 'avg_stress', stroke: '#f87171', name: t('dashboard.avgStress'), strokeWidth: 2 },
+                  ]}
+                />
+              </Suspense>
             </div>
             <table className="sr-only">
               <caption>{t('dashboard.moodTrends')}</caption>
@@ -215,15 +225,20 @@ export default function DashboardPage() {
                 n: correlation.sample_size,
               })}
             </p>
-            <ResponsiveContainer width="100%" height={250}>
-              <ScatterChart>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-                <XAxis dataKey="temperature" name={t('dashboard.temperatureLabel')} unit="°C" stroke={axisStroke} fontSize={12} />
-                <YAxis dataKey="sentiment" name={t('dashboard.sentimentLabel')} stroke={axisStroke} fontSize={12} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Scatter data={correlation.scatter_data} fill="#a78bfa" />
-              </ScatterChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<ChartSkeleton />}>
+              <LazyScatterChart
+                data={correlation.scatter_data}
+                xAxisKey="temperature"
+                yAxisKey="sentiment"
+                height={250}
+                gridStroke={gridStroke}
+                axisStroke={axisStroke}
+                tooltipStyle={tooltipStyle}
+                scatters={[
+                  { name: t('dashboard.temperatureLabel'), fill: '#a78bfa', data: correlation.scatter_data },
+                ]}
+              />
+            </Suspense>
           </>
         ) : (
           <EmptyState
@@ -249,15 +264,19 @@ export default function DashboardPage() {
           />
         ) : (
           <div role="img" aria-label={t('dashboard.frequentTags')}>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={tags}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-                <XAxis dataKey="name" stroke={axisStroke} fontSize={12} />
-                <YAxis stroke={axisStroke} fontSize={12} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="count" name={t('dashboard.tagCount')} fill="#7c3aed" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <Suspense fallback={<ChartSkeleton />}>
+              <LazyBarChart
+                data={tags}
+                xAxisKey="name"
+                height={250}
+                gridStroke={gridStroke}
+                axisStroke={axisStroke}
+                tooltipStyle={tooltipStyle}
+                bars={[
+                  { dataKey: 'count', name: t('dashboard.tagCount'), fill: '#7c3aed' },
+                ]}
+              />
+            </Suspense>
           </div>
         )}
       </div>
@@ -266,15 +285,19 @@ export default function DashboardPage() {
       {activityCorrelation.length > 0 && (
         <div className="glass p-6">
           <h2 className="text-lg font-semibold mb-4">{t('dashboard.activityCorrelation')}</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={activityCorrelation}>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-              <XAxis dataKey="name" stroke={axisStroke} fontSize={11} />
-              <YAxis stroke={axisStroke} fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="avg_sentiment" name={t('dashboard.avgSentiment')} fill="#a78bfa" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <Suspense fallback={<ChartSkeleton />}>
+            <LazyBarChart
+              data={activityCorrelation}
+              xAxisKey="name"
+              height={250}
+              gridStroke={gridStroke}
+              axisStroke={axisStroke}
+              tooltipStyle={tooltipStyle}
+              bars={[
+                { dataKey: 'avg_sentiment', name: t('dashboard.avgSentiment'), fill: '#a78bfa' },
+              ]}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -291,15 +314,20 @@ export default function DashboardPage() {
               })}
             </p>
           )}
-          <ResponsiveContainer width="100%" height={250}>
-            <ScatterChart>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-              <XAxis dataKey="sleep_hours" name={t('dashboard.sleepHoursLabel')} unit="h" stroke={axisStroke} fontSize={12} />
-              <YAxis dataKey="sentiment" name={t('dashboard.sentimentLabel')} stroke={axisStroke} fontSize={12} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Scatter data={sleepCorrelation.scatter_data} fill="#60a5fa" />
-            </ScatterChart>
-          </ResponsiveContainer>
+          <Suspense fallback={<ChartSkeleton />}>
+            <LazyScatterChart
+              data={sleepCorrelation.scatter_data}
+              xAxisKey="sleep_hours"
+              yAxisKey="sentiment"
+              height={250}
+              gridStroke={gridStroke}
+              axisStroke={axisStroke}
+              tooltipStyle={tooltipStyle}
+              scatters={[
+                { name: t('dashboard.sleepHoursLabel'), fill: '#60a5fa', data: sleepCorrelation.scatter_data },
+              ]}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -443,7 +471,9 @@ export default function DashboardPage() {
       )}
 
       {/* Stress Radar Chart */}
-      <StressRadarChart data={stressByTag} />
+      <Suspense fallback={<ChartSkeleton />}>
+        <StressRadarChart data={stressByTag} />
+      </Suspense>
     </div>
   )
 }
