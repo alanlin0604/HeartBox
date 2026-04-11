@@ -1,0 +1,783 @@
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+
+[31m[1mDEPRECATED: [0m[33m[1mthis command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.[0m
+
+
+[32mWe highly encourage switching to the new [0m[32m[1m`scan`[0m[32m command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.[0m
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+
++==============================================================================+
+
+                               /$$$$$$            /$$
+                              /$$__  $$          | $$
+           /$$$$$$$  /$$$$$$ | $$  \__//$$$$$$  /$$$$$$   /$$   /$$
+          /$$_____/ |____  $$| $$$$   /$$__  $$|_  $$_/  | $$  | $$
+         |  $$$$$$   /$$$$$$$| $$_/  | $$$$$$$$  | $$    | $$  | $$
+          \____  $$ /$$__  $$| $$    | $$_____/  | $$ /$$| $$  | $$
+          /$$$$$$$/|  $$$$$$$| $$    |  $$$$$$$  |  $$$$/|  $$$$$$$
+         |_______/  \_______/|__/     \_______/   \___/   \____  $$
+                                                          /$$  | $$
+                                                         |  $$$$$$/
+  by safetycli.com                                        \______/
+
++==============================================================================+
+
+ [1mREPORT[0m 
+
+  Safety [1mv3.7.0[0m is scanning for [1mVulnerabilities[0m[1m...[0m
+[1m  Scanning dependencies[0m in your [1menvironment:[0m
+
+  -> C:\Users\alan9\OneDrive\Desktop\HeartBox\backend\venv\Lib\site-packages
+
+  Using [1mopen-source vulnerability database[0m
+[1m  Found and scanned 194 packages[0m
+  Timestamp [1m2026-04-12 03:34:02[0m
+[1m  42[0m[1m vulnerabilities reported[0m
+[1m  0[0m[1m vulnerabilities ignored[0m
+
+[1m  * Continue-on-error is enabled, so returning successful (0) exit code in
+  all cases.[0m
+
++==============================================================================+
+ [1mVULNERABILITIES REPORTED[0m 
++==============================================================================+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m89026
+[1m   Affected spec: [0m<6.8.0
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to unbounded memory allocation based on
+   attacker-controlled stream length values. When pypdf parses a PDF content
+   stream, it trusts a large /Length value even when the underlying stream
+   data is much smaller, leading to excessive memory consumption during
+   stream processing.
+[1m   CVE-2026-31826[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/89026/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 89026 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m84345
+[1m   Affected spec: [0m<6.6.0
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to inefficient cross-reference table
+   rebuilding when handling malformed startxref data in non-strict mode. In
+   pypdf._reader.PdfReader._rebuild_xref_table(), the non-strict recovery
+   path scans the entire PDF buffer with a re.finditer() pattern to
+   rediscover obj markers, which can take excessively long on inputs
+   dominated by whitespace.
+[1m   CVE-2026-22691[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/84345/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 84345 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m84344
+[1m   Affected spec: [0m<6.6.0
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to unbounded Root-object recovery work driven
+   by an attacker-controlled /Size trailer value when /Root is missing in
+   non-strict mode. In pypdf¡¦s PdfReader non-strict parsing path, omitting
+   the trailer /Root entry while setting a huge/Size causes the reader to
+   attempt to access object numbers up to the /Size limit (mitigated in later
+   versions via the root_object_recovery_limit control), resulting in
+   potentially long runtimes on invalid PDFs.
+[1m   CVE-2026-22690[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/84344/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 84344 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m86802
+[1m   Affected spec: [0m<6.7.1
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to an infinite loop when traversing cyclic
+   outline tree references. The
+   pypdf.generic._data_structures.TreeObject.children() iterator follows the
+   /First ¡÷ /Next chain until /Last without reliably detecting cycles, so a
+   crafted outline structure can prevent the loop¡¦s exit condition from ever
+   being reached.
+[1m   CVE-2026-27024[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/86802/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 86802 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m86803
+[1m   Affected spec: [0m<6.7.1
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to unbounded processing of unusually large
+   /ToUnicode font streams in crafted PDFs. When pypdf parses a font¡¦s
+   /ToUnicode entry (for example during text extraction), it can iterate over
+   and allocate data for exceptionally large values without sufficient
+   limits, resulting in long runtimes and high memory consumption.
+[1m   CVE-2026-27025[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/86803/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 86803 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m86804
+[1m   Affected spec: [0m<6.7.1
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to unbounded byte-by-byte recovery
+   decompression on malformed /FlateDecode streams. In pypdf/filters.py, the
+   decompress logic can fall back to iterating over the compressed stream one
+   byte at a time and repeatedly calling
+   zlib.decompressobj(...).decompress(...), which can take an excessively
+   long time when the input stream is intentionally malformed and triggers
+   recovery behaviour.
+[1m   CVE-2026-27026[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/86804/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 86804 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m88029
+[1m   Affected spec: [0m<6.7.5
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to inefficient algorithmic complexity in the
+   ASCIIHexDecode stream decoding. The pypdf.filters.ASCIIHexDecode.decode
+   method in pypdf/filters.py performs per-byte parsing with repeated buffer
+   concatenation when converting hex pairs into output bytes, which can cause
+   disproportionate runtime on large /ASCIIHexDecode streams.
+[1m   CVE-2026-28804[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/88029/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 88029 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m78709
+[1m   Affected spec: [0m<6.0.0
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to unbounded decompression of FlateDecode-
+   encoded streams that can exhaust memory. The `pypdf.filters.decompress`
+   function used by the `FlateDecode` filter, invoked by `PdfReader` when
+   parsing cross-reference streams via `_reader._read_pdf15_xref_stream` and
+   when accessing other content streams, failed to enforce a maximum
+   decompressed output length. An attacker can exploit this by providing a
+   crafted PDF whose cross-reference stream chains FlateDecode filters so
+   that simply opening the file with `PdfReader` triggers excessive memory
+   allocation, leading to process termination or service unavailability
+   without authentication.
+[1m   CVE-2025-55197[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/78709/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 78709 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m80589
+[1m   Affected spec: [0m<6.1.3
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to an infinite loop in the DCTDecode inline
+   image parser when the end-of-image marker is missing. The
+   extract_inline_DCT function in pypdf/generic/_image_inline.py reads bytes
+   from an inline DCT image while parsing a page¡¦s content stream and, for
+   malformed JPEG data lacking the 0xFFD9 EOI marker, fails to reach a
+   termination condition, permitting unbounded iteration.
+[1m   CVE-2025-62707[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/80589/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 80589 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m80590
+[1m   Affected spec: [0m<6.1.3
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to unbounded decompression of LZWDecode
+   streams in page content that lack an enforced output-size limit. The
+   LZWDecode filter path in pypdf/filters.py invoked _LzwCodec.decode from
+   pypdf/_codecs/_codecs.py without bounding the decompressed output,
+   permitting extremely high expansion ratios during decode() and
+   uncontrolled memory allocation.
+[1m   CVE-2025-62708[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/80590/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 80590 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m87621
+[1m   Affected spec: [0m<6.7.3
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to uncontrolled memory allocation during XFA
+   stream decoding compressed with /FlateDecode. The issue occurs when the
+   xfa property is accessed on a PdfReader or PdfWriter, causing pypdf¡¦s
+   FlateDecode stream handling to expand attacker-controlled compressed data
+   without sufficient resource limits.
+[1m   CVE-2026-27888[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/87621/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 87621 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m81877
+[1m   Affected spec: [0m<6.4.0
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to insufficient limiting of memory usage when
+   decoding LZWDecode content streams. The pypdf.filters LZWDecode
+   implementation allows attacker-controlled page content streams to be
+   decompressed without an effective maximum output size, so a single highly
+   compressed stream can expand to roughly 1 GB of in-memory data during
+   parsing.
+[1m   CVE-2025-66019[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/81877/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 81877 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m85196
+[1m   Affected spec: [0m<6.6.2
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to missing cycle detection when traversing PDF
+   outlines/bookmarks. The PdfReader.outline property calls _get_outline() in
+   pypdf/_doc_common.py, which iterates through outline nodes (including
+   /Next and nested /First entries) without reliably tracking visited nodes,
+   allowing a crafted cyclic outline structure to trigger an infinite loop.
+[1m   CVE-2026-24688[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/85196/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 85196 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m88009
+[1m   Affected spec: [0m<6.7.4
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to uncontrolled memory allocation while
+   decoding RunLengthDecode-compressed PDF content streams. The issue occurs
+   in pypdf/filters.py where RunLengthDecode.decode() expands attacker-
+   controlled run-length segments into an in-memory buffer without an
+   effective maximum output-length limit in affected releases.
+[1m   CVE-2026-28351[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/88009/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 88009 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pypdf version 5.6.0[0m
+[1m   Vulnerability ID: [0m87482
+[1m   Affected spec: [0m<6.7.2
+[1m   ADVISORY: [0mAffected versions of the pypdf package are vulnerable to
+   Denial of Service (DoS) due to missing cycle detection when following
+   /Prev pointers in the PDF cross-reference chain. The PdfReader() parsing
+   flow in pypdf/_reader.py calls _read_xref_tables_and_trailers(), which
+   iterates with a while startxref is not None loop and repeatedly follows
+   /Prev offsets without tracking previously visited xref locations, allowing
+   a circular reference to keep the loop running forever.
+[1m   CVE-2026-27628[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/87482/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 87482 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pip version 24.3.1[0m
+[1m   Vulnerability ID: [0m75180
+[1m   Affected spec: [0m<25.0
+[1m   ADVISORY: [0mPip solves a security vulnerability that previously
+   allowed maliciously crafted wheel files to execute unauthorized code
+   during installation.
+[1m   PVE-2025-75180[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/75180/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 75180 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pip version 24.3.1[0m
+[1m   Vulnerability ID: [0m85681
+[1m   Affected spec: [0m<26.0
+[1m   ADVISORY: [0mAffected versions of the pip package are vulnerable to
+   Path Traversal due to an incorrect directory containment check when
+   extracting wheel archives. In src/pip/_internal/utils/unpacking.py, the
+   is_within_directory() helper used os.path.commonprefix() (character-by-
+   character) to compare directory and target paths, allowing crafted paths
+   like a parent-directory substring match to be treated as safely inside the
+   installation directory.
+[1m   CVE-2026-1703[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/85681/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 85681 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pip version 24.3.1[0m
+[1m   Vulnerability ID: [0m79883
+[1m   Affected spec: [0m<25.2
+[1m   ADVISORY: [0mAffected versions of the pip package are vulnerable to
+   Arbitrary File Overwrite due to improper validation of symbolic link
+   targets in the fallback tar extraction code. In
+   src/pip/_internal/utils/unpacking.py, the _untar_without_filter routine
+   used when the Python tarfile module lacks PEP 706 (no tarfile.data_filter)
+   extracted symlink members with tar._extract_member without verifying that
+   link destinations resolve under the extraction root, a check later added
+   via the is_symlink_target_in_tar helper.
+[1m   CVE-2025-8869[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/79883/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 79883 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in pillow version 11.1.0[0m
+[1m   Vulnerability ID: [0m86269
+[1m   Affected spec: [0m>=10.3.0,<12.1.1
+[1m   ADVISORY: [0mAffected versions of the Pillow package are vulnerable
+   to an Out-of-bounds Write issue due to insufficient validation of tile
+   extents when decoding PSD image data. When Image.open() loads a PSD and
+   the decoder paths in src/decode.c and src/encode.c process tile offsets
+   and sizes, negative xoff/yoff values (and related invalid extents) can
+   bypass expected bounds checks and lead to writes outside the intended
+   image buffer.
+[1m   CVE-2026-25990[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/86269/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 86269 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in langchain-core version 0.3.83[0m
+[1m   Vulnerability ID: [0m86270
+[1m   Affected spec: [0m<1.2.11
+[1m   ADVISORY: [0mAffected versions of the langchain-core package are
+   vulnerable to Server-Side Request Forgery (SSRF) due to fetching user-
+   supplied image_url values during token counting without URL validation. In
+   ChatOpenAI.get_num_tokens_from_messages(), messages containing image_url
+   blocks can flow into _url_to_size(), which calls httpx.get(image_source)
+   on attacker-controlled URLs in
+   libs/partners/openai/langchain_openai/chat_models/base.py when computing
+   vision-model token counts.
+[1m   CVE-2026-26013[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/86270/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 86270 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in langchain version 0.3.25[0m
+[1m   Vulnerability ID: [0m88512
+[1m   Affected spec: [0m<1.2.24
+[1m   ADVISORY: [0mAffected versions of the @langchain/google-cloud-sql-pg
+   package are vulnerable to SQL injection due to unsafe interpolation of
+   table and schema identifiers. The PostgresChatMessageHistory.initialize()
+   method does not properly validate or safely construct table and schema
+   names before incorporating them into SQL statements, enabling attacker-
+   controlled SQL syntax to alter the intended query structure; the fix was
+   introduced in commit
+   aa2f89d5aa04beb4ae9ebaaa71427e7013301354.https://github.com/langchain-
+   ai/langchainjs/commit/aa2f89d5aa04beb4ae9ebaaa71427e7013301354
+[1m   PVE-2026-88512[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/88512/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 88512 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in gunicorn version 23.0.0[0m
+[1m   Vulnerability ID: [0m71600
+[1m   Affected spec: [0m>=0.10.0
+[1m   ADVISORY: [0mGunicorn fails to properly validate Transfer-Encoding
+   headers, leading to HTTP Request Smuggling (HRS) vulnerabilities. By
+   crafting requests with conflicting Transfer-Encoding headers, attackers
+   can bypass security restrictions and access restricted endpoints. This
+   issue is due to Gunicorn's handling of Transfer-Encoding headers, where it
+   incorrectly processes requests with multiple, conflicting Transfer-
+   Encoding headers, treating them as chunked regardless of the final
+   encoding specified. This vulnerability allows for a range of attacks
+   including cache poisoning, session manipulation, and data exposure.
+[1m   CVE-2024-1135[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/71600/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 71600 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django-allauth version 65.4.0[0m
+[1m   Vulnerability ID: [0m82837
+[1m   Affected spec: [0m<65.13.0
+[1m   ADVISORY: [0mAffected versions of the django-allauth package are
+   vulnerable to Insufficient Session Expiration due to access and refresh
+   tokens remaining valid after the associated user account is deactivated.
+   In django-allauth¡¦s IdP OpenID Connect implementation,
+   allauth/idp/oidc/internal/oauthlib/request_validator.py does not check
+   instance.user.is_active in validate_bearer_token() and
+   validate_refresh_token(), and
+   allauth/idp/oidc/internal/oauthlib/device_codes.py previously returned
+   token state without revalidating the user¡¦s active status.
+[1m   CVE-2025-65430[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/82837/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 82837 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django-allauth version 65.4.0[0m
+[1m   Vulnerability ID: [0m82838
+[1m   Affected spec: [0m<65.13.0
+[1m   ADVISORY: [0mAffected versions of the django-allauth package are
+   vulnerable to Authorization Bypass due to the use of a mutable identifier
+   (preferred_username) from third-party providers for authorization
+   decisions. The authentication logic in django-allauth¡¦s social account
+   handling uses the preferred_username field from Okta and NetIQ OpenID
+   Connect identity providers as the canonical user identifier, which may be
+   changed by an attacker and is not stable enough to base authorization on;
+   the code fails to validate that the identifier is immutable.
+[1m   CVE-2025-65431[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/82838/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 82838 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django-allauth version 65.4.0[0m
+[1m   Vulnerability ID: [0m88433
+[1m   Affected spec: [0m<65.14.1
+[1m   ADVISORY: [0mAffected versions of the django-allauth package are
+   vulnerable to Open Redirect due to improper validation of the SAML
+   RelayState parameter when IdP-initiated SSO is enabled. In the SAML login
+   flow, django-allauth accepts any URL supplied in RelayState and uses it as
+   the post-authentication redirect target, allowing untrusted external
+   destinations to be processed without restriction when IdP-initiated SSO is
+   turned on, which is disabled by default.
+[1m   CVE-2026-27982[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/88433/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 88433 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in djangorestframework-simplejwt version 5.5.0[0m
+[1m   Vulnerability ID: [0m66963
+[1m   Affected spec: [0m<5.5.1
+[1m   ADVISORY: [0mAffected versions of Djangorestframework-simplejwt are
+   vulnerable to information disclosure. A user can access web application
+   resources even after their account has been disabled due to missing user
+   validation checks via the for_user method.
+[1m   CVE-2024-22513[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/66963/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 66963 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m85663
+[1m   Affected spec: [0m>=5.2a1,<5.2.11
+[1m   ADVISORY: [0mAffected versions of the Django package are vulnerable
+   to SQL Injection due to improper handling of control characters in column
+   aliases within FilteredRelation. The FilteredRelation class fails to
+   properly sanitize column aliases containing control characters when used
+   with QuerySet methods annotate(), aggregate(), extra(), values(),
+   values_list(), and alias() via dictionary expansion (**kwargs).
+[1m   CVE-2026-1287[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/85663/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 85663 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m85659
+[1m   Affected spec: [0m>=5.2a1,<5.2.11
+[1m   ADVISORY: [0mAffected versions of the Django package are vulnerable
+   to Information Disclosure (Timing Attack) due to non-constant-time
+   comparison in the mod_wsgi authentication handler. The
+   django.contrib.auth.handlers.modwsgi.check_password() function does not
+   perform user existence checks in constant time, allowing response timing
+   differences to reveal whether usernames exist.
+[1m   CVE-2025-13473[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/85659/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 85659 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m85664
+[1m   Affected spec: [0m>=5.2a1,<5.2.11
+[1m   ADVISORY: [0mAffected versions of the Django package are vulnerable
+   to SQL Injection due to improper handling of column aliases containing
+   periods in QuerySet.order_by() when combined with FilteredRelation. The
+   QuerySet.order_by() method fails to properly sanitize column aliases that
+   contain periods when the same alias is used in FilteredRelation via
+   dictionary expansion. https://github.com/django/django/commit/90f5b10784ba
+   5bf369caed87640e2b4394ea3314
+[1m   CVE-2026-1312[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/85664/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 85664 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m85662
+[1m   Affected spec: [0m>=5.2a1,<5.2.11
+[1m   ADVISORY: [0mAffected versions of the Django package are vulnerable
+   to Denial of Service (DoS) due to quadratic time complexity during HTML
+   parsing in text truncation methods. The
+   django.utils.text.Truncator.chars() and Truncator.words() methods (with
+   html=True), as well as the truncatechars_html and truncatewords_html
+   template filters, exhibit quadratic time complexity when processing inputs
+   containing a large number of unmatched HTML end tags.
+[1m   CVE-2026-1285[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/85662/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 85662 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m85660
+[1m   Affected spec: [0m>=5.2a1,<5.2.11
+[1m   ADVISORY: [0mAffected versions of the Django package are vulnerable
+   to Denial of Service (DoS) due to inefficient string concatenation when
+   processing duplicate HTTP headers in ASGI mode. The ASGIRequest class
+   combines repeated headers using repeated string concatenation, resulting
+   in super-linear (quadratic) time complexity when processing requests with
+   many duplicate headers.
+[1m   CVE-2025-14550[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/85660/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 85660 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m85661
+[1m   Affected spec: [0m>=5.2a1,<5.2.11
+[1m   ADVISORY: [0mAffected versions of the Django package are vulnerable
+   to SQL Injection due to improper sanitization of band index parameters in
+   PostGIS raster lookups. The raster lookup functionality in Django's GIS
+   module fails to properly validate or escape untrusted data used as a band
+   index when performing spatial queries against PostGIS databases.
+[1m   CVE-2026-1207[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/85661/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 85661 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m80044
+[1m   Affected spec: [0m>=5.2a1,<5.2.7
+[1m   ADVISORY: [0mAffected versions of the Django package are vulnerable
+   to Path Traversal due to improper validation of archive member paths
+   during extraction. The django.utils.archive.extract() function¡Xused by the
+   startapp --template and startproject --template commands¡Xchecked path
+   prefixes instead of using canonicalised paths, allowing archive entries
+   whose names share a prefix with the destination to resolve outside the
+   intended directory.
+[1m   CVE-2025-59682[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/80044/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 80044 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m80041
+[1m   Affected spec: [0m>=5.2a1,<5.2.7
+[1m   ADVISORY: [0mAffected versions of the Django package are vulnerable
+   to SQL Injection due to insufficient neutralization of user-controlled
+   column alias names provided via dictionary expansion. The
+   QuerySet.annotate(), QuerySet.alias(), QuerySet.aggregate(), and
+   QuerySet.extra() methods accept **kwargs whose keys are used as column
+   aliases, and on MySQL and MariaDB, those identifiers are not safely
+   quoted, permitting crafted input to be incorporated into the generated
+   SQL.
+[1m   CVE-2025-59681[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/80041/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 80041 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0mSFTY-20260303-51924
+[1m   Affected spec: [0m>=5.2,<5.2.12
+[1m   ADVISORY: [0mAn issue was discovered in 6.0 before 6.0.3, 5.2 before
+   5.2.12, and 4.2 before 4.2.29.Race condition in file-system storage and
+   file-based cache backends in Django allows an attacker to cause file
+   system objects to be created with incorrect permissions via concurrent
+   requests, where one thread's temporary `umask` change affects other
+   threads in multi-threaded environments.Earlier, unsupported Django series
+   (such as 5.0.x, 4.1.x, and 3.2.x) were not evaluated and may also be
+   affected.Django would like to thank Tarek Nakkouch for reporting this
+   issue.
+[1m   CVE-2026-25674[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/SFTY-20260303-51924/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id
+   SFTY-20260303-51924 in safety¡¦s ignore command-line argument or add the
+   ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0mSFTY-20260303-06996
+[1m   Affected spec: [0m>=5.2,<5.2.12
+[1m   ADVISORY: [0mAn issue was discovered in 6.0 before 6.0.3, 5.2 before
+   5.2.12, and 4.2 before 4.2.29.`URLField.to_python()` in Django calls
+   `urllib.parse.urlsplit()`, which performs NFKC normalization on Windows
+   that is disproportionately slow for certain Unicode characters, allowing a
+   remote attacker to cause denial of service via large URL inputs containing
+   these characters.Earlier, unsupported Django series (such as 5.0.x, 4.1.x,
+   and 3.2.x) were not evaluated and may also be affected.Django would like
+   to thank Seokchan Yoon for reporting this issue.
+[1m   CVE-2026-25673[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/SFTY-20260303-06996/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id
+   SFTY-20260303-06996 in safety¡¦s ignore command-line argument or add the
+   ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m77686
+[1m   Affected spec: [0m>=5.2a1,<5.2.2
+[1m   ADVISORY: [0mAn issue was discovered in Django 5.2 before 5.2.3, 5.1
+   before 5.1.11, and 4.2 before 4.2.23. Internal HTTP response logging does
+   not escape request.path, which allows remote attackers to potentially
+   manipulate log output via crafted URLs. This may lead to log injection or
+   forgery when logs are viewed in terminals or processed by external
+   systems.
+[1m   CVE-2025-48432[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/77686/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 77686 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m81270
+[1m   Affected spec: [0m>=5.2a1,<5.2.8
+[1m   ADVISORY: [0mCVE-2025-64459: Affected versions of the Django package
+   are vulnerable to SQL Injection due to improper input validation, allowing
+   the internal _connector keyword argument to be accepted from untrusted
+   dictionaries via expansion. The .filter(), .exclude(), and .get() methods
+   on QuerySet, as well as the Q class, resolve **kwargs and will treat a
+   supplied _connector value as the logical connector without constraining it
+   to the expected set (AND/OR), permitting attacker-controlled tokens to
+   influence SQL predicate construction.
+[1m   CVE-2025-64459[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/81270/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 81270 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m81269
+[1m   Affected spec: [0m>=5.2a1,<5.2.8
+[1m   ADVISORY: [0mCVE-2025-64458: Affected versions of the Django package
+   are vulnerable to Denial of Service (DoS) due to slow Unicode NFKC
+   normalization on Windows being applied to untrusted inputs. The
+   django.contrib.auth.views.LoginView and
+   django.contrib.auth.views.LogoutView, and django.views.i18n.set_language
+   normalize user-controlled strings using Python¡¦s NFKC algorithm, which is
+   unusually slow on Windows for huge Unicode sequences and can be triggered
+   to consume excessive CPU.
+[1m   CVE-2025-64458[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/81269/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 81269 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m82187
+[1m   Affected spec: [0m>=5.2,<5.2.9
+[1m   ADVISORY: [0mDjango fixes potential SQL injection in
+   ``FilteredRelation`` column aliases on PostgreSQL.
+[1m   CVE-2025-13372[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/82187/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 82187 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m82188
+[1m   Affected spec: [0m>=5.2,<5.2.9
+[1m   ADVISORY: [0mDjango fixes a potential denial-of-service vulnerability
+   in XML ``Deserializer``.
+[1m   CVE-2025-64460[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/82188/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 82188 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
+[31m-> Vulnerability found in django version 5.2.1[0m
+[1m   Vulnerability ID: [0m79173
+[1m   Affected spec: [0m>=5.2a1,<5.2.6
+[1m   ADVISORY: [0mAffected versions of the Django package are vulnerable
+   to SQL Injection due to insufficient input sanitization in
+   FilteredRelation column aliases. The FilteredRelation class fails to
+   properly validate or escape column alias names when they are provided
+   through dictionary expansion as keyword arguments to QuerySet.annotate()
+   or QuerySet.alias() methods, allowing malicious SQL code to be injected
+   directly into the generated database queries.
+[1m   CVE-2025-57833[0m
+[1m   For more information about this vulnerability, visit
+   [0mhttps://getsafety.com/v/79173/97c[0m
+   To ignore this vulnerability, use PyUp vulnerability id 79173 in safety¡¦s
+   ignore command-line argument or add the ignore to your safety policy file.
+
+
++==============================================================================+
+   [32m[1mREMEDIATIONS[0m
+
+  42 vulnerabilities were reported in 9 packages. For detailed remediation & 
+  fix recommendations, upgrade to a commercial license. 
+
++==============================================================================+
+
+ Scan was completed. 42 vulnerabilities were reported. 
+
++==============================================================================+[0m
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+
+[31m[1mDEPRECATED: [0m[33m[1mthis command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.[0m
+
+
+[32mWe highly encourage switching to the new [0m[32m[1m`scan`[0m[32m command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.[0m
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+

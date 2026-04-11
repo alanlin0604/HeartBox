@@ -179,6 +179,7 @@ REST_FRAMEWORK = {
     # Disable DRF intercepting ?format= query param (we use it for PDF export)
     'URL_FORMAT_OVERRIDE': None,
     'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
