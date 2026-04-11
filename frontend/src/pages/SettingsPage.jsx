@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext'
 import { isRememberedLogin, setAuthTokens } from '../utils/tokenStorage'
 import { subscribeToPush, unsubscribePush } from '../utils/pushNotifications'
 import useHealthSync from '../hooks/useHealthSync'
+import { Card, Button, Input, Tabs } from '../components/ui'
 
 export default function SettingsPage() {
   const location = useLocation()
@@ -183,23 +184,22 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
 
       {/* Tab Navigation */}
-      <div className="glass p-2 flex gap-2 flex-wrap">
+      <Card variant="default" padding="sm" className="flex gap-2 flex-wrap">
         {tabs.map((tab) => (
-          <button
+          <Button
             key={tab.id}
+            variant={activeTab === tab.id ? 'primary' : 'ghost'}
+            size="sm"
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-              activeTab === tab.id ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
-            }`}
           >
             {tab.label}
-          </button>
+          </Button>
         ))}
-      </div>
+      </Card>
 
       {/* === Profile Tab === */}
       {activeTab === 'profile' && (
-        <div className="glass p-4 sm:p-6 space-y-6">
+        <Card variant="default" padding="lg" className="space-y-6" animate staggerDelay={0.1}>
           {/* Profile Section */}
           <form onSubmit={handleSaveProfile} className="space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.profile')}</h2>
@@ -208,12 +208,12 @@ export default function SettingsPage() {
               <label htmlFor="settings-username" className="block text-sm font-medium opacity-60 mb-1">
                 {t('settings.username')}
               </label>
-              <input
+              <Input
                 id="settings-username"
                 type="text"
                 value={user?.username || ''}
                 disabled
-                className="glass-input opacity-60 cursor-not-allowed"
+                className="opacity-60 cursor-not-allowed"
               />
             </div>
 
@@ -221,12 +221,11 @@ export default function SettingsPage() {
               <label htmlFor="settings-email" className="block text-sm font-medium opacity-60 mb-1">
                 {t('settings.email')}
               </label>
-              <input
+              <Input
                 id="settings-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="glass-input"
               />
             </div>
 
@@ -269,9 +268,9 @@ export default function SettingsPage() {
               />
             </div>
 
-            <button type="submit" disabled={saving} className="btn-primary">
+            <Button type="submit" disabled={saving} loading={saving}>
               {saving ? t('settings.saving') : t('settings.save')}
-            </button>
+            </Button>
           </form>
 
           <div className="border-t border-[var(--card-border)]" />
@@ -318,20 +317,20 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
-              <button type="submit" disabled={pwSaving} className="btn-primary">
+              <Button type="submit" disabled={pwSaving} loading={pwSaving}>
                 {pwSaving ? t('settings.saving') : t('settings.changePassword')}
-              </button>
-              <button type="button" onClick={handleLogoutOthers} disabled={logoutOthersLoading} className="btn-secondary">
+              </Button>
+              <Button type="button" variant="secondary" onClick={handleLogoutOthers} disabled={logoutOthersLoading} loading={logoutOthersLoading}>
                 {logoutOthersLoading ? t('common.loading') : t('settings.logoutOtherDevices')}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
       {/* === Preferences Tab === */}
       {activeTab === 'preferences' && (
-        <div className="glass p-4 sm:p-6 space-y-6">
+        <Card variant="default" padding="lg" className="space-y-6" animate staggerDelay={0.1}>
           {/* Font Size */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.fontSize')}</h2>
@@ -504,12 +503,12 @@ export default function SettingsPage() {
               />
             </label>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* === Health Tab === */}
       {activeTab === 'health' && (
-        <div className="glass p-4 sm:p-6 space-y-6">
+        <Card variant="default" padding="lg" className="space-y-6" animate staggerDelay={0.1}>
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('health.connectionTitle')}</h2>
             <p className="text-sm opacity-60">{t('health.connectionDesc')}</p>
@@ -612,12 +611,12 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* === Data Tab === */}
       {activeTab === 'data' && (
-        <div className="glass p-4 sm:p-6 space-y-6">
+        <Card variant="default" padding="lg" className="space-y-6" animate staggerDelay={0.1}>
           {/* Data Import */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('import.title')}</h2>
@@ -653,12 +652,12 @@ export default function SettingsPage() {
             )}
             <Link to="/pricing" className="btn-secondary inline-block">{t('subscription.viewPlans')}</Link>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* === Security Tab === */}
       {activeTab === 'security' && (
-        <div className="glass p-4 sm:p-6 space-y-6">
+        <Card variant="default" padding="lg" className="space-y-6" animate staggerDelay={0.1}>
           {/* Two-Factor Authentication */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -773,7 +772,7 @@ export default function SettingsPage() {
               {t('settings.deleteAccount')}
             </button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Delete Account Modal */}

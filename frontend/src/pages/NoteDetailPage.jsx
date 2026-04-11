@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import ConfirmModal from '../components/ConfirmModal'
 import ShareNoteButton from '../components/ShareNoteButton'
 import { useToast } from '../context/ToastContext'
+import { Card, Button, Input } from '../components/ui'
 
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
 
@@ -154,14 +155,15 @@ export default function NoteDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto mt-2 sm:mt-4 px-2 sm:px-0 space-y-3 sm:space-y-4 pb-6">
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
-        className="text-sm opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
       >
         &larr; {t('noteDetail.back')}
-      </button>
+      </Button>
 
-      <div className="glass p-4 sm:p-6 space-y-4">
+      <Card variant="default" padding="lg" className="space-y-4" animate staggerDelay={0.1}>
         {/* Header */}
         <div className="space-y-2">
           <div className="text-sm opacity-60">{date}</div>
@@ -175,13 +177,13 @@ export default function NoteDetailPage() {
               📌
             </button>
             <div className="flex-1" />
-            <button onClick={handleStartEdit} className="btn-secondary text-xs">
+            <Button onClick={handleStartEdit} variant="secondary" size="sm">
               {t('noteDetail.edit')}
-            </button>
+            </Button>
             <ShareNoteButton noteId={note.id} />
-            <button onClick={() => setConfirmOpen(true)} disabled={deleting} className="btn-danger text-xs">
+            <Button onClick={() => setConfirmOpen(true)} disabled={deleting} variant="danger" size="sm">
               {deleting ? t('noteDetail.deleting') : t('noteDetail.delete')}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -203,17 +205,17 @@ export default function NoteDetailPage() {
               </Suspense>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <input value={editWeather} onChange={(e) => setEditWeather(e.target.value)} placeholder={t('noteForm.weather')} className="glass-input" />
-              <input type="number" value={editTemp} onChange={(e) => setEditTemp(e.target.value)} placeholder={t('noteForm.temperature')} className="glass-input" />
-              <input value={editTags} onChange={(e) => setEditTags(e.target.value)} placeholder={t('noteForm.tags')} className="glass-input" />
+              <Input value={editWeather} onChange={(e) => setEditWeather(e.target.value)} placeholder={t('noteForm.weather')} />
+              <Input type="number" value={editTemp} onChange={(e) => setEditTemp(e.target.value)} placeholder={t('noteForm.temperature')} />
+              <Input value={editTags} onChange={(e) => setEditTags(e.target.value)} placeholder={t('noteForm.tags')} />
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={handleSaveEdit} className="btn-primary text-sm" disabled={saving}>
+              <Button type="button" onClick={handleSaveEdit} disabled={saving} loading={saving} size="sm">
                 {saving ? t('common.loading') : t('settings.save')}
-              </button>
-              <button type="button" onClick={() => setEditing(false)} className="btn-secondary text-sm">
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setEditing(false)} size="sm">
                 {t('common.cancel')}
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
@@ -327,7 +329,7 @@ export default function NoteDetailPage() {
             </div>
           </div>
         )}
-      </div>
+      </Card>
       <ConfirmModal
         open={confirmOpen}
         title={t('noteDetail.confirmTitle')}
