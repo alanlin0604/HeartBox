@@ -1,0 +1,298 @@
+/**
+ * HeartBox Design System
+ * Modern Wellness UI - Soft Glassmorphism + Warm Minimalism
+ *
+ * Last Updated: 2026-04-11
+ */
+
+:root {
+  /* ==================== Color Palette ==================== */
+
+  /* Primary - Warm Purple Gradient */
+  --color-primary-50: #FAF5FF;
+  --color-primary-100: #F3E8FF;
+  --color-primary-200: #E9D5FF;
+  --color-primary-300: #D8B4FE;
+  --color-primary-400: #C084FC;
+  --color-primary-500: #A78BFA;
+  --color-primary-600: #9333EA;
+  --color-primary-700: #7E22CE;
+  --color-primary-800: #6B21A8;
+  --color-primary-900: #581C87;
+
+  /* Secondary - Soft Coral */
+  --color-secondary-50: #FFF1F2;
+  --color-secondary-100: #FFE4E6;
+  --color-secondary-200: #FECDD3;
+  --color-secondary-300: #FDA4AF;
+  --color-secondary-400: #FB7185;
+  --color-secondary-500: #FCA5A5;
+  --color-secondary-600: #F43F5E;
+  --color-secondary-700: #E11D48;
+
+  /* Accent - Golden Sunset */
+  --color-accent-50: #FFFBEB;
+  --color-accent-100: #FEF3C7;
+  --color-accent-200: #FDE68A;
+  --color-accent-300: #FCD34D;
+  --color-accent-400: #FBBF24;
+  --color-accent-500: #F59E0B;
+  --color-accent-600: #D97706;
+
+  /* Calm - Soft Blue */
+  --color-calm-50: #EFF6FF;
+  --color-calm-100: #DBEAFE;
+  --color-calm-200: #BFDBFE;
+  --color-calm-300: #93C5FD;
+  --color-calm-400: #60A5FA;
+  --color-calm-500: #3B82F6;
+
+  /* Success - Calm Green */
+  --color-success-50: #ECFDF5;
+  --color-success-100: #D1FAE5;
+  --color-success-200: #A7F3D0;
+  --color-success-300: #86EFAC;
+  --color-success-400: #34D399;
+  --color-success-500: #10B981;
+
+  /* Neutral - Dark Mode Base */
+  --color-slate-50: #F8FAFC;
+  --color-slate-100: #F1F5F9;
+  --color-slate-200: #E2E8F0;
+  --color-slate-300: #CBD5E1;
+  --color-slate-400: #94A3B8;
+  --color-slate-500: #64748B;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1E293B;
+  --color-slate-900: #0F172A;
+  --color-slate-950: #020617;
+
+  /* ==================== Semantic Colors ==================== */
+
+  /* Mood Colors */
+  --mood-happy: var(--color-accent-300);      /* Golden */
+  --mood-calm: var(--color-calm-300);         /* Soft Blue */
+  --mood-sad: #A5B4FC;                        /* Lavender */
+  --mood-anxious: var(--color-secondary-300); /* Soft Pink */
+  --mood-grateful: var(--color-success-300);  /* Warm Green */
+  --mood-excited: #FB923C;                    /* Orange */
+  --mood-tired: #94A3B8;                      /* Gray */
+  --mood-angry: #F87171;                      /* Red */
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-400) 100%);
+  --gradient-primary-hover: linear-gradient(135deg, var(--color-primary-400) 0%, #E879F9 100%);
+  --gradient-sunset: linear-gradient(135deg, #FCA5A5 0%, #FCD34D 50%, #C084FC 100%);
+  --gradient-calm: linear-gradient(135deg, var(--color-calm-400) 0%, var(--color-primary-400) 100%);
+  --gradient-success: linear-gradient(135deg, var(--color-success-400) 0%, var(--color-calm-400) 100%);
+
+  /* Background Gradient */
+  --bg-gradient-main: linear-gradient(180deg,
+    var(--color-slate-900) 0%,
+    var(--color-slate-800) 50%,
+    #312E81 100%
+  );
+
+  --bg-gradient-dark: linear-gradient(135deg,
+    var(--color-slate-950) 0%,
+    var(--color-slate-900) 50%,
+    #1E1B4B 100%
+  );
+
+  /* ==================== Glass Effects ==================== */
+
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-bg-hover: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-border-hover: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --glass-shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.16);
+  --glass-blur: blur(20px);
+
+  /* ==================== Typography ==================== */
+
+  /* Font Family */
+  --font-primary: 'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont,
+                  'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Cascadia Code', 'Consolas', monospace;
+
+  /* Font Sizes */
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+  --text-4xl: 2.25rem;     /* 36px */
+  --text-5xl: 3rem;        /* 48px */
+
+  /* Line Heights */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 1.75;
+
+  /* Font Weights */
+  --font-light: 300;
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+
+  /* Letter Spacing */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+
+  /* ==================== Spacing ==================== */
+
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0-5: 0.125rem;   /* 2px */
+  --space-1: 0.25rem;      /* 4px */
+  --space-1-5: 0.375rem;   /* 6px */
+  --space-2: 0.5rem;       /* 8px */
+  --space-2-5: 0.625rem;   /* 10px */
+  --space-3: 0.75rem;      /* 12px */
+  --space-3-5: 0.875rem;   /* 14px */
+  --space-4: 1rem;         /* 16px */
+  --space-5: 1.25rem;      /* 20px */
+  --space-6: 1.5rem;       /* 24px */
+  --space-7: 1.75rem;      /* 28px */
+  --space-8: 2rem;         /* 32px */
+  --space-9: 2.25rem;      /* 36px */
+  --space-10: 2.5rem;      /* 40px */
+  --space-11: 2.75rem;     /* 44px */
+  --space-12: 3rem;        /* 48px */
+  --space-14: 3.5rem;      /* 56px */
+  --space-16: 4rem;        /* 64px */
+  --space-20: 5rem;        /* 80px */
+  --space-24: 6rem;        /* 96px */
+
+  /* ==================== Border Radius ==================== */
+
+  --radius-none: 0;
+  --radius-sm: 0.5rem;     /* 8px */
+  --radius-md: 0.75rem;    /* 12px */
+  --radius-lg: 1rem;       /* 16px */
+  --radius-xl: 1.25rem;    /* 20px */
+  --radius-2xl: 1.5rem;    /* 24px */
+  --radius-3xl: 2rem;      /* 32px */
+  --radius-full: 9999px;
+
+  /* ==================== Shadows ==================== */
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.12);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.15);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+
+  /* Glow Shadows */
+  --shadow-glow-purple: 0 0 20px rgba(167, 139, 250, 0.3);
+  --shadow-glow-pink: 0 0 20px rgba(252, 165, 165, 0.3);
+  --shadow-glow-blue: 0 0 20px rgba(147, 197, 253, 0.3);
+
+  /* ==================== Animation ==================== */
+
+  /* Durations */
+  --duration-instant: 0ms;
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+  --duration-slower: 500ms;
+
+  /* Easing Functions */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ==================== Z-Index Layers ==================== */
+
+  --z-0: 0;
+  --z-10: 10;
+  --z-20: 20;
+  --z-30: 30;
+  --z-40: 40;
+  --z-50: 50;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 400;
+  --z-popover: 500;
+  --z-toast: 600;
+  --z-tooltip: 700;
+  --z-max: 9999;
+
+  /* ==================== Breakpoints (for reference) ==================== */
+
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  /* ==================== Touch Targets ==================== */
+
+  --touch-target-min: 44px;  /* iOS minimum */
+  --touch-spacing-min: 8px;  /* Minimum gap between targets */
+}
+
+/* ==================== Utility Classes ==================== */
+
+/* Glass Card */
+.glass-card-modern {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all var(--duration-normal) var(--ease-smooth);
+}
+
+.glass-card-modern:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+  box-shadow: var(--glass-shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Smooth Transition */
+.transition-smooth {
+  transition: all var(--duration-normal) var(--ease-smooth);
+}
+
+/* Hover Scale */
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+
+/* Hover Lift */
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+/* Focus Ring */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-primary-400);
+  outline-offset: 2px;
+}

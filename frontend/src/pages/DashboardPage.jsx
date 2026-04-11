@@ -9,6 +9,7 @@ import SkeletonCard from '../components/SkeletonCard'
 import MoodCalendar from '../components/MoodCalendar'
 import YearInPixels from '../components/YearInPixels'
 import EmptyState from '../components/EmptyState'
+import { Card, Button } from '../components/ui'
 
 const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
 const LazyScatterChart = lazy(() => import('../components/charts/LazyScatterChart'))
@@ -104,50 +105,77 @@ export default function DashboardPage() {
   )
 
   return (
-    <div className="space-y-6 mt-4">
+    <div className="space-y-8 mt-6 pb-8">
       <MoodCalendar />
 
       {/* Year in Pixels */}
       <YearInPixels />
 
-      {/* Streak stats */}
-      {(data?.current_streak > 0 || data?.longest_streak > 0) && (
-        <div className="glass p-4 flex flex-wrap items-center gap-6">
-          {data?.current_streak > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-xl">🔥</span>
-              <span className="font-medium">{t('journal.streak', { days: data.current_streak })}</span>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Streak stats */}
+        {(data?.current_streak > 0 || data?.longest_streak > 0) && (
+          <Card padding="md" className="bg-gradient-to-br from-orange-500/10 to-red-500/10 border-orange-500/20">
+            <div className="flex flex-wrap items-center gap-6">
+              {data?.current_streak > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">🔥</span>
+                  <div>
+                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">Current Streak</div>
+                    <div className="text-xl font-bold text-[var(--text-primary)]">
+                      {data.current_streak} {data.current_streak === 1 ? 'day' : 'days'}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {data?.longest_streak > 0 && (
+                <div className="flex items-center gap-3 opacity-80">
+                  <span className="text-3xl">🏆</span>
+                  <div>
+                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">Best Streak</div>
+                    <div className="text-lg font-semibold text-[var(--text-primary)]">
+                      {data.longest_streak} {data.longest_streak === 1 ? 'day' : 'days'}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-          {data?.longest_streak > 0 && (
-            <div className="flex items-center gap-2 text-sm opacity-70">
-              <span className="text-xl">🏆</span>
-              <span>{t('dashboard.longestStreak', { days: data.longest_streak })}</span>
-            </div>
-          )}
-        </div>
-      )}
+          </Card>
+        )}
 
-      {/* Gratitude stats */}
-      {(data?.gratitude_count > 0 || data?.gratitude_streak > 0) && (
-        <div className="glass p-4 flex flex-wrap items-center gap-6">
-          {data?.gratitude_count > 0 && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-xl">🙏</span>
-              <span className="font-medium">{t('dashboard.gratitudeCount', { count: data.gratitude_count })}</span>
+        {/* Gratitude stats */}
+        {(data?.gratitude_count > 0 || data?.gratitude_streak > 0) && (
+          <Card padding="md" className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20">
+            <div className="flex flex-wrap items-center gap-6">
+              {data?.gratitude_count > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">🙏</span>
+                  <div>
+                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">Gratitude Notes</div>
+                    <div className="text-xl font-bold text-[var(--text-primary)]">
+                      {data.gratitude_count}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {data?.gratitude_streak > 0 && (
+                <div className="flex items-center gap-3 opacity-80">
+                  <span className="text-3xl">✨</span>
+                  <div>
+                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">Gratitude Streak</div>
+                    <div className="text-lg font-semibold text-[var(--text-primary)]">
+                      {data.gratitude_streak} {data.gratitude_streak === 1 ? 'day' : 'days'}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-          {data?.gratitude_streak > 0 && (
-            <div className="flex items-center gap-2 text-sm opacity-70">
-              <span className="text-xl">✨</span>
-              <span>{t('dashboard.gratitudeStreak', { days: data.gratitude_streak })}</span>
-            </div>
-          )}
-        </div>
-      )}
+          </Card>
+        )}
+      </div>
 
       {/* Controls */}
-      <div className="glass p-4 flex flex-wrap items-center gap-4">
+      <Card padding="md" className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <span className="text-sm opacity-60">{t('dashboard.period')}</span>
           <select
@@ -171,12 +199,12 @@ export default function DashboardPage() {
             <option value={90}>{t('dashboard.days90')}</option>
           </select>
         </div>
-      </div>
+      </Card>
 
       {/* Mood Trends */}
-      <div className="glass p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">{t('dashboard.moodTrends')}</h2>
+      <Card padding="lg">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">{t('dashboard.moodTrends')}</h2>
         </div>
         {trends.length === 0 ? (
           <EmptyState
@@ -211,11 +239,11 @@ export default function DashboardPage() {
             </table>
           </>
         )}
-      </div>
+      </Card>
 
       {/* Weather Correlation */}
-      <div className="glass p-6">
-        <h2 className="text-lg font-semibold mb-2">{t('dashboard.weatherCorrelation')}</h2>
+      <Card padding="lg">
+        <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">{t('dashboard.weatherCorrelation')}</h2>
         {correlation.correlation != null ? (
           <>
             <p className="text-sm opacity-60 mb-4">
@@ -248,7 +276,7 @@ export default function DashboardPage() {
             onAction={() => navigate('/')}
           />
         )}
-      </div>
+      </Card>
 
       {/* Frequent Tags */}
       <div className="glass p-6">

@@ -5,6 +5,7 @@ import { useLang } from '../context/LanguageContext'
 import { LANG_OPTIONS } from '../utils/locales'
 import PasswordField from '../components/PasswordField'
 import { useToast } from '../context/ToastContext'
+import { Button, Card, Input } from '../components/ui'
 
 export default function LoginPage() {
   const { user, login } = useAuth()
@@ -99,7 +100,6 @@ export default function LoginPage() {
     try {
       const { default: api } = await import('../api/axios')
       const { data } = await api.post('/auth/2fa/login/', { partial_token: partialToken, code: totpCode })
-      // Store tokens and redirect
       const { setAuthTokens } = await import('../utils/tokenStorage')
       setAuthTokens(data.access, data.refresh, rememberMe)
       window.location.href = '/'
@@ -112,71 +112,101 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="glass p-8 w-full max-w-md">
-        <div className="flex justify-end mb-4 gap-1">
+      {/* Decorative gradient orbs */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-3xl -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl -z-10" />
+
+      <Card padding="lg" className="w-full max-w-md">
+        {/* Language Selector */}
+        <div className="flex justify-end mb-6 gap-1">
           {LANG_OPTIONS.map((opt) => (
             <button
               key={opt.code}
               onClick={() => setLang(opt.code)}
-              className={`px-1.5 py-0.5 text-xs rounded cursor-pointer transition-all ${
-                lang === opt.code
-                  ? 'bg-purple-500/30 text-purple-500 font-bold'
-                  : 'opacity-50 hover:opacity-100'
-              }`}
+              className={`
+                px-3 py-1 text-xs rounded-lg cursor-pointer transition-all
+                ${lang === opt.code
+                  ? 'bg-[var(--color-primary-500)]/20 text-[var(--color-primary-400)] font-semibold border border-[var(--color-primary-500)]/30'
+                  : 'opacity-50 hover:opacity-100 hover:bg-[var(--surface-primary)]'
+                }
+              `.trim().replace(/\s+/g, ' ')}
             >
               {opt.label}
             </button>
           ))}
         </div>
-        <div className="flex justify-center mb-3">
-          <img src="/logo.png" alt="HeartBox" decoding="async" className="w-36 h-36 object-contain" />
-        </div>
-        <h1 className="text-2xl font-bold text-center mb-2 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-          {t('app.displayName')}
-        </h1>
-        <p className="text-center opacity-60 text-sm mb-6">{t('login.title')}</p>
 
+        {/* Logo */}
+        <div className="flex justify-center mb-4">
+          <img
+            src="/logo.png"
+            alt="HeartBox"
+            decoding="async"
+            className="w-32 h-32 object-contain drop-shadow-[0_0_20px_rgba(167,139,250,0.2)]"
+          />
+        </div>
+
+        {/* Title */}
+        <h1 className="text-3xl font-bold text-center mb-2">
+          <span className="gradient-text">{t('app.displayName')}</span>
+        </h1>
+        <p className="text-center text-[var(--text-secondary)] text-sm mb-8">
+          {t('login.title')}
+        </p>
+
+        {/* Error Alert */}
         {error && (
-          <div role="alert" className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
-            {error}
+          <div
+            role="alert"
+            className="mb-6 p-4 rounded-lg bg-[var(--color-secondary-600)]/10 border border-[var(--color-secondary-600)]/20 text-[var(--color-secondary-600)]"
+          >
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span className="text-sm">{error}</span>
+            </div>
           </div>
         )}
 
+        {/* 2FA Form */}
         {requires2FA ? (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-center">{t('twofa.loginTitle')}</h2>
-            <input
+          <div className="space-y-6">
+            <h2 className="text-lg font-semibold text-center text-[var(--text-primary)]">
+              {t('twofa.loginTitle')}
+            </h2>
+            <Input
               type="text"
               value={totpCode}
               onChange={e => setTotpCode(e.target.value)}
               placeholder={t('twofa.enterCode')}
               maxLength={6}
-              className="glass-input text-center text-lg tracking-widest"
+              className="text-center text-lg tracking-widest"
             />
-            <button
+            <Button
               onClick={handle2FAVerify}
               disabled={totpCode.length !== 6 || twoFALoading}
-              className="btn-primary w-full"
+              loading={twoFALoading}
+              fullWidth
             >
-              {twoFALoading ? t('common.loading') : t('twofa.verify')}
-            </button>
+              {t('twofa.verify')}
+            </Button>
           </div>
         ) : (
           <>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="login-username" className="sr-only">{t('login.username')}</label>
-                <input
-                  id="login-username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={t('login.username')}
-                  className="glass-input"
-                  autoComplete="username"
-                  required
-                />
-              </div>
+            {/* Login Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Input
+                id="login-username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={t('login.username')}
+                label={t('login.username')}
+                autoComplete="username"
+                required
+              />
+
               <PasswordField
                 id="login-password"
                 value={password}
@@ -186,43 +216,78 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 required
               />
-              <label className="flex items-center gap-2 text-sm opacity-75">
+
+              <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-[var(--border-primary)] accent-[var(--color-primary-500)]"
                 />
                 {t('login.rememberMe')}
               </label>
-              <button type="submit" disabled={loading} className="btn-primary w-full">
-                {loading ? t('login.loading') : t('login.submit')}
-              </button>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                loading={loading}
+                fullWidth
+                size="lg"
+              >
+                {t('login.submit')}
+              </Button>
             </form>
-            <div className="text-center my-4">
-              <div className="border-t border-[var(--card-border)] relative">
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 bg-[var(--tooltip-bg)] text-xs opacity-50">{t('oauth.or')}</span>
+
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[var(--border-primary)]" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-3 bg-[var(--glass-bg)] text-[var(--text-tertiary)]">
+                  {t('oauth.or')}
+                </span>
               </div>
             </div>
+
+            {/* Google Sign In */}
             <div ref={googleBtnRef} className="w-full flex justify-center" />
-            <div className="mt-2 text-right">
-              <Link to="/forgot-password" className="text-xs text-purple-400 hover:text-purple-300">
+
+            {/* Forgot Password Link */}
+            <div className="mt-4 text-right">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-[var(--color-primary-400)] hover:text-[var(--color-primary-300)] transition-colors"
+              >
                 {t('login.forgotPassword')}
               </Link>
             </div>
 
-            <p className="mt-4 text-center text-sm opacity-60">
+            {/* Register Link */}
+            <p className="mt-6 text-center text-sm text-[var(--text-secondary)]">
               {t('login.noAccount')}{' '}
-              <Link to="/register" className="text-purple-500 hover:text-purple-400 opacity-100">
+              <Link
+                to="/register"
+                className="text-[var(--color-primary-400)] hover:text-[var(--color-primary-300)] font-medium transition-colors"
+              >
                 {t('login.register')}
               </Link>
             </p>
           </>
         )}
-      </div>
-      <div className="mt-6 text-center text-xs opacity-40 space-x-3">
-        <Link to="/privacy" className="hover:opacity-70">{t('legal.privacy')}</Link>
-        <span>|</span>
-        <Link to="/terms" className="hover:opacity-70">{t('legal.terms')}</Link>
+      </Card>
+
+      {/* Footer Links */}
+      <div className="mt-8 text-center">
+        <div className="flex items-center justify-center gap-4 text-xs text-[var(--text-tertiary)]">
+          <Link to="/privacy" className="hover:text-[var(--color-primary-400)] transition-colors">
+            {t('legal.privacy')}
+          </Link>
+          <span>•</span>
+          <Link to="/terms" className="hover:text-[var(--color-primary-400)] transition-colors">
+            {t('legal.terms')}
+          </Link>
+        </div>
       </div>
     </div>
   )

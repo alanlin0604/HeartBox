@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
+import { Button, Card } from '../components/ui'
 
 export default function LandingPage() {
   const { t } = useLang()
@@ -31,45 +32,119 @@ export default function LandingPage() {
         }
       })}} />
 
-      {/* Hero */}
-      <header className="flex flex-col items-center justify-center text-center px-4 pt-16 pb-12">
-        <img src="/logo.png" alt="HeartBox" className="w-20 h-20 mb-4" />
-        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent mb-4">
-          {t('landing.title')}
+      {/* Hero Section - Modern Design */}
+      <header className="relative flex flex-col items-center justify-center text-center px-4 pt-20 pb-16 sm:pt-24 sm:pb-20 overflow-hidden">
+        {/* Decorative gradient orbs */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl -z-10" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl -z-10" />
+
+        {/* Logo with subtle animation */}
+        <div className="mb-6 animate-scale-in">
+          <img
+            src="/logo.png"
+            alt="HeartBox"
+            className="w-24 h-24 drop-shadow-[0_0_20px_rgba(167,139,250,0.3)]"
+          />
+        </div>
+
+        {/* Title with gradient text */}
+        <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6 animate-fade-in">
+          <span className="gradient-text">
+            {t('landing.title')}
+          </span>
         </h1>
-        <p className="text-lg md:text-xl opacity-70 max-w-2xl mb-8">{t('landing.subtitle')}</p>
-        <div className="flex gap-4 flex-wrap justify-center">
-          <Link to="/register" className="btn-primary text-lg px-8 py-3">{t('landing.getStarted')}</Link>
-          <a href="#features" className="btn-secondary text-lg px-8 py-3">{t('landing.learnMore')}</a>
+
+        {/* Subtitle */}
+        <p className="text-lg sm:text-xl md:text-2xl text-[var(--text-secondary)] max-w-3xl mb-10 leading-relaxed animate-fade-in" style={{ animationDelay: '100ms' }}>
+          {t('landing.subtitle')}
+        </p>
+
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <Link to="/register">
+            <Button size="lg" className="min-w-[160px]">
+              ✨ {t('landing.getStarted')}
+            </Button>
+          </Link>
+          <a href="#features">
+            <Button variant="secondary" size="lg" className="min-w-[160px]">
+              {t('landing.learnMore')}
+            </Button>
+          </a>
         </div>
       </header>
 
-      {/* Features */}
-      <section id="features" className="max-w-6xl mx-auto px-4 py-12">
-        <h2 className="text-2xl font-bold text-center mb-8">{t('landing.featuresTitle')}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Features Section - Card Grid */}
+      <section id="features" className="max-w-7xl mx-auto px-4 py-16 sm:py-20">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            {t('landing.featuresTitle')}
+          </h2>
+          <div className="w-20 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((f, i) => (
-            <div key={i} className="glass p-6 text-center space-y-3 hover:scale-[1.02] transition-transform">
-              <img src={f.icon} alt="" className="w-12 h-12 mx-auto" />
-              <h3 className="text-lg font-semibold">{t(f.titleKey)}</h3>
-              <p className="text-sm opacity-70">{t(f.descKey)}</p>
-            </div>
+            <Card
+              key={i}
+              hover
+              padding="lg"
+              className="text-center group"
+              style={{
+                animationDelay: `${i * 50}ms`,
+                animation: 'scale-in var(--duration-normal) var(--ease-smooth) backwards'
+              }}
+            >
+              <div className="mb-4 transform group-hover:scale-110 transition-transform duration-300">
+                <img
+                  src={f.icon}
+                  alt=""
+                  className="w-16 h-16 mx-auto drop-shadow-lg"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-[var(--text-primary)]">
+                {t(f.titleKey)}
+              </h3>
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                {t(f.descKey)}
+              </p>
+            </Card>
           ))}
         </div>
       </section>
 
-      {/* Pricing Preview */}
-      <section className="max-w-4xl mx-auto px-4 py-12 text-center">
-        <h2 className="text-2xl font-bold mb-4">{t('landing.pricingTitle')}</h2>
-        <p className="opacity-70 mb-6">{t('landing.pricingDesc')}</p>
-        <Link to="/pricing" className="btn-secondary">{t('landing.viewPricing')}</Link>
+      {/* Pricing Preview Section */}
+      <section className="max-w-4xl mx-auto px-4 py-16 sm:py-20">
+        <Card padding="lg" className="text-center">
+          <h2 className="text-3xl font-bold mb-4 text-[var(--text-primary)]">
+            {t('landing.pricingTitle')}
+          </h2>
+          <p className="text-lg text-[var(--text-secondary)] mb-8 max-w-2xl mx-auto">
+            {t('landing.pricingDesc')}
+          </p>
+          <Link to="/pricing">
+            <Button variant="outline" size="lg">
+              {t('landing.viewPricing')} →
+            </Button>
+          </Link>
+        </Card>
       </section>
 
       {/* Footer */}
-      <footer className="text-center text-xs opacity-40 py-6 space-x-4 mt-auto">
-        <Link to="/privacy" className="hover:opacity-70">{t('legal.privacy')}</Link>
-        <Link to="/terms" className="hover:opacity-70">{t('legal.terms')}</Link>
-        <span>&copy; {new Date().getFullYear()} HeartBox</span>
+      <footer className="text-center py-8 mt-auto border-t border-[var(--border-primary)]">
+        <div className="flex flex-wrap justify-center gap-6 mb-4 text-sm text-[var(--text-tertiary)]">
+          <Link to="/privacy" className="hover:text-[var(--color-primary-400)] transition-colors">
+            {t('legal.privacy')}
+          </Link>
+          <Link to="/terms" className="hover:text-[var(--color-primary-400)] transition-colors">
+            {t('legal.terms')}
+          </Link>
+        </div>
+        <p className="text-xs text-[var(--text-muted)]">
+          &copy; {new Date().getFullYear()} HeartBox. All rights reserved.
+        </p>
       </footer>
     </div>
   )
