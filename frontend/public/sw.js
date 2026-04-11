@@ -1,4 +1,4 @@
-const CACHE_NAME = 'heartbox-cache-v5'
+const CACHE_NAME = 'heartbox-cache-v6'
 const APP_SHELL = ['/', '/index.html', '/manifest.json', '/offline.html']
 
 self.addEventListener('install', (event) => {
@@ -36,20 +36,23 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Static assets: cache-first
+  // Static assets: stale-while-revalidate
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached
-      return fetch(event.request)
-        .then((response) => {
-          if (!response || response.status !== 200 || response.type === 'opaque') {
-            return response
+    caches.match(event.request).then((cachedResponse) => {
+      // Start network request for fresh content
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          // Update cache in background
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type !== 'opaque') {
+            const copy = networkResponse.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
           }
-          const copy = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
-          return response
+          return networkResponse
         })
-        .catch(() => undefined)
+        .catch(() => cachedResponse) // Network failed, return cached version
+
+      // Return cached content immediately if available, otherwise wait for network
+      return cachedResponse || fetchPromise
     }),
   )
 })
