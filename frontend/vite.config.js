@@ -28,12 +28,23 @@ export default defineConfig({
     reportCompressedSize: false,
     chunkSizeWarningLimit: 1000,
     minify: 'terser',
+    cssMinify: true,
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        passes: 2,
+      },
+      mangle: {
+        safari10: true,
+      },
+      format: {
+        comments: false,
       },
     },
+    cssCodeSplit: true,
+    assetsInlineLimit: 4096,
     rollupOptions: {
       external: [
         'capacitor-apple-health',

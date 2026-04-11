@@ -30,11 +30,12 @@
     <link rel="alternate" hreflang="ja" href="https://heartbox.tw/" />
     <link rel="alternate" hreflang="x-default" href="https://heartbox.tw/" />
 
-    <!-- DNS Prefetch (fallback for older browsers) -->
+    <!-- DNS Prefetch & Preconnect for critical origins -->
     <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
     <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
     <link rel="dns-prefetch" href="https://heartbox-api-598139488748.asia-east1.run.app" />
     <link rel="dns-prefetch" href="https://accounts.google.com" />
+    <link rel="dns-prefetch" href="https://www.gstatic.com" />
 
     <!-- Font & API preconnect / preload -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -44,9 +45,12 @@
     <link rel="preconnect" href="https://heartbox-api-598139488748.asia-east1.run.app" crossorigin />
     <link rel="preconnect" href="https://accounts.google.com" />
 
+    <!-- Preload critical resources -->
+    <link rel="modulepreload" href="/src/main.jsx" />
+    <link rel="preload" href="/logo.png" as="image" type="image/png" />
+
     <!-- Prefetch likely next pages -->
     <link rel="prefetch" href="/dashboard" as="document" />
-    <link rel="prefetch" href="/notes" as="document" />
     <link rel="prefetch" href="/settings" as="document" />
 
     <title>HeartBox — 心事盒</title>
