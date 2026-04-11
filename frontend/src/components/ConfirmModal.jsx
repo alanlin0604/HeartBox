@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react'
-import haptics from '../utils/haptics'
 
 export default function ConfirmModal({
   open,
@@ -59,26 +58,10 @@ export default function ConfirmModal({
         <h3 id="confirm-modal-title" className="text-lg font-semibold">{title}</h3>
         <p className="text-sm opacity-75">{message}</p>
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              haptics.buttonTap()
-              onCancel()
-            }}
-            className="btn-secondary"
-            disabled={loading}
-          >
+          <button type="button" onClick={onCancel} className="btn-secondary" disabled={loading}>
             {cancelText}
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              haptics.delete()
-              onConfirm()
-            }}
-            className="btn-danger"
-            disabled={loading}
-          >
+          <button type="button" onClick={onConfirm} className="btn-danger" disabled={loading}>
             {loading ? '...' : confirmText}
           </button>
         </div>

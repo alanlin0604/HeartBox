@@ -1,20 +1,9 @@
-const CACHE_NAME = 'heartbox-cache-v6'
+const CACHE_NAME = 'heartbox-cache-v5'
 const APP_SHELL = ['/', '/index.html', '/manifest.json', '/offline.html']
-
-// Critical assets to precache (will be populated during build)
-const CRITICAL_ASSETS = [
-  // Build process should inject actual asset paths here via workbox or custom script
-  // For now, we'll cache them on first request via runtime caching below
-]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      // Cache APP_SHELL immediately
-      return cache.addAll(APP_SHELL).catch((err) => {
-        console.warn('Failed to cache some APP_SHELL resources:', err)
-      })
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
   )
   self.skipWaiting()
 })
@@ -47,10 +36,11 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Static assets: stale-while-revalidate for better perceived performance
+  // Static assets: cache-first
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request)
+      if (cached) return cached
+      return fetch(event.request)
         .then((response) => {
           if (!response || response.status !== 200 || response.type === 'opaque') {
             return response
@@ -60,9 +50,6 @@ self.addEventListener('fetch', (event) => {
           return response
         })
         .catch(() => undefined)
-
-      // Return cached version immediately if available, but update cache in background
-      return cached || fetchPromise
     }),
   )
 })
