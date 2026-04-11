@@ -2,11 +2,22 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import compression from 'vite-plugin-compression'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 const DEV_BACKEND = process.env.VITE_PROXY_TARGET || 'http://localhost:8000'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), compression({ algorithm: 'gzip' })],
+  plugins: [
+    react(),
+    tailwindcss(),
+    compression({ algorithm: 'gzip' }),
+    visualizer({
+      filename: './dist/stats.html',
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+    }),
+  ],
   test: {
     environment: 'jsdom',
     globals: true,
