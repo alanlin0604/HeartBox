@@ -1,9 +1,10 @@
 /**
- * Modern Button Component
+ * Modern Button Component with Framer Motion animations
  * Follows HeartBox Design System
  */
 
 import { forwardRef } from 'react'
+import { motion } from 'framer-motion'
 
 const Button = forwardRef(function Button({
   variant = 'primary',
@@ -71,8 +72,24 @@ const Button = forwardRef(function Button({
 
   const widthClass = fullWidth ? 'w-full' : ''
 
+  // Framer Motion 動畫配置
+  const animationConfig = {
+    whileHover: disabled || loading ? {} : {
+      scale: 1.02,
+      y: -2,
+    },
+    whileTap: disabled || loading ? {} : {
+      scale: 0.98,
+    },
+    transition: {
+      type: 'spring',
+      stiffness: 400,
+      damping: 17,
+    },
+  }
+
   return (
-    <button
+    <motion.button
       ref={ref}
       disabled={disabled || loading}
       className={`
@@ -82,6 +99,7 @@ const Button = forwardRef(function Button({
         ${widthClass}
         ${className}
       `.trim().replace(/\s+/g, ' ')}
+      {...animationConfig}
       {...props}
     >
       {loading ? (
@@ -96,7 +114,7 @@ const Button = forwardRef(function Button({
           {rightIcon && <span className="shrink-0">{rightIcon}</span>}
         </>
       )}
-    </button>
+    </motion.button>
   )
 })
 

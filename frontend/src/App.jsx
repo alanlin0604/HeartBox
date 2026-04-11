@@ -1,9 +1,11 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { AnimatePresence } from 'framer-motion'
 import { useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
+import PageTransition from './components/PageTransition'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -67,51 +69,53 @@ export default function App() {
   const location = useLocation()
   return (
     <ErrorBoundary key={location.pathname}>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        {/* Public therapist report (no auth required) */}
-        <Route path="/report/:token" element={<LazyRoute><TherapistReportPublicPage /></LazyRoute>} />
-        <Route path="/verify-email" element={<LazyRoute><VerifyEmailPage /></LazyRoute>} />
-        <Route path="/pricing" element={<LazyRoute><PricingPage /></LazyRoute>} />
-        <Route
-          path="/"
-          element={
-            <HomeRoute>
-              <Layout />
-            </HomeRoute>
-          }
-        >
-          <Route index element={<LazyRoute><JournalPage /></LazyRoute>} />
-          <Route path="dashboard" element={<LazyRoute><DashboardPage /></LazyRoute>} />
-          <Route path="notes/:id" element={<LazyRoute><NoteDetailPage /></LazyRoute>} />
-          <Route path="counselors" element={<LazyRoute><CounselorListPage /></LazyRoute>} />
-          <Route path="ai-chat" element={<LazyRoute><AIChatPage /></LazyRoute>} />
-          <Route path="achievements" element={<LazyRoute><AchievementsPage /></LazyRoute>} />
-          <Route path="chat/:id" element={<LazyRoute><ChatPage /></LazyRoute>} />
-          <Route path="settings" element={<LazyRoute><SettingsPage /></LazyRoute>} />
-          <Route path="assessments" element={<LazyRoute><AssessmentsPage /></LazyRoute>} />
-          <Route path="weekly-summary" element={<LazyRoute><WeeklySummaryPage /></LazyRoute>} />
-          <Route path="breathe" element={<LazyRoute><BreathingPage /></LazyRoute>} />
-          <Route path="learn" element={<LazyRoute><PsychoContentPage /></LazyRoute>} />
-          <Route path="learn/courses/:courseId" element={<LazyRoute><CourseDetailPage /></LazyRoute>} />
-          <Route path="learn/courses/:courseId/lessons/:lessonId" element={<LazyRoute><LessonPage /></LazyRoute>} />
-          <Route path="guide" element={<LazyRoute><GuidePage /></LazyRoute>} />
+      <AnimatePresence mode="wait" initial={false}>
+        <Routes location={location} key={location.pathname}>
+          <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
+          <Route path="/register" element={<PageTransition><RegisterPage /></PageTransition>} />
+          <Route path="/forgot-password" element={<PageTransition><ForgotPasswordPage /></PageTransition>} />
+          <Route path="/reset-password" element={<PageTransition><ResetPasswordPage /></PageTransition>} />
+          <Route path="/privacy" element={<PageTransition><PrivacyPage /></PageTransition>} />
+          <Route path="/terms" element={<PageTransition><TermsPage /></PageTransition>} />
+          {/* Public therapist report (no auth required) */}
+          <Route path="/report/:token" element={<LazyRoute><PageTransition><TherapistReportPublicPage /></PageTransition></LazyRoute>} />
+          <Route path="/verify-email" element={<LazyRoute><PageTransition><VerifyEmailPage /></PageTransition></LazyRoute>} />
+          <Route path="/pricing" element={<LazyRoute><PageTransition><PricingPage /></PageTransition></LazyRoute>} />
           <Route
-            path="admin"
+            path="/"
             element={
-              <AdminRoute>
-                <LazyRoute><AdminPage /></LazyRoute>
-              </AdminRoute>
+              <HomeRoute>
+                <Layout />
+              </HomeRoute>
             }
-          />
-        </Route>
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+          >
+            <Route index element={<LazyRoute><PageTransition><JournalPage /></PageTransition></LazyRoute>} />
+            <Route path="dashboard" element={<LazyRoute><PageTransition><DashboardPage /></PageTransition></LazyRoute>} />
+            <Route path="notes/:id" element={<LazyRoute><PageTransition><NoteDetailPage /></PageTransition></LazyRoute>} />
+            <Route path="counselors" element={<LazyRoute><PageTransition><CounselorListPage /></PageTransition></LazyRoute>} />
+            <Route path="ai-chat" element={<LazyRoute><PageTransition><AIChatPage /></PageTransition></LazyRoute>} />
+            <Route path="achievements" element={<LazyRoute><PageTransition><AchievementsPage /></PageTransition></LazyRoute>} />
+            <Route path="chat/:id" element={<LazyRoute><PageTransition><ChatPage /></PageTransition></LazyRoute>} />
+            <Route path="settings" element={<LazyRoute><PageTransition><SettingsPage /></PageTransition></LazyRoute>} />
+            <Route path="assessments" element={<LazyRoute><PageTransition><AssessmentsPage /></PageTransition></LazyRoute>} />
+            <Route path="weekly-summary" element={<LazyRoute><PageTransition><WeeklySummaryPage /></PageTransition></LazyRoute>} />
+            <Route path="breathe" element={<LazyRoute><PageTransition><BreathingPage /></PageTransition></LazyRoute>} />
+            <Route path="learn" element={<LazyRoute><PageTransition><PsychoContentPage /></PageTransition></LazyRoute>} />
+            <Route path="learn/courses/:courseId" element={<LazyRoute><PageTransition><CourseDetailPage /></PageTransition></LazyRoute>} />
+            <Route path="learn/courses/:courseId/lessons/:lessonId" element={<LazyRoute><PageTransition><LessonPage /></PageTransition></LazyRoute>} />
+            <Route path="guide" element={<LazyRoute><PageTransition><GuidePage /></PageTransition></LazyRoute>} />
+            <Route
+              path="admin"
+              element={
+                <AdminRoute>
+                  <LazyRoute><PageTransition><AdminPage /></PageTransition></LazyRoute>
+                </AdminRoute>
+              }
+            />
+          </Route>
+          <Route path="*" element={<PageTransition><NotFoundPage /></PageTransition>} />
+        </Routes>
+      </AnimatePresence>
     </ErrorBoundary>
   )
 }

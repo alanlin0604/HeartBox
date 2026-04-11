@@ -1,14 +1,17 @@
 /**
- * Modern Glass Card Component
+ * Modern Glass Card Component with Framer Motion animations
  * Follows HeartBox Design System - Glassmorphism
  */
 
 import { forwardRef } from 'react'
+import { motion } from 'framer-motion'
 
 const Card = forwardRef(function Card({
   variant = 'default',
   padding = 'md',
   hover = false,
+  animate = true,
+  staggerDelay = 0,
   children,
   className = '',
   ...props
@@ -52,8 +55,23 @@ const Card = forwardRef(function Card({
     cursor-pointer
   ` : ''
 
+  // Framer Motion 動畫配置
+  const animationConfig = animate ? {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: {
+      duration: 0.5,
+      delay: staggerDelay,
+      ease: [0.25, 0.1, 0.25, 1],
+    },
+    whileHover: hover ? {
+      y: -4,
+      transition: { duration: 0.2 },
+    } : {},
+  } : {}
+
   return (
-    <div
+    <motion.div
       ref={ref}
       className={`
         ${baseStyles}
@@ -62,10 +80,11 @@ const Card = forwardRef(function Card({
         ${hoverStyles}
         ${className}
       `.trim().replace(/\s+/g, ' ')}
+      {...animationConfig}
       {...props}
     >
       {children}
-    </div>
+    </motion.div>
   )
 })
 
