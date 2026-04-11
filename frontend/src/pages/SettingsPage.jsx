@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
@@ -13,6 +13,7 @@ import { subscribeToPush, unsubscribePush } from '../utils/pushNotifications'
 import useHealthSync from '../hooks/useHealthSync'
 
 export default function SettingsPage() {
+  const location = useLocation()
   const { user, refreshUser } = useAuth()
   const { t, lang } = useLang()
   const { theme } = useTheme()
@@ -64,6 +65,13 @@ export default function SettingsPage() {
   const [userTimezone, setUserTimezone] = useState(user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone)
   const health = useHealthSync()
   const [activeTab, setActiveTab] = useState('profile')
+
+  // Handle tab navigation from other pages
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab)
+    }
+  }, [location.state?.tab])
 
   useEffect(() => {
     // Notification preferences

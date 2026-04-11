@@ -1052,5 +1052,8 @@
   "health.metric_hrv": "心率變異性",
   "health.metric_active_calories": "活動卡路里",
   "health.metric_exercise_minutes": "運動時長",
-  "health.correlationHint": "r > 0 表示正相關（數值越高心情越好），r < 0 表示負相關。需至少 3 天以上的交叉數據。"
+  "health.correlationHint": "r > 0 表示正相關（數值越高心情越好），r < 0 表示負相關。需至少 3 天以上的交叉數據。",
+  "health.noData": "目前沒有健康數據",
+  "health.noDataDesc": "請前往設定頁面連結 Health Connect 並同步數據，或在日常活動中使用健康追蹤裝置記錄你的步數、心率和睡眠等數據。",
+  "health.goToSettings": "前往設定"
 }

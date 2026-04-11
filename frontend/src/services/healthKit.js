@@ -20,17 +20,25 @@ let isAvailable = false
  */
 export async function initHealthService() {
   try {
+    // Get platform (android, ios, or web)
     platform = Capacitor.getPlatform()
+    console.log('[HealthKit] Platform detected:', platform)
 
     if (platform === 'web') {
       isAvailable = false
+      console.log('[HealthKit] Running in web mode, health features disabled')
       return
     }
 
+    // Check if health plugin is available
     const result = await Health.isAvailable()
     isAvailable = result.available
-  } catch {
+
+    console.log('[HealthKit] Health plugin availability:', result)
+    console.log('[HealthKit] isAvailable:', isAvailable)
+  } catch (error) {
     // Health plugin not available
+    console.error('[HealthKit] Failed to initialize:', error)
     isAvailable = false
   }
 }
@@ -59,14 +67,18 @@ export async function requestPermissions() {
         'heartRate',
         'heartRateVariability',
         'calories',
-        'exerciseTime',
+        // Note: 'exerciseTime' not supported on Android Health Connect
+        // Use 'workouts' API separately if needed
         'sleep',
       ],
     })
 
+    console.log('[HealthKit] Authorization result:', result)
+
     // Check if we got at least some read permissions
     return result.readAuthorized.length > 0
-  } catch {
+  } catch (error) {
+    console.error('[HealthKit] Authorization failed:', error)
     return false
   }
 }
@@ -185,22 +197,8 @@ export async function readHealthData(startDate, endDate) {
       })
     }
 
-    // Read Exercise Time
-    const exResult = await Health.readSamples({
-      dataType: 'exerciseTime',
-      startDate: start,
-      endDate: end,
-      limit: 1000,
-    }).catch(() => ({ samples: [] }))
-
-    for (const sample of exResult.samples || []) {
-      metrics.push({
-        date: sample.startDate.split('T')[0],
-        metric_type: 'exercise_minutes',
-        value: sample.value,
-        source,
-      })
-    }
+    // Note: Exercise Time (exerciseTime) not supported on Android Health Connect
+    // TODO: Use workouts API or alternative method to get exercise data
 
     // Read Sleep
     const sleepResult = await Health.readSamples({

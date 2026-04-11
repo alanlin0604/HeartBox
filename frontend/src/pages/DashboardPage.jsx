@@ -304,12 +304,13 @@ export default function DashboardPage() {
       )}
 
       {/* Health Overview */}
-      {healthData?.summary && Object.keys(healthData.summary).length > 0 && (
-        <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4">{t('health.dashboardTitle')}</h2>
+      <div className="glass p-6">
+        <h2 className="text-lg font-semibold mb-4">{t('health.dashboardTitle')}</h2>
 
-          {/* Health metric cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+        {healthData?.summary && Object.keys(healthData.summary).length > 0 ? (
+          <>
+            {/* Health metric cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
             {healthData.summary.steps && (
               <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
                 <p className="text-xs opacity-60">{t('health.steps')}</p>
@@ -396,8 +397,26 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </div>
           )}
-        </div>
-      )}
+          </>
+        ) : (
+          /* Empty state when no health data */
+          <div className="text-center py-8">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold mb-2">{t('health.noData')}</h3>
+            <p className="text-sm opacity-60 mb-4 max-w-md mx-auto">{t('health.noDataDesc')}</p>
+            <button
+              onClick={() => navigate('/settings', { state: { tab: 'health' } })}
+              className="btn-primary text-sm"
+            >
+              {t('health.goToSettings')}
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Health-Mood Correlation */}
       {healthData?.health_mood_correlation && Object.keys(healthData.health_mood_correlation).length > 0 && (
