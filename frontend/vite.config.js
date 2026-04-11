@@ -27,6 +27,13 @@ export default defineConfig({
     sourcemap: false,
     reportCompressedSize: false,
     chunkSizeWarningLimit: 1000,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
     rollupOptions: {
       external: [
         'capacitor-apple-health',
@@ -37,8 +44,9 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-recharts': ['recharts'],
           'vendor-axios': ['axios'],
-          'vendor-tiptap': ['@tiptap/react', '@tiptap/starter-kit'],
+          'vendor-tiptap': ['@tiptap/react', '@tiptap/starter-kit', '@tiptap/extension-placeholder'],
           'vendor-dompurify': ['dompurify'],
+          'vendor-framer': ['framer-motion'],
         },
       },
     },
