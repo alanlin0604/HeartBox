@@ -90,14 +90,14 @@ export default function YearInPixels() {
               <div className="flex items-center gap-px mb-1">
                 <div className="w-8 text-xs opacity-40" />
                 {Array.from({ length: 31 }, (_, i) => (
-                  <div key={i} className="w-3.5 h-3.5 flex items-center justify-center text-[8px] opacity-30">
+                  <div key={i} className="w-3.5 h-3.5 flex items-center justify-center text-[8px] text-slate-400">
                     {(i + 1) % 5 === 0 ? i + 1 : ''}
                   </div>
                 ))}
               </div>
               {grid.map((row) => (
                 <div key={row.monthKey} className="flex items-center gap-px mb-px">
-                  <div className="w-8 text-xs opacity-50 text-right pr-1">{t(row.monthKey)}</div>
+                  <div className="w-8 text-xs text-slate-400 text-right pr-1">{t(row.monthKey)}</div>
                   {row.days.map((cell, idx) => (
                     <div
                       key={idx}
@@ -116,13 +116,13 @@ export default function YearInPixels() {
 
           {/* Tooltip */}
           {hovered && (
-            <div className="mt-2 text-xs opacity-60">
+            <div className="mt-2 text-xs text-slate-400">
               {hovered.date}: {hovered.score != null ? `${t('dashboard.avgSentiment')} ${hovered.score}` : t('dashboard.noData')}
             </div>
           )}
 
           {/* Legend */}
-          <div className="flex items-center gap-2 mt-3 text-xs opacity-50">
+          <div className="flex items-center gap-2 mt-3 text-xs text-slate-400">
             <span>{t('dashboard.negative')}</span>
             <div className="w-3.5 h-3.5 rounded-[2px] bg-red-500/80" />
             <div className="w-3.5 h-3.5 rounded-[2px] bg-orange-400/70" />

@@ -70,7 +70,7 @@ export default function ShareNoteButton({ noteId }) {
             {error && <p className="text-red-500 text-sm">{error}</p>}
 
             <div>
-              <label className="text-sm opacity-60 block mb-1">{t('share.selectCounselor')}</label>
+              <label className="text-sm text-slate-400 block mb-1">{t('share.selectCounselor')}</label>
               <select
                 value={selectedCounselor}
                 onChange={(e) => setSelectedCounselor(e.target.value)}

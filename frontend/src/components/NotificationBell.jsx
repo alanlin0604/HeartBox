@@ -219,7 +219,7 @@ export default memo(function NotificationBell() {
             <div className="p-6 text-center space-y-2">
               <p className="text-2xl">🔔</p>
               <p className="text-sm font-medium opacity-70">{t('notification.empty')}</p>
-              <p className="text-xs opacity-50">{t('notification.emptyDesc')}</p>
+              <p className="text-xs text-slate-400">{t('notification.emptyDesc')}</p>
             </div>
           ) : (
             notifications.slice(0, 20).map((notif) => (
@@ -236,8 +236,8 @@ export default memo(function NotificationBell() {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{NOTIF_TYPE_KEYS[notif.type] ? t(NOTIF_TYPE_KEYS[notif.type]) : notif.data?.assessment_id ? t('notification.type.assessmentShare') : notif.title}</p>
-                    <p className="text-xs opacity-60 truncate">{getLocalizedMessage(notif, t)}</p>
-                    <p className="text-xs opacity-40 mt-1">
+                    <p className="text-xs text-slate-400 truncate">{getLocalizedMessage(notif, t)}</p>
+                    <p className="text-xs text-slate-400 mt-1">
                       {new Date(notif.created_at).toLocaleString(LOCALE_MAP[lang] || lang)}
                     </p>
                   </div>

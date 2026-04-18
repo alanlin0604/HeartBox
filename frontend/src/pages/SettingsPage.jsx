@@ -205,7 +205,7 @@ export default function SettingsPage() {
             <h2 className="text-lg font-semibold">{t('settings.profile')}</h2>
 
             <div>
-              <label htmlFor="settings-username" className="block text-sm font-medium opacity-60 mb-1">
+              <label htmlFor="settings-username" className="block text-sm font-medium text-slate-400 mb-1">
                 {t('settings.username')}
               </label>
               <Input
@@ -218,7 +218,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label htmlFor="settings-email" className="block text-sm font-medium opacity-60 mb-1">
+              <label htmlFor="settings-email" className="block text-sm font-medium text-slate-400 mb-1">
                 {t('settings.email')}
               </label>
               <Input
@@ -230,7 +230,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label htmlFor="settings-bio" className="block text-sm font-medium opacity-60 mb-1">
+              <label htmlFor="settings-bio" className="block text-sm font-medium text-slate-400 mb-1">
                 {t('settings.bio')}
               </label>
               <textarea
@@ -242,7 +242,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium opacity-60 mb-1">
+              <label className="block text-sm font-medium text-slate-400 mb-1">
                 {t('settings.avatar')}
               </label>
               <input
@@ -280,7 +280,7 @@ export default function SettingsPage() {
             <h2 className="text-lg font-semibold">{t('settings.changePassword')}</h2>
 
             <div>
-              <label htmlFor="settings-old-password" className="block text-sm font-medium opacity-60 mb-1">
+              <label htmlFor="settings-old-password" className="block text-sm font-medium text-slate-400 mb-1">
                 {t('settings.oldPassword')}
               </label>
               <PasswordField
@@ -292,7 +292,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label htmlFor="settings-new-password" className="block text-sm font-medium opacity-60 mb-1">
+              <label htmlFor="settings-new-password" className="block text-sm font-medium text-slate-400 mb-1">
                 {t('settings.newPassword')}
               </label>
               <PasswordField
@@ -305,7 +305,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label htmlFor="settings-confirm-password" className="block text-sm font-medium opacity-60 mb-1">
+              <label htmlFor="settings-confirm-password" className="block text-sm font-medium text-slate-400 mb-1">
                 {t('settings.confirmPassword')}
               </label>
               <PasswordField
@@ -511,7 +511,7 @@ export default function SettingsPage() {
         <Card variant="default" padding="lg" className="space-y-6" animate staggerDelay={0.1}>
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('health.connectionTitle')}</h2>
-            <p className="text-sm opacity-60">{t('health.connectionDesc')}</p>
+            <p className="text-sm text-slate-400">{t('health.connectionDesc')}</p>
 
             {health.available ? (
               <div className="space-y-4">
@@ -550,7 +550,7 @@ export default function SettingsPage() {
                     <div className="space-y-3">
                       <h3 className="text-sm font-medium">{t('health.syncStatus')}</h3>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="opacity-60">{t('health.lastSync')}</span>
+                        <span className="text-slate-400">{t('health.lastSync')}</span>
                         <span>
                           {health.lastSync
                             ? new Date(health.lastSync).toLocaleString()
@@ -620,7 +620,7 @@ export default function SettingsPage() {
           {/* Data Import */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('import.title')}</h2>
-            <p className="text-sm opacity-60">{t('import.settingsDesc')}</p>
+            <p className="text-sm text-slate-400">{t('import.settingsDesc')}</p>
             <button onClick={() => setImportOpen(true)} className="btn-secondary">{t('import.button')}</button>
           </div>
 
@@ -631,7 +631,7 @@ export default function SettingsPage() {
           {/* Account Info */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">{t('settings.accountInfo')}</h2>
-            <div className="text-sm space-y-2 opacity-70">
+            <div className="text-sm space-y-2 text-slate-400">
               <p>{t('settings.joined')}: {user?.created_at ? new Date(user.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang) : '-'}</p>
               <p>{t('settings.theme')}: {theme === 'dark' ? t('settings.themeDark') : t('settings.themeLight')}</p>
             </div>
@@ -648,7 +648,7 @@ export default function SettingsPage() {
                 <p>{t('subscription.status')}: {currentSub.status}</p>
               </div>
             ) : (
-              <p className="text-sm opacity-60">{t('subscription.noPlan')}</p>
+              <p className="text-sm text-slate-400">{t('subscription.noPlan')}</p>
             )}
             <Link to="/pricing" className="btn-secondary inline-block">{t('subscription.viewPlans')}</Link>
           </div>
@@ -669,7 +669,7 @@ export default function SettingsPage() {
             {twoFAEnabled ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium opacity-60 mb-1">{t('twofa.passwordToDisable')}</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">{t('twofa.passwordToDisable')}</label>
                   <input
                     type="password"
                     value={disablePassword}
@@ -696,7 +696,7 @@ export default function SettingsPage() {
               </div>
             ) : setupQR ? (
               <div className="space-y-4">
-                <div className="text-sm opacity-70 space-y-1">
+                <div className="text-sm text-slate-400 space-y-1">
                   <p>{t('twofa.step1')}</p>
                   <p>{t('twofa.step2')}</p>
                   <p>{t('twofa.step3')}</p>
@@ -706,10 +706,10 @@ export default function SettingsPage() {
                 </div>
                 <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-sm">
                   <p className="font-medium text-yellow-500">{t('twofa.secretKey')}: <span className="break-all font-mono">{setupQR.secret}</span></p>
-                  <p className="text-xs opacity-70 mt-1">{t('twofa.backupWarning')}</p>
+                  <p className="text-xs text-slate-400 mt-1">{t('twofa.backupWarning')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium opacity-60 mb-1">{t('twofa.enterCode')}</label>
+                  <label className="block text-sm font-medium text-slate-400 mb-1">{t('twofa.enterCode')}</label>
                   <input
                     type="text"
                     value={totpCode}
@@ -741,8 +741,8 @@ export default function SettingsPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm opacity-70">{t('twofa.description')}</p>
-                <p className="text-xs opacity-50">{t('twofa.recommendedApps')}</p>
+                <p className="text-sm text-slate-400">{t('twofa.description')}</p>
+                <p className="text-xs text-slate-400">{t('twofa.recommendedApps')}</p>
                 <button
                   onClick={async () => {
                     try {
@@ -764,7 +764,7 @@ export default function SettingsPage() {
           {/* Danger Zone - Delete Account */}
           <div className="space-y-3">
             <h2 className="text-lg font-semibold text-red-500">{t('settings.dangerZone')}</h2>
-            <p className="text-sm opacity-60">{t('settings.deleteAccountDesc')}</p>
+            <p className="text-sm text-slate-400">{t('settings.deleteAccountDesc')}</p>
             <button
               onClick={() => setDeleteModalOpen(true)}
               className="btn-danger"
@@ -780,7 +780,7 @@ export default function SettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="popup-panel p-4 sm:p-6 w-full max-w-md space-y-4" role="dialog" aria-modal="true">
             <h2 className="text-lg font-semibold text-red-500">{t('settings.deleteAccountConfirm')}</h2>
-            <p className="text-sm opacity-70">{t('settings.deleteAccountDesc')}</p>
+            <p className="text-sm text-slate-400">{t('settings.deleteAccountDesc')}</p>
             <input
               type="password"
               value={deletePassword}

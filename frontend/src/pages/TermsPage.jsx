@@ -12,7 +12,7 @@ export default function TermsPage() {
         <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
           {t('terms.heading')}
         </h1>
-        <p className="text-sm opacity-60">{t('terms.lastUpdated')}</p>
+        <p className="text-sm text-slate-400">{t('terms.lastUpdated')}</p>
 
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">{t('terms.s1Title')}</h2>

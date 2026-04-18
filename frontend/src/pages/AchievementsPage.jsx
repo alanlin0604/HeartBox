@@ -67,7 +67,7 @@ export default function AchievementsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t('achievement.title')}</h1>
         <div className="flex items-center gap-3">
-          <span className="text-sm opacity-60">
+          <span className="text-sm text-slate-400">
             {unlockedCount}/{totalCount}
           </span>
           <button
@@ -116,7 +116,7 @@ export default function AchievementsPage() {
                   <h3 className="font-semibold text-sm">
                     {t(`achievement.${a.id}`)}
                   </h3>
-                  <p className="text-xs opacity-50">
+                  <p className="text-xs text-slate-400">
                     {t(`achievement.${a.id}_desc`)}
                   </p>
                 </div>
@@ -130,7 +130,7 @@ export default function AchievementsPage() {
 
             {/* Progress bar */}
             <div>
-              <div className="flex justify-between text-xs opacity-50 mb-1">
+              <div className="flex justify-between text-xs text-slate-400 mb-1">
                 <span>{a.current}/{a.threshold}</span>
                 {a.unlocked && a.unlocked_at && (
                   <span>{new Date(a.unlocked_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>

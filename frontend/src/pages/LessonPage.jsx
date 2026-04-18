@@ -97,7 +97,7 @@ export default function LessonPage() {
   return (
     <div className="space-y-6 mt-4 max-w-3xl mx-auto">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm opacity-60 flex-wrap">
+      <div className="flex items-center gap-2 text-sm text-slate-400 flex-wrap">
         <Link to="/learn" className="hover:opacity-100 transition-opacity">{t('nav.learn')}</Link>
         <span>/</span>
         <Link to={`/learn/courses/${courseId}`} className="hover:opacity-100 transition-opacity">{courseTitle}</Link>
@@ -108,7 +108,7 @@ export default function LessonPage() {
       {/* Article content */}
       <div className="glass p-6">
         <h1 className="text-2xl font-bold mb-4">{title}</h1>
-        <div className="flex items-center gap-3 text-xs opacity-50 mb-6">
+        <div className="flex items-center gap-3 text-xs text-slate-400 mb-6">
           <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-400">
             {t(`learn.${article.category}`)}
           </span>
@@ -119,7 +119,7 @@ export default function LessonPage() {
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mdToHtml(content)) }}
         />
         {article.source && (
-          <p className="text-xs opacity-40 mt-6 pt-3 border-t border-[var(--card-border)]">
+          <p className="text-xs text-slate-400 mt-6 pt-3 border-t border-[var(--card-border)]">
             {t('learn.source')}: {article.source}
           </p>
         )}
@@ -155,7 +155,7 @@ export default function LessonPage() {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
-            <span className="opacity-60">{prevLesson[`title_${langKey}`] || prevLesson.title_en}</span>
+            <span className="text-slate-400">{prevLesson[`title_${langKey}`] || prevLesson.title_en}</span>
           </button>
         ) : <div />}
         {nextLesson ? (
@@ -163,7 +163,7 @@ export default function LessonPage() {
             onClick={() => navigate(`/learn/courses/${courseId}/lessons/${nextLesson.id}`)}
             className="glass px-4 py-3 flex items-center gap-2 hover:bg-purple-500/5 transition-colors cursor-pointer text-sm"
           >
-            <span className="opacity-60">{nextLesson[`title_${langKey}`] || nextLesson.title_en}</span>
+            <span className="text-slate-400">{nextLesson[`title_${langKey}`] || nextLesson.title_en}</span>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>

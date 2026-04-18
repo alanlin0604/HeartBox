@@ -52,7 +52,7 @@ export default function SleepTracker() {
       <h2 className="text-base font-semibold">{t('sleep.title')}</h2>
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
-          <label className="block text-xs opacity-60 mb-1">{t('noteForm.sleepHours')}</label>
+          <label className="block text-xs text-slate-400 mb-1">{t('noteForm.sleepHours')}</label>
           <input
             type="number"
             value={hours}
@@ -65,7 +65,7 @@ export default function SleepTracker() {
           />
         </div>
         <div className="flex-1">
-          <label className="block text-xs opacity-60 mb-1">{t('noteForm.sleepQuality')}</label>
+          <label className="block text-xs text-slate-400 mb-1">{t('noteForm.sleepQuality')}</label>
           <div className="flex gap-1">
             {QUALITY_OPTIONS.map((opt) => (
               <button

@@ -57,10 +57,10 @@ export default function TherapistReportPublicPage() {
     <div className="min-h-screen p-6 max-w-3xl mx-auto space-y-6">
       <div className="glass p-6">
         <h1 className="text-2xl font-bold mb-2">{report.title}</h1>
-        <p className="text-sm opacity-60">
+        <p className="text-sm text-slate-400">
           {report.period_start} — {report.period_end}
         </p>
-        <p className="text-xs opacity-40 mt-1">
+        <p className="text-xs text-slate-400 mt-1">
           {t('publicReport.generated')}: {new Date(report.created_at).toLocaleDateString(locale)}
         </p>
       </div>
@@ -68,15 +68,15 @@ export default function TherapistReportPublicPage() {
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="glass p-4 text-center">
-          <p className="text-xs opacity-60">{t('publicReport.notes')}</p>
+          <p className="text-xs text-slate-400">{t('publicReport.notes')}</p>
           <p className="text-2xl font-bold">{report.report_data?.note_count ?? '-'}</p>
         </div>
         <div className="glass p-4 text-center">
-          <p className="text-xs opacity-60">{t('publicReport.avgMood')}</p>
+          <p className="text-xs text-slate-400">{t('publicReport.avgMood')}</p>
           <p className="text-2xl font-bold">{report.report_data?.mood_avg ?? '-'}</p>
         </div>
         <div className="glass p-4 text-center">
-          <p className="text-xs opacity-60">{t('publicReport.avgStress')}</p>
+          <p className="text-xs text-slate-400">{t('publicReport.avgStress')}</p>
           <p className="text-2xl font-bold">{report.report_data?.stress_avg ?? '-'}</p>
         </div>
       </div>
@@ -111,7 +111,7 @@ export default function TherapistReportPublicPage() {
               <div key={i} className="glass-card p-3 flex items-center justify-between text-sm">
                 <span>{a.assessment_type.toUpperCase()}</span>
                 <span className="font-bold">{a.total_score}</span>
-                <span className="text-xs opacity-60">{new Date(a.created_at).toLocaleDateString(locale)}</span>
+                <span className="text-xs text-slate-400">{new Date(a.created_at).toLocaleDateString(locale)}</span>
               </div>
             ))}
           </div>

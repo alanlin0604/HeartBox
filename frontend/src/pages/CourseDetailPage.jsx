@@ -48,7 +48,7 @@ export default function CourseDetailPage() {
   return (
     <div className="space-y-6 mt-4 max-w-3xl mx-auto">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm opacity-60">
+      <div className="flex items-center gap-2 text-sm text-slate-400">
         <Link to="/learn" className="hover:opacity-100 transition-opacity">{t('nav.learn')}</Link>
         <span>/</span>
         <span>{title}</span>
@@ -60,7 +60,7 @@ export default function CourseDetailPage() {
           <span className="text-4xl">{course.icon_emoji}</span>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{title}</h1>
-            <p className="text-sm opacity-60 mt-2">{desc}</p>
+            <p className="text-sm text-slate-400 mt-2">{desc}</p>
             <div className="mt-4 flex items-center gap-3">
               <div className="flex-1 h-2.5 rounded-full bg-[var(--card-border)] overflow-hidden">
                 <div
@@ -99,7 +99,7 @@ export default function CourseDetailPage() {
               </span>
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium">{lessonTitle}</h3>
-                <span className="text-xs opacity-50">{lesson.reading_time} {t('learn.minRead')}</span>
+                <span className="text-xs text-slate-400">{lesson.reading_time} {t('learn.minRead')}</span>
               </div>
             </button>
           )

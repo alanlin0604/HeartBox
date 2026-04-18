@@ -25,7 +25,7 @@ export default function GuidePage() {
     <div className="space-y-6 mt-4 max-w-2xl mx-auto">
       <div className="text-center space-y-2">
         <h1 className="text-2xl font-bold">{t('guide.title')}</h1>
-        <p className="text-sm opacity-60">{t('guide.subtitle')}</p>
+        <p className="text-sm text-slate-400">{t('guide.subtitle')}</p>
       </div>
 
       <div className="space-y-3">
@@ -37,7 +37,7 @@ export default function GuidePage() {
             }
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold">{t(f.titleKey)}</h3>
-              <p className="text-sm opacity-70 mt-1">{t(f.descKey)}</p>
+              <p className="text-sm text-slate-400 mt-1">{t(f.descKey)}</p>
             </div>
           </div>
         ))}

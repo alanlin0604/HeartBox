@@ -60,7 +60,7 @@ export default function ExportPDFButton() {
     <div className="popup-panel p-4 space-y-3 w-full">
       <h3 className="text-sm font-semibold">{t('export.title')}</h3>
       <div>
-        <label className="text-xs opacity-60 block mb-1">{t('export.format')}</label>
+        <label className="text-xs text-slate-400 block mb-1">{t('export.format')}</label>
         <select
           value={format}
           onChange={(e) => setFormat(e.target.value)}
@@ -73,7 +73,7 @@ export default function ExportPDFButton() {
       {format === 'pdf' && (
         <>
           <div>
-            <label className="text-xs opacity-60 block mb-1">{t('export.from')}</label>
+            <label className="text-xs text-slate-400 block mb-1">{t('export.from')}</label>
             <input
               type="date"
               value={dateFrom}
@@ -82,7 +82,7 @@ export default function ExportPDFButton() {
             />
           </div>
           <div>
-            <label className="text-xs opacity-60 block mb-1">{t('export.to')}</label>
+            <label className="text-xs text-slate-400 block mb-1">{t('export.to')}</label>
             <input
               type="date"
               value={dateTo}

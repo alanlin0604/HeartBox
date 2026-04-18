@@ -79,7 +79,7 @@ export default function BookingPanel({ counselorId, counselorName, hourlyRate, c
         {success ? (
           <div className="text-center py-6 space-y-2">
             <p className="text-green-500 font-semibold text-lg">{t('booking.success')}</p>
-            <p className="opacity-60 text-sm">{t('booking.successMsg')}</p>
+            <p className="text-slate-400 text-sm">{t('booking.successMsg')}</p>
             <button onClick={onClose} className="btn-primary text-sm mt-4">
               {t('booking.close')}
             </button>
@@ -88,14 +88,14 @@ export default function BookingPanel({ counselorId, counselorName, hourlyRate, c
           <>
             {hourlyRate && (
               <div className="glass-card p-3 text-center">
-                <p className="text-sm opacity-60">{t('pricing.sessionFee')}</p>
+                <p className="text-sm text-slate-400">{t('pricing.sessionFee')}</p>
                 <p className="text-lg font-bold text-purple-500">
                   {formatPrice(hourlyRate, currency)} / {t('pricing.perHour')}
                 </p>
               </div>
             )}
             <div>
-              <label className="text-sm opacity-60 block mb-1">{t('booking.selectDate')}</label>
+              <label className="text-sm text-slate-400 block mb-1">{t('booking.selectDate')}</label>
               <input
                 type="date"
                 value={date}
@@ -109,9 +109,9 @@ export default function BookingPanel({ counselorId, counselorName, hourlyRate, c
               <div>
                 <p className="text-sm font-medium mb-2">{t('booking.availableSlots')}</p>
                 {loadingSlots ? (
-                  <p className="text-sm opacity-60">{t('common.loading')}</p>
+                  <p className="text-sm text-slate-400">{t('common.loading')}</p>
                 ) : slots.length === 0 ? (
-                  <p className="text-sm opacity-60">{t('booking.noSlots')}</p>
+                  <p className="text-sm text-slate-400">{t('booking.noSlots')}</p>
                 ) : (
                   <div className="grid gap-2 grid-cols-2">
                     {slots.map((slot) => (

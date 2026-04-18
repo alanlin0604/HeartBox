@@ -55,7 +55,7 @@ export default function PasswordField({
           <div className="h-1.5 rounded-full bg-white/10">
             <div className={`h-full rounded-full transition-all ${barClass}`} style={{ width: `${strength.value}%` }} />
           </div>
-          <p className="text-xs opacity-70">
+          <p className="text-xs text-slate-400">
             {strength.level === 'strong'
               ? t('password.strong')
               : strength.level === 'medium'

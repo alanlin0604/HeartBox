@@ -167,7 +167,7 @@ export default memo(function MoodCalendar() {
           {WEEKDAY_KEYS.map((key) => (
             <div
               key={key}
-              className="text-center text-xs opacity-50 py-2 font-medium"
+              className="text-center text-xs text-slate-400 py-2 font-medium"
               role="columnheader"
             >
               {t(key)}

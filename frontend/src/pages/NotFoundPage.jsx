@@ -11,7 +11,7 @@ export default function NotFoundPage() {
           404
         </div>
         <h1 className="text-xl font-semibold">{t('notFound.title')}</h1>
-        <p className="text-sm opacity-60">{t('notFound.desc')}</p>
+        <p className="text-sm text-slate-400">{t('notFound.desc')}</p>
         <Link to="/" className="btn-primary inline-block">
           {t('notFound.home')}
         </Link>

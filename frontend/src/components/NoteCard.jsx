@@ -29,7 +29,7 @@ export default memo(function NoteCard({ note, highlight }) {
       <div className="glass-card p-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs opacity-60">{date}</span>
+            <span className="text-xs text-slate-400">{date}</span>
             {note.attachments?.length > 0 && (
               <span className="text-xs opacity-40" title={t('noteCard.hasAttachments')}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -57,14 +57,14 @@ export default memo(function NoteCard({ note, highlight }) {
         )}
         {note.stress_index != null && (
           <div className="mt-2 flex items-center gap-2">
-            <span className="text-xs opacity-50">{t('noteCard.stress')}</span>
+            <span className="text-xs text-slate-400">{t('noteCard.stress')}</span>
             <div className="flex-1 h-1.5 rounded-full" style={{ background: 'var(--stress-bar-bg)' }}>
               <div
                 className="h-full rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500"
                 style={{ width: `${note.stress_index * 10}%` }}
               />
             </div>
-            <span className="text-xs opacity-60">{note.stress_index}/10</span>
+            <span className="text-xs text-slate-400">{note.stress_index}/10</span>
           </div>
         )}
       </div>

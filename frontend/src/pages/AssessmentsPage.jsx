@@ -182,7 +182,7 @@ export default function AssessmentsPage() {
               {t('assessment.shareToCounselor')}
             </button>
           </div>
-          <p className="text-xs opacity-60 mt-2">{t('assessment.disclaimer')}</p>
+          <p className="text-xs text-slate-400 mt-2">{t('assessment.disclaimer')}</p>
         </div>
       )}
 
@@ -194,8 +194,8 @@ export default function AssessmentsPage() {
             <h2 className="text-lg font-semibold">
               {tab === 'phq9' ? t('assessment.phq9Title') : t('assessment.gad7Title')}
             </h2>
-            <p className="text-sm opacity-60">{t('assessment.instructions')}</p>
-            <p className="text-xs opacity-50 italic">{t('assessment.disclaimer')}</p>
+            <p className="text-sm text-slate-400">{t('assessment.instructions')}</p>
+            <p className="text-xs text-slate-400 italic">{t('assessment.disclaimer')}</p>
 
             {Array.from({ length: questionCount }, (_, i) => (
               <div key={i} className="space-y-2">
@@ -245,7 +245,7 @@ export default function AssessmentsPage() {
                         <span className={`font-semibold ${getScoreColor(tab, item.total_score)}`}>{item.total_score}</span>
                         <span className="mx-2 opacity-40">—</span>
                         <span className={getScoreColor(tab, item.total_score)}>{getScoreLabel(tab, item.total_score, t)}</span>
-                        <span className="ml-3 text-xs opacity-50">
+                        <span className="ml-3 text-xs text-slate-400">
                           {new Date(item.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}
                         </span>
                       </div>
@@ -290,7 +290,7 @@ export default function AssessmentsPage() {
           <div className="p-6 max-w-sm w-full space-y-4 rounded-2xl border border-[var(--card-border)] shadow-xl" style={{ background: 'var(--popup-bg)' }}>
             <h3 className="text-lg font-semibold">{t('assessment.selectCounselor')}</h3>
             {counselors.length === 0 ? (
-              <p className="text-sm opacity-60">{t('counselor.noApproved')}</p>
+              <p className="text-sm text-slate-400">{t('counselor.noApproved')}</p>
             ) : (
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {counselors.map((c) => (
@@ -301,7 +301,7 @@ export default function AssessmentsPage() {
                     className="w-full glass-card p-3 flex items-center justify-between text-sm hover:bg-purple-500/10 transition-colors cursor-pointer"
                   >
                     <span className="font-medium">{c.display_name || c.username}</span>
-                    <span className="text-xs opacity-50">{c.specialty}</span>
+                    <span className="text-xs text-slate-400">{c.specialty}</span>
                   </button>
                 ))}
               </div>

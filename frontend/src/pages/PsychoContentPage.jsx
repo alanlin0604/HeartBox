@@ -98,7 +98,7 @@ export default function PsychoContentPage() {
       {/* Courses Tab */}
       {tab === 'courses' && (
         loading ? <LoadingSpinner /> : courses.length === 0 ? (
-          <p className="text-sm opacity-60 text-center py-12">{t('learn.noCourses')}</p>
+          <p className="text-sm text-slate-400 text-center py-12">{t('learn.noCourses')}</p>
         ) : (
           <div className="grid gap-4">
             {courses.map((course) => {
@@ -116,7 +116,7 @@ export default function PsychoContentPage() {
                     <span className="text-3xl">{course.icon_emoji}</span>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-lg">{title}</h3>
-                      <p className="text-sm opacity-60 mt-1 line-clamp-2">{desc}</p>
+                      <p className="text-sm text-slate-400 mt-1 line-clamp-2">{desc}</p>
                       <div className="mt-3 flex items-center gap-3">
                         <div className="flex-1 h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
                           <div
@@ -124,7 +124,7 @@ export default function PsychoContentPage() {
                             style={{ width: `${pct}%` }}
                           />
                         </div>
-                        <span className="text-xs opacity-60 whitespace-nowrap">
+                        <span className="text-xs text-slate-400 whitespace-nowrap">
                           {course.completed_count}/{course.lesson_count} {t('learn.lessons')}
                         </span>
                       </div>
@@ -158,7 +158,7 @@ export default function PsychoContentPage() {
           </div>
 
           {loading ? <LoadingSpinner /> : articles.length === 0 ? (
-            <p className="text-sm opacity-60 text-center py-12">{t('learn.noArticles')}</p>
+            <p className="text-sm text-slate-400 text-center py-12">{t('learn.noArticles')}</p>
           ) : (
             <div className="space-y-3">
               {articles.map((article) => {
@@ -174,7 +174,7 @@ export default function PsychoContentPage() {
                     >
                       <div>
                         <h3 className="font-semibold">{title}</h3>
-                        <div className="flex items-center gap-3 mt-1 text-xs opacity-50">
+                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
                           <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-400">
                             {t(`learn.${article.category}`)}
                           </span>
@@ -193,7 +193,7 @@ export default function PsychoContentPage() {
                           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mdToHtml(content)) }}
                         />
                         {article.source && (
-                          <p className="text-xs opacity-40 mt-3 pt-2 border-t border-[var(--card-border)]">
+                          <p className="text-xs text-slate-400 mt-3 pt-2 border-t border-[var(--card-border)]">
                             {t('learn.source')}: {article.source}
                           </p>
                         )}

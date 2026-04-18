@@ -298,7 +298,7 @@ export default function BreathingPage() {
         >
           <span className="text-2xl">📚</span>
           <div className="flex-1 min-w-0">
-            <p className="text-sm opacity-80">{t('breathe.learnMore')}</p>
+            <p className="text-sm text-slate-400">{t('breathe.learnMore')}</p>
             <p className="text-sm font-semibold text-purple-400">{t('breathe.learnMoreLink')}</p>
           </div>
         </button>
@@ -337,7 +337,7 @@ export default function BreathingPage() {
                 >
                   <h3 className="font-semibold">{t(ex.nameKey)}</h3>
                   <p className="text-xs text-purple-400 mt-0.5">{t(`breathe.desc.${ex.id}`)}</p>
-                  <p className="text-sm opacity-60 mt-1">
+                  <p className="text-sm text-slate-400 mt-1">
                     {ex.steps.map(s => `${t(`breathe.phase.${s.phase}`)} ${s.duration}s`).join(' → ')}
                   </p>
                 </button>
@@ -362,7 +362,7 @@ export default function BreathingPage() {
                   </div>
                 </div>
               </div>
-              <p className="text-sm opacity-60">{t('breathe.elapsed')}: {formatTime(totalElapsed)}</p>
+              <p className="text-sm text-slate-400">{t('breathe.elapsed')}: {formatTime(totalElapsed)}</p>
               <button
                 onClick={stopBreathing}
                 className="px-6 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors text-sm"
@@ -377,7 +377,7 @@ export default function BreathingPage() {
             <div className="glass p-6 text-center space-y-4">
               <div className="text-4xl">🎉</div>
               <h3 className="text-lg font-semibold">{t('breathe.completed')}</h3>
-              <p className="text-sm opacity-60">{t('breathe.duration')}: {formatTime(totalElapsed)}</p>
+              <p className="text-sm text-slate-400">{t('breathe.duration')}: {formatTime(totalElapsed)}</p>
               <button onClick={saveBreathingSession} className="btn-primary">
                 {t('breathe.saveSession')}
               </button>
@@ -406,11 +406,11 @@ export default function BreathingPage() {
                   </button>
                 ))}
               </div>
-              <p className="text-center text-sm opacity-60">{t('breathe.minutes')}</p>
+              <p className="text-center text-sm text-slate-400">{t('breathe.minutes')}</p>
 
               {/* Ambient sound toggle */}
               <div className="flex items-center justify-center gap-3">
-                <span className="text-sm opacity-60">{t('breathe.ambientSound')}</span>
+                <span className="text-sm text-slate-400">{t('breathe.ambientSound')}</span>
                 <button
                   onClick={toggleAmbient}
                   className={`w-12 h-6 rounded-full transition-colors relative ${
@@ -461,7 +461,7 @@ export default function BreathingPage() {
             <div className="glass p-6 text-center space-y-4">
               <div className="text-4xl">🧘</div>
               <h3 className="text-lg font-semibold">{t('breathe.meditationComplete')}</h3>
-              <p className="text-sm opacity-60">{t('breathe.duration')}: {formatTime(medElapsed)}</p>
+              <p className="text-sm text-slate-400">{t('breathe.duration')}: {formatTime(medElapsed)}</p>
               <button onClick={saveMeditationSession} className="btn-primary">
                 {t('breathe.saveSession')}
               </button>
@@ -473,7 +473,7 @@ export default function BreathingPage() {
       {/* History */}
       {sessions.length > 0 && (
         <div className="glass p-4 space-y-3">
-          <h3 className="font-semibold text-sm opacity-60">{t('breathe.history')}</h3>
+          <h3 className="font-semibold text-sm text-slate-400">{t('breathe.history')}</h3>
           <div className="space-y-2">
             {sessions.slice(0, 10).map(s => (
               <div key={s.id} className="flex items-center justify-between text-sm py-1.5 border-b border-[var(--card-border)] last:border-0">
@@ -481,7 +481,7 @@ export default function BreathingPage() {
                   <span>{s.session_type === 'breathing' ? '🌬️' : '🧘'}</span>
                   <span>{s.session_type === 'breathing' ? t(`breathe.exercise.${s.exercise_name}`) : `${s.exercise_name} ${t('breathe.meditation')}`}</span>
                 </div>
-                <div className="flex items-center gap-3 opacity-60">
+                <div className="flex items-center gap-3 text-slate-400">
                   <span>{formatTime(s.duration_seconds)}</span>
                   <span>{new Date(s.completed_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
                 </div>

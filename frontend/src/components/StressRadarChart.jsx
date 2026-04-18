@@ -14,7 +14,7 @@ export default memo(function StressRadarChart({ data }) {
     return (
       <div className="glass p-6">
         <h2 className="text-lg font-semibold mb-4">{t('dashboard.stressRadar')}</h2>
-        <p className="opacity-60 text-sm">{t('dashboard.noStressRadar')}</p>
+        <p className="text-slate-400 text-sm">{t('dashboard.noStressRadar')}</p>
       </div>
     )
   }

@@ -47,8 +47,8 @@ export default function ImportModal({ onClose, onSuccess }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="popup-panel p-6 w-full max-w-lg space-y-4" role="dialog" aria-modal="true">
         <h2 className="text-lg font-semibold">{t('import.title')}</h2>
-        <p className="text-sm opacity-70">{t('import.desc')}</p>
-        <p className="text-xs opacity-50">{t('import.format')}</p>
+        <p className="text-sm text-slate-400">{t('import.desc')}</p>
+        <p className="text-xs text-slate-400">{t('import.format')}</p>
 
         <input
           ref={fileRef}
@@ -63,7 +63,7 @@ export default function ImportModal({ onClose, onSuccess }) {
             <table className="text-xs w-full">
               <tbody>
                 {preview.map((row, i) => (
-                  <tr key={i} className={i === 0 ? 'font-bold opacity-70' : 'opacity-60'}>
+                  <tr key={i} className={i === 0 ? 'font-bold text-slate-400' : 'text-slate-400'}>
                     {row.map((cell, j) => (
                       <td key={j} className="px-2 py-1 border border-[var(--card-border)] truncate max-w-[120px]">{cell}</td>
                     ))}

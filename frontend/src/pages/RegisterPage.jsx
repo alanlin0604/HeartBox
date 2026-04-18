@@ -133,7 +133,7 @@ export default function RegisterPage() {
         <h1 className="text-2xl font-bold text-center mb-2 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
           {t('app.displayName')}
         </h1>
-        <p className="text-center opacity-60 text-sm mb-6">{t('register.title')}</p>
+        <p className="text-center text-slate-400 text-sm mb-6">{t('register.title')}</p>
 
         {error && (
           <Alert
@@ -196,7 +196,7 @@ export default function RegisterPage() {
 
         <div ref={googleBtnRef} className="w-full flex justify-center" />
 
-        <p className="mt-4 text-center text-sm opacity-60">
+        <p className="mt-4 text-center text-sm text-slate-400">
           {t('register.hasAccount')}{' '}
           <Link to="/login" className="text-purple-500 hover:text-purple-400 opacity-100">
             {t('register.login')}

@@ -71,14 +71,14 @@ export default function ScheduleManager() {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">{t('schedule.manageTitle')}</h3>
-      <p className="text-sm opacity-70 bg-blue-500/10 border border-blue-400/30 rounded-lg px-4 py-2">
+      <p className="text-sm text-slate-400 bg-blue-500/10 border border-blue-400/30 rounded-lg px-4 py-2">
         💡 {t('schedule.hint')}
       </p>
 
       {/* Add slot form */}
       <form onSubmit={handleAdd} className="glass p-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="text-xs opacity-60 block mb-1">{t('schedule.dayOfWeek')}</label>
+          <label className="text-xs text-slate-400 block mb-1">{t('schedule.dayOfWeek')}</label>
           <select
             value={dayOfWeek}
             onChange={(e) => setDayOfWeek(Number(e.target.value))}
@@ -90,7 +90,7 @@ export default function ScheduleManager() {
           </select>
         </div>
         <div>
-          <label className="text-xs opacity-60 block mb-1">{t('schedule.startTime')}</label>
+          <label className="text-xs text-slate-400 block mb-1">{t('schedule.startTime')}</label>
           <input
             type="time"
             value={startTime}
@@ -99,7 +99,7 @@ export default function ScheduleManager() {
           />
         </div>
         <div>
-          <label className="text-xs opacity-60 block mb-1">{t('schedule.endTime')}</label>
+          <label className="text-xs text-slate-400 block mb-1">{t('schedule.endTime')}</label>
           <input
             type="time"
             value={endTime}
@@ -114,16 +114,16 @@ export default function ScheduleManager() {
 
       {/* Slot list */}
       {loading ? (
-        <p className="opacity-60 text-sm">{t('common.loading')}</p>
+        <p className="text-slate-400 text-sm">{t('common.loading')}</p>
       ) : slots.length === 0 ? (
-        <p className="opacity-60 text-sm">{t('schedule.noSlots')}</p>
+        <p className="text-slate-400 text-sm">{t('schedule.noSlots')}</p>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {slots.map((slot) => (
             <div key={slot.id} className="glass-card p-3 flex items-center justify-between">
               <div>
                 <span className="font-medium text-sm">{t(DAY_KEYS[slot.day_of_week])}</span>
-                <span className="text-sm opacity-60 ml-2">
+                <span className="text-sm text-slate-400 ml-2">
                   {slot.start_time?.slice(0, 5)} - {slot.end_time?.slice(0, 5)}
                 </span>
               </div>

@@ -164,7 +164,7 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 border-t border-white/10">
           {/* Tag */}
           <div>
-            <label className="text-xs opacity-60 mb-1 block">{t('search.tag')}</label>
+            <label className="text-xs text-slate-400 mb-1 block">{t('search.tag')}</label>
             <input
               type="text"
               value={localTag}
@@ -176,7 +176,7 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
 
           {/* Sentiment range */}
           <div>
-            <label className="text-xs opacity-60 mb-1 block">{t('search.sentimentRange')}</label>
+            <label className="text-xs text-slate-400 mb-1 block">{t('search.sentimentRange')}</label>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -204,7 +204,7 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
 
           {/* Stress range */}
           <div>
-            <label className="text-xs opacity-60 mb-1 block">{t('search.stressRange')}</label>
+            <label className="text-xs text-slate-400 mb-1 block">{t('search.stressRange')}</label>
             <div className="flex gap-2">
               <input
                 type="number"
@@ -230,7 +230,7 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
 
           {/* Date range */}
           <div className="sm:col-span-2 lg:col-span-2">
-            <label className="text-xs opacity-60 mb-1 block">{t('search.dateRange')}</label>
+            <label className="text-xs text-slate-400 mb-1 block">{t('search.dateRange')}</label>
             <div className="flex gap-2">
               <input
                 type="date"

@@ -59,7 +59,7 @@ export default class ErrorBoundary extends Component {
           <div className="glass p-8 w-full max-w-md text-center space-y-4">
             <div className="text-4xl">😢</div>
             <h1 className="text-xl font-bold">{getLocaleText('errorBoundary.title')}</h1>
-            <p className="text-sm opacity-60">{getLocaleText('errorBoundary.desc')}</p>
+            <p className="text-sm text-slate-400">{getLocaleText('errorBoundary.desc')}</p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => window.location.reload()}

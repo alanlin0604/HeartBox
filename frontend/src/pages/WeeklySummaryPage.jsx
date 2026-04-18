@@ -130,22 +130,22 @@ export default function WeeklySummaryPage() {
           </h2>
           <div className="grid grid-cols-3 gap-4">
             <div className="glass-card p-3 text-center">
-              <p className="text-xs opacity-60">{t('weeklySummary.noteCount')}</p>
+              <p className="text-xs text-slate-400">{t('weeklySummary.noteCount')}</p>
               <p className="text-2xl font-bold">{detail.note_count}</p>
             </div>
             <div className="glass-card p-3 text-center">
-              <p className="text-xs opacity-60">{t('weeklySummary.avgMood')}</p>
+              <p className="text-xs text-slate-400">{t('weeklySummary.avgMood')}</p>
               <p className="text-2xl font-bold">{detail.mood_avg ?? '-'}</p>
             </div>
             <div className="glass-card p-3 text-center">
-              <p className="text-xs opacity-60">{t('weeklySummary.avgStress')}</p>
+              <p className="text-xs text-slate-400">{t('weeklySummary.avgStress')}</p>
               <p className="text-2xl font-bold">{detail.stress_avg ?? '-'}</p>
             </div>
           </div>
 
           {detail.top_activities?.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold opacity-60 mb-2">{t('weeklySummary.topActivities')}</h3>
+              <h3 className="text-sm font-semibold text-slate-400 mb-2">{t('weeklySummary.topActivities')}</h3>
               <div className="flex flex-wrap gap-2">
                 {detail.top_activities.map((act) => {
                   const label = t(`activities.${act.name}`) !== `activities.${act.name}` ? t(`activities.${act.name}`) : act.name
@@ -191,7 +191,7 @@ export default function WeeklySummaryPage() {
       <div className="glass p-6">
         <h2 className="text-lg font-semibold mb-4">{t('weeklySummary.history')}</h2>
         {listLoading ? <LoadingSpinner /> : summaries.length === 0 ? (
-          <p className="text-sm opacity-60">{t('weeklySummary.noHistory')}</p>
+          <p className="text-sm text-slate-400">{t('weeklySummary.noHistory')}</p>
         ) : (
           <div className="space-y-2">
             {summaries.map((s) => (
@@ -201,7 +201,7 @@ export default function WeeklySummaryPage() {
                 className="w-full glass-card p-3 flex items-center justify-between text-sm hover:bg-purple-500/10 transition-colors cursor-pointer"
               >
                 <span>{t('weeklySummary.weekOf', { date: s.week_start })}</span>
-                <span className="opacity-60">{s.note_count} {t('weeklySummary.notes')}</span>
+                <span className="text-slate-400">{s.note_count} {t('weeklySummary.notes')}</span>
               </button>
             ))}
           </div>

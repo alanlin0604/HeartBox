@@ -50,7 +50,7 @@ export default function PricingPage() {
   return (
     <div className="space-y-6 mt-4 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-center">{t('subscription.pricingTitle')}</h1>
-      <p className="text-center opacity-70">{t('subscription.pricingDesc')}</p>
+      <p className="text-center text-slate-400">{t('subscription.pricingDesc')}</p>
 
       <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-center">
         <p className="font-medium text-blue-400">{t('subscription.devNotice')}</p>
@@ -62,7 +62,7 @@ export default function PricingPage() {
             <h2 className="text-xl font-bold text-center">{plan.name}</h2>
             <div className="text-center">
               <span className="text-3xl font-bold">{plan.price > 0 ? `${plan.currency} ${plan.price}` : t('subscription.free')}</span>
-              {plan.price > 0 && <span className="text-sm opacity-60">/{t('subscription.month')}</span>}
+              {plan.price > 0 && <span className="text-sm text-slate-400">/{t('subscription.month')}</span>}
             </div>
             <ul className="space-y-2 text-sm">
               {FEATURE_ORDER

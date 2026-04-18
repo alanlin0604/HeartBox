@@ -166,7 +166,7 @@ export default function NoteDetailPage() {
       <Card variant="default" padding="lg" className="space-y-4" animate staggerDelay={0.1}>
         {/* Header */}
         <div className="space-y-2">
-          <div className="text-sm opacity-60">{date}</div>
+          <div className="text-sm text-slate-400">{date}</div>
           <div className="flex flex-wrap items-center gap-2">
             <MoodBadge score={note.sentiment_score} />
             <button
@@ -227,7 +227,7 @@ export default function NoteDetailPage() {
         {/* Attachments */}
         {attachments.length > 0 && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold opacity-60">{t('noteDetail.attachments')}</h3>
+            <h3 className="text-sm font-semibold text-slate-400">{t('noteDetail.attachments')}</h3>
             <div className="flex flex-wrap gap-3">
               {attachments.map((att) => (
                 <img
@@ -270,7 +270,7 @@ export default function NoteDetailPage() {
         {/* Stress Index */}
         {note.stress_index != null && (
           <div className="flex items-center gap-3">
-            <span className="text-sm opacity-60 shrink-0">{t('noteDetail.stressIndex')}</span>
+            <span className="text-sm text-slate-400 shrink-0">{t('noteDetail.stressIndex')}</span>
             <div className="flex-1 h-2 rounded-full max-w-xs" style={{ background: 'var(--stress-bar-bg)' }}>
               <div
                 className="h-full rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500"
@@ -284,7 +284,7 @@ export default function NoteDetailPage() {
         {/* Sentiment Score */}
         {note.sentiment_score != null && (
           <div className="flex items-center gap-3">
-            <span className="text-sm opacity-60 shrink-0">{t('noteDetail.sentimentScore')}</span>
+            <span className="text-sm text-slate-400 shrink-0">{t('noteDetail.sentimentScore')}</span>
             <div className="flex-1 h-2 rounded-full max-w-xs" style={{ background: 'var(--stress-bar-bg)' }}>
               <div
                 className="h-full rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-500"
@@ -311,7 +311,7 @@ export default function NoteDetailPage() {
         {/* Shared With */}
         {shares.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold opacity-60">{t('share.sharedWith')}</h3>
+            <h3 className="text-sm font-semibold text-slate-400">{t('share.sharedWith')}</h3>
             <div className="flex flex-wrap gap-2">
               {shares.map((s) => (
                 <span key={s.id} className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
