@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { getAnalytics } from '../api/analytics'
+import { ACTIVITY_ICONS } from './icons/ActivityIcons'
 
 const RichTextEditor = lazy(() => import('./RichTextEditor'))
 
@@ -18,19 +19,20 @@ const WEATHER_LABEL_KEYS = [
   { labelKey: 'noteForm.weatherPartlyCloudy' },
 ]
 
+// Activities with SVG Icons (Professional, Accessible)
 const ACTIVITIES = [
-  { id: 'exercise', emoji: '\u{1F3C3}', labelKey: 'activities.exercise' },
-  { id: 'social', emoji: '\u{1F465}', labelKey: 'activities.social' },
-  { id: 'work', emoji: '\u{1F4BC}', labelKey: 'activities.work' },
-  { id: 'reading', emoji: '\u{1F4DA}', labelKey: 'activities.reading' },
-  { id: 'travel', emoji: '\u2708\uFE0F', labelKey: 'activities.travel' },
-  { id: 'music', emoji: '\u{1F3B5}', labelKey: 'activities.music' },
-  { id: 'cooking', emoji: '\u{1F373}', labelKey: 'activities.cooking' },
-  { id: 'meditation', emoji: '\u{1F9D8}', labelKey: 'activities.meditation' },
-  { id: 'gaming', emoji: '\u{1F3AE}', labelKey: 'activities.gaming' },
-  { id: 'shopping', emoji: '\u{1F6CD}\uFE0F', labelKey: 'activities.shopping' },
-  { id: 'movie', emoji: '\u{1F3AC}', labelKey: 'activities.movie' },
-  { id: 'nature', emoji: '\u{1F33F}', labelKey: 'activities.nature' },
+  { id: 'exercise', icon: ACTIVITY_ICONS.exercise, labelKey: 'activities.exercise' },
+  { id: 'social', icon: ACTIVITY_ICONS.social, labelKey: 'activities.social' },
+  { id: 'work', icon: ACTIVITY_ICONS.work, labelKey: 'activities.work' },
+  { id: 'reading', icon: ACTIVITY_ICONS.reading, labelKey: 'activities.reading' },
+  { id: 'travel', icon: ACTIVITY_ICONS.travel, labelKey: 'activities.travel' },
+  { id: 'music', icon: ACTIVITY_ICONS.music, labelKey: 'activities.music' },
+  { id: 'cooking', icon: ACTIVITY_ICONS.cooking, labelKey: 'activities.cooking' },
+  { id: 'meditation', icon: ACTIVITY_ICONS.meditation, labelKey: 'activities.meditation' },
+  { id: 'gaming', icon: ACTIVITY_ICONS.gaming, labelKey: 'activities.gaming' },
+  { id: 'shopping', icon: ACTIVITY_ICONS.shopping, labelKey: 'activities.shopping' },
+  { id: 'movie', icon: ACTIVITY_ICONS.movie, labelKey: 'activities.movie' },
+  { id: 'nature', icon: ACTIVITY_ICONS.nature, labelKey: 'activities.nature' },
 ]
 
 const LANG_SPEECH_MAP = { 'zh-TW': 'zh-TW', en: 'en-US', ja: 'ja-JP' }
@@ -346,24 +348,37 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
         </Suspense>
       </div>
 
-      {/* Activities */}
+      {/* Activities - SVG Icons */}
       <div>
         <label className="block text-sm font-medium opacity-60 mb-2">{t('noteForm.activities')}</label>
         <div className="flex flex-wrap gap-2">
-          {ACTIVITIES.map((act) => (
-            <button
-              key={act.id}
-              type="button"
-              onClick={() => toggleActivity(act.id)}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
-                selectedActivities.includes(act.id)
-                  ? 'bg-purple-500/25 border-purple-500/40 text-purple-400'
-                  : 'border-[var(--card-border)] opacity-60 hover:opacity-100'
-              }`}
-            >
-              {act.emoji} {t(act.labelKey)}
-            </button>
-          ))}
+          {ACTIVITIES.map((act) => {
+            const Icon = act.icon
+            return (
+              <button
+                key={act.id}
+                type="button"
+                onClick={() => toggleActivity(act.id)}
+                className={`
+                  inline-flex items-center gap-1.5
+                  text-xs px-3 py-2 rounded-full border
+                  transition-all cursor-pointer
+                  min-h-[36px]
+                  focus-visible:outline-2 focus-visible:outline-offset-2
+                  focus-visible:outline-[var(--color-primary-400)]
+                  ${selectedActivities.includes(act.id)
+                    ? 'bg-purple-500/25 border-purple-500/40 text-purple-400 shadow-sm'
+                    : 'border-[var(--card-border)] opacity-60 hover:opacity-100 hover:border-[var(--border-primary)]'
+                  }
+                `.trim().replace(/\s+/g, ' ')}
+                aria-pressed={selectedActivities.includes(act.id)}
+                aria-label={t(act.labelKey)}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span>{t(act.labelKey)}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 

@@ -22,11 +22,15 @@ export async function initHealthService() {
   try {
     // Get platform (android, ios, or web)
     platform = Capacitor.getPlatform()
-    console.log('[HealthKit] Platform detected:', platform)
+    if (import.meta.env.DEV) {
+      console.log('[HealthKit] Platform detected:', platform)
+    }
 
     if (platform === 'web') {
       isAvailable = false
-      console.log('[HealthKit] Running in web mode, health features disabled')
+      if (import.meta.env.DEV) {
+        console.log('[HealthKit] Running in web mode, health features disabled')
+      }
       return
     }
 
@@ -34,11 +38,15 @@ export async function initHealthService() {
     const result = await Health.isAvailable()
     isAvailable = result.available
 
-    console.log('[HealthKit] Health plugin availability:', result)
-    console.log('[HealthKit] isAvailable:', isAvailable)
+    if (import.meta.env.DEV) {
+      console.log('[HealthKit] Health plugin availability:', result)
+      console.log('[HealthKit] isAvailable:', isAvailable)
+    }
   } catch (error) {
     // Health plugin not available
-    console.error('[HealthKit] Failed to initialize:', error)
+    if (import.meta.env.DEV) {
+      console.error('[HealthKit] Failed to initialize:', error)
+    }
     isAvailable = false
   }
 }
@@ -73,12 +81,16 @@ export async function requestPermissions() {
       ],
     })
 
-    console.log('[HealthKit] Authorization result:', result)
+    if (import.meta.env.DEV) {
+      console.log('[HealthKit] Authorization result:', result)
+    }
 
     // Check if we got at least some read permissions
     return result.readAuthorized.length > 0
   } catch (error) {
-    console.error('[HealthKit] Authorization failed:', error)
+    if (import.meta.env.DEV) {
+      console.error('[HealthKit] Authorization failed:', error)
+    }
     return false
   }
 }
@@ -212,7 +224,9 @@ export async function readHealthData(startDate, endDate) {
     sleep.push(...sleepByDate)
 
   } catch (err) {
-    console.warn('Failed to read health data:', err)
+    if (import.meta.env.DEV) {
+      console.warn('Failed to read health data:', err)
+    }
   }
 
   // Deduplicate metrics by date+type (keep latest)
