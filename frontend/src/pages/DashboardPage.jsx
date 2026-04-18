@@ -123,9 +123,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">🔥</span>
                   <div>
-                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">Current Streak</div>
+                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">{t('dashboard.currentStreak')}</div>
                     <div className="text-xl font-bold text-[var(--text-primary)]">
-                      {data.current_streak} {data.current_streak === 1 ? 'day' : 'days'}
+                      {data.current_streak} {t(data.current_streak === 1 ? 'dashboard.day' : 'dashboard.days')}
                     </div>
                   </div>
                 </div>
@@ -134,9 +134,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3 opacity-80">
                   <span className="text-3xl">🏆</span>
                   <div>
-                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">Best Streak</div>
+                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">{t('dashboard.bestStreak')}</div>
                     <div className="text-lg font-semibold text-[var(--text-primary)]">
-                      {data.longest_streak} {data.longest_streak === 1 ? 'day' : 'days'}
+                      {data.longest_streak} {t(data.longest_streak === 1 ? 'dashboard.day' : 'dashboard.days')}
                     </div>
                   </div>
                 </div>
@@ -153,7 +153,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">🙏</span>
                   <div>
-                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">Gratitude Notes</div>
+                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">{t('dashboard.gratitudeNotes')}</div>
                     <div className="text-xl font-bold text-[var(--text-primary)]">
                       {data.gratitude_count}
                     </div>
@@ -164,9 +164,9 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3 opacity-80">
                   <span className="text-3xl">✨</span>
                   <div>
-                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">Gratitude Streak</div>
+                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">{t('dashboard.gratitudeStreak')}</div>
                     <div className="text-lg font-semibold text-[var(--text-primary)]">
-                      {data.gratitude_streak} {data.gratitude_streak === 1 ? 'day' : 'days'}
+                      {data.gratitude_streak} {t(data.gratitude_streak === 1 ? 'dashboard.day' : 'dashboard.days')}
                     </div>
                   </div>
                 </div>
