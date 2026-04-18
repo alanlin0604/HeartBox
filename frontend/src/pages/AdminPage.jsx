@@ -75,7 +75,7 @@ function StatsTab() {
     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
       {cards.map((c) => (
         <div key={c.label} className="glass p-5 rounded-xl">
-          <p className="text-sm opacity-60 mb-1">{c.label}</p>
+          <p className="text-sm text-slate-400 mb-1">{c.label}</p>
           <p className={`text-3xl font-bold bg-gradient-to-r ${c.color} bg-clip-text text-transparent`}>
             {c.value}
           </p>
@@ -153,7 +153,7 @@ function UsersTab() {
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/10 text-left opacity-60">
+              <tr className="border-b border-white/10 text-left text-slate-400">
                 <th className="pb-2 pr-4">{t('admin.colId')}</th>
                 <th className="pb-2 pr-4">{t('admin.colUsername')}</th>
                 <th className="pb-2 pr-4">{t('admin.colEmail')}</th>
@@ -168,14 +168,14 @@ function UsersTab() {
                 <tr key={u.id} className="border-b border-white/5 hover:bg-white/5">
                   <td className="py-2 pr-4">{u.id}</td>
                   <td className="py-2 pr-4 font-medium">{u.username}</td>
-                  <td className="py-2 pr-4 opacity-70">{u.email}</td>
+                  <td className="py-2 pr-4 text-slate-400">{u.email}</td>
                   <td className="py-2 pr-4">{roleBadge(u)}</td>
                   <td className="py-2 pr-4">
                     <span className={`px-2 py-0.5 rounded-full text-xs ${u.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                       {u.is_active ? t('admin.statusActive') : t('admin.statusInactive')}
                     </span>
                   </td>
-                  <td className="py-2 pr-4 opacity-70">{new Date(u.date_joined).toLocaleDateString(LOCALE_MAP[lang] || lang)}</td>
+                  <td className="py-2 pr-4 text-slate-400">{new Date(u.date_joined).toLocaleDateString(LOCALE_MAP[lang] || lang)}</td>
                   <td className="py-2 space-x-2">
                     {!u.is_superuser && (
                       <>
@@ -209,12 +209,12 @@ function UsersTab() {
                 <span className="font-medium">{u.username}</span>
                 {roleBadge(u)}
               </div>
-              <p className="text-xs opacity-60">{u.email}</p>
+              <p className="text-xs text-slate-400">{u.email}</p>
               <div className="flex items-center gap-2 text-xs">
                 <span className={`px-2 py-0.5 rounded-full ${u.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                   {u.is_active ? t('admin.statusActive') : t('admin.statusInactive')}
                 </span>
-                <span className="opacity-50">{new Date(u.date_joined).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
+                <span className="text-slate-400">{new Date(u.date_joined).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
               </div>
               {!u.is_superuser && (
                 <div className="flex gap-2 pt-1">
@@ -329,12 +329,12 @@ function CounselorsTab() {
                 <span className="font-bold text-lg">{c.username}</span>
                 {statusBadge(c.status)}
               </div>
-              <p className="text-sm opacity-70">{c.email}</p>
+              <p className="text-sm text-slate-400">{c.email}</p>
               <div className="text-sm space-y-1">
-                <p><span className="opacity-60">{t('admin.licenseNumber')}</span>{c.license_number}</p>
-                <p><span className="opacity-60">{t('admin.specialty')}</span>{c.specialty}</p>
-                <p><span className="opacity-60">{t('admin.introduction')}</span>{c.introduction}</p>
-                <p><span className="opacity-60">{t('admin.appliedDate')}</span>{new Date(c.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</p>
+                <p><span className="text-slate-400">{t('admin.licenseNumber')}</span>{c.license_number}</p>
+                <p><span className="text-slate-400">{t('admin.specialty')}</span>{c.specialty}</p>
+                <p><span className="text-slate-400">{t('admin.introduction')}</span>{c.introduction}</p>
+                <p><span className="text-slate-400">{t('admin.appliedDate')}</span>{new Date(c.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</p>
               </div>
               {c.status === 'pending' && (
                 <div className="flex gap-2 pt-1">
@@ -387,13 +387,13 @@ function FeedbackTab() {
     <div className="space-y-4">
       <div className="flex gap-4 flex-wrap">
         <div className="glass p-5 rounded-xl">
-          <p className="text-sm opacity-60 mb-1">{t('admin.feedbackAvg')}</p>
+          <p className="text-sm text-slate-400 mb-1">{t('admin.feedbackAvg')}</p>
           <p className="text-3xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
             {avg} <span className="text-lg">/ 5</span>
           </p>
         </div>
         <div className="glass p-5 rounded-xl">
-          <p className="text-sm opacity-60 mb-1">{t('admin.feedbackTotal', { count: feedbacks.length })}</p>
+          <p className="text-sm text-slate-400 mb-1">{t('admin.feedbackTotal', { count: feedbacks.length })}</p>
           <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-indigo-500 bg-clip-text text-transparent">
             {feedbacks.length}
           </p>

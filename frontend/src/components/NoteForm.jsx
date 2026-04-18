@@ -350,7 +350,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
 
       {/* Activities - SVG Icons */}
       <div>
-        <label className="block text-sm font-medium opacity-60 mb-2">{t('noteForm.activities')}</label>
+        <label className="block text-sm font-medium text-slate-400 mb-2">{t('noteForm.activities')}</label>
         <div className="flex flex-wrap gap-2">
           {ACTIVITIES.map((act) => {
             const Icon = act.icon
@@ -426,7 +426,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
         onClick={() => fileInputRef.current?.click()}
         className="glass-card p-4 border-2 border-dashed border-white/10 rounded-xl text-center cursor-pointer hover:border-purple-500/30 transition-colors"
       >
-        <p className="text-sm opacity-60">{t('noteForm.attachHint')}</p>
+        <p className="text-sm text-slate-400">{t('noteForm.attachHint')}</p>
         <input
           ref={fileInputRef}
           type="file"

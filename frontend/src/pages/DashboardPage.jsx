@@ -179,7 +179,7 @@ export default function DashboardPage() {
       {/* Controls */}
       <Card padding="md" className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm opacity-60">{t('dashboard.period')}</span>
+          <span className="text-sm text-slate-400">{t('dashboard.period')}</span>
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
@@ -190,7 +190,7 @@ export default function DashboardPage() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm opacity-60">{t('dashboard.lookback')}</span>
+          <span className="text-sm text-slate-400">{t('dashboard.lookback')}</span>
           <select
             value={lookback}
             onChange={(e) => setLookback(Number(e.target.value))}
@@ -371,7 +371,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
             {healthData.summary.steps && (
               <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                <p className="text-xs opacity-60">{t('health.steps')}</p>
+                <p className="text-xs text-slate-400">{t('health.steps')}</p>
                 <p className="text-lg font-bold text-blue-400">
                   {Math.round(healthData.summary.steps.latest || 0).toLocaleString()}
                 </p>
@@ -382,7 +382,7 @@ export default function DashboardPage() {
             )}
             {healthData.summary.heart_rate && (
               <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-                <p className="text-xs opacity-60">{t('health.heartRate')}</p>
+                <p className="text-xs text-slate-400">{t('health.heartRate')}</p>
                 <p className="text-lg font-bold text-red-400">
                   {Math.round(healthData.summary.heart_rate.latest || 0)} bpm
                 </p>
@@ -393,7 +393,7 @@ export default function DashboardPage() {
             )}
             {healthData.summary.hrv && (
               <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                <p className="text-xs opacity-60">{t('health.hrv')}</p>
+                <p className="text-xs text-slate-400">{t('health.hrv')}</p>
                 <p className="text-lg font-bold text-purple-400">
                   {Math.round(healthData.summary.hrv.latest || 0)} ms
                 </p>
@@ -404,7 +404,7 @@ export default function DashboardPage() {
             )}
             {healthData.summary.active_calories && (
               <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
-                <p className="text-xs opacity-60">{t('health.calories')}</p>
+                <p className="text-xs text-slate-400">{t('health.calories')}</p>
                 <p className="text-lg font-bold text-orange-400">
                   {Math.round(healthData.summary.active_calories.latest || 0)} kcal
                 </p>
@@ -415,7 +415,7 @@ export default function DashboardPage() {
             )}
             {healthData.summary.exercise_minutes && (
               <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20">
-                <p className="text-xs opacity-60">{t('health.exerciseMinutes')}</p>
+                <p className="text-xs text-slate-400">{t('health.exerciseMinutes')}</p>
                 <p className="text-lg font-bold text-green-400">
                   {Math.round(healthData.summary.exercise_minutes.latest || 0)} {t('health.min')}
                 </p>
@@ -426,7 +426,7 @@ export default function DashboardPage() {
             )}
             {healthData.summary.sleep && (
               <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-                <p className="text-xs opacity-60">{t('health.sleepData')}</p>
+                <p className="text-xs text-slate-400">{t('health.sleepData')}</p>
                 <p className="text-lg font-bold text-indigo-400">
                   {healthData.summary.sleep.avg_hours || '-'} h
                 </p>
@@ -440,7 +440,7 @@ export default function DashboardPage() {
           {/* Steps trend chart */}
           {healthData.summary.steps?.trend?.length > 1 && (
             <div className="mt-4">
-              <h3 className="text-sm font-medium mb-2 opacity-70">{t('health.stepsTrend')}</h3>
+              <h3 className="text-sm font-medium mb-2 text-slate-400">{t('health.stepsTrend')}</h3>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={healthData.summary.steps.trend.map(d => ({
                   name: d.date?.slice(5),

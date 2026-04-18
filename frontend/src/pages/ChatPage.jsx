@@ -26,7 +26,7 @@ const MessageItem = memo(function MessageItem({ msg, user, lang, t, onQuoteActio
             {msg.sender_avatar ? (
               <img src={msg.sender_avatar} alt={msg.sender_name} loading="lazy" decoding="async" className="w-5 h-5 rounded-full object-cover border border-white/20" />
             ) : null}
-            <p className="text-xs font-semibold opacity-60">{msg.sender_name}</p>
+            <p className="text-xs font-semibold text-slate-400">{msg.sender_name}</p>
           </div>
         )}
         {msg.message_type === 'quote' ? (

@@ -247,12 +247,12 @@ export default function JournalPage() {
         </div>
       )}
       <div className="glass-card p-4 space-y-3">
-        <h3 className="text-sm font-semibold opacity-70">{t('journal.todayNotes')}</h3>
+        <h3 className="text-sm font-semibold text-slate-400">{t('journal.todayNotes')}</h3>
         <p className="text-2xl font-bold">{todayNoteCount}</p>
       </div>
       {weekAvgMood !== null && (
         <div className="glass-card p-4 space-y-3">
-          <h3 className="text-sm font-semibold opacity-70">{t('journal.weekAvgMood')}</h3>
+          <h3 className="text-sm font-semibold text-slate-400">{t('journal.weekAvgMood')}</h3>
           <p className="text-2xl font-bold">{weekAvgMood}</p>
         </div>
       )}

@@ -297,7 +297,7 @@ export default function AIChatPage() {
                         {session.title}
                       </p>
                       {session.last_message_preview && (
-                        <p className="text-xs opacity-50 truncate mt-0.5">
+                        <p className="text-xs text-slate-400 truncate mt-0.5">
                           {session.last_message_preview}
                         </p>
                       )}

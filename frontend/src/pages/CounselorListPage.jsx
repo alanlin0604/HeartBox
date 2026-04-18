@@ -463,7 +463,7 @@ export default function CounselorListPage() {
                         )}
                         <div>
                           <h3 className="text-lg font-semibold">{c.display_name || c.username}</h3>
-                          <p className="text-sm opacity-60">{c.specialty}</p>
+                          <p className="text-sm text-slate-400">{c.specialty}</p>
                         </div>
                       </div>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
@@ -513,7 +513,7 @@ export default function CounselorListPage() {
                       )}
                       <div>
                       <h3 className="text-lg font-semibold">{c.display_name || c.username}</h3>
-                      <p className="text-sm opacity-60">{c.specialty}</p>
+                      <p className="text-sm text-slate-400">{c.specialty}</p>
                       </div>
                     </div>
                   </div>
@@ -582,7 +582,7 @@ export default function CounselorListPage() {
                   <div>
                     <h3 className="font-semibold">{conv.other_user.display_name || conv.other_user.username}</h3>
                     {conv.last_message && (
-                      <p className="text-sm opacity-60 mt-1">
+                      <p className="text-sm text-slate-400 mt-1">
                         {conv.last_message.sender_name}: {conv.last_message.content}
                       </p>
                     )}
@@ -648,7 +648,7 @@ export default function CounselorListPage() {
                     <p className="font-medium">
                       {b.counselor_name} — {b.date}
                     </p>
-                    <p className="text-sm opacity-60">
+                    <p className="text-sm text-slate-400">
                       {b.start_time?.slice(0, 5)} - {b.end_time?.slice(0, 5)}
                     </p>
                     <span className={`text-xs font-medium ${
@@ -745,12 +745,12 @@ export default function CounselorListPage() {
         <div className="space-y-6">
           <div>
             <h2 className="text-xl font-semibold">{t('report.title')}</h2>
-            <p className="text-sm opacity-60 mt-1">{t('report.description')}</p>
+            <p className="text-sm text-slate-400 mt-1">{t('report.description')}</p>
           </div>
 
           <div className="glass p-4 space-y-2">
             <p className="text-sm font-medium">{t('report.includesTitle')}</p>
-            <ul className="text-sm opacity-70 space-y-1 list-disc list-inside">
+            <ul className="text-sm text-slate-400 space-y-1 list-disc list-inside">
               <li>{t('report.includesMoodTrend')}</li>
               <li>{t('report.includesStress')}</li>
               <li>{t('report.includesAssessments')}</li>
@@ -769,7 +769,7 @@ export default function CounselorListPage() {
             />
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm opacity-60 block mb-1">{t('report.startDate')}</label>
+                <label className="text-sm text-slate-400 block mb-1">{t('report.startDate')}</label>
                 <input
                   type="date"
                   value={reportStartDate}
@@ -779,7 +779,7 @@ export default function CounselorListPage() {
                 />
               </div>
               <div>
-                <label className="text-sm opacity-60 block mb-1">{t('report.endDate')}</label>
+                <label className="text-sm text-slate-400 block mb-1">{t('report.endDate')}</label>
                 <input
                   type="date"
                   value={reportEndDate}
@@ -801,7 +801,7 @@ export default function CounselorListPage() {
                 <div key={r.id} className="glass-card p-4 flex justify-between items-center">
                   <div>
                     <p className="font-medium">{r.title}</p>
-                    <p className="text-sm opacity-60">
+                    <p className="text-sm text-slate-400">
                       {r.period_start} — {r.period_end}
                     </p>
                     <p className="text-xs opacity-40">
@@ -1003,10 +1003,10 @@ export default function CounselorListPage() {
       {tab === 'pricing' && isCounselor && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">{t('counselor.editProfile')}</h2>
-          <p className="text-sm opacity-60">{t('counselor.editProfileDesc')}</p>
+          <p className="text-sm text-slate-400">{t('counselor.editProfileDesc')}</p>
           <form onSubmit={handleSaveProfile} className="glass p-6 space-y-4 max-w-lg">
             <div>
-              <label className="text-sm opacity-60 block mb-1">{t('counselor.displayNameLabel')}</label>
+              <label className="text-sm text-slate-400 block mb-1">{t('counselor.displayNameLabel')}</label>
               <input
                 type="text"
                 value={editDisplayName}
@@ -1017,7 +1017,7 @@ export default function CounselorListPage() {
               />
             </div>
             <div>
-              <label className="text-sm opacity-60 block mb-1">{t('counselor.specialtyLabel')}</label>
+              <label className="text-sm text-slate-400 block mb-1">{t('counselor.specialtyLabel')}</label>
               <input
                 type="text"
                 value={editSpecialty}
@@ -1027,7 +1027,7 @@ export default function CounselorListPage() {
               />
             </div>
             <div>
-              <label className="text-sm opacity-60 block mb-1">{t('counselor.introPlaceholder')}</label>
+              <label className="text-sm text-slate-400 block mb-1">{t('counselor.introPlaceholder')}</label>
               <textarea
                 value={editIntroduction}
                 onChange={(e) => setEditIntroduction(e.target.value)}
@@ -1036,7 +1036,7 @@ export default function CounselorListPage() {
               />
             </div>
             <div>
-              <label className="text-sm opacity-60 block mb-1">{t('pricing.hourlyRate')}</label>
+              <label className="text-sm text-slate-400 block mb-1">{t('pricing.hourlyRate')}</label>
               <input
                 type="number"
                 min="0"
@@ -1048,7 +1048,7 @@ export default function CounselorListPage() {
               />
             </div>
             <div>
-              <label className="text-sm opacity-60 block mb-1">{t('pricing.currency')}</label>
+              <label className="text-sm text-slate-400 block mb-1">{t('pricing.currency')}</label>
               <select
                 value={pricingCurrency}
                 onChange={(e) => setPricingCurrency(e.target.value)}
@@ -1076,15 +1076,15 @@ export default function CounselorListPage() {
               <p className="text-lg font-semibold">{t('counselor.yourStatus')}</p>
               <div className="space-y-2">
                 <p>
-                  <span className="opacity-60">{t('counselor.licenseNumber')}</span>
+                  <span className="text-slate-400">{t('counselor.licenseNumber')}</span>
                   {myProfile.license_number}
                 </p>
                 <p>
-                  <span className="opacity-60">{t('counselor.specialtyLabel')}</span>
+                  <span className="text-slate-400">{t('counselor.specialtyLabel')}</span>
                   {myProfile.specialty}
                 </p>
                 <p>
-                  <span className="opacity-60">{t('counselor.statusLabel')}</span>
+                  <span className="text-slate-400">{t('counselor.statusLabel')}</span>
                   <span
                     className={`font-semibold ${
                       myProfile.status === 'approved'
@@ -1099,12 +1099,12 @@ export default function CounselorListPage() {
                 </p>
               </div>
               {myProfile.status === 'rejected' && (
-                <p className="text-sm opacity-60">
+                <p className="text-sm text-slate-400">
                   {t('counselor.rejectedMsg')}
                 </p>
               )}
               {myProfile.status === 'pending' && (
-                <p className="text-sm opacity-60">
+                <p className="text-sm text-slate-400">
                   {t('counselor.pendingMsg')}
                 </p>
               )}
@@ -1112,11 +1112,11 @@ export default function CounselorListPage() {
           ) : applySuccess ? (
             <div className="glass-card p-6 text-center space-y-2">
               <p className="text-lg font-semibold text-green-500">{t('counselor.applySuccess')}</p>
-              <p className="opacity-60">{t('counselor.applySuccessMsg')}</p>
+              <p className="text-slate-400">{t('counselor.applySuccessMsg')}</p>
             </div>
           ) : (
             <form onSubmit={handleApply} className="glass p-6 space-y-4">
-              <p className="text-sm opacity-60">
+              <p className="text-sm text-slate-400">
                 {t('counselor.applyDescription')}
               </p>
               {applyError && (
@@ -1147,7 +1147,7 @@ export default function CounselorListPage() {
               />
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm opacity-60 block mb-1">{t('pricing.hourlyRate')} ({t('pricing.optional')})</label>
+                  <label className="text-sm text-slate-400 block mb-1">{t('pricing.hourlyRate')} ({t('pricing.optional')})</label>
                   <input
                     type="number"
                     min="0"
@@ -1159,7 +1159,7 @@ export default function CounselorListPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm opacity-60 block mb-1">{t('pricing.currency')}</label>
+                  <label className="text-sm text-slate-400 block mb-1">{t('pricing.currency')}</label>
                   <select
                     value={applyCurrency}
                     onChange={(e) => setApplyCurrency(e.target.value)}
