@@ -1,9 +1,14 @@
 {
-  "name": "HeartBox-心事盒",
+  "name": "HeartBox - 心事盒",
   "short_name": "HeartBox",
   "description": "AI 驅動的加密心情日記應用程式，記錄、分析並理解你的情緒。",
+  "lang": "zh-TW",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
+  "id": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#0f0c29",
   "theme_color": "#7c3aed",
   "categories": ["health", "lifestyle", "productivity"],
@@ -25,18 +30,58 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
     {
       "name": "寫日記",
+      "short_name": "日誌",
       "url": "/",
-      "description": "開始撰寫新的心情日記"
+      "description": "開始撰寫新的心情日記",
+      "icons": [
+        {
+          "src": "/icons/日誌.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "數據分析",
+      "short_name": "分析",
       "url": "/dashboard",
-      "description": "查看心情趨勢與分析"
+      "description": "查看心情趨勢與分析",
+      "icons": [
+        {
+          "src": "/icons/每週報告.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "AI 聊天",
+      "short_name": "AI",
+      "url": "/ai-chat",
+      "description": "與 AI 心理健康助手聊天",
+      "icons": [
+        {
+          "src": "/icons/AI 聊天.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
-  ]
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"]
 }

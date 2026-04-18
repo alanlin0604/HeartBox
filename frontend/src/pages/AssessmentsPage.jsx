@@ -4,6 +4,7 @@ import { getCounselors } from '../api/counselors'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
+import { usePerformance } from '../hooks/usePerformance'
 import { LOCALE_MAP } from '../utils/locales'
 
 const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
@@ -51,6 +52,7 @@ function getScoreColor(type, score) {
 }
 
 export default function AssessmentsPage() {
+  usePerformance('AssessmentsPage', 50)
   const { t, lang } = useLang()
   const { theme } = useTheme()
   const toast = useToast()

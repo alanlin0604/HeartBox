@@ -89,16 +89,16 @@ export default function Layout() {
   }, [])
 
   const navLinks = [
-    { to: '/', label: t('nav.journal'), icon: '/icons/日誌.png', end: true },
-    { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.png' },
-    { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.png' },
-    { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.png' },
-    { to: '/breathe', label: t('nav.breathe'), icon: '/icons/呼吸與冥想.png' },
-    { to: '/learn', label: t('nav.learn'), icon: '/icons/學習.png' },
-    { to: '/counselors', label: t('nav.counselors'), icon: '/icons/諮商師.png' },
-    { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.png' },
-    { to: '/achievements', label: t('nav.achievements'), icon: '/icons/成就.png' },
-    { to: '/guide', label: t('nav.guide'), icon: '/icons/功能指南.png' },
+    { to: '/', label: t('nav.journal'), icon: '/icons/日誌.webp', end: true },
+    { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.webp' },
+    { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.webp' },
+    { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.webp' },
+    { to: '/breathe', label: t('nav.breathe'), icon: '/icons/呼吸與冥想.webp' },
+    { to: '/learn', label: t('nav.learn'), icon: '/icons/學習.webp' },
+    { to: '/counselors', label: t('nav.counselors'), icon: '/icons/諮商師.webp' },
+    { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
+    { to: '/achievements', label: t('nav.achievements'), icon: '/icons/成就.webp' },
+    { to: '/guide', label: t('nav.guide'), icon: '/icons/功能指南.webp' },
   ]
 
   // Bottom nav: first 4 items + "More"

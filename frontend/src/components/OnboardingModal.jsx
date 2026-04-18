@@ -8,8 +8,8 @@ export default function OnboardingModal({ onComplete }) {
 
   const steps = [
     { titleKey: 'onboarding.welcomeTitle', descKey: 'onboarding.welcomeDesc', icon: '/logo.png' },
-    { titleKey: 'onboarding.journalTitle', descKey: 'onboarding.journalDesc', icon: '/icons/日誌.png' },
-    { titleKey: 'onboarding.exploreTitle', descKey: 'onboarding.exploreDesc', icon: '/icons/功能指南.png' },
+    { titleKey: 'onboarding.journalTitle', descKey: 'onboarding.journalDesc', icon: '/icons/日誌.webp' },
+    { titleKey: 'onboarding.exploreTitle', descKey: 'onboarding.exploreDesc', icon: '/icons/功能指南.webp' },
   ]
 
   const handleComplete = async () => {

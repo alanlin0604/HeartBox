@@ -6,12 +6,12 @@ export default function LandingPage() {
   const { t } = useLang()
 
   const features = [
-    { icon: '/icons/日誌.png', titleKey: 'landing.featureJournal', descKey: 'landing.featureJournalDesc' },
-    { icon: '/icons/AI 聊天.png', titleKey: 'landing.featureAI', descKey: 'landing.featureAIDesc' },
-    { icon: '/icons/心情週報月報.png', titleKey: 'landing.featureAnalytics', descKey: 'landing.featureAnalyticsDesc' },
-    { icon: '/icons/呼吸與冥想.png', titleKey: 'landing.featureBreathe', descKey: 'landing.featureBreatheDesc' },
-    { icon: '/icons/諮商師.png', titleKey: 'landing.featureCounselor', descKey: 'landing.featureCounselorDesc' },
-    { icon: '/icons/問卷評估.png', titleKey: 'landing.featureAssessment', descKey: 'landing.featureAssessmentDesc' },
+    { icon: '/icons/日誌.webp', titleKey: 'landing.featureJournal', descKey: 'landing.featureJournalDesc' },
+    { icon: '/icons/AI 聊天.webp', titleKey: 'landing.featureAI', descKey: 'landing.featureAIDesc' },
+    { icon: '/icons/心情週報月報.webp', titleKey: 'landing.featureAnalytics', descKey: 'landing.featureAnalyticsDesc' },
+    { icon: '/icons/呼吸與冥想.webp', titleKey: 'landing.featureBreathe', descKey: 'landing.featureBreatheDesc' },
+    { icon: '/icons/諮商師.webp', titleKey: 'landing.featureCounselor', descKey: 'landing.featureCounselorDesc' },
+    { icon: '/icons/問卷評估.webp', titleKey: 'landing.featureAssessment', descKey: 'landing.featureAssessmentDesc' },
   ]
 
   return (

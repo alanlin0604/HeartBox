@@ -1052,5 +1052,11 @@
   "health.metric_hrv": "心拍変動",
   "health.metric_active_calories": "消費カロリー",
   "health.metric_exercise_minutes": "運動時間",
-  "health.correlationHint": "r > 0 は正の相関（数値が高いほど気分が良い）。3日以上のデータが必要です。"
+  "health.correlationHint": "r > 0 は正の相関（数値が高いほど気分が良い）。3日以上のデータが必要です。",
+  "health.noData": "ヘルスデータがありません",
+  "health.noDataDesc": "設定ページでHealth Connectを接続してデータを同期するか、ヘルストラッカーを使用して歩数、心拍数、睡眠などを記録してください。",
+  "health.goToSettings": "設定に移動",
+  "offline.youAreOffline": "オフラインです",
+  "offline.someFeaturesMayNotWork": "一部の機能が利用できない可能性があります",
+  "offline.backOnline": "オンラインに戻りました"
 }

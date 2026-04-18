@@ -38,11 +38,11 @@ export default function EditorToolbar({ editor, showVoice = false, isListening =
               className="inline-block w-4 h-4"
               style={{
                 backgroundColor: 'currentColor',
-                maskImage: 'url(/icons/microphone-black-shape.png)',
+                maskImage: 'url(/icons/microphone-black-shape.webp)',
                 maskSize: 'contain',
                 maskRepeat: 'no-repeat',
                 maskPosition: 'center',
-                WebkitMaskImage: 'url(/icons/microphone-black-shape.png)',
+                WebkitMaskImage: 'url(/icons/microphone-black-shape.webp)',
                 WebkitMaskSize: 'contain',
                 WebkitMaskRepeat: 'no-repeat',
                 WebkitMaskPosition: 'center',

@@ -61,7 +61,7 @@ export default function JournalPage() {
     setContextMenu({ x, y, noteId })
   }, [])
 
-  const handleTogglePin = async (noteId) => {
+  const handleTogglePin = useCallback(async (noteId) => {
     setContextMenu(null)
     try {
       const { data } = await togglePin(noteId)
@@ -70,9 +70,9 @@ export default function JournalPage() {
     } catch {
       toast?.error(t('common.operationFailed'))
     }
-  }
+  }, [toast, t])
 
-  const handleDeleteNote = async (noteId) => {
+  const handleDeleteNote = useCallback(async (noteId) => {
     setDeleteConfirmId(null)
     try {
       await deleteNote(noteId)
@@ -81,7 +81,7 @@ export default function JournalPage() {
     } catch {
       toast?.error(t('common.operationFailed'))
     }
-  }
+  }, [toast, t])
 
   // Initialize filters from URL query params (for calendar click-through)
   const [filters, setFilters] = useState(() => {
@@ -120,22 +120,22 @@ export default function JournalPage() {
     finally { setTrashLoading(false) }
   }
 
-  const handleRestore = async (id) => {
+  const handleRestore = useCallback(async (id) => {
     try {
       await restoreNote(id)
       setTrashNotes((prev) => prev.filter((n) => n.id !== id))
       toast?.success(t('journal.restore'))
       fetchNotes(page, filters)
     } catch { toast?.error(t('common.operationFailed')) }
-  }
+  }, [toast, t, fetchNotes, page, filters])
 
-  const handlePermanentDelete = async (id) => {
+  const handlePermanentDelete = useCallback(async (id) => {
     try {
       await permanentDeleteNote(id)
       setTrashNotes((prev) => prev.filter((n) => n.id !== id))
     } catch { toast?.error(t('common.operationFailed')) }
     finally { setPermanentDeleteId(null) }
-  }
+  }, [toast, t])
 
   useEffect(() => { document.title = `${t('nav.journal')} — ${t('app.name')}` }, [t])
 
@@ -170,7 +170,7 @@ export default function JournalPage() {
     return notes.filter((n) => n.created_at?.slice(0, 10) === today).length
   }, [notes])
 
-  const handleCreate = async (content, metadata, files = []) => {
+  const handleCreate = useCallback(async (content, metadata, files = []) => {
     setCreating(true)
     try {
       const res = await createNote(content, metadata)
@@ -204,23 +204,23 @@ export default function JournalPage() {
     } finally {
       setCreating(false)
     }
-  }
+  }, [fetchNotes, filters, toast, t])
 
-  const handleFilterChange = (newFilters) => {
+  const handleFilterChange = useCallback((newFilters) => {
     setFilters(newFilters)
     setPage(1)
-  }
+  }, [])
 
-  const toggleSelect = (id) => {
+  const toggleSelect = useCallback((id) => {
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
     })
-  }
+  }, [])
 
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = useCallback(async () => {
     setBatchConfirmOpen(false)
     setBatchDeleting(true)
     try {
@@ -235,10 +235,10 @@ export default function JournalPage() {
     } finally {
       setBatchDeleting(false)
     }
-  }
+  }, [selected, toast, t, fetchNotes, filters])
 
   // Sidebar content (shared between desktop aside and mobile inline)
-  const sidebarContent = (
+  const sidebarContent = useMemo(() => (
     <>
       {streak > 0 && (
         <div className="glass-card p-3 flex items-center gap-2 text-sm">
@@ -257,7 +257,7 @@ export default function JournalPage() {
         </div>
       )}
     </>
-  )
+  ), [streak, t, todayNoteCount, weekAvgMood])
 
   return (
     <div className="mt-4">

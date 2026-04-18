@@ -1055,5 +1055,8 @@
   "health.correlationHint": "r > 0 means positive correlation (higher = better mood). Requires at least 3 days of overlapping data.",
   "health.noData": "No health data available",
   "health.noDataDesc": "Connect Health Connect in Settings and sync your data, or use a health tracking device to record your steps, heart rate, sleep, and more.",
-  "health.goToSettings": "Go to Settings"
+  "health.goToSettings": "Go to Settings",
+  "offline.youAreOffline": "You are offline",
+  "offline.someFeaturesMayNotWork": "Some features may not work",
+  "offline.backOnline": "Back online"
 }

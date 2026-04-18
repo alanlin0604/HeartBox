@@ -1,3 +1,6 @@
+// Validate environment variables BEFORE any other imports
+import config from './config/env'
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -11,7 +14,7 @@ import './index.css'
 import App from './App.jsx'
 
 // Initialize Sentry (only in production if DSN is set)
-const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN
+const SENTRY_DSN = config.sentryDsn
 if (SENTRY_DSN && import.meta.env.PROD) {
   Sentry.init({
     dsn: SENTRY_DSN,

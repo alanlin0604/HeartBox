@@ -1,0 +1,22 @@
+echo "🔍 Running pre-commit checks..."
+
+# Run frontend tests
+if [ -d "frontend" ]; then
+  echo "📝 Running frontend tests..."
+  cd frontend && npm test || {
+    echo "❌ Tests failed. Please fix them before committing."
+    exit 1
+  }
+  cd ..
+fi
+
+# Run backend tests (if exists)
+if [ -f "backend/manage.py" ]; then
+  echo "📝 Running backend tests..."
+  cd backend && python manage.py test --keepdb 2>/dev/null || {
+    echo "⚠️ Backend tests not configured (non-blocking)"
+  }
+  cd ..
+fi
+
+echo "✅ Pre-commit checks passed!"

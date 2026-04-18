@@ -1,0 +1,37 @@
+# Validate commit message format (Conventional Commits)
+commit_msg=$(cat "$1")
+
+# Pattern: type(scope?): subject
+# Examples: feat: add new feature, fix(api): resolve bug, docs: update readme
+pattern="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .{1,100}"
+
+if ! echo "$commit_msg" | grep -Eq "$pattern"; then
+  echo ""
+  echo "❌ Invalid commit message format!"
+  echo ""
+  echo "Expected format: <type>(<scope>): <subject>"
+  echo ""
+  echo "Types:"
+  echo "  feat:     A new feature"
+  echo "  fix:      A bug fix"
+  echo "  docs:     Documentation only changes"
+  echo "  style:    Code style changes (formatting, etc.)"
+  echo "  refactor: Code refactoring"
+  echo "  perf:     Performance improvements"
+  echo "  test:     Adding or updating tests"
+  echo "  build:    Build system or dependencies"
+  echo "  ci:       CI/CD configuration"
+  echo "  chore:    Other changes"
+  echo ""
+  echo "Examples:"
+  echo "  feat: add user authentication"
+  echo "  fix(api): resolve timeout issue"
+  echo "  docs: update installation guide"
+  echo ""
+  echo "Your commit message:"
+  echo "  $commit_msg"
+  echo ""
+  exit 1
+fi
+
+echo "✅ Commit message format valid"

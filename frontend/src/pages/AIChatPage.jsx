@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, memo } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
+import { usePerformance } from '../hooks/usePerformance'
 import {
   getAIChatSessions,
   createAIChatSession,
@@ -49,6 +50,7 @@ const AIChatMessage = memo(function AIChatMessage({ msg, lang }) {
 })
 
 export default function AIChatPage() {
+  usePerformance('AIChatPage', 50)
   const { lang, t } = useLang()
   const toast = useToast()
 

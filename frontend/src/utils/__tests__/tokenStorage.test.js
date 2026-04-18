@@ -10,8 +10,9 @@ import {
 
 describe('tokenStorage utilities', () => {
   beforeEach(() => {
-    // Clear localStorage before each test
+    // Clear both localStorage and sessionStorage before each test
     localStorage.clear()
+    sessionStorage.clear()
   })
 
   describe('Access Token', () => {

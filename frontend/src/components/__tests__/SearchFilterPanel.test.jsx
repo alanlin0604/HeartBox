@@ -5,7 +5,19 @@ import SearchFilterPanel from '../SearchFilterPanel'
 // Mock context hooks
 vi.mock('../../context/LanguageContext', () => ({
   useLang: () => ({
-    t: (key) => key,
+    t: (key) => {
+      const translations = {
+        'search.placeholder': 'Search notes',
+        'search.search': 'Search',
+        'search.tag': 'Tag',
+        'search.sentimentRange': 'Sentiment Range',
+        'search.stressRange': 'Stress Range',
+        'search.dateRange': 'Date Range',
+        'aria.expandFilters': 'Expand filters',
+        'aria.collapseFilters': 'Collapse filters',
+      }
+      return translations[key] || key
+    },
     lang: 'en',
     setLang: vi.fn(),
   }),
@@ -23,15 +35,15 @@ describe('SearchFilterPanel', () => {
     const onFilterChange = vi.fn()
     render(<SearchFilterPanel filters={{}} onFilterChange={onFilterChange} />)
 
-    expect(screen.getByPlaceholderText('search.placeholder')).toBeInTheDocument()
-    expect(screen.getByText('search.search')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Search notes')).toBeInTheDocument()
+    expect(screen.getByText('Search')).toBeInTheDocument()
   })
 
   it('calls onFilterChange with search term on form submit', () => {
     const onFilterChange = vi.fn()
     render(<SearchFilterPanel filters={{}} onFilterChange={onFilterChange} />)
 
-    const input = screen.getByPlaceholderText('search.placeholder')
+    const input = screen.getByPlaceholderText('Search notes')
     fireEvent.change(input, { target: { value: 'happy' } })
     fireEvent.submit(input.closest('form'))
 
@@ -43,17 +55,17 @@ describe('SearchFilterPanel', () => {
     render(<SearchFilterPanel filters={{}} onFilterChange={onFilterChange} />)
 
     // Filter fields should not be visible initially
-    expect(screen.queryByText('search.tag')).not.toBeInTheDocument()
+    expect(screen.queryByText('Tag')).not.toBeInTheDocument()
 
     // Click the expand button
     const expandButton = screen.getByRole('button', { name: 'Expand filters' })
     fireEvent.click(expandButton)
 
     // Filter fields should now be visible
-    expect(screen.getByText('search.tag')).toBeInTheDocument()
-    expect(screen.getByText('search.sentimentRange')).toBeInTheDocument()
-    expect(screen.getByText('search.stressRange')).toBeInTheDocument()
-    expect(screen.getByText('search.dateRange')).toBeInTheDocument()
+    expect(screen.getByText('Tag')).toBeInTheDocument()
+    expect(screen.getByText('Sentiment Range')).toBeInTheDocument()
+    expect(screen.getByText('Stress Range')).toBeInTheDocument()
+    expect(screen.getByText('Date Range')).toBeInTheDocument()
 
     // Aria attributes should update
     expect(expandButton).toHaveAttribute('aria-expanded', 'true')

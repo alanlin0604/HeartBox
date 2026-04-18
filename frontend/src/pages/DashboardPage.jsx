@@ -5,6 +5,7 @@ import { getHealthSummary } from '../api/health'
 import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
+import { usePerformance } from '../hooks/usePerformance'
 import SkeletonCard from '../components/SkeletonCard'
 import MoodCalendar from '../components/MoodCalendar'
 import YearInPixels from '../components/YearInPixels'
@@ -23,6 +24,7 @@ const ChartSkeleton = () => (
 )
 
 export default function DashboardPage() {
+  usePerformance('DashboardPage', 50)
   const navigate = useNavigate()
   const { theme } = useTheme()
   const { t } = useLang()

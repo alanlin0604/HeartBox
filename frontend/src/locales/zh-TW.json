@@ -1055,5 +1055,8 @@
   "health.correlationHint": "r > 0 表示正相關（數值越高心情越好），r < 0 表示負相關。需至少 3 天以上的交叉數據。",
   "health.noData": "目前沒有健康數據",
   "health.noDataDesc": "請前往設定頁面連結 Health Connect 並同步數據，或在日常活動中使用健康追蹤裝置記錄你的步數、心率和睡眠等數據。",
-  "health.goToSettings": "前往設定"
+  "health.goToSettings": "前往設定",
+  "offline.youAreOffline": "您目前離線",
+  "offline.someFeaturesMayNotWork": "部分功能可能無法使用",
+  "offline.backOnline": "已重新連線"
 }

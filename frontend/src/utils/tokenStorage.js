@@ -52,6 +52,11 @@ export function getRefreshToken() {
 }
 
 export function setAccessToken(access) {
+  if (access === null || access === undefined) {
+    removeFrom(localStorage, ACCESS_KEY);
+    removeFrom(sessionStorage, ACCESS_KEY);
+    return;
+  }
   if (readFrom(localStorage, ACCESS_KEY)) {
     writeTo(localStorage, ACCESS_KEY, access);
     return;
@@ -60,6 +65,11 @@ export function setAccessToken(access) {
 }
 
 export function setRefreshToken(refresh) {
+  if (refresh === null || refresh === undefined) {
+    removeFrom(localStorage, REFRESH_KEY);
+    removeFrom(sessionStorage, REFRESH_KEY);
+    return;
+  }
   if (readFrom(localStorage, REFRESH_KEY)) {
     writeTo(localStorage, REFRESH_KEY, refresh);
     return;
@@ -73,4 +83,10 @@ export function clearAuthTokens() {
   removeFrom(sessionStorage, ACCESS_KEY);
   removeFrom(sessionStorage, REFRESH_KEY);
   removeFrom(localStorage, REMEMBER_KEY);
+}
+
+export function hasValidTokens() {
+  const access = getAccessToken();
+  const refresh = getRefreshToken();
+  return Boolean(access && refresh);
 }

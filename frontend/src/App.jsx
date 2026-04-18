@@ -6,6 +6,7 @@ import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
 import PageTransition from './components/PageTransition'
+import OfflineIndicator from './components/OfflineIndicator'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -68,7 +69,9 @@ function LazyRoute({ children }) {
 export default function App() {
   const location = useLocation()
   return (
-    <ErrorBoundary key={location.pathname}>
+    <>
+      <OfflineIndicator />
+      <ErrorBoundary key={location.pathname}>
       <AnimatePresence mode="wait" initial={false}>
         <Routes location={location} key={location.pathname}>
           <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
@@ -117,5 +120,6 @@ export default function App() {
         </Routes>
       </AnimatePresence>
     </ErrorBoundary>
+    </>
   )
 }
