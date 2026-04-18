@@ -294,7 +294,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
               <button
                 type="button"
                 onClick={() => deleteTemplate(tpl.id)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-300 text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer w-4 h-4 flex items-center justify-center"
+                className="absolute right-0 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer min-w-11 min-h-11 flex items-center justify-center"
                 title={t('noteForm.deleteTemplate')}
                 aria-label={t('noteForm.deleteTemplate')}
               >

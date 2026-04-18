@@ -10,6 +10,9 @@ const api = axios.create({
 // --- GET request deduplication ---
 const pendingGets = new Map();
 
+// --- Token refresh lock to prevent race conditions ---
+let refreshPromise = null;
+
 api.interceptors.request.use((config) => {
   // Attach Bearer token
   const token = getAccessToken();
@@ -59,22 +62,39 @@ api.interceptors.response.use(
 
     const original = error.config;
 
-    // Auto-refresh on 401
+    // Auto-refresh on 401 with global lock to prevent race conditions
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       const refresh = getRefreshToken();
       if (refresh) {
         try {
-          const { data } = await axios.post(`${API_BASE}/auth/refresh/`, { refresh });
-          setAccessToken(data.access);
-          if (data.refresh) {
-            setRefreshToken(data.refresh);
+          // Global lock: only one refresh request at a time
+          if (!refreshPromise) {
+            refreshPromise = axios.post(`${API_BASE}/auth/refresh/`, { refresh })
+              .then(({ data }) => {
+                setAccessToken(data.access);
+                if (data.refresh) {
+                  setRefreshToken(data.refresh);
+                }
+                return data.access;
+              })
+              .catch((err) => {
+                clearAuthTokens();
+                window.location.href = '/login';
+                throw err;
+              })
+              .finally(() => {
+                refreshPromise = null;
+              });
           }
-          original.headers.Authorization = `Bearer ${data.access}`;
+
+          // Wait for the refresh to complete (either from this request or another)
+          const newAccessToken = await refreshPromise;
+          original.headers.Authorization = `Bearer ${newAccessToken}`;
           return api(original);
         } catch {
-          clearAuthTokens();
-          window.location.href = '/login';
+          // Error handling is done in the catch above
+          return Promise.reject(error);
         }
       }
     }
