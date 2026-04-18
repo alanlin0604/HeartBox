@@ -53,7 +53,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-recharts': ['recharts'],
+          // Remove recharts from manualChunks to enable automatic code splitting per chart type
+          // Each chart component (Bar, Line, Scatter, Radar) will be split into separate chunks
           'vendor-axios': ['axios'],
           'vendor-tiptap': ['@tiptap/react', '@tiptap/starter-kit', '@tiptap/extension-placeholder'],
           'vendor-dompurify': ['dompurify'],
