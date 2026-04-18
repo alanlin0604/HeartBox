@@ -209,8 +209,66 @@ export async function readHealthData(startDate, endDate) {
       })
     }
 
-    // Note: Exercise Time (exerciseTime) not supported on Android Health Connect
-    // TODO: Use workouts API or alternative method to get exercise data
+    // Read Exercise/Workouts (Android: use workouts API)
+    if (platform === 'android') {
+      try {
+        // Android Health Connect uses workouts instead of exerciseTime
+        const workoutsResult = await Health.readWorkouts({
+          startDate: start,
+          endDate: end,
+          limit: 1000,
+        }).catch(() => ({ workouts: [] }))
+
+        // Group workouts by date and calculate total exercise time
+        const exerciseByDate = {}
+        for (const workout of workoutsResult.workouts || []) {
+          const date = workout.startDate.split('T')[0]
+          const duration = Math.round(
+            (new Date(workout.endDate) - new Date(workout.startDate)) / 60000
+          )
+
+          if (!exerciseByDate[date]) exerciseByDate[date] = 0
+          exerciseByDate[date] += duration
+        }
+
+        // Convert to metrics
+        for (const [date, totalMinutes] of Object.entries(exerciseByDate)) {
+          metrics.push({
+            date,
+            metric_type: 'exercise_time',
+            value: totalMinutes,
+            source,
+          })
+        }
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.warn('Failed to read workouts:', err)
+        }
+      }
+    } else if (platform === 'ios') {
+      // iOS: try to read exerciseTime directly (if available)
+      try {
+        const exerciseResult = await Health.readSamples({
+          dataType: 'exerciseTime',
+          startDate: start,
+          endDate: end,
+          limit: 1000,
+        }).catch(() => ({ samples: [] }))
+
+        for (const sample of exerciseResult.samples || []) {
+          metrics.push({
+            date: sample.startDate.split('T')[0],
+            metric_type: 'exercise_time',
+            value: sample.value,
+            source,
+          })
+        }
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.warn('Failed to read exercise time:', err)
+        }
+      }
+    }
 
     // Read Sleep
     const sleepResult = await Health.readSamples({
