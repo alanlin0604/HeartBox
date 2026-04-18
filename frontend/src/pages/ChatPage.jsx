@@ -287,9 +287,9 @@ export default function ChatPage() {
   if (loading) return <LoadingSpinner />
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col flex-1 min-h-0 relative">
       {/* Header */}
-      <div className="glass p-4 flex items-center gap-3 mb-4">
+      <div className="glass p-4 flex items-center gap-3 mb-4 shrink-0">
         <button
           onClick={() => navigate('/counselors')}
           className="opacity-60 hover:opacity-100 transition-opacity cursor-pointer text-lg"
@@ -325,7 +325,7 @@ export default function ChatPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-3 px-2 pb-4">
+      <div className="flex-1 overflow-y-auto space-y-3 px-2 pb-32">
         {messages.length === 0 ? (
           <div className="text-center opacity-40 mt-12">
             {t('chat.empty')}
@@ -338,9 +338,9 @@ export default function ChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Quote Form */}
+      {/* Quote Form - Fixed above input */}
       {showQuoteForm && (
-        <form onSubmit={handleSendQuote} className="glass p-3 space-y-2 border-t border-purple-500/30">
+        <form onSubmit={handleSendQuote} className="glass p-3 space-y-2 border-t border-purple-500/30 sticky bottom-16 shrink-0">
           <div className="flex items-center gap-2 text-sm font-medium text-purple-400">
             <span>{t('chat.quoteLabel')}</span>
           </div>
@@ -392,8 +392,8 @@ export default function ChatPage() {
         </form>
       )}
 
-      {/* Input */}
-      <form onSubmit={handleSend} className="glass p-3 flex gap-3">
+      {/* Input - Fixed at bottom */}
+      <form onSubmit={handleSend} className="glass p-3 flex gap-3 sticky bottom-0 shrink-0">
         {user?.is_counselor && (
           <button
             type="button"

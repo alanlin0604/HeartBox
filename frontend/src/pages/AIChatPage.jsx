@@ -324,12 +324,12 @@ export default function AIChatPage() {
       <div
         className={`${
           !showSidebar ? 'flex' : 'hidden'
-        } md:flex flex-col flex-1 min-h-0`}
+        } md:flex flex-col flex-1 min-h-0 relative`}
       >
         {activeSessionId ? (
           <>
             {/* Chat header */}
-            <div className="glass p-3 mb-3 flex items-center gap-3">
+            <div className="glass p-3 mb-3 flex items-center gap-3 shrink-0">
               <button
                 onClick={handleBack}
                 className="md:hidden opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
@@ -344,7 +344,7 @@ export default function AIChatPage() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto space-y-3 px-1 pb-3">
+            <div className="flex-1 overflow-y-auto space-y-3 px-1 pb-24">
               {messages.length === 0 ? (
                 <div className="text-center opacity-40 mt-12">
                   <span className="text-4xl block mb-3">🤖</span>
@@ -371,8 +371,8 @@ export default function AIChatPage() {
               <div ref={bottomRef} />
             </div>
 
-            {/* Input */}
-            <form onSubmit={handleSend} className="glass p-3 flex gap-3">
+            {/* Input - Fixed at bottom */}
+            <form onSubmit={handleSend} className="glass p-3 flex gap-3 sticky bottom-0 shrink-0">
               <input
                 type="text"
                 value={input}
