@@ -35,12 +35,12 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorReview, Course, CounselorProfile,
-    DailySleep, Feedback, HealthMetric,
+    DailySleep, DashboardLayout, Feedback, Habit, HabitLog, HealthMetric, JournalStreak,
     Message, MoodNote, NoteAttachment, Notification, NotificationPreference,
-    PsychoArticle, PushSubscription,
-    SelfAssessment, SharedAssessment, SharedNote, SubscriptionPlan,
+    PsychoArticle, PushSubscription, ReminderSettings,
+    SelfAssessment, SharedAssessment, SharedNote, SubscriptionPlan, Tag,
     TherapistReport, TimeSlot, TOTPDevice,
-    UserAchievement, UserLessonProgress, UserSubscription, WeeklySummary,
+    UserAchievement, UserLessonProgress, UserMetric, UserSubscription, WeeklySummary,
     WellnessSession,
 )
 from .serializers import (
@@ -56,9 +56,13 @@ from .serializers import (
     CounselorProfileSerializer,
     CounselorReviewSerializer,
     DailySleepSerializer,
+    DashboardLayoutSerializer,
+    HabitLogSerializer,
+    HabitSerializer,
     HealthMetricSerializer,
     HealthSyncSerializer,
     FeedbackSerializer,
+    JournalStreakSerializer,
     MessageSerializer,
     MoodNoteListSerializer,
     MoodNoteSerializer,
@@ -67,16 +71,19 @@ from .serializers import (
     NotificationSerializer,
     PsychoArticleSerializer,
     PushSubscriptionSerializer,
+    ReminderSettingsSerializer,
     SelfAssessmentSerializer,
     SharedAssessmentSerializer,
     SharedNoteSerializer,
     SubscriptionPlanSerializer,
+    TagSerializer,
     TherapistReportPublicSerializer,
     TherapistReportSerializer,
     TimeSlotSerializer,
     TOTPSetupSerializer,
     TOTPVerifySerializer,
     UserAchievementSerializer,
+    UserMetricSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
     UserSubscriptionSerializer,
@@ -473,6 +480,42 @@ class LogoutOtherDevicesView(APIView):
         return Response(_issue_tokens(user))
 
 
+class TagViewSet(viewsets.ModelViewSet):
+    """CRUD operations for user tags."""
+    serializer_class = TagSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Tag.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def cloud(self, request):
+        """Tag cloud with usage counts. Returns [{name, count, color}]."""
+        tags = self.get_queryset().annotate(
+            count=Count('notes', filter=Q(notes__is_deleted=False))
+        ).filter(count__gt=0).order_by('-count')[:20]
+        return Response([
+            {'name': tag.name, 'count': tag.count, 'color': tag.color}
+            for tag in tags
+        ])
+
+    @action(detail=False, methods=['get'])
+    def autocomplete(self, request):
+        """Autocomplete for tag input. Query param: q"""
+        query = request.query_params.get('q', '').strip().lower()
+        if not query:
+            # Return frequently used tags
+            tags = self.get_queryset().annotate(
+                count=Count('notes', filter=Q(notes__is_deleted=False))
+            ).filter(count__gt=0).order_by('-count')[:10]
+        else:
+            tags = self.get_queryset().filter(name__icontains=query)[:10]
+        return Response(TagSerializer(tags, many=True).data)
+
+
 class MoodNoteViewSet(viewsets.ModelViewSet):
     def get_throttles(self):
         if self.action == 'create':
@@ -532,6 +575,15 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         note = serializer.save(user=self.request.user)
         self._run_ai_analysis(note)
         self._invalidate_user_cache()
+        # Update journal streak
+        try:
+            from api.services.streaks import update_streak, get_streak_milestone
+            streak = update_streak(self.request.user)
+            milestone = get_streak_milestone(streak.current_streak)
+            if milestone:
+                self._streak_milestone = milestone
+        except Exception as e:
+            logger.warning('Streak update failed for user %s: %s', self.request.user.pk, e)
         # Auto-check achievements
         try:
             from api.services.achievements import check_achievements
@@ -548,9 +600,12 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         self._new_achievements = []
+        self._streak_milestone = None
         response = super().create(request, *args, **kwargs)
         if self._new_achievements:
             response['X-New-Achievements'] = ','.join(self._new_achievements)
+        if self._streak_milestone:
+            response['X-Streak-Milestone'] = self._streak_milestone['id']
         return response
 
     @action(detail=True, methods=['post'])
@@ -2230,6 +2285,274 @@ class DailySleepListView(generics.ListAPIView):
         return DailySleep.objects.filter(user=self.request.user)
 
 
+# ===== Sleep Analysis Views =====
+
+class SleepAnalysisView(APIView):
+    """綜合睡眠分析 - 統計、情緒關聯、壓力關聯、問題識別、建議"""
+
+    def get(self, request):
+        from .services.sleep_analysis import (
+            analyze_sleep_mood_correlation,
+            analyze_sleep_stress_correlation,
+            get_sleep_statistics,
+            identify_sleep_issues,
+            generate_sleep_recommendations,
+        )
+
+        days = int(request.query_params.get('days', 30))
+
+        # 獲取各項分析結果
+        statistics = get_sleep_statistics(request.user, days)
+        mood_correlation = analyze_sleep_mood_correlation(request.user, days)
+        stress_correlation = analyze_sleep_stress_correlation(request.user, days)
+        issues_data = identify_sleep_issues(request.user, days=min(days, 14))
+        recommendations = generate_sleep_recommendations(request.user, days=min(days, 14))
+
+        return Response({
+            'statistics': statistics,
+            'mood_correlation': mood_correlation,
+            'stress_correlation': stress_correlation,
+            'issues': issues_data.get('issues', []),
+            'recommendations': recommendations
+        })
+
+
+class SleepCalendarView(APIView):
+    """睡眠日曆 - 每日睡眠記錄 + quality_score + pattern"""
+
+    def get(self, request):
+        from .serializers import DailySleepDetailSerializer
+
+        start_date_str = request.query_params.get('start_date')
+        end_date_str = request.query_params.get('end_date')
+
+        if not start_date_str or not end_date_str:
+            return error_response('missing_params', 'start_date and end_date are required')
+
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return error_response('invalid_date_format', 'Invalid date format. Use YYYY-MM-DD.')
+
+        if end_date < start_date:
+            return error_response('invalid_range', 'end_date must be >= start_date')
+
+        sleeps = DailySleep.objects.filter(
+            user=request.user,
+            date__gte=start_date,
+            date__lte=end_date
+        ).order_by('date')
+
+        calendar_data = DailySleepDetailSerializer(sleeps, many=True).data
+
+        return Response({
+            'calendar': calendar_data
+        })
+
+
+class SleepTrendsView(APIView):
+    """睡眠趨勢 - 週度聚合資料"""
+
+    def get(self, request):
+        from datetime import timedelta
+        from django.db.models import Avg
+
+        days = int(request.query_params.get('days', 90))
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=days)
+
+        # 獲取睡眠記錄
+        sleeps = DailySleep.objects.filter(
+            user=request.user,
+            date__gte=start_date
+        ).order_by('date')
+
+        # 獲取情緒記錄（用於關聯）
+        mood_notes = MoodNote.objects.filter(
+            user=request.user,
+            created_at__date__gte=start_date,
+            sentiment_score__isnull=False,
+            is_deleted=False
+        ).values('created_at__date', 'sentiment_score')
+
+        # 計算每日平均情緒
+        mood_by_date = {}
+        for note in mood_notes:
+            date = note['created_at__date']
+            score = note['sentiment_score']
+            if date not in mood_by_date:
+                mood_by_date[date] = []
+            mood_by_date[date].append((score + 1) * 5)  # 轉換為 0-10
+
+        # 按週聚合
+        from collections import defaultdict
+        weeks = defaultdict(lambda: {'sleep_hours': [], 'quality_scores': [], 'moods': []})
+
+        for sleep in sleeps:
+            # 計算該日期屬於哪一週（ISO week）
+            week_start = sleep.date - timedelta(days=sleep.date.weekday())
+
+            weeks[week_start]['sleep_hours'].append(sleep.sleep_hours)
+
+            # 計算品質分數
+            from .services.sleep_analysis import calculate_quality_score
+            score = calculate_quality_score(
+                sleep.sleep_hours,
+                sleep.deep_sleep_minutes,
+                sleep.light_sleep_minutes,
+                sleep.rem_sleep_minutes
+            )
+            weeks[week_start]['quality_scores'].append(score)
+
+            # 加入情緒資料
+            if sleep.date in mood_by_date:
+                avg_mood = sum(mood_by_date[sleep.date]) / len(mood_by_date[sleep.date])
+                weeks[week_start]['moods'].append(avg_mood)
+
+        # 生成趨勢資料
+        trends = []
+        for week_start in sorted(weeks.keys()):
+            data = weeks[week_start]
+            trends.append({
+                'week_start': str(week_start),
+                'avg_sleep_hours': round(sum(data['sleep_hours']) / len(data['sleep_hours']), 1) if data['sleep_hours'] else None,
+                'avg_quality_score': round(sum(data['quality_scores']) / len(data['quality_scores'])) if data['quality_scores'] else None,
+                'avg_mood': round(sum(data['moods']) / len(data['moods']), 1) if data['moods'] else None
+            })
+
+        return Response({
+            'trends': trends
+        })
+
+
+class SleepInsightsView(APIView):
+    """睡眠洞察 - 有趣的統計發現"""
+
+    def get(self, request):
+        from datetime import timedelta
+        from .services.sleep_analysis import calculate_quality_score
+
+        insights = []
+        user = request.user
+        end_date = timezone.now().date()
+
+        # 取得最近 90 天的睡眠記錄
+        sleeps = DailySleep.objects.filter(
+            user=user,
+            date__gte=end_date - timedelta(days=90)
+        ).order_by('-date')
+
+        if sleeps.count() < 7:
+            return Response({'insights': ['資料不足，至少需要 7 天的睡眠記錄']})
+
+        # 洞察 1: 週末 vs 平日睡眠差異
+        weekday_hours = []
+        weekend_hours = []
+
+        for sleep in sleeps:
+            weekday = sleep.date.weekday()  # 0=Monday, 6=Sunday
+            if weekday < 5:  # 平日
+                weekday_hours.append(sleep.sleep_hours)
+            else:  # 週末
+                weekend_hours.append(sleep.sleep_hours)
+
+        if weekday_hours and weekend_hours:
+            avg_weekday = sum(weekday_hours) / len(weekday_hours)
+            avg_weekend = sum(weekend_hours) / len(weekend_hours)
+            diff = avg_weekend - avg_weekday
+
+            if abs(diff) > 0.5:
+                if diff > 0:
+                    insights.append(f'週末平均多睡 {diff:.1f} 小時（可能平日睡眠不足）')
+                else:
+                    insights.append(f'週末平均少睡 {abs(diff):.1f} 小時（作息相當規律）')
+
+        # 洞察 2: 最佳睡眠時數（情緒最好的睡眠時數）
+        mood_notes = MoodNote.objects.filter(
+            user=user,
+            created_at__date__gte=end_date - timedelta(days=90),
+            sentiment_score__isnull=False,
+            is_deleted=False
+        ).values('created_at__date', 'sentiment_score')
+
+        mood_by_date = {}
+        for note in mood_notes:
+            date = note['created_at__date']
+            score = (note['sentiment_score'] + 1) * 5  # 轉換為 0-10
+            if date not in mood_by_date:
+                mood_by_date[date] = []
+            mood_by_date[date].append(score)
+
+        # 按睡眠時數分組（6-7h, 7-8h, 8-9h, 9+h）
+        from collections import defaultdict
+        mood_by_hours = defaultdict(list)
+
+        for sleep in sleeps:
+            if sleep.date in mood_by_date:
+                avg_mood = sum(mood_by_date[sleep.date]) / len(mood_by_date[sleep.date])
+                if 6 <= sleep.sleep_hours < 7:
+                    mood_by_hours['6-7h'].append(avg_mood)
+                elif 7 <= sleep.sleep_hours < 8:
+                    mood_by_hours['7-8h'].append(avg_mood)
+                elif 8 <= sleep.sleep_hours < 9:
+                    mood_by_hours['8-9h'].append(avg_mood)
+                elif sleep.sleep_hours >= 9:
+                    mood_by_hours['9+h'].append(avg_mood)
+
+        # 找出情緒最好的睡眠時數區間
+        best_range = None
+        best_mood = 0
+        for hours_range, moods in mood_by_hours.items():
+            if len(moods) >= 3:  # 至少 3 個樣本
+                avg = sum(moods) / len(moods)
+                if avg > best_mood:
+                    best_mood = avg
+                    best_range = hours_range
+
+        if best_range:
+            insights.append(f'您在睡眠 {best_range} 時情緒最佳（平均 {best_mood:.1f}/10）')
+
+        # 洞察 3: 連續最佳睡眠記錄
+        best_streak = 0
+        current_streak = 0
+
+        for sleep in reversed(list(sleeps)):
+            score = calculate_quality_score(
+                sleep.sleep_hours,
+                sleep.deep_sleep_minutes,
+                sleep.light_sleep_minutes,
+                sleep.rem_sleep_minutes
+            )
+            if score >= 80:
+                current_streak += 1
+                best_streak = max(best_streak, current_streak)
+            else:
+                current_streak = 0
+
+        if best_streak >= 3:
+            insights.append(f'最長連續優質睡眠記錄：{best_streak} 天')
+
+        # 洞察 4: 深度睡眠與品質的關係
+        deep_sleep_records = [s for s in sleeps if s.deep_sleep_minutes is not None and s.deep_sleep_minutes > 0]
+        if len(deep_sleep_records) >= 10:
+            total_minutes = sum([s.deep_sleep_minutes + s.light_sleep_minutes + s.rem_sleep_minutes
+                                for s in deep_sleep_records
+                                if s.light_sleep_minutes and s.rem_sleep_minutes])
+            total_deep = sum([s.deep_sleep_minutes for s in deep_sleep_records])
+
+            if total_minutes > 0:
+                avg_deep_pct = (total_deep / total_minutes) * 100
+                insights.append(f'平均深度睡眠佔比 {avg_deep_pct:.1f}%（建議 20-25%）')
+
+        if not insights:
+            insights.append('繼續記錄睡眠數據，我們將為您提供更多洞察')
+
+        return Response({
+            'insights': insights
+        })
+
+
 # ===== Therapist Report Views =====
 
 class TherapistReportCreateView(generics.CreateAPIView):
@@ -2660,6 +2983,65 @@ class GoogleLoginCallbackView(APIView):
 
 # === CSV Import ===
 
+class PreviewCSVView(APIView):
+    """Preview CSV import without actually creating notes"""
+    throttle_classes = [GeneralWriteThrottle]
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return error_response('error.upload_file_required', 'A file is required.', 400)
+
+        if not file.name.endswith('.csv'):
+            return error_response('csv_invalid_format', 'Only CSV files are accepted.', 400)
+
+        try:
+            content = file.read().decode('utf-8-sig')
+            reader = csv.DictReader(io.StringIO(content))
+
+            # Get column headers
+            fieldnames = reader.fieldnames or []
+
+            # Preview first 5 rows
+            preview_rows = []
+            for i, row in enumerate(reader):
+                if i >= 5:
+                    break
+                preview_rows.append(dict(row))
+
+            # Count total rows
+            reader_count = csv.DictReader(io.StringIO(content))
+            total_rows = sum(1 for _ in reader_count)
+
+            # Suggest column mapping
+            COLUMN_MAP = {
+                'created': 'date',
+                'sentiment': 'mood',
+                'created_at': 'date',
+                'created_date': 'date',
+                'entry': 'content',
+                'text': 'content',
+                'body': 'content',
+                'note': 'content',
+            }
+
+            suggested_mapping = {}
+            for col in fieldnames:
+                col_lower = col.strip().lower()
+                suggested_mapping[col] = COLUMN_MAP.get(col_lower, col_lower)
+
+            return Response({
+                'total_rows': total_rows,
+                'preview_rows': preview_rows,
+                'columns': fieldnames,
+                'suggested_mapping': suggested_mapping,
+            })
+
+        except Exception as e:
+            logger.exception('CSV preview error')
+            return error_response('csv_parse_error', f'Invalid CSV file: {str(e)}', 400)
+
+
 class ImportCSVView(APIView):
     throttle_classes = [GeneralWriteThrottle]
 
@@ -3035,4 +3417,467 @@ class HealthSummaryView(APIView):
         return Response({
             'summary': summary,
             'health_mood_correlation': health_mood,
+        })
+
+
+class ReminderSettingsView(APIView):
+    """Get or update user's daily reminder settings."""
+
+    def get(self, request):
+        settings, created = ReminderSettings.objects.get_or_create(user=request.user)
+        serializer = ReminderSettingsSerializer(settings)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        settings, created = ReminderSettings.objects.get_or_create(user=request.user)
+        serializer = ReminderSettingsSerializer(settings, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class JournalStreakView(APIView):
+    """Get user's current journaling streak information."""
+
+    def get(self, request):
+        from api.services.streaks import update_streak
+        # Always recalculate to ensure accuracy
+        streak = update_streak(request.user)
+        serializer = JournalStreakSerializer(streak)
+        return Response(serializer.data)
+
+
+class OnThisDayView(APIView):
+    """Get notes from previous years on this day."""
+
+    def get(self, request):
+        from api.services.reviews import get_on_this_day
+        date_str = request.query_params.get('date')
+
+        if date_str:
+            try:
+                from datetime import datetime
+                date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+        else:
+            date = None
+
+        results = get_on_this_day(request.user, date)
+        return Response(results)
+
+
+class MonthlyReviewView(APIView):
+    """Get monthly review with statistics and highlights."""
+
+    def get(self, request):
+        from api.services.reviews import get_monthly_review
+
+        year = request.query_params.get('year')
+        month = request.query_params.get('month')
+
+        if not year or not month:
+            return Response({'error': 'year and month parameters are required'}, status=400)
+
+        try:
+            year = int(year)
+            month = int(month)
+            if not (1 <= month <= 12):
+                raise ValueError('Month must be between 1 and 12')
+        except ValueError as e:
+            return Response({'error': str(e)}, status=400)
+
+        review = get_monthly_review(request.user, year, month)
+        if not review:
+            return Response({'error': 'No notes found for this month'}, status=404)
+
+        return Response(review)
+
+
+class YearlyReviewView(APIView):
+    """Get yearly review (Year in Review) with comprehensive statistics."""
+
+    def get(self, request):
+        from api.services.reviews import get_yearly_review
+
+        year = request.query_params.get('year')
+        if not year:
+            # Default to current year
+            year = timezone.now().year
+        else:
+            try:
+                year = int(year)
+            except ValueError:
+                return Response({'error': 'Invalid year'}, status=400)
+
+        review = get_yearly_review(request.user, year)
+        if not review:
+            return Response({'error': 'No notes found for this year'}, status=404)
+
+        return Response(review)
+
+
+class AISuggestionsView(APIView):
+    """Get AI-powered writing suggestions, insights, and reflection questions."""
+
+    def get(self, request):
+        from api.services.ai_suggestions import get_ai_suggestions
+
+        try:
+            suggestions = get_ai_suggestions(request.user)
+            return Response(suggestions)
+        except Exception as e:
+            logger.error(f'Failed to generate AI suggestions for user {request.user.pk}: {e}')
+            return Response({'error': 'Failed to generate suggestions'}, status=500)
+
+
+class MoodPredictionView(APIView):
+    """Get mood and stress predictions with health tips."""
+
+    def get(self, request):
+        from api.services.predictions import get_mood_prediction, get_health_tips
+
+        try:
+            prediction = get_mood_prediction(request.user)
+            health_tips = get_health_tips(request.user)
+
+            return Response({
+                'prediction': prediction,
+                'health_tips': health_tips,
+                'generated_at': timezone.now().isoformat()
+            })
+        except Exception as e:
+            logger.error(f'Failed to generate mood prediction for user {request.user.pk}: {e}')
+            return Response({'error': 'Failed to generate prediction'}, status=500)
+
+
+# ===== Habit Tracking =====
+
+class HabitViewSet(viewsets.ModelViewSet):
+    """Habit CRUD operations."""
+    serializer_class = HabitSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Habit.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def check_in(self, request, pk=None):
+        """Check in for a habit."""
+        habit = self.get_object()
+        today = timezone.now().date()
+
+        # Check if already checked in today
+        if HabitLog.objects.filter(habit=habit, date=today).exists():
+            return Response({'error': 'Already checked in today'}, status=400)
+
+        log = HabitLog.objects.create(
+            habit=habit,
+            user=request.user,
+            date=today,
+            note=request.data.get('note', '')
+        )
+
+        return Response(HabitLogSerializer(log).data)
+
+    @action(detail=True, methods=['get'])
+    def calendar(self, request, pk=None):
+        """Get habit check-in calendar (last 90 days)."""
+        habit = self.get_object()
+
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=90)
+
+        logs = HabitLog.objects.filter(
+            habit=habit,
+            date__gte=start_date,
+            date__lte=end_date
+        ).values('date')
+
+        # Convert to date list
+        completed_dates = [log['date'].isoformat() for log in logs]
+
+        return Response({
+            'habit_id': habit.id,
+            'completed_dates': completed_dates,
+            'start_date': start_date.isoformat(),
+            'end_date': end_date.isoformat(),
+        })
+
+
+class HabitAnalyticsView(APIView):
+    """Habit and mood correlation analysis."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=30)
+
+        # Get all active habits
+        habits = Habit.objects.filter(user=request.user, is_active=True)
+
+        results = []
+        for habit in habits:
+            # Get check-in dates
+            completed_dates = HabitLog.objects.filter(
+                habit=habit,
+                date__gte=start_date,
+                date__lte=end_date
+            ).values_list('date', flat=True)
+
+            if not completed_dates:
+                continue
+
+            # Calculate average mood on check-in days
+            completed_mood = MoodNote.objects.filter(
+                user=request.user,
+                created_at__date__in=completed_dates
+            ).aggregate(avg_sentiment=Avg('sentiment_score'))
+
+            # Calculate average mood on non-check-in days
+            not_completed_mood = MoodNote.objects.filter(
+                user=request.user,
+                created_at__date__gte=start_date,
+                created_at__date__lte=end_date
+            ).exclude(
+                created_at__date__in=completed_dates
+            ).aggregate(avg_sentiment=Avg('sentiment_score'))
+
+            avg_completed = completed_mood['avg_sentiment'] or 0
+            avg_not_completed = not_completed_mood['avg_sentiment'] or 0
+
+            results.append({
+                'habit_id': habit.id,
+                'habit_name': habit.name,
+                'avg_mood_when_completed': round(avg_completed, 2),
+                'avg_mood_when_not_completed': round(avg_not_completed, 2),
+                'mood_difference': round(avg_completed - avg_not_completed, 2),
+                'completion_days': len(completed_dates),
+            })
+
+        # Sort by mood difference (most impactful first)
+        results.sort(key=lambda x: abs(x['mood_difference']), reverse=True)
+
+        return Response(results)
+
+
+# ==============================
+# Dashboard Views
+# ==============================
+
+class DashboardLayoutView(APIView):
+    """
+    GET: Retrieve user's dashboard layout (or default if not set)
+    PUT: Update user's dashboard layout
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Get dashboard layout for current user."""
+        try:
+            layout = DashboardLayout.objects.get(user=request.user)
+            serializer = DashboardLayoutSerializer(layout)
+            return Response(serializer.data)
+        except DashboardLayout.DoesNotExist:
+            # Return default layout if user hasn't customized yet
+            from .services.dashboard_service import get_default_layout
+            default_layout = get_default_layout()
+            return Response({
+                'layout_config': default_layout,
+                'updated_at': None
+            })
+
+    def put(self, request):
+        """Update or create dashboard layout for current user."""
+        try:
+            layout = DashboardLayout.objects.get(user=request.user)
+            serializer = DashboardLayoutSerializer(layout, data=request.data, partial=True)
+        except DashboardLayout.DoesNotExist:
+            serializer = DashboardLayoutSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DashboardLayoutResetView(APIView):
+    """POST: Reset dashboard layout to default."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """Reset dashboard layout to default configuration."""
+        from .services.dashboard_service import get_default_layout
+
+        default_layout = get_default_layout()
+
+        layout, created = DashboardLayout.objects.update_or_create(
+            user=request.user,
+            defaults={'layout_config': default_layout}
+        )
+
+        serializer = DashboardLayoutSerializer(layout)
+        return Response({
+            'message': 'Dashboard layout reset to default',
+            'data': serializer.data
+        })
+
+
+class UserMetricListView(APIView):
+    """
+    GET: List all custom metrics for the user
+    POST: Create a new custom metric
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Get all custom metrics for current user."""
+        metrics = UserMetric.objects.filter(user=request.user)
+        serializer = UserMetricSerializer(metrics, many=True)
+
+        return Response({
+            'metrics': serializer.data
+        })
+
+    def post(self, request):
+        """Create a new custom metric."""
+        serializer = UserMetricSerializer(data=request.data)
+
+        if serializer.is_valid():
+            try:
+                # Calculate initial current_value
+                from .services.dashboard_service import update_metric_current_value
+                metric_type = serializer.validated_data['metric_type']
+                current_value = update_metric_current_value(request.user, metric_type)
+
+                # Save with calculated current_value
+                metric = serializer.save(
+                    user=request.user,
+                    current_value=current_value
+                )
+
+                response_serializer = UserMetricSerializer(metric)
+                return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+            except Exception as e:
+                # Handle unique_together constraint violation
+                if 'unique' in str(e).lower():
+                    return Response(
+                        {'error': 'You already have a metric of this type'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                raise
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserMetricDetailView(APIView):
+    """
+    PATCH: Update a specific metric
+    DELETE: Delete a specific metric
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, request, pk):
+        """Get metric and verify ownership."""
+        try:
+            return UserMetric.objects.get(pk=pk, user=request.user)
+        except UserMetric.DoesNotExist:
+            return None
+
+    def patch(self, request, pk):
+        """Update a custom metric (target_value or is_active)."""
+        metric = self.get_object(request, pk)
+        if not metric:
+            return Response(
+                {'error': 'Metric not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = UserMetricSerializer(metric, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            # Recalculate current_value if needed
+            from .services.dashboard_service import update_metric_current_value
+            current_value = update_metric_current_value(request.user, metric.metric_type)
+
+            serializer.save(current_value=current_value)
+            return Response(serializer.data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        """Delete a custom metric."""
+        metric = self.get_object(request, pk)
+        if not metric:
+            return Response(
+                {'error': 'Metric not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        metric.delete()
+        return Response(
+            {'message': 'Metric deleted successfully'},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
+class DashboardWidgetDataView(APIView):
+    """GET: Fetch data for a specific widget."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, widget_id):
+        """Get data for a specific widget."""
+        from .services.dashboard_service import get_widget_data
+
+        # Validate widget_id
+        valid_widgets = [
+            'streak', 'mood_trends', 'on_this_day',
+            'habit_checkin', 'ai_suggestions', 'sleep_stats'
+        ]
+
+        if widget_id not in valid_widgets:
+            return Response(
+                {'error': f'Invalid widget_id. Must be one of: {", ".join(valid_widgets)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            data = get_widget_data(request.user, widget_id)
+            return Response(data)
+        except Exception as e:
+            logger.error(f'Error fetching widget data for {widget_id}: {str(e)}')
+            return Response(
+                {'error': 'Failed to fetch widget data'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class UserMetricRefreshView(APIView):
+    """POST: Refresh current_value for all active metrics."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """Refresh current values for all user's active metrics."""
+        from .services.dashboard_service import update_metric_current_value
+
+        metrics = UserMetric.objects.filter(user=request.user, is_active=True)
+        updated_count = 0
+
+        for metric in metrics:
+            try:
+                current_value = update_metric_current_value(request.user, metric.metric_type)
+                metric.current_value = current_value
+                metric.save()
+                updated_count += 1
+            except Exception as e:
+                logger.error(f'Error updating metric {metric.id}: {str(e)}')
+
+        return Response({
+            'message': f'Refreshed {updated_count} metrics',
+            'updated_count': updated_count
         })

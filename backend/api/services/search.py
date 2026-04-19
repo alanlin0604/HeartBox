@@ -50,12 +50,22 @@ def search_notes(queryset, search=None, tag=None,
         except (ValueError, TypeError):
             pass
 
-    # Tag filter (JSON contains)
+    # Tag filter - supports both new Tag model (by name or ID) and legacy metadata tags
     if tag:
-        queryset = queryset.filter(metadata__tags__contains=[tag])
+        # Try filtering by Tag model first (many-to-many relationship)
+        try:
+            # If tag is a digit, treat as tag ID
+            if tag.isdigit():
+                queryset = queryset.filter(tags__id=int(tag))
+            else:
+                # Otherwise, treat as tag name
+                queryset = queryset.filter(tags__name__iexact=tag)
+        except Exception:
+            # Fallback to legacy metadata tags (JSON contains)
+            queryset = queryset.filter(metadata__tags__contains=[tag])
 
     # Keyword search — DB-level via search_text index
     if search:
         queryset = queryset.filter(search_text__icontains=search)
 
-    return queryset
+    return queryset.distinct()

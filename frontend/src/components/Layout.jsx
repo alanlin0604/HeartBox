@@ -21,6 +21,8 @@ const ROUTE_PRELOADS = {
   '/admin': () => import('../pages/AdminPage'),
   '/settings': () => import('../pages/SettingsPage'),
   '/guide': () => import('../pages/GuidePage'),
+  '/habits': () => import('../pages/HabitsPage'),
+  '/friends': () => import('../pages/FriendsPage'),
 }
 
 export default function Layout() {
@@ -93,6 +95,8 @@ export default function Layout() {
     { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.webp' },
     { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.webp' },
     { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.webp' },
+    { to: '/habits', label: t('nav.habits'), icon: '/icons/習慣追蹤.webp' },
+    { to: '/friends', label: t('friends.title'), icon: '/icons/諮商師.webp' },
     { to: '/breathe', label: t('nav.breathe'), icon: '/icons/呼吸與冥想.webp' },
     { to: '/learn', label: t('nav.learn'), icon: '/icons/學習.webp' },
     { to: '/counselors', label: t('nav.counselors'), icon: '/icons/諮商師.webp' },

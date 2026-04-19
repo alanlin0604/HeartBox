@@ -6,7 +6,9 @@ from .views import (
     AIChatSendMessageView,
     AIChatSessionDetailView,
     AIChatSessionListCreateView,
+    AISuggestionsView,
     AdminCounselorActionView,
+    MoodPredictionView,
     AdminCounselorListView,
     AdminFeedbackListView,
     AdminStatsView,
@@ -28,9 +30,15 @@ from .views import (
     DailyPromptView,
     DailySleepListView,
     DailySleepView,
+    DashboardLayoutResetView,
+    DashboardLayoutView,
+    DashboardWidgetDataView,
+    HabitAnalyticsView,
+    HabitViewSet,
     HealthMetricListView,
     HealthSummaryView,
     HealthSyncView,
+    JournalStreakView,
     QuoteActionView,
     CounselorApplyView,
     CounselorListView,
@@ -44,21 +52,25 @@ from .views import (
     FeedbackCreateView,
     GoogleLoginCallbackView,
     ImportCSVView,
+    PreviewCSVView,
     LessonCompleteView,
     Login2FAView,
     MessageListView,
+    MonthlyReviewView,
     MoodNoteViewSet,
     MySubscriptionView,
     NoteAttachmentUploadView,
     NotificationListView,
     NotificationPreferenceView,
     NotificationReadView,
+    OnThisDayView,
     ProfileView,
     PsychoArticleDetailView,
     PsychoArticleListView,
     PushSubscriptionView,
     RefreshView,
     RegisterView,
+    ReminderSettingsView,
     ResendVerificationView,
     ForgotPasswordView,
     LoginView,
@@ -70,8 +82,13 @@ from .views import (
     NoteSharesListView,
     ShareNoteView,
     SharedNotesReceivedView,
+    SleepAnalysisView,
+    SleepCalendarView,
+    SleepInsightsView,
+    SleepTrendsView,
     UnshareNoteView,
     SubscriptionPlanListView,
+    TagViewSet,
     TOTPDisableView,
     TOTPSetupView,
     TOTPVerifyView,
@@ -79,15 +96,42 @@ from .views import (
     TherapistReportListView,
     TherapistReportPublicView,
     TimeSlotListView,
+    UserMetricDetailView,
+    UserMetricListView,
+    UserMetricRefreshView,
     VerifyEmailView,
     WeeklySummaryListView,
     WeeklySummaryView,
     WellnessSessionListCreateView,
+    YearlyReviewView,
     YearPixelsView,
 )
+from .friends_views import (
+    AcceptFriendRequestView,
+    AddCommentView,
+    CommentListView,
+    DeleteCommentView,
+    FriendActivityView,
+    FriendListView,
+    FriendRequestCreateView,
+    ReceivedFriendRequestsView,
+    RejectFriendRequestView,
+    RemoveFriendView,
+    SentFriendRequestsView,
+    ShareNoteWithFriendsView,
+    SharedByMeView,
+    SharedNoteDetailView,
+    SharedWithMeView,
+    UnshareNoteView as UnshareNoteWithFriendView,
+    UserSearchView,
+)
+from .community_views import PublicPostViewSet
 
 router = DefaultRouter()
 router.register(r'notes', MoodNoteViewSet, basename='moodnote')
+router.register(r'tags', TagViewSet, basename='tag')
+router.register(r'habits', HabitViewSet, basename='habit')
+router.register(r'community/posts', PublicPostViewSet, basename='community-post')
 
 urlpatterns = [
     # Auth
@@ -111,6 +155,7 @@ urlpatterns = [
     # Alerts
     path('alerts/', AlertsView.as_view(), name='alerts'),
     # CSV Import (must be before router.urls so it matches before notes/<pk>/)
+    path('notes/import/preview/', PreviewCSVView.as_view(), name='notes-import-preview'),
     path('notes/import/', ImportCSVView.as_view(), name='notes-import'),
     # PDF Export (must be before router.urls so it matches before notes/<pk>/)
     path('notes/export/', ExportPDFView.as_view(), name='notes-export'),
@@ -169,6 +214,11 @@ urlpatterns = [
     # Sleep Tracking
     path('sleep/', DailySleepView.as_view(), name='daily-sleep'),
     path('sleep/list/', DailySleepListView.as_view(), name='daily-sleep-list'),
+    # Sleep Analysis
+    path('sleep/analysis/', SleepAnalysisView.as_view(), name='sleep-analysis'),
+    path('sleep/calendar/', SleepCalendarView.as_view(), name='sleep-calendar'),
+    path('sleep/trends/', SleepTrendsView.as_view(), name='sleep-trends'),
+    path('sleep/insights/', SleepInsightsView.as_view(), name='sleep-insights'),
     # Health Data
     path('health/sync/', HealthSyncView.as_view(), name='health-sync'),
     path('health/metrics/', HealthMetricListView.as_view(), name='health-metrics'),
@@ -203,6 +253,43 @@ urlpatterns = [
     path('notifications/preferences/', NotificationPreferenceView.as_view(), name='notification-preferences'),
     # Web Push
     path('push/subscribe/', PushSubscriptionView.as_view(), name='push-subscribe'),
+    # Reminders & Streaks
+    path('reminders/settings/', ReminderSettingsView.as_view(), name='reminder-settings'),
+    path('streaks/', JournalStreakView.as_view(), name='journal-streak'),
+    # Reviews
+    path('reviews/on-this-day/', OnThisDayView.as_view(), name='on-this-day'),
+    path('reviews/monthly/', MonthlyReviewView.as_view(), name='monthly-review'),
+    path('reviews/yearly/', YearlyReviewView.as_view(), name='yearly-review'),
+    # AI Suggestions
+    path('ai/suggestions/', AISuggestionsView.as_view(), name='ai-suggestions'),
+    path('ai/predictions/', MoodPredictionView.as_view(), name='mood-predictions'),
+    # Habit Tracking
+    path('habits/analytics/', HabitAnalyticsView.as_view(), name='habit-analytics'),
+    # Dashboard
+    path('dashboard/layout/', DashboardLayoutView.as_view(), name='dashboard-layout'),
+    path('dashboard/layout/reset/', DashboardLayoutResetView.as_view(), name='dashboard-layout-reset'),
+    path('dashboard/metrics/', UserMetricListView.as_view(), name='dashboard-metrics'),
+    path('dashboard/metrics/<int:pk>/', UserMetricDetailView.as_view(), name='dashboard-metric-detail'),
+    path('dashboard/metrics/refresh/', UserMetricRefreshView.as_view(), name='dashboard-metrics-refresh'),
+    path('dashboard/widget-data/<str:widget_id>/', DashboardWidgetDataView.as_view(), name='dashboard-widget-data'),
+    # Friends System
+    path('friends/', FriendListView.as_view(), name='friend-list'),
+    path('friends/search/', UserSearchView.as_view(), name='user-search'),
+    path('friends/requests/', FriendRequestCreateView.as_view(), name='friend-request-create'),
+    path('friends/requests/received/', ReceivedFriendRequestsView.as_view(), name='friend-requests-received'),
+    path('friends/requests/sent/', SentFriendRequestsView.as_view(), name='friend-requests-sent'),
+    path('friends/requests/<int:pk>/accept/', AcceptFriendRequestView.as_view(), name='friend-request-accept'),
+    path('friends/requests/<int:pk>/reject/', RejectFriendRequestView.as_view(), name='friend-request-reject'),
+    path('friends/<int:friend_id>/', RemoveFriendView.as_view(), name='friend-remove'),
+    path('friends/share-note/', ShareNoteWithFriendsView.as_view(), name='friend-share-note'),
+    path('friends/share/<int:share_id>/', UnshareNoteWithFriendView.as_view(), name='friend-unshare'),
+    path('friends/shared-with-me/', SharedWithMeView.as_view(), name='friend-shared-with-me'),
+    path('friends/shared-by-me/', SharedByMeView.as_view(), name='friend-shared-by-me'),
+    path('friends/share/<int:pk>/detail/', SharedNoteDetailView.as_view(), name='friend-share-detail'),
+    path('friends/share/<int:share_id>/comment/', AddCommentView.as_view(), name='friend-add-comment'),
+    path('friends/share/<int:share_id>/comments/', CommentListView.as_view(), name='friend-comment-list'),
+    path('friends/comment/<int:comment_id>/', DeleteCommentView.as_view(), name='friend-delete-comment'),
+    path('friends/activity/', FriendActivityView.as_view(), name='friend-activity'),
     # Notes CRUD
     path('', include(router.urls)),
 ]

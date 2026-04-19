@@ -1,0 +1,276 @@
+import { useState } from 'react'
+import { useLang } from '../context/LanguageContext'
+import { importAPI } from '../api/import'
+
+export default function DataImportPage() {
+  const { t } = useLang()
+  const [step, setStep] = useState(1) // 1: upload, 2: preview, 3: mapping, 4: result
+  const [file, setFile] = useState(null)
+  const [preview, setPreview] = useState(null)
+  const [mapping, setMapping] = useState({})
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  // Step 1: 文件上傳
+  async function handleFileSelect(e) {
+    const selectedFile = e.target.files[0]
+    if (!selectedFile) return
+
+    if (!selectedFile.name.endsWith('.csv')) {
+      setError(t('import.errorInvalidFormat'))
+      return
+    }
+
+    setFile(selectedFile)
+    setError(null)
+
+    // 自動預覽
+    try {
+      setLoading(true)
+      const previewData = await importAPI.previewCSV(selectedFile)
+      setPreview(previewData)
+      setMapping(previewData.suggested_mapping || {})
+      setStep(2)
+    } catch (err) {
+      setError(err.response?.data?.message || t('import.errorPreview'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Step 2 & 3: 確認匯入
+  async function handleConfirmImport() {
+    try {
+      setLoading(true)
+      setError(null)
+      const importResult = await importAPI.importCSV(file, mapping)
+      setResult(importResult)
+      setStep(4)
+    } catch (err) {
+      setError(err.response?.data?.message || t('import.errorImport'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleReset() {
+    setStep(1)
+    setFile(null)
+    setPreview(null)
+    setMapping({})
+    setResult(null)
+    setError(null)
+  }
+
+  return (
+    <div className="min-h-screen p-6 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-8">
+        {t('import.title')}
+      </h1>
+
+      {/* 步驟指示器 */}
+      <div className="flex items-center justify-center mb-8">
+        {[1, 2, 3, 4].map((s) => (
+          <div key={s} className="flex items-center">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
+                step >= s
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-white/10 text-slate-400'
+              }`}
+            >
+              {s}
+            </div>
+            {s < 4 && (
+              <div
+                className={`w-16 h-1 mx-2 ${
+                  step > s ? 'bg-purple-500' : 'bg-white/10'
+                }`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* 錯誤訊息 */}
+      {error && (
+        <div className="glass p-4 mb-6 border border-red-400/50 bg-red-500/10">
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
+
+      {/* Step 1: 文件上傳 */}
+      {step === 1 && (
+        <div className="glass p-8">
+          <h2 className="text-xl font-semibold mb-4">{t('import.step1Title')}</h2>
+          <p className="text-slate-400 mb-6">{t('import.step1Description')}</p>
+
+          <div className="border-2 border-dashed border-white/20 rounded-lg p-12 text-center hover:border-purple-500/50 transition-colors">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="csv-upload"
+              disabled={loading}
+            />
+            <label
+              htmlFor="csv-upload"
+              className="cursor-pointer flex flex-col items-center"
+            >
+              <svg className="w-16 h-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <span className="text-lg font-semibold mb-2">
+                {loading ? t('common.loading') : t('import.uploadFile')}
+              </span>
+              <span className="text-sm text-slate-400">
+                {t('import.uploadHint')}
+              </span>
+            </label>
+          </div>
+
+          {/* CSV 範本說明 */}
+          <div className="mt-6 p-4 bg-white/5 rounded-lg">
+            <h3 className="font-semibold mb-2">{t('import.templateTitle')}</h3>
+            <p className="text-sm text-slate-400 mb-2">{t('import.templateDescription')}</p>
+            <code className="text-xs bg-black/30 p-2 rounded block overflow-x-auto">
+              date,content,mood,stress,tags<br />
+              2024-01-01,今天心情很好,5,2,工作,運動<br />
+              2024-01-02,有點壓力,3,7,工作,健康
+            </code>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: 預覽與欄位對應 */}
+      {step === 2 && preview && (
+        <div className="space-y-6">
+          {/* 預覽資訊 */}
+          <div className="glass p-6">
+            <h2 className="text-xl font-semibold mb-4">{t('import.step2Title')}</h2>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="p-4 bg-white/5 rounded-lg">
+                <div className="text-2xl font-bold text-purple-400">
+                  {preview.total_rows}
+                </div>
+                <div className="text-sm text-slate-400">{t('import.totalRows')}</div>
+              </div>
+              <div className="p-4 bg-white/5 rounded-lg">
+                <div className="text-2xl font-bold text-purple-400">
+                  {preview.columns.length}
+                </div>
+                <div className="text-sm text-slate-400">{t('import.totalColumns')}</div>
+              </div>
+            </div>
+
+            {/* 欄位映射 */}
+            <h3 className="font-semibold mb-3">{t('import.columnMapping')}</h3>
+            <div className="space-y-2 mb-4">
+              {preview.columns.map((col) => (
+                <div key={col} className="flex items-center gap-3">
+                  <div className="w-1/3 text-sm text-slate-300">{col}</div>
+                  <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                  <select
+                    value={mapping[col] || col}
+                    onChange={(e) => setMapping({ ...mapping, [col]: e.target.value })}
+                    className="flex-1 bg-white/10 border border-white/20 rounded px-3 py-2 text-sm"
+                  >
+                    <option value="date">{t('import.fieldDate')}</option>
+                    <option value="content">{t('import.fieldContent')}</option>
+                    <option value="mood">{t('import.fieldMood')}</option>
+                    <option value="stress">{t('import.fieldStress')}</option>
+                    <option value="tags">{t('import.fieldTags')}</option>
+                    <option value="weather">{t('import.fieldWeather')}</option>
+                    <option value="temperature">{t('import.fieldTemperature')}</option>
+                    <option value="_ignore">{t('import.fieldIgnore')}</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            {/* 預覽資料 */}
+            <h3 className="font-semibold mb-3">{t('import.previewData')}</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    {preview.columns.map((col) => (
+                      <th key={col} className="px-3 py-2 text-left text-slate-400 font-medium">
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.preview_rows.map((row, idx) => (
+                    <tr key={idx} className="border-b border-white/5">
+                      {preview.columns.map((col) => (
+                        <td key={col} className="px-3 py-2 text-slate-300">
+                          {row[col] || '-'}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 操作按鈕 */}
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={handleReset}
+              className="px-6 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition-colors"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              onClick={handleConfirmImport}
+              disabled={loading}
+              className="px-6 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg font-semibold transition-colors disabled:opacity-50"
+            >
+              {loading ? t('common.importing') : t('import.confirmImport')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 4: 匯入結果 */}
+      {step === 4 && result && (
+        <div className="glass p-8">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">{t('import.importSuccess')}</h2>
+            <p className="text-slate-400">{t('import.importedCount', { count: result.imported })}</p>
+          </div>
+
+          {result.errors && result.errors.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2 text-yellow-400">{t('import.someErrors')}</h3>
+              <ul className="space-y-1 text-sm text-slate-400">
+                {result.errors.map((err, idx) => (
+                  <li key={idx}>• {err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <button
+            onClick={handleReset}
+            className="w-full px-6 py-3 bg-purple-500 hover:bg-purple-600 rounded-lg font-semibold transition-colors"
+          >
+            {t('import.importAnother')}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}

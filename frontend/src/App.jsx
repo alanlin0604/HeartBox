@@ -18,6 +18,7 @@ import NotFoundPage from './pages/NotFoundPage'
 // Lazy-load heavy pages for code splitting
 const JournalPage = lazy(() => import('./pages/JournalPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const PersonalDashboardPage = lazy(() => import('./pages/PersonalDashboardPage'))
 const NoteDetailPage = lazy(() => import('./pages/NoteDetailPage'))
 const CounselorListPage = lazy(() => import('./pages/CounselorListPage'))
 const ChatPage = lazy(() => import('./pages/ChatPage'))
@@ -36,6 +37,11 @@ const TherapistReportPublicPage = lazy(() => import('./pages/TherapistReportPubl
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
 const PricingPage = lazy(() => import('./pages/PricingPage'))
+const DataImportPage = lazy(() => import('./pages/DataImportPage'))
+const HabitsPage = lazy(() => import('./pages/HabitsPage'))
+const FriendsPage = lazy(() => import('./pages/FriendsPage'))
+const SleepAnalysisPage = lazy(() => import('./pages/SleepAnalysisPage'))
+const CommunityPage = lazy(() => import('./pages/CommunityPage'))
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -94,6 +100,7 @@ export default function App() {
           >
             <Route index element={<LazyRoute><PageTransition><JournalPage /></PageTransition></LazyRoute>} />
             <Route path="dashboard" element={<LazyRoute><PageTransition><DashboardPage /></PageTransition></LazyRoute>} />
+            <Route path="personal-dashboard" element={<LazyRoute><PageTransition><PersonalDashboardPage /></PageTransition></LazyRoute>} />
             <Route path="notes/:id" element={<LazyRoute><PageTransition><NoteDetailPage /></PageTransition></LazyRoute>} />
             <Route path="counselors" element={<LazyRoute><PageTransition><CounselorListPage /></PageTransition></LazyRoute>} />
             <Route path="ai-chat" element={<LazyRoute><PageTransition><AIChatPage /></PageTransition></LazyRoute>} />
@@ -107,6 +114,11 @@ export default function App() {
             <Route path="learn/courses/:courseId" element={<LazyRoute><PageTransition><CourseDetailPage /></PageTransition></LazyRoute>} />
             <Route path="learn/courses/:courseId/lessons/:lessonId" element={<LazyRoute><PageTransition><LessonPage /></PageTransition></LazyRoute>} />
             <Route path="guide" element={<LazyRoute><PageTransition><GuidePage /></PageTransition></LazyRoute>} />
+            <Route path="import" element={<LazyRoute><PageTransition><DataImportPage /></PageTransition></LazyRoute>} />
+            <Route path="habits" element={<LazyRoute><PageTransition><HabitsPage /></PageTransition></LazyRoute>} />
+            <Route path="friends" element={<LazyRoute><PageTransition><FriendsPage /></PageTransition></LazyRoute>} />
+            <Route path="sleep-analysis" element={<LazyRoute><PageTransition><SleepAnalysisPage /></PageTransition></LazyRoute>} />
+            <Route path="community" element={<LazyRoute><PageTransition><CommunityPage /></PageTransition></LazyRoute>} />
             <Route
               path="admin"
               element={

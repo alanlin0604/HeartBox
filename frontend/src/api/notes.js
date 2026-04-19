@@ -38,15 +38,17 @@ export const getNote = (id) => {
   });
 };
 
-export const createNote = (content, metadata = {}) => {
+export const createNote = (content, metadata = {}, tag_ids = []) => {
   invalidateNotesCaches();
-  return api.post('/notes/', { content, metadata });
+  return api.post('/notes/', { content, metadata, tag_ids });
 };
 
-export const updateNote = (id, content, metadata) => {
+export const updateNote = (id, content, metadata, tag_ids) => {
   invalidateNotesCaches();
   invalidate(`note:${id}`);
-  return api.put(`/notes/${id}/`, { content, metadata });
+  const data = { content, metadata };
+  if (tag_ids !== undefined) data.tag_ids = tag_ids;
+  return api.put(`/notes/${id}/`, data);
 };
 
 export const deleteNote = (id) => {

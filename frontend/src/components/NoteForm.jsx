@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } fro
 import { useLang } from '../context/LanguageContext'
 import { getAnalytics } from '../api/analytics'
 import { ACTIVITY_ICONS } from './icons/ActivityIcons'
+import TagInput from './TagInput'
 
 const RichTextEditor = lazy(() => import('./RichTextEditor'))
 
@@ -103,7 +104,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
 
   const [weather, setWeather] = useState('')
   const [temperature, setTemperature] = useState('')
-  const [tagsInput, setTagsInput] = useState('')
+  const [selectedTags, setSelectedTags] = useState([])
   const [files, setFiles] = useState([])
   const [tagSuggestions, setTagSuggestions] = useState([])
   const [selectedActivities, setSelectedActivities] = useState([])
@@ -202,9 +203,6 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     const metadata = {}
     if (weather) metadata.weather = weather
     if (temperature) metadata.temperature = parseFloat(temperature)
-    if (tagsInput.trim()) {
-      metadata.tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean)
-    }
     if (selectedActivities.length > 0) {
       metadata.activities = selectedActivities
     }
@@ -212,16 +210,17 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
       metadata.type = metadataType
     }
 
-    onSubmit(content, metadata, files)
+    const tag_ids = selectedTags.map(tag => tag.id)
+    onSubmit(content, metadata, files, tag_ids)
     try { localStorage.removeItem('heartbox_draft') } catch { /* ignore */ }
     editorRef.current?.clear()
     setWeather('')
     setTemperature('')
-    setTagsInput('')
+    setSelectedTags([])
     setFiles([])
     setSelectedActivities([])
     setMetadataType(null)
-  }, [weather, temperature, tagsInput, files, selectedActivities, metadataType, onSubmit])
+  }, [weather, temperature, selectedTags, files, selectedActivities, metadataType, onSubmit])
 
   const handleFileChange = useCallback((e) => {
     const selected = Array.from(e.target.files)
@@ -404,19 +403,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
           placeholder={t('noteForm.temperature')}
           className="glass-input"
         />
-        <input
-          type="text"
-          value={tagsInput}
-          onChange={(e) => setTagsInput(e.target.value)}
-          placeholder={t('noteForm.tags')}
-          className="glass-input"
-          list="heartbox-tag-suggestions"
-        />
-        <datalist id="heartbox-tag-suggestions">
-          {tagSuggestions.map((tag) => (
-            <option key={tag} value={tag} />
-          ))}
-        </datalist>
+        <TagInput value={selectedTags} onChange={setSelectedTags} />
       </div>
 
       {/* File upload area */}

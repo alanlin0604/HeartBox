@@ -701,3 +701,74 @@ h4, h5, h6 {
     transform: none;
   }
 }
+
+/* ===== Dashboard Widget Styles ===== */
+.react-grid-layout {
+  position: relative;
+}
+
+.react-grid-item {
+  transition: all 200ms ease-out;
+  transition-property: left, top, width, height;
+}
+
+.react-grid-item.resizing {
+  z-index: 100;
+  will-change: width, height;
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 100;
+  will-change: transform;
+  transform: scale(1.05);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+}
+
+.react-grid-item.dropping {
+  visibility: hidden;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: rgba(168, 85, 247, 0.2);
+  opacity: 0.5;
+  transition-duration: 250ms;
+  z-index: 2;
+  border-radius: 12px;
+  border: 2px dashed rgba(168, 85, 247, 0.5);
+}
+
+.react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  background: transparent;
+}
+
+.react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(168, 85, 247, 0.5);
+  border-bottom: 2px solid rgba(168, 85, 247, 0.5);
+}
+
+.dashboard-widget {
+  height: 100%;
+}
+
+/* Drag handle cursor */
+.drag-handle {
+  cursor: move;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}

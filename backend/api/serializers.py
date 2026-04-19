@@ -6,12 +6,13 @@ from rest_framework import serializers
 from .models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorReview, Course, CounselorProfile,
-    DailySleep, Feedback, HealthMetric,
+    DailySleep, DashboardLayout, Feedback, FriendComment, FriendRequest,
+    Friendship, Habit, HabitLog, HealthMetric, JournalStreak,
     Message, MoodNote, NoteAttachment, Notification, NotificationPreference,
-    PushSubscription, PsychoArticle,
-    SelfAssessment, SharedAssessment, SharedNote, SubscriptionPlan,
+    PostReaction, PublicPost, PushSubscription, PsychoArticle, ReminderSettings,
+    SelfAssessment, SharedAssessment, SharedNote, SharedWithFriend, SubscriptionPlan, Tag,
     TherapistReport, TimeSlot, TOTPDevice,
-    UserAchievement, UserLessonProgress, UserSubscription,
+    UserAchievement, UserLessonProgress, UserMetric, UserSubscription,
     WeeklySummary, WellnessSession,
 )
 
@@ -44,51 +45,85 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return hasattr(obj, 'counselor_profile') and obj.counselor_profile.is_approved
 
 
+class TagSerializer(serializers.ModelSerializer):
+    """Tag serializer for CRUD operations."""
+    note_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Tag
+        fields = ('id', 'name', 'color', 'created_at', 'note_count')
+        read_only_fields = ('id', 'created_at')
+
+    def get_note_count(self, obj):
+        return obj.notes.filter(is_deleted=False).count()
+
+    def validate_name(self, value):
+        # Normalize tag name: strip whitespace, lowercase
+        return value.strip().lower()
+
+
 class MoodNoteSerializer(serializers.ModelSerializer):
     """Full serializer — write accepts plaintext `content`, read returns decrypted."""
     content = serializers.CharField(write_only=True)
     decrypted_content = serializers.CharField(source='content', read_only=True)
     attachments = serializers.SerializerMethodField()
+    tags = TagSerializer(many=True, read_only=True)
+    tag_ids = serializers.PrimaryKeyRelatedField(
+        many=True, write_only=True, queryset=Tag.objects.none(), required=False
+    )
 
     class Meta:
         model = MoodNote
         fields = (
             'id', 'content', 'decrypted_content',
             'sentiment_score', 'stress_index', 'ai_feedback',
-            'is_pinned', 'metadata', 'attachments', 'created_at', 'updated_at',
+            'is_pinned', 'metadata', 'tags', 'tag_ids', 'attachments', 'created_at', 'updated_at',
         )
         read_only_fields = ('id', 'sentiment_score', 'stress_index', 'ai_feedback', 'created_at', 'updated_at')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            self.fields['tag_ids'].queryset = Tag.objects.filter(user=request.user)
 
     def get_attachments(self, obj):
         return NoteAttachmentSerializer(obj.attachments.all(), many=True).data
 
     def create(self, validated_data):
         plaintext = validated_data.pop('content')
+        tag_ids = validated_data.pop('tag_ids', [])
         note = MoodNote(**validated_data)
         note.set_content(plaintext)
         note.save()
+        if tag_ids:
+            note.tags.set(tag_ids)
         return note
 
     def update(self, instance, validated_data):
         plaintext = validated_data.pop('content', None)
+        tag_ids = validated_data.pop('tag_ids', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if plaintext is not None:
             instance.set_content(plaintext)
         instance.save()
+        if tag_ids is not None:
+            instance.tags.set(tag_ids)
         return instance
 
 
 class MoodNoteListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list views — only decrypts first 100 chars."""
     content_preview = serializers.CharField(read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
 
     class Meta:
         model = MoodNote
         fields = (
             'id', 'content_preview',
             'sentiment_score', 'stress_index',
-            'is_pinned', 'metadata', 'created_at',
+            'is_pinned', 'metadata', 'tags', 'created_at',
         )
 
 
@@ -429,6 +464,35 @@ class DailySleepSerializer(serializers.ModelSerializer):
         return value
 
 
+class DailySleepDetailSerializer(serializers.ModelSerializer):
+    """擴充的睡眠記錄 Serializer（含分析欄位）"""
+    quality_score = serializers.SerializerMethodField()
+    sleep_pattern = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DailySleep
+        fields = ('id', 'date', 'sleep_hours', 'sleep_quality',
+                  'bedtime', 'wake_time', 'deep_sleep_minutes',
+                  'light_sleep_minutes', 'rem_sleep_minutes', 'source',
+                  'quality_score', 'sleep_pattern', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'quality_score', 'sleep_pattern', 'created_at', 'updated_at')
+
+    def get_quality_score(self, obj):
+        """計算睡眠品質分數 (0-100)"""
+        from .services.sleep_analysis import calculate_quality_score
+        return calculate_quality_score(
+            obj.sleep_hours,
+            obj.deep_sleep_minutes,
+            obj.light_sleep_minutes,
+            obj.rem_sleep_minutes
+        )
+
+    def get_sleep_pattern(self, obj):
+        """識別睡眠模式"""
+        from .services.sleep_analysis import identify_sleep_pattern
+        return identify_sleep_pattern(obj.bedtime, obj.wake_time, obj.user, days=7)
+
+
 class HealthMetricSerializer(serializers.ModelSerializer):
     class Meta:
         model = HealthMetric
@@ -628,3 +692,340 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
 class PushSubscriptionSerializer(serializers.Serializer):
     endpoint = serializers.URLField(max_length=500)
     keys = serializers.DictField(child=serializers.CharField())
+
+
+class ReminderSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReminderSettings
+        fields = ('enabled', 'reminder_time', 'updated_at')
+        read_only_fields = ('updated_at',)
+
+
+class JournalStreakSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JournalStreak
+        fields = ('current_streak', 'longest_streak', 'last_entry_date', 'total_entries', 'updated_at')
+        read_only_fields = fields
+
+
+# ===== Habit Tracking =====
+
+class HabitSerializer(serializers.ModelSerializer):
+    streak = serializers.SerializerMethodField()
+    completion_rate = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Habit
+        fields = [
+            'id', 'name', 'description', 'category', 'color', 'icon',
+            'target_frequency', 'target_count', 'is_active',
+            'created_at', 'updated_at', 'streak', 'completion_rate'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'streak', 'completion_rate']
+
+    def get_streak(self, obj):
+        """Calculate current consecutive days streak."""
+        from datetime import timedelta
+        from django.utils import timezone
+
+        today = timezone.now().date()
+        streak = 0
+        check_date = today
+
+        while True:
+            if HabitLog.objects.filter(habit=obj, date=check_date).exists():
+                streak += 1
+                check_date -= timedelta(days=1)
+            else:
+                break
+            if streak > 365:
+                break
+
+        return streak
+
+    def get_completion_rate(self, obj):
+        """Calculate completion rate for last 30 days."""
+        from datetime import timedelta
+        from django.utils import timezone
+
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=30)
+
+        total_days = 30
+        completed_days = HabitLog.objects.filter(
+            habit=obj,
+            date__gte=start_date,
+            date__lte=end_date
+        ).count()
+
+        return round((completed_days / total_days) * 100, 1) if total_days > 0 else 0.0
+
+
+class HabitLogSerializer(serializers.ModelSerializer):
+    habit_name = serializers.CharField(source='habit.name', read_only=True)
+
+    class Meta:
+        model = HabitLog
+        fields = ['id', 'habit', 'habit_name', 'completed_at', 'date', 'note']
+        read_only_fields = ['id', 'completed_at', 'date']
+
+    def create(self, validated_data):
+        from django.utils import timezone
+        validated_data['date'] = timezone.now().date()
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class DashboardLayoutSerializer(serializers.ModelSerializer):
+    """Serializer for user's dashboard layout configuration."""
+
+    class Meta:
+        model = DashboardLayout
+        fields = ['layout_config', 'updated_at']
+        read_only_fields = ['updated_at']
+
+    def validate_layout_config(self, value):
+        """Validate the JSON structure of layout_config."""
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("layout_config must be a dictionary")
+
+        if 'widgets' not in value:
+            raise serializers.ValidationError("Missing 'widgets' key in layout_config")
+
+        if not isinstance(value['widgets'], list):
+            raise serializers.ValidationError("'widgets' must be a list")
+
+        # Validate each widget has required fields
+        required_fields = ['id', 'x', 'y', 'w', 'h', 'enabled']
+        for idx, widget in enumerate(value['widgets']):
+            if not isinstance(widget, dict):
+                raise serializers.ValidationError(f"Widget at index {idx} must be a dictionary")
+
+            for field in required_fields:
+                if field not in widget:
+                    raise serializers.ValidationError(f"Widget at index {idx} missing required field: {field}")
+
+            # Validate data types
+            if not isinstance(widget['id'], str):
+                raise serializers.ValidationError(f"Widget {idx}: 'id' must be a string")
+            if not isinstance(widget['enabled'], bool):
+                raise serializers.ValidationError(f"Widget {idx}: 'enabled' must be a boolean")
+            for pos_field in ['x', 'y', 'w', 'h']:
+                if not isinstance(widget[pos_field], (int, float)):
+                    raise serializers.ValidationError(f"Widget {idx}: '{pos_field}' must be a number")
+
+        return value
+
+
+class UserMetricSerializer(serializers.ModelSerializer):
+    """Serializer for user's custom metric tracking."""
+    progress = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserMetric
+        fields = ['id', 'metric_type', 'target_value', 'current_value', 'progress', 'is_active', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'current_value', 'progress', 'created_at', 'updated_at']
+
+    def get_progress(self, obj):
+        """Calculate progress percentage."""
+        if obj.target_value == 0:
+            return 0.0
+        return round((obj.current_value / obj.target_value) * 100, 1)
+
+    def validate_target_value(self, value):
+        """Ensure target value is positive."""
+        if value <= 0:
+            raise serializers.ValidationError("Target value must be greater than 0")
+        return value
+
+
+# ============ Friend System Serializers ============
+
+
+class FriendshipSerializer(serializers.ModelSerializer):
+    """Serializer for friendship relationships."""
+    user_id = serializers.IntegerField(source='friend.id', read_only=True)
+    username = serializers.CharField(source='friend.username', read_only=True)
+    email = serializers.EmailField(source='friend.email', read_only=True)
+    avatar = serializers.ImageField(source='friend.avatar', read_only=True)
+    streak_days = serializers.SerializerMethodField()
+    total_entries = serializers.SerializerMethodField()
+    friendship_since = serializers.DateTimeField(source='created_at', read_only=True)
+
+    class Meta:
+        model = Friendship
+        fields = ['id', 'user_id', 'username', 'email', 'avatar', 'streak_days', 'total_entries', 'friendship_since']
+        read_only_fields = ['id', 'friendship_since']
+
+    def get_streak_days(self, obj):
+        """Get friend's current streak."""
+        try:
+            streak = JournalStreak.objects.get(user=obj.friend)
+            return streak.current_streak
+        except JournalStreak.DoesNotExist:
+            return 0
+
+    def get_total_entries(self, obj):
+        """Get friend's total journal entries."""
+        return MoodNote.objects.filter(user=obj.friend, is_deleted=False).count()
+
+
+class FriendRequestSerializer(serializers.ModelSerializer):
+    """Serializer for friend requests."""
+    from_user_id = serializers.IntegerField(source='from_user.id', read_only=True)
+    from_user_username = serializers.CharField(source='from_user.username', read_only=True)
+    from_user_avatar = serializers.ImageField(source='from_user.avatar', read_only=True)
+    to_user_id = serializers.IntegerField(source='to_user.id', read_only=True)
+    to_user_username = serializers.CharField(source='to_user.username', read_only=True)
+
+    class Meta:
+        model = FriendRequest
+        fields = [
+            'id', 'from_user_id', 'from_user_username', 'from_user_avatar',
+            'to_user_id', 'to_user_username', 'status', 'message', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'status', 'created_at', 'updated_at']
+
+
+class SharedWithFriendSerializer(serializers.ModelSerializer):
+    """Serializer for shared notes with friends."""
+    shared_by_id = serializers.IntegerField(source='shared_by.id', read_only=True)
+    shared_by_username = serializers.CharField(source='shared_by.username', read_only=True)
+    shared_by_avatar = serializers.ImageField(source='shared_by.avatar', read_only=True)
+    content_preview = serializers.SerializerMethodField()
+    sentiment_score = serializers.FloatField(source='note.sentiment_score', read_only=True)
+    created_at = serializers.DateTimeField(source='note.created_at', read_only=True)
+    comment_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SharedWithFriend
+        fields = [
+            'id', 'note', 'shared_by_id', 'shared_by_username', 'shared_by_avatar',
+            'shared_at', 'content_preview', 'sentiment_score', 'created_at', 'comment_count'
+        ]
+        read_only_fields = ['id', 'shared_at']
+
+    def get_content_preview(self, obj):
+        """Return first 100 chars of note content."""
+        content = obj.note.search_text
+        if len(content) > 100:
+            return content[:100] + '...'
+        return content
+
+    def get_comment_count(self, obj):
+        """Return comment count for this share."""
+        return obj.comments.count()
+
+
+class SharedWithFriendDetailSerializer(SharedWithFriendSerializer):
+    """Detailed serializer with full content."""
+    decrypted_content = serializers.CharField(source='note.content', read_only=True)
+    tags = serializers.SerializerMethodField()
+
+    class Meta(SharedWithFriendSerializer.Meta):
+        fields = SharedWithFriendSerializer.Meta.fields + ['decrypted_content', 'tags']
+
+    def get_tags(self, obj):
+        """Return tags for the note."""
+        return TagSerializer(obj.note.tags.all(), many=True).data
+
+
+class FriendCommentSerializer(serializers.ModelSerializer):
+    """Serializer for comments on shared notes."""
+    commenter_id = serializers.IntegerField(source='commenter.id', read_only=True)
+    commenter_username = serializers.CharField(source='commenter.username', read_only=True)
+    commenter_avatar = serializers.ImageField(source='commenter.avatar', read_only=True)
+
+    class Meta:
+        model = FriendComment
+        fields = ['id', 'commenter_id', 'commenter_username', 'commenter_avatar', 'content', 'created_at']
+        read_only_fields = ['id', 'commenter_id', 'created_at']
+
+
+class UserSearchSerializer(serializers.ModelSerializer):
+    """Serializer for user search results."""
+    is_friend = serializers.SerializerMethodField()
+    has_pending_request = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'avatar', 'bio', 'is_friend', 'has_pending_request']
+        read_only_fields = ['id', 'username', 'email', 'avatar', 'bio']
+
+    def get_is_friend(self, obj):
+        """Check if already friends with current user."""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Friendship.objects.filter(user=request.user, friend=obj).exists()
+        return False
+
+    def get_has_pending_request(self, obj):
+        """Check if there's a pending friend request."""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return FriendRequest.objects.filter(
+                from_user=request.user, to_user=obj, status='pending'
+            ).exists()
+        return False
+
+
+class PostReactionSerializer(serializers.ModelSerializer):
+    """Serializer for post reactions."""
+    username = serializers.CharField(source='user.username', read_only=True)
+
+    class Meta:
+        model = PostReaction
+        fields = ['id', 'reaction_type', 'username', 'created_at']
+        read_only_fields = ['id', 'username', 'created_at']
+
+
+class PublicPostSerializer(serializers.ModelSerializer):
+    """Serializer for public community posts."""
+    reaction_counts = serializers.SerializerMethodField()
+    user_reacted = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PublicPost
+        fields = [
+            'id', 'content', 'sentiment_score', 'category',
+            'created_at', 'reaction_counts', 'user_reacted', 'is_owner'
+        ]
+        read_only_fields = ['id', 'sentiment_score', 'category', 'created_at']
+
+    def get_reaction_counts(self, obj):
+        """Count reactions by type."""
+        from django.db.models import Count
+        reactions = obj.reactions.values('reaction_type').annotate(count=Count('id'))
+        return {r['reaction_type']: r['count'] for r in reactions}
+
+    def get_user_reacted(self, obj):
+        """List of reaction types current user has given."""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return list(
+                obj.reactions.filter(user=request.user).values_list('reaction_type', flat=True)
+            )
+        return []
+
+    def get_is_owner(self, obj):
+        """Check if current user owns this post."""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.user_id == request.user.id
+        return False
+
+
+class PublicPostCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating public posts."""
+    class Meta:
+        model = PublicPost
+        fields = ['content', 'category']
+
+    def validate_content(self, value):
+        """Validate content length."""
+        if len(value.strip()) < 10:
+            raise serializers.ValidationError('Content must be at least 10 characters.')
+        if len(value) > 5000:
+            raise serializers.ValidationError('Content must not exceed 5000 characters.')
+        return value.strip()

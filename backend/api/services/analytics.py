@@ -169,14 +169,30 @@ def get_calendar_data(queryset, year, month):
 
 
 def get_frequent_tags(queryset, lookback_days=90, top_n=10):
-    """Aggregate tag frequency from metadata.tags. Returns Recharts BarChart data."""
+    """Aggregate tag frequency from Tag model and legacy metadata.tags. Returns Recharts BarChart data."""
+    from django.db.models import Count
+
     since = timezone.now() - timedelta(days=lookback_days)
-    notes = queryset.filter(created_at__gte=since).values('metadata')
+    notes = queryset.filter(created_at__gte=since)
 
     tag_counts = {}
-    for note in notes:
-        meta = note.get('metadata') or {}
-        tags = meta.get('tags', [])
+
+    # Get counts from new Tag model (many-to-many)
+    from ..models import Tag
+    user = notes.first().user if notes.exists() else None
+    if user:
+        tag_data = Tag.objects.filter(
+            user=user,
+            notes__in=notes,
+            notes__is_deleted=False
+        ).annotate(count=Count('notes')).values('name', 'count')
+
+        for tag in tag_data:
+            tag_counts[tag['name']] = tag_counts.get(tag['name'], 0) + tag['count']
+
+    # Also get counts from legacy metadata.tags for backward compatibility
+    for meta in notes.values_list('metadata', flat=True):
+        tags = (meta or {}).get('tags', [])
         if isinstance(tags, list):
             for tag in tags:
                 tag_counts[tag] = tag_counts.get(tag, 0) + 1
@@ -187,14 +203,38 @@ def get_frequent_tags(queryset, lookback_days=90, top_n=10):
 
 def get_stress_by_tag(queryset, lookback_days=90):
     """Average stress index per tag for RadarChart. Returns [{tag, avg_stress, count}]."""
+    from django.db.models import Avg, Count
+    from ..models import Tag
+
     since = timezone.now() - timedelta(days=lookback_days)
     notes = queryset.filter(
         created_at__gte=since,
         stress_index__isnull=False,
-    ).values('stress_index', 'metadata')
+    )
 
     tag_stress = {}  # tag -> [stress_values]
-    for note in notes:
+
+    # Get stress data from new Tag model
+    user = notes.first().user if notes.exists() else None
+    if user:
+        tag_data = Tag.objects.filter(
+            user=user,
+            notes__in=notes,
+            notes__is_deleted=False,
+            notes__stress_index__isnull=False
+        ).annotate(
+            avg_stress=Avg('notes__stress_index'),
+            count=Count('notes')
+        ).values('name', 'avg_stress', 'count')
+
+        for tag in tag_data:
+            if tag['name'] not in tag_stress:
+                tag_stress[tag['name']] = []
+            # Approximate stress values from average (for combining with legacy data)
+            tag_stress[tag['name']].extend([tag['avg_stress']] * tag['count'])
+
+    # Also get stress data from legacy metadata.tags
+    for note in notes.values('stress_index', 'metadata'):
         meta = note.get('metadata') or {}
         tags = meta.get('tags', [])
         if isinstance(tags, list):

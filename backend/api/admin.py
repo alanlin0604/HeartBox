@@ -4,12 +4,13 @@ from django.utils import timezone
 
 from .models import (
     AIChatMessage, AIChatSession, AuditLog, Booking, Conversation,
-    CounselorProfile, Course, CustomUser, DailySleep, Feedback, HealthMetric,
+    CounselorProfile, Course, CustomUser, DailySleep, DashboardLayout, Feedback,
+    FriendComment, FriendRequest, Friendship, HealthMetric, JournalStreak,
     Message, MoodNote, NoteAttachment, Notification,
-    NotificationPreference, PsychoArticle, PushSubscription,
-    SelfAssessment, SharedAssessment, SharedNote,
-    SubscriptionPlan, TherapistReport, TimeSlot, TOTPDevice,
-    UserAchievement, UserLessonProgress, UserSubscription,
+    NotificationPreference, PsychoArticle, PushSubscription, ReminderSettings,
+    SelfAssessment, SharedAssessment, SharedNote, SharedWithFriend,
+    SubscriptionPlan, Tag, TherapistReport, TimeSlot, TOTPDevice,
+    UserAchievement, UserLessonProgress, UserMetric, UserSubscription,
     WeeklySummary, WellnessSession,
 )
 
@@ -21,6 +22,15 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
         ('Extra', {'fields': ('bio', 'avatar', 'token_version')}),
     )
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'name', 'color', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('user__username', 'name')
+    readonly_fields = ('created_at',)
+    list_per_page = 50
 
 
 @admin.register(MoodNote)
@@ -270,3 +280,76 @@ class PushSubscriptionAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'endpoint', 'created_at')
     search_fields = ('user__username', 'endpoint')
     list_per_page = 50
+
+
+@admin.register(ReminderSettings)
+class ReminderSettingsAdmin(admin.ModelAdmin):
+    list_display = ('user', 'enabled', 'reminder_time', 'updated_at')
+    list_filter = ('enabled',)
+    search_fields = ('user__username',)
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(JournalStreak)
+class JournalStreakAdmin(admin.ModelAdmin):
+    list_display = ('user', 'current_streak', 'longest_streak', 'total_entries', 'last_entry_date')
+    search_fields = ('user__username',)
+    readonly_fields = ('updated_at',)
+    list_per_page = 50
+
+
+@admin.register(DashboardLayout)
+class DashboardLayoutAdmin(admin.ModelAdmin):
+    list_display = ('user', 'updated_at')
+    search_fields = ('user__username',)
+    readonly_fields = ('updated_at',)
+    list_per_page = 50
+
+
+@admin.register(UserMetric)
+class UserMetricAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'metric_type', 'target_value', 'current_value', 'is_active', 'updated_at')
+    list_filter = ('metric_type', 'is_active')
+    search_fields = ('user__username',)
+    readonly_fields = ('created_at', 'updated_at')
+    list_per_page = 50
+
+
+# ============ Friend System Admin ============
+
+
+@admin.register(Friendship)
+class FriendshipAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'friend', 'created_at')
+    search_fields = ('user__username', 'friend__username')
+    readonly_fields = ('created_at',)
+    list_per_page = 50
+
+
+@admin.register(FriendRequest)
+class FriendRequestAdmin(admin.ModelAdmin):
+    list_display = ('id', 'from_user', 'to_user', 'status', 'created_at', 'updated_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('from_user__username', 'to_user__username')
+    readonly_fields = ('created_at', 'updated_at')
+    list_per_page = 50
+
+
+@admin.register(SharedWithFriend)
+class SharedWithFriendAdmin(admin.ModelAdmin):
+    list_display = ('id', 'note', 'shared_by', 'shared_with', 'shared_at')
+    search_fields = ('shared_by__username', 'shared_with__username')
+    readonly_fields = ('shared_at',)
+    list_per_page = 50
+
+
+@admin.register(FriendComment)
+class FriendCommentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'share', 'commenter', 'content_preview', 'created_at')
+    search_fields = ('commenter__username', 'content')
+    readonly_fields = ('created_at',)
+    list_per_page = 50
+
+    def content_preview(self, obj):
+        return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
+    content_preview.short_description = 'Content Preview'

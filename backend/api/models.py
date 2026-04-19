@@ -24,6 +24,28 @@ class CustomUser(AbstractUser):
         return self.username
 
 
+class Tag(models.Model):
+    """User-defined tags for organizing notes."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='tags',
+    )
+    name = models.CharField(max_length=50)
+    color = models.CharField(max_length=7, default='#6366f1', help_text='Hex color code')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['user', 'name']
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['user', 'name'], name='tag_user_name'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username}: {self.name}'
+
+
 class MoodNote(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -46,7 +68,8 @@ class MoodNote(models.Model):
     is_pinned = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
-    metadata = models.JSONField(default=dict, blank=True, help_text='weather, temperature, location, tags')
+    metadata = models.JSONField(default=dict, blank=True, help_text='weather, temperature, location, legacy tags')
+    tags = models.ManyToManyField(Tag, blank=True, related_name='notes')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -198,6 +221,10 @@ class Notification(models.Model):
         ('booking', '預約通知'),
         ('share', '日記分享'),
         ('system', '系統通知'),
+        ('friend_request', '好友請求'),
+        ('friend_accepted', '好友已接受'),
+        ('friend_share', '好友分享日記'),
+        ('friend_comment', '好友留言'),
     ]
 
     user = models.ForeignKey(
@@ -855,3 +882,323 @@ class PushSubscription(models.Model):
 
     def __str__(self):
         return f'Push for {self.user.username} ({self.endpoint[:50]}...)'
+
+
+class ReminderSettings(models.Model):
+    """User's daily reminder preferences for journaling."""
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='reminder_settings',
+    )
+    enabled = models.BooleanField(default=True)
+    reminder_time = models.TimeField(default='20:00', help_text='Local time for daily reminder')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = 'Reminder Settings'
+
+    def __str__(self):
+        status = 'enabled' if self.enabled else 'disabled'
+        return f'{self.user.username} — {self.reminder_time} ({status})'
+
+
+class JournalStreak(models.Model):
+    """Tracks user's journaling streak and milestones."""
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='journal_streak',
+    )
+    current_streak = models.IntegerField(default=0, help_text='Current consecutive days')
+    longest_streak = models.IntegerField(default=0, help_text='All-time best streak')
+    last_entry_date = models.DateField(null=True, blank=True)
+    total_entries = models.IntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.user.username} — {self.current_streak} days (best: {self.longest_streak})'
+
+
+class Habit(models.Model):
+    """User-defined habit tracking."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='habits')
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    category = models.CharField(max_length=50, blank=True)
+    color = models.CharField(max_length=7, default='#8b5cf6')
+    icon = models.CharField(max_length=50, blank=True)
+
+    # Target settings
+    target_frequency = models.CharField(max_length=20, default='daily')
+    target_count = models.IntegerField(default=1)
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_active'], name='habit_user_active'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} - {self.name}'
+
+
+class HabitLog(models.Model):
+    """Habit check-in record."""
+    habit = models.ForeignKey(Habit, on_delete=models.CASCADE, related_name='logs')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    completed_at = models.DateTimeField(auto_now_add=True)
+    date = models.DateField()
+    note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-completed_at']
+        unique_together = [['habit', 'date']]
+        indexes = [
+            models.Index(fields=['user', 'date'], name='habitlog_user_date'),
+            models.Index(fields=['habit', '-date'], name='habitlog_habit_date'),
+        ]
+
+    def __str__(self):
+        return f'{self.habit.name} - {self.date}'
+
+
+class DashboardLayout(models.Model):
+    """User's personalized dashboard layout configuration."""
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='dashboard_layout',
+    )
+    layout_config = models.JSONField(
+        default=dict,
+        help_text='Widget positions and settings: {"widgets": [{"id": "...", "x": 0, "y": 0, "w": 4, "h": 2, "enabled": true}]}',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user'], name='dashboard_user'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} - Dashboard Layout'
+
+
+class UserMetric(models.Model):
+    """User-defined custom metric tracking with targets."""
+    METRIC_TYPE_CHOICES = [
+        ('daily_entries', 'Daily Entries'),
+        ('avg_mood', 'Average Mood'),
+        ('streak_days', 'Streak Days'),
+        ('habit_completion', 'Habit Completion'),
+        ('sleep_hours', 'Sleep Hours'),
+        ('exercise_minutes', 'Exercise Minutes'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='custom_metrics',
+    )
+    metric_type = models.CharField(max_length=50, choices=METRIC_TYPE_CHOICES)
+    target_value = models.FloatField()
+    current_value = models.FloatField(default=0.0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_active'], name='usermetric_user_active'),
+        ]
+        unique_together = [['user', 'metric_type']]
+
+    def __str__(self):
+        return f'{self.user.username} - {self.metric_type}: {self.current_value}/{self.target_value}'
+
+
+class Friendship(models.Model):
+    """好友關係（雙向確認後建立）"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='friendships',
+    )
+    friend = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='friends_with',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = [['user', 'friend']]
+        indexes = [
+            models.Index(fields=['user'], name='friendship_user'),
+            models.Index(fields=['friend'], name='friendship_friend'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} ↔ {self.friend.username}'
+
+
+class FriendRequest(models.Model):
+    """好友請求"""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
+
+    from_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='sent_requests',
+    )
+    to_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='received_requests',
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = [['from_user', 'to_user']]
+        indexes = [
+            models.Index(fields=['to_user', 'status'], name='friendreq_to_status'),
+            models.Index(fields=['from_user', 'status'], name='friendreq_from_status'),
+        ]
+
+    def __str__(self):
+        return f'{self.from_user.username} → {self.to_user.username} ({self.status})'
+
+
+class SharedWithFriend(models.Model):
+    """與好友分享日記的記錄"""
+    note = models.ForeignKey(
+        MoodNote,
+        on_delete=models.CASCADE,
+        related_name='friend_shares',
+    )
+    shared_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notes_shared_with_friends',
+    )
+    shared_with = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notes_received_from_friends',
+    )
+    shared_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-shared_at']
+        unique_together = [['note', 'shared_with']]
+        indexes = [
+            models.Index(fields=['shared_with', '-shared_at'], name='friendshare_with_date'),
+            models.Index(fields=['shared_by', '-shared_at'], name='friendshare_by_date'),
+        ]
+
+    def __str__(self):
+        return f'{self.shared_by.username} shared note with {self.shared_with.username}'
+
+
+class FriendComment(models.Model):
+    """好友對分享日記的留言"""
+    share = models.ForeignKey(
+        SharedWithFriend,
+        on_delete=models.CASCADE,
+        related_name='comments',
+    )
+    commenter = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['share', 'created_at'], name='friendcomment_share_date'),
+        ]
+
+    def __str__(self):
+        return f'Comment by {self.commenter.username} on share #{self.share.id}'
+
+
+class PublicPost(models.Model):
+    """匿名發布到社群的日記貼文（不加密，公開可見）"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='public_posts',
+    )
+    content = models.TextField(help_text='Post content (not encrypted)')
+    sentiment_score = models.FloatField(null=True, blank=True, help_text='AI-analyzed sentiment score')
+    category = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text='Auto-detected category: anxiety, stress, happiness, etc.',
+    )
+    is_active = models.BooleanField(default=True, help_text='User can deactivate their own posts')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at'], name='publicpost_created'),
+            models.Index(fields=['user', '-created_at'], name='publicpost_user_created'),
+            models.Index(fields=['category', '-created_at'], name='publicpost_category_created'),
+            models.Index(fields=['is_active', '-created_at'], name='publicpost_active_created'),
+        ]
+
+    def __str__(self):
+        preview = self.content[:50] + '...' if len(self.content) > 50 else self.content
+        return f'Post by {self.user.username}: {preview}'
+
+
+class PostReaction(models.Model):
+    """對公開貼文的反應（擁抱、支持、愛心等）"""
+    REACTION_CHOICES = [
+        ('hug', 'Hug'),
+        ('support', 'Support'),
+        ('heart', 'Heart'),
+    ]
+
+    post = models.ForeignKey(
+        PublicPost,
+        on_delete=models.CASCADE,
+        related_name='reactions',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='post_reactions',
+    )
+    reaction_type = models.CharField(max_length=20, choices=REACTION_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [['post', 'user', 'reaction_type']]
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['post', 'reaction_type'], name='reaction_post_type'),
+            models.Index(fields=['user', '-created_at'], name='reaction_user_created'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} {self.reaction_type} on post #{self.post.id}'

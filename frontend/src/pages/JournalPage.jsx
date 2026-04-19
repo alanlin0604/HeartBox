@@ -170,10 +170,10 @@ export default function JournalPage() {
     return notes.filter((n) => n.created_at?.slice(0, 10) === today).length
   }, [notes])
 
-  const handleCreate = useCallback(async (content, metadata, files = []) => {
+  const handleCreate = useCallback(async (content, metadata, files = [], tag_ids = []) => {
     setCreating(true)
     try {
-      const res = await createNote(content, metadata)
+      const res = await createNote(content, metadata, tag_ids)
       const noteId = res.data.id
       // Upload attachments after note creation (don't block refresh on failure)
       let attachFailed = false
