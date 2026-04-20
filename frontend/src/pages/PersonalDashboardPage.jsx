@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Responsive, WidthProvider } from 'react-grid-layout';
+import GridLayout from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import { useLang } from '../context/LanguageContext';
 import { getDashboardLayout, updateDashboardLayout, resetDashboardLayout } from '../api/dashboard';
@@ -14,7 +14,7 @@ import AISuggestionsWidget from '../components/dashboard/widgets/AISuggestionsWi
 import SleepStatsWidget from '../components/dashboard/widgets/SleepStatsWidget';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+const ResponsiveGridLayout = GridLayout.WidthProvider(GridLayout.Responsive);
 
 const DEFAULT_LAYOUT = {
   widgets: [
