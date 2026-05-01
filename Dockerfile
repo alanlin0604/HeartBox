@@ -39,9 +39,9 @@ USER appuser
 
 EXPOSE 8080
 
-# Health check for container orchestrators
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-8080}/healthz/')" || exit 1
+# Health check removed - Cloud Run uses its own health checking mechanism
+# HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+#     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-8080}/healthz/')" || exit 1
 
 # Run migrations (with retry for transient DB connections) then start Daphne (ASGI)
 CMD sh -c "for i in 1 2 3; do python manage.py migrate --noinput && break || echo 'Migration attempt $i failed, retrying in 5s...' && sleep 5; done && daphne -b 0.0.0.0 -p ${PORT:-8080} moodnotes_pro.asgi:application"
