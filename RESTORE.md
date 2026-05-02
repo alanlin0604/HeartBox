@@ -1,17 +1,70 @@
 # 💻 電腦重灌後恢復工作指南
 
+## 🤖 自動化建置（推薦）
+
+重灌後只需 3 步驟，Claude 會自動幫你完成所有設定：
+
+### 步驟 1：安裝基礎工具
+```powershell
+# 在 PowerShell (系統管理員) 執行
+winget install Git.Git
+winget install OpenJS.NodeJS.LTS
+winget install Python.Python.3.12
+winget install Microsoft.VisualStudioCode
+winget install GitHub.cli
+```
+
+### 步驟 2：Clone 專案
+```powershell
+cd C:\Users\alan9\OneDrive\Desktop
+git clone https://github.com/alanlin0604/HeartBox.git
+cd HeartBox
+```
+
+### 步驟 3：開啟 Claude Code 並說
+```
+幫我建置 HeartBox 開發環境
+```
+
+**Claude 會自動執行：**
+- ✅ 設定 Git 使用者資訊
+- ✅ 安裝前端依賴 (npm install)
+- ✅ 建立後端虛擬環境
+- ✅ 安裝後端依賴 (pip install)
+- ✅ 檢查環境變數檔案
+- ✅ 執行資料庫遷移
+
+**接著說：**
+```
+幫我建立環境變數檔案
+```
+
+Claude 會建立 `backend/.env` 和 `frontend/.env`，然後你只需填入敏感資訊（API keys）。
+
+**最後說：**
+```
+啟動開發環境
+```
+
+就完成了！🎉
+
+---
+
 ## ✅ 已完成：所有變更已 Push
 
-**最新 3 個 commits 已推送到 GitHub：**
-1. `fc8e4c3` - docs: reorganize and clean up documentation structure
-2. `158b9c7` - docs: add comprehensive Android development and optimization roadmap
-3. `bf49702` - chore: remove HEALTHCHECK from Dockerfile for Cloud Run compatibility
+**最新 4 個 commits 已推送到 GitHub：**
+1. `4d21d96` - docs: add computer reinstallation recovery guide
+2. `fc8e4c3` - docs: reorganize and clean up documentation structure
+3. `158b9c7` - docs: add comprehensive Android development and optimization roadmap
+4. `bf49702` - chore: remove HEALTHCHECK from Dockerfile for Cloud Run compatibility
 
 **確認網址：** https://github.com/alanlin0604/HeartBox
 
 ---
 
-## 🔧 重灌後恢復步驟
+## 🔧 手動恢復步驟（進階使用者）
+
+> 💡 建議使用上方的自動化建置方式，以下為手動步驟參考
 
 ### 1️⃣ 安裝必要軟體（Windows）
 
