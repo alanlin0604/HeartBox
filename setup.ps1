@@ -39,7 +39,7 @@ Write-Host ""
 
 # 2. 設定 Git
 Write-Host "=== 2️⃣ 設定 Git ===" -ForegroundColor Cyan
-git config --global user.name "alam930604"
+git config --global user.name "alanlin0604"
 git config --global user.email "alan930604@gmail.com"
 Write-Host "✅ Git 設定完成" -ForegroundColor Green
 Write-Host ""
@@ -66,31 +66,25 @@ Write-Host ""
 
 # 4. 設定後端環境
 Write-Host "=== 4️⃣ 設定後端環境 ===" -ForegroundColor Cyan
-if (Test-Path "backend/requirements.txt") {
-    Set-Location backend
-
-    # 建立虛擬環境
-    if (-not (Test-Path "venv")) {
-        Write-Host "建立 Python 虛擬環境..."
-        python -m venv venv
+if (Test-Path "requirements.txt") {
+    # venv 放在 backend/，但 requirements.txt 在專案根目錄
+    if (-not (Test-Path "backend/venv")) {
+        Write-Host "建立 Python 虛擬環境 (backend/venv)..."
+        python -m venv backend/venv
     }
 
-    # 啟動虛擬環境並安裝依賴
-    Write-Host "安裝 Python 依賴..."
-    & "venv\Scripts\python.exe" -m pip install --upgrade pip
-    & "venv\Scripts\python.exe" -m pip install -r requirements.txt
+    Write-Host "安裝 Python 依賴 (從根目錄 requirements.txt)..."
+    & "backend\venv\Scripts\python.exe" -m pip install --upgrade pip
+    & "backend\venv\Scripts\python.exe" -m pip install -r requirements.txt
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✅ 後端依賴安裝完成" -ForegroundColor Green
     } else {
         Write-Host "❌ 後端依賴安裝失敗" -ForegroundColor Red
-        Set-Location ..
         exit 1
     }
-
-    Set-Location ..
 } else {
-    Write-Host "❌ 找不到 backend/requirements.txt" -ForegroundColor Red
+    Write-Host "❌ 找不到 requirements.txt（應位於專案根目錄）" -ForegroundColor Red
     exit 1
 }
 Write-Host ""
@@ -99,18 +93,19 @@ Write-Host ""
 Write-Host "=== 5️⃣ 檢查環境變數 ===" -ForegroundColor Cyan
 $envNeeded = $false
 
-if (-not (Test-Path "backend/.env")) {
-    Write-Host "⚠️  需要建立 backend/.env" -ForegroundColor Yellow
+# Django 從專案根目錄載入 .env（settings.py: load_dotenv(BASE_DIR.parent / '.env')）
+if (-not (Test-Path ".env")) {
+    Write-Host "⚠️  需要建立根目錄 .env（後端）" -ForegroundColor Yellow
     $envNeeded = $true
 } else {
-    Write-Host "✅ backend/.env 已存在" -ForegroundColor Green
+    Write-Host "✅ 根目錄 .env 已存在" -ForegroundColor Green
 }
 
-if (-not (Test-Path "frontend/.env")) {
-    Write-Host "⚠️  需要建立 frontend/.env" -ForegroundColor Yellow
+if (-not (Test-Path "frontend/.env.production")) {
+    Write-Host "⚠️  需要建立 frontend/.env.production" -ForegroundColor Yellow
     $envNeeded = $true
 } else {
-    Write-Host "✅ frontend/.env 已存在" -ForegroundColor Green
+    Write-Host "✅ frontend/.env.production 已存在" -ForegroundColor Green
 }
 
 if ($envNeeded) {
@@ -125,7 +120,7 @@ Write-Host ""
 Write-Host "下一步：" -ForegroundColor Cyan
 Write-Host "  1. 建立環境變數檔案（告訴 Claude：'幫我建立環境變數檔案'）"
 Write-Host "  2. 啟動開發環境："
-Write-Host "     終端機 1： cd backend && venv\Scripts\activate && python manage.py runserver"
-Write-Host "     終端機 2： cd frontend && npm run dev"
+Write-Host "     終端機 1： cd backend; venv\Scripts\activate; python manage.py runserver"
+Write-Host "     終端機 2： cd frontend; npm run dev"
 Write-Host ""
 Write-Host "🎉 準備就緒！" -ForegroundColor Green
