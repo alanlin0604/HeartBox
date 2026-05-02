@@ -54,8 +54,9 @@
     <link rel="preconnect" href="https://heartbox-api-598139488748.asia-east1.run.app" crossorigin />
     <link rel="preconnect" href="https://accounts.google.com" />
 
-    <!-- Preload critical resources -->
-    <link rel="modulepreload" href="/src/main.jsx" />
+    <!-- Preload critical resources. (Vite injects modulepreload for the entry chunk
+         during build — manual /src/main.jsx preload would resolve to a dev-only path
+         and previously emitted as a broken data:text/jsx URL, costing ~4.8s of FCP.) -->
     <link rel="preload" href="/logo.png" as="image" type="image/png" />
 
     <!-- Prefetch likely next pages -->
