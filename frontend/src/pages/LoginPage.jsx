@@ -6,6 +6,7 @@ import { LANG_OPTIONS } from '../utils/locales'
 import PasswordField from '../components/PasswordField'
 import { useToast } from '../context/ToastContext'
 import { Button, Card, Input } from '../components/ui'
+import { loadGsiClient } from '../utils/loadGsiClient'
 
 export default function LoginPage() {
   const { user, login } = useAuth()
@@ -42,30 +43,25 @@ export default function LoginPage() {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
     if (!clientId) return
 
-    const initGoogle = () => {
-      if (!window.google?.accounts?.id || !googleBtnRef.current) return false
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: (res) => googleCallbackRef.current(res),
+    let cancelled = false
+    loadGsiClient()
+      .then(() => {
+        if (cancelled || !window.google?.accounts?.id || !googleBtnRef.current) return
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (res) => googleCallbackRef.current(res),
+        })
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'pill',
+          width: Math.min(googleBtnRef.current.offsetWidth || 384, 400),
+        })
       })
-      window.google.accounts.id.renderButton(googleBtnRef.current, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        text: 'signin_with',
-        shape: 'pill',
-        width: Math.min(googleBtnRef.current.offsetWidth || 384, 400),
-      })
-      return true
-    }
-
-    if (!initGoogle()) {
-      const interval = setInterval(() => {
-        if (initGoogle()) clearInterval(interval)
-      }, 200)
-      const timeout = setTimeout(() => clearInterval(interval), 5000)
-      return () => { clearInterval(interval); clearTimeout(timeout) }
-    }
+      .catch(() => {})
+    return () => { cancelled = true }
   }, [])
 
   if (user) return <Navigate to="/" />

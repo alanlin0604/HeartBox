@@ -65,8 +65,9 @@
 
     <title>HeartBox — 心事盒</title>
 
-    <!-- Google Identity Services (for OAuth login) -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Google Identity Services script is lazy-loaded by LoginPage / RegisterPage
+         (see src/utils/loadGsiClient.js). The preconnect hint above keeps the
+         TCP+TLS warm so the actual fetch is faster when an auth page mounts. -->
   </head>
   <body>
     <div id="root"></div>
