@@ -114,7 +114,15 @@ export default function Layout() {
   const moreNavLinks = navLinks.slice(4)
 
   return (
-    <div className={`flex flex-col ${isChatRoute ? 'h-dvh overflow-hidden' : 'min-h-screen'}`}>
+    <div
+      className={`flex flex-col ${isChatRoute ? 'overflow-hidden' : 'min-h-screen'}`}
+      style={isChatRoute ? {
+        // body has padding-top/bottom = env(safe-area-inset-*); h-dvh ignored
+        // those, so the wrapper extended past the viewport and squeezed the
+        // chat header up under the sticky nav. Subtract them explicitly.
+        height: 'calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom))',
+      } : undefined}
+    >
       {/* Skip to main content link for accessibility */}
       <a
         href="#main-content"
