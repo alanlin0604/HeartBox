@@ -6,6 +6,7 @@ import { useLang } from '../context/LanguageContext'
 import { LANG_OPTIONS } from '../utils/locales'
 import NotificationBell from './NotificationBell'
 import useIdleTimer from '../hooks/useIdleTimer'
+import useGlobalHealthSync from '../hooks/useGlobalHealthSync'
 import OnboardingModal from './OnboardingModal'
 import { useToast } from '../context/ToastContext'
 
@@ -50,6 +51,9 @@ export default function Layout() {
     onIdle: () => { logout(); navigate('/login') },
     enabled: idleEnabled,
   })
+
+  // Sync health data on cold start + every app foreground (no-op on web)
+  useGlobalHealthSync()
 
   const [onboardingDone, setOnboardingDone] = useState(true)
   useEffect(() => {

@@ -10,6 +10,13 @@
 
 import { Health } from '@capgo/capacitor-health'
 import { Capacitor } from '@capacitor/core'
+import { syncHealthData } from '../api/health'
+
+const LAST_SYNC_KEY = 'heartbox_health_last_sync'
+const HEALTH_ENABLED_KEY = 'heartbox_health_enabled'
+const MIN_SYNC_GAP_MS = 30 * 60 * 1000 // 30 min throttle
+
+let inFlight = null
 
 let platform = 'web'
 let isAvailable = false
@@ -351,6 +358,53 @@ function estimateSleepQuality(hours, deepMinutes) {
   else if (hours < 5 || hours > 10) score -= 1
   if (deepMinutes && deepMinutes >= 60) score += 1
   return Math.max(1, Math.min(5, score))
+}
+
+/**
+ * Run a single end-to-end sync (read last 7 days → POST to backend).
+ * Safe to call from anywhere; deduplicates concurrent calls and throttles
+ * to MIN_SYNC_GAP_MS unless { force: true }.
+ *
+ * Returns one of: 'ok' | 'skipped-disabled' | 'skipped-throttle' |
+ * 'skipped-no-perms' | 'skipped-unavailable' | 'error'
+ */
+export async function performHealthSync({ force = false } = {}) {
+  if (!isHealthAvailable()) return 'skipped-unavailable'
+  if (localStorage.getItem(HEALTH_ENABLED_KEY) !== 'true') return 'skipped-disabled'
+
+  if (!force) {
+    const last = localStorage.getItem(LAST_SYNC_KEY)
+    if (last && Date.now() - new Date(last).getTime() < MIN_SYNC_GAP_MS) {
+      return 'skipped-throttle'
+    }
+  }
+
+  if (inFlight) return inFlight
+
+  inFlight = (async () => {
+    try {
+      const hasPerms = await checkPermissions()
+      if (!hasPerms) return 'skipped-no-perms'
+
+      const end = new Date()
+      const start = new Date()
+      start.setDate(start.getDate() - 7)
+      const data = await readHealthData(start, end)
+
+      if (data.metrics.length > 0 || data.sleep.length > 0) {
+        await syncHealthData(data)
+      }
+      localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString())
+      return 'ok'
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('[HealthKit] sync failed:', err)
+      return 'error'
+    } finally {
+      inFlight = null
+    }
+  })()
+
+  return inFlight
 }
 
 /** Remove duplicate metrics, keeping latest per date+type. */
