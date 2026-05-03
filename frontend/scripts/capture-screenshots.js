@@ -1,9 +1,10 @@
 // Capture Play Store screenshots from the production frontend.
 //
-// Captures the public marketing pages (Landing, Pricing, Login, Register,
-// Privacy) at 1080x2400 (modern phone aspect, Play Store accepts 1080-3840
-// wide and 9:16 ~ 16:9). For each of the three locales, the script
-// presets `localStorage.language` so the page renders in that language.
+// Captures public marketing pages at 1080x2400 (modern phone aspect, Play
+// Store accepts 1080-3840 wide and 9:16 ~ 16:9). For each of the three
+// locales, the script presets localStorage so the page renders in that
+// language and forces light mode (Play Store screenshots tend to look
+// brighter / more inviting in light theme).
 //
 // Authenticated pages (Journal, Dashboard, AI chat, Health, Weekly
 // summary) need real data and are easier to capture from the running
@@ -34,12 +35,14 @@ const TARGET = process.env.TARGET || 'https://heartbox.tw'
 const VIEWPORT = { width: 1080, height: 2400, deviceScaleFactor: 1 }
 
 const LANGS = ['zh-TW', 'en', 'ja']
+// Pages that don't require backend data or auth. /pricing was dropped
+// because it depends on a backend round-trip for plan data — when that
+// hangs, the screenshot captures only the LoadingSpinner.
 const PAGES = [
   { name: '01-landing', path: '/' },
-  { name: '02-pricing', path: '/pricing' },
-  { name: '03-login', path: '/login' },
-  { name: '04-register', path: '/register' },
-  { name: '05-privacy', path: '/privacy' },
+  { name: '02-login', path: '/login' },
+  { name: '03-register', path: '/register' },
+  { name: '04-privacy', path: '/privacy' },
 ]
 
 // Find Chrome on Windows. Adjust if your install path differs.
@@ -74,10 +77,19 @@ try {
       const page = await browser.newPage()
       await page.setViewport(VIEWPORT)
 
-      // Preset language before navigation so first paint already in target locale
+      // Preset language + force light mode before navigation so first
+      // paint is already in target locale and theme. theme_manual prevents
+      // ThemeContext from auto-switching back to OS preference.
       await page.evaluateOnNewDocument((l) => {
-        try { localStorage.setItem('language', l) } catch { /* ignore */ }
+        try {
+          localStorage.setItem('language', l)
+          localStorage.setItem('theme', 'light')
+          localStorage.setItem('theme_manual', '1')
+        } catch { /* ignore */ }
       }, lang)
+      // Also tell Chrome itself to report a light color scheme so any
+      // CSS that bypasses ThemeContext (e.g. media queries) goes light too.
+      await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }])
 
       const url = TARGET.replace(/\/$/, '') + p.path
       try {
