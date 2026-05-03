@@ -96,11 +96,14 @@ jobs:
 
       - name: Build release APK
         if: inputs.build_type == 'release'
+        # `-Pandroid.injected.signing.store.file` is resolved relative to the
+        # gradle daemon working dir (~/.gradle/daemon/...), not the project,
+        # so an absolute path is required.
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=heartbox.keystore \
+            -Pandroid.injected.signing.store.file="$PWD/app/heartbox.keystore" \
             -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
             -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
             -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
