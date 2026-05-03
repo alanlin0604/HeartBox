@@ -1,0 +1,3 @@
+# Generated screenshots — re-runnable via `npm run store:screenshots`.
+# Keep them out of git so the repo stays small.
+screenshots/

@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "optimize:images": "node scripts/optimize-images.js",
-    "check:i18n": "node scripts/check-i18n.js"
+    "check:i18n": "node scripts/check-i18n.js",
+    "store:graphic": "node scripts/make-feature-graphic.js",
+    "store:screenshots": "node scripts/capture-screenshots.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
@@ -49,6 +51,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^28.0.0",
+    "puppeteer-core": "^24.42.0",
     "rollup-plugin-visualizer": "^7.0.1",
     "sharp": "^0.34.5",
     "terser": "^5.46.1",
