@@ -7,15 +7,17 @@ import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
 import PageTransition from './components/PageTransition'
 import OfflineIndicator from './components/OfflineIndicator'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import PrivacyPage from './pages/PrivacyPage'
-import TermsPage from './pages/TermsPage'
-import NotFoundPage from './pages/NotFoundPage'
 
-// Lazy-load heavy pages for code splitting
+// All page modules are code-split. Logged-in users land on JournalPage (or whatever
+// authed route they hit) and never download the auth/legal pages; first-time visitors
+// hit LandingPage and only fetch LoginPage when they actually click "sign in".
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
+const TermsPage = lazy(() => import('./pages/TermsPage'))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const JournalPage = lazy(() => import('./pages/JournalPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const PersonalDashboardPage = lazy(() => import('./pages/PersonalDashboardPage'))
@@ -80,12 +82,12 @@ export default function App() {
       <ErrorBoundary key={location.pathname}>
       <AnimatePresence mode="wait" initial={false}>
         <Routes location={location} key={location.pathname}>
-          <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
-          <Route path="/register" element={<PageTransition><RegisterPage /></PageTransition>} />
-          <Route path="/forgot-password" element={<PageTransition><ForgotPasswordPage /></PageTransition>} />
-          <Route path="/reset-password" element={<PageTransition><ResetPasswordPage /></PageTransition>} />
-          <Route path="/privacy" element={<PageTransition><PrivacyPage /></PageTransition>} />
-          <Route path="/terms" element={<PageTransition><TermsPage /></PageTransition>} />
+          <Route path="/login" element={<LazyRoute><PageTransition><LoginPage /></PageTransition></LazyRoute>} />
+          <Route path="/register" element={<LazyRoute><PageTransition><RegisterPage /></PageTransition></LazyRoute>} />
+          <Route path="/forgot-password" element={<LazyRoute><PageTransition><ForgotPasswordPage /></PageTransition></LazyRoute>} />
+          <Route path="/reset-password" element={<LazyRoute><PageTransition><ResetPasswordPage /></PageTransition></LazyRoute>} />
+          <Route path="/privacy" element={<LazyRoute><PageTransition><PrivacyPage /></PageTransition></LazyRoute>} />
+          <Route path="/terms" element={<LazyRoute><PageTransition><TermsPage /></PageTransition></LazyRoute>} />
           {/* Public therapist report (no auth required) */}
           <Route path="/report/:token" element={<LazyRoute><PageTransition><TherapistReportPublicPage /></PageTransition></LazyRoute>} />
           <Route path="/verify-email" element={<LazyRoute><PageTransition><VerifyEmailPage /></PageTransition></LazyRoute>} />
@@ -128,7 +130,7 @@ export default function App() {
               }
             />
           </Route>
-          <Route path="*" element={<PageTransition><NotFoundPage /></PageTransition>} />
+          <Route path="*" element={<LazyRoute><PageTransition><NotFoundPage /></PageTransition></LazyRoute>} />
         </Routes>
       </AnimatePresence>
     </ErrorBoundary>
