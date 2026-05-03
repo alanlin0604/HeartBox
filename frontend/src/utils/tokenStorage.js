@@ -1,6 +1,7 @@
 const ACCESS_KEY = 'access_token';
 const REFRESH_KEY = 'refresh_token';
 const REMEMBER_KEY = 'remember_me';
+const RETURNING_KEY = 'heartbox_returning_user';
 
 function readFrom(storage, key) {
   try {
@@ -33,6 +34,10 @@ export function isRememberedLogin() {
 export function setAuthTokens(access, refresh, rememberMe) {
   const persistent = Boolean(rememberMe);
   writeTo(localStorage, REMEMBER_KEY, persistent ? '1' : '0');
+  // Persist a "this device has been signed into before" hint so the landing
+  // CTA can route returning users straight to /login instead of /register.
+  // Survives logout intentionally.
+  writeTo(localStorage, RETURNING_KEY, '1');
 
   const primary = persistent ? localStorage : sessionStorage;
   const secondary = persistent ? sessionStorage : localStorage;
@@ -41,6 +46,10 @@ export function setAuthTokens(access, refresh, rememberMe) {
   writeTo(primary, REFRESH_KEY, refresh);
   removeFrom(secondary, ACCESS_KEY);
   removeFrom(secondary, REFRESH_KEY);
+}
+
+export function isReturningUser() {
+  return readFrom(localStorage, RETURNING_KEY) === '1';
 }
 
 export function getAccessToken() {

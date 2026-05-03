@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
 import { Button, Card } from '../components/ui'
+import { isReturningUser } from '../utils/tokenStorage'
 
 export default function LandingPage() {
   const { t } = useLang()
+  const returning = isReturningUser()
+  const ctaTo = returning ? '/login' : '/register'
+  const ctaLabel = returning ? t('login.submit') : t('landing.getStarted')
 
   const features = [
     { icon: '/icons/日誌.webp', titleKey: 'landing.featureJournal', descKey: 'landing.featureJournalDesc' },
@@ -61,9 +65,9 @@ export default function LandingPage() {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
-          <Link to="/register">
+          <Link to={ctaTo}>
             <Button size="lg" className="min-w-[160px]">
-              ✨ {t('landing.getStarted')}
+              ✨ {ctaLabel}
             </Button>
           </Link>
           <a href="#features">

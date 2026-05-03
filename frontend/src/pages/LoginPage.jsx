@@ -137,7 +137,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex justify-center mb-4">
           <img
-            src="/logo.png"
+            src="/logo-icon.png"
             alt="HeartBox"
             decoding="async"
             className="w-32 h-32 object-contain drop-shadow-[0_0_20px_rgba(167,139,250,0.2)]"

@@ -72,16 +72,26 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const { t, lang } = useLang()
 
   const TEMPLATES_KEY = 'heartbox_custom_templates'
+  const PINS_KEY = 'heartbox_template_pins'
+  const HIDDEN_KEY = 'heartbox_template_hidden'
 
-  const loadTemplates = () => {
+  const loadJSON = (key, fallback) => {
     try {
-      return JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]')
-    } catch { return [] }
+      const raw = localStorage.getItem(key)
+      return raw ? JSON.parse(raw) : fallback
+    } catch { return fallback }
+  }
+  const writeJSON = (key, value) => {
+    try { localStorage.setItem(key, JSON.stringify(value)) } catch {}
   }
 
-  const [customTemplates, setCustomTemplates] = useState(loadTemplates)
+  const [customTemplates, setCustomTemplates] = useState(() => loadJSON(TEMPLATES_KEY, []))
+  const [pinnedIds, setPinnedIds] = useState(() => loadJSON(PINS_KEY, []))
+  const [hiddenIds, setHiddenIds] = useState(() => loadJSON(HIDDEN_KEY, []))
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
+  // Right-click / long-press context menu: { x, y, template } or null
+  const [tplMenu, setTplMenu] = useState(null)
 
   const saveTemplate = () => {
     const content = editorRef.current?.getHTML() || ''
@@ -91,15 +101,41 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     const newTpl = { id: Date.now().toString(), name: templateName.trim(), content }
     const updated = [...customTemplates, newTpl]
     setCustomTemplates(updated)
-    try { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updated)) } catch {}
+    writeJSON(TEMPLATES_KEY, updated)
     setTemplateName('')
     setShowSaveTemplate(false)
   }
 
-  const deleteTemplate = (id) => {
-    const updated = customTemplates.filter((tpl) => tpl.id !== id)
-    setCustomTemplates(updated)
-    try { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(updated)) } catch {}
+  const togglePin = (id) => {
+    const next = pinnedIds.includes(id)
+      ? pinnedIds.filter((p) => p !== id)
+      : [id, ...pinnedIds]
+    setPinnedIds(next)
+    writeJSON(PINS_KEY, next)
+  }
+
+  const removeTemplate = (tpl) => {
+    if (tpl.kind === 'custom') {
+      const updated = customTemplates.filter((c) => c.id !== tpl.id)
+      setCustomTemplates(updated)
+      writeJSON(TEMPLATES_KEY, updated)
+      // Also drop from pins if present
+      if (pinnedIds.includes(tpl.id)) {
+        const next = pinnedIds.filter((p) => p !== tpl.id)
+        setPinnedIds(next)
+        writeJSON(PINS_KEY, next)
+      }
+    } else {
+      // Built-in: hide via flag (so it can be restored)
+      const next = [...hiddenIds, tpl.id]
+      setHiddenIds(next)
+      writeJSON(HIDDEN_KEY, next)
+    }
+  }
+
+  const restoreHidden = () => {
+    setHiddenIds([])
+    writeJSON(HIDDEN_KEY, [])
   }
 
   const [weather, setWeather] = useState('')
@@ -251,56 +287,126 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     )
   }
 
+  // === Unified template list: built-in + custom, hidden filtered, pinned first ===
+  const allTemplates = useMemo(() => {
+    const builtin = GRATITUDE_TEMPLATES.map((tpl) => ({
+      id: tpl.id,
+      name: t(tpl.nameKey),
+      content: t(tpl.contentKey),
+      kind: 'builtin',
+      isGratitude: true,
+    }))
+    const custom = customTemplates.map((tpl) => ({
+      id: tpl.id,
+      name: tpl.name,
+      content: tpl.content,
+      kind: 'custom',
+      isGratitude: false,
+    }))
+    const visible = [...builtin, ...custom].filter((tpl) => !hiddenIds.includes(tpl.id))
+    const pinSet = new Set(pinnedIds)
+    const pinned = pinnedIds
+      .map((id) => visible.find((v) => v.id === id))
+      .filter(Boolean)
+    const rest = visible.filter((v) => !pinSet.has(v.id))
+    return [...pinned, ...rest]
+  }, [customTemplates, pinnedIds, hiddenIds, t])
+
+  const applyTemplate = (tpl) => {
+    if (!editorRef.current?.editor || !tpl.content) return
+    editorRef.current.editor.chain().clearContent().setContent(tpl.content).focus('end').run()
+    if (tpl.isGratitude) setMetadataType('gratitude')
+  }
+
+  // === Long-press detection (mobile) ===
+  const longPressTimer = useRef(null)
+  const longPressFired = useRef(false)
+  const touchStartPos = useRef({ x: 0, y: 0 })
+
+  const handleTouchStart = (e, tpl) => {
+    longPressFired.current = false
+    const touch = e.touches[0]
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY }
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true
+      setTplMenu({ x: touch.clientX, y: touch.clientY, template: tpl })
+    }, 500)
+  }
+  const handleTouchMove = (e) => {
+    if (!longPressTimer.current) return
+    const touch = e.touches[0]
+    const dx = Math.abs(touch.clientX - touchStartPos.current.x)
+    const dy = Math.abs(touch.clientY - touchStartPos.current.y)
+    if (dx > 10 || dy > 10) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  // Close menu on outside click / Escape
+  useEffect(() => {
+    if (!tplMenu) return
+    const close = () => setTplMenu(null)
+    const onKey = (e) => { if (e.key === 'Escape') close() }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('touchstart', close)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('touchstart', close)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [tplMenu])
+
   return (
     <form onSubmit={handleSubmit} className="glass p-6 space-y-4">
       <h2 className="text-lg font-semibold">{t('noteForm.title')}</h2>
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2">
-          {GRATITUDE_TEMPLATES.map((tpl) => (
-            <button
-              key={tpl.id}
-              type="button"
-              onClick={() => {
-                if (editorRef.current?.editor) {
-                  editorRef.current.editor.chain().clearContent().setContent(t(tpl.contentKey)).focus('end').run()
-                  setMetadataType('gratitude')
-                }
-              }}
-              className={`text-sm px-3 py-1.5 rounded-full border font-medium transition-colors cursor-pointer ${
-                metadataType === 'gratitude'
-                  ? 'bg-amber-500/30 border-amber-400/50'
-                  : 'bg-amber-500/20 border-amber-400/40 hover:bg-amber-500/30'
-              }`}
-              style={{ color: 'var(--text-primary)' }}
-            >
-              {t(tpl.nameKey)}
-            </button>
-          ))}
-          {customTemplates.map((tpl) => (
-            <div key={tpl.id} className="group relative">
+          {allTemplates.map((tpl) => {
+            const pinned = pinnedIds.includes(tpl.id)
+            const isActive = tpl.isGratitude && metadataType === 'gratitude'
+            const baseColor = tpl.isGratitude
+              ? (isActive ? 'bg-amber-500/30 border-amber-400/50' : 'bg-amber-500/20 border-amber-400/40 hover:bg-amber-500/30')
+              : 'bg-purple-500/25 border-purple-400/40 hover:bg-purple-500/35'
+            return (
               <button
+                key={tpl.id}
                 type="button"
                 onClick={() => {
-                  if (editorRef.current?.editor && tpl.content) {
-                    editorRef.current.editor.chain().clearContent().setContent(tpl.content).focus('end').run()
-                  }
+                  if (longPressFired.current) { longPressFired.current = false; return }
+                  applyTemplate(tpl)
                 }}
-                className="text-sm px-3 py-1.5 rounded-full bg-purple-500/25 border border-purple-400/40 hover:bg-purple-500/35 font-medium transition-colors cursor-pointer pr-7"
-                style={{ color: 'var(--text-primary)' }}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  setTplMenu({ x: e.clientX, y: e.clientY, template: tpl })
+                }}
+                onTouchStart={(e) => handleTouchStart(e, tpl)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                className={`text-sm px-3 py-1.5 rounded-full border font-medium transition-colors cursor-pointer select-none ${baseColor}`}
+                style={{ color: 'var(--text-primary)', WebkitTouchCallout: 'none' }}
               >
+                {pinned && <span className="mr-1" aria-hidden="true">📌</span>}
                 {tpl.name}
               </button>
-              <button
-                type="button"
-                onClick={() => deleteTemplate(tpl.id)}
-                className="absolute right-0 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer min-w-11 min-h-11 flex items-center justify-center"
-                title={t('noteForm.deleteTemplate')}
-                aria-label={t('noteForm.deleteTemplate')}
-              >
-                &times;
-              </button>
-            </div>
-          ))}
+            )
+          })}
+          {hiddenIds.length > 0 && (
+            <button
+              type="button"
+              onClick={restoreHidden}
+              className="text-xs px-3 py-1.5 rounded-full border border-dashed border-[var(--card-border)] opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+            >
+              ↺ {t('noteForm.restoreHidden')}
+            </button>
+          )}
           {!showSaveTemplate ? (
             <button
               type="button"
@@ -454,6 +560,41 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
       <button type="submit" disabled={loading} className="btn-primary">
         {loading ? t('noteForm.saving') : t('noteForm.save')}
       </button>
+
+      {tplMenu && (
+        <div
+          role="menu"
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          className="fixed z-[60] min-w-[140px] py-1 rounded-lg shadow-xl border"
+          style={{
+            left: Math.min(tplMenu.x, window.innerWidth - 160),
+            top: Math.min(tplMenu.y, window.innerHeight - 100),
+            background: 'var(--card-bg)',
+            borderColor: 'var(--card-border)',
+            color: 'var(--text-primary)',
+          }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => { togglePin(tplMenu.template.id); setTplMenu(null) }}
+            className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 cursor-pointer flex items-center gap-2"
+          >
+            <span aria-hidden="true">📌</span>
+            {pinnedIds.includes(tplMenu.template.id) ? t('noteForm.templateUnpin') : t('noteForm.templatePin')}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => { removeTemplate(tplMenu.template); setTplMenu(null) }}
+            className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 text-red-400 cursor-pointer flex items-center gap-2"
+          >
+            <span aria-hidden="true">🗑</span>
+            {tplMenu.template.kind === 'custom' ? t('noteForm.templateDelete') : t('noteForm.templateHide')}
+          </button>
+        </div>
+      )}
     </form>
   )
 }

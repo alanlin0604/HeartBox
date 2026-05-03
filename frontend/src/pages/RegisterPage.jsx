@@ -124,7 +124,7 @@ export default function RegisterPage() {
           ))}
         </div>
         <div className="flex justify-center mb-3">
-          <img src="/logo.png" alt="HeartBox" decoding="async" className="w-36 h-36 object-contain" />
+          <img src="/logo-icon.png" alt="HeartBox" decoding="async" className="w-36 h-36 object-contain" />
         </div>
         <h1 className="text-2xl font-bold text-center mb-2 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
           {t('app.displayName')}
