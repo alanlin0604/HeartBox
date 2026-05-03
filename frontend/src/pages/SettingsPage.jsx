@@ -775,6 +775,22 @@ export default function SettingsPage() {
         </Card>
       )}
 
+      {/* Legal — privacy/terms (also helps Google Play reviewers find policy) */}
+      <Card variant="default" padding="md">
+        <h2 className="text-lg font-semibold mb-3">{t('settings.legal')}</h2>
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+          <Link to="/privacy" className="text-purple-400 hover:text-purple-300 underline">
+            {t('legal.privacy')}
+          </Link>
+          <Link to="/privacy#health-data" className="text-purple-400 hover:text-purple-300 underline">
+            {t('settings.healthDataPolicy')}
+          </Link>
+          <Link to="/terms" className="text-purple-400 hover:text-purple-300 underline">
+            {t('legal.terms')}
+          </Link>
+        </div>
+      </Card>
+
       {/* Delete Account Modal */}
       {deleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

@@ -48,6 +48,22 @@ export default function PrivacyPage() {
           <p className="text-sm opacity-80 leading-relaxed">{t('privacy.s6Body')}</p>
         </section>
 
+        <section className="space-y-2" id="health-data">
+          <h2 className="text-lg font-semibold">{t('privacy.s7Title')}</h2>
+          <p className="text-sm opacity-80 leading-relaxed">{t('privacy.s7Intro')}</p>
+          <ul className="text-sm opacity-80 list-disc list-inside space-y-1">
+            <li>{t('privacy.s7Type1')}</li>
+            <li>{t('privacy.s7Type2')}</li>
+            <li>{t('privacy.s7Type3')}</li>
+            <li>{t('privacy.s7Type4')}</li>
+            <li>{t('privacy.s7Type5')}</li>
+            <li>{t('privacy.s7Type6')}</li>
+          </ul>
+          <p className="text-sm opacity-80 leading-relaxed">{t('privacy.s7Purpose')}</p>
+          <p className="text-sm opacity-80 leading-relaxed">{t('privacy.s7Sharing')}</p>
+          <p className="text-sm opacity-80 leading-relaxed">{t('privacy.s7Retention')}</p>
+        </section>
+
         <div className="pt-4 flex gap-4 text-sm">
           <Link to="/terms">
             <Button variant="ghost" size="sm">
