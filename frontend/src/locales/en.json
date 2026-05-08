@@ -14,6 +14,7 @@
   "login.loading": "Signing in...",
   "login.failed": "Login failed",
   "login.success": "Signed in successfully",
+  "login.warmingUp": "Waking up the server… first connection can take a few seconds",
   "login.rememberMe": "Keep me signed in",
   "login.forgotPassword": "Forgot password?",
   "login.noAccount": "Don't have an account?",

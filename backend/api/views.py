@@ -345,7 +345,9 @@ class LoginView(TokenObtainPairView):
                 })
         except TOTPDevice.DoesNotExist:
             pass
-        return Response(serializer.validated_data)
+        data = dict(serializer.validated_data)
+        data['user'] = UserProfileSerializer(user, context={'request': request}).data
+        return Response(data)
 
 
 class RefreshView(TokenRefreshView):

@@ -13,6 +13,7 @@
   "login.submit": "登入",
   "login.loading": "登入中...",
   "login.failed": "登入失敗",
+  "login.warmingUp": "正在喚醒伺服器，請稍候…首次連線需數秒",
   "login.noAccount": "還沒有帳號？",
   "login.register": "註冊",
   "register.title": "建立新帳號",

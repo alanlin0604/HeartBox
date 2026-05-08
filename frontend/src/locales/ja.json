@@ -361,6 +361,7 @@
   "login.forgotPassword": "パスワードを忘れた場合",
   "login.rememberMe": "ログイン状態を保持する",
   "login.success": "ログイン成功",
+  "login.warmingUp": "サーバーを起動しています… 初回接続には数秒かかります",
   "noteDetail.confirmTitle": "日記を削除",
   "noteDetail.deleteFailed": "日記の削除に失敗しました",
   "noteDetail.deleted": "日記を削除しました",

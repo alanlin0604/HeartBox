@@ -54,8 +54,14 @@ export function AuthProvider({ children }) {
       return data; // Return 2FA data to caller without setting tokens
     }
     setAuthTokens(data.access, data.refresh, rememberMe);
-    const profile = await getProfile();
-    setUser(profile.data);
+    if (data.user) {
+      setUser(data.user);
+      setCachedUser(data.user);
+    } else {
+      const profile = await getProfile();
+      setUser(profile.data);
+      setCachedUser(profile.data);
+    }
     return data;
   }, []);
 
