@@ -17,20 +17,18 @@ import { getBookings, bookingAction, cancelBooking } from '../api/schedule'
 import { useLang } from '../context/LanguageContext'
 import SkeletonCard from '../components/SkeletonCard'
 import BookingPanel from '../components/BookingPanel'
-import ScheduleManager from '../components/ScheduleManager'
-import EmptyState from '../components/EmptyState'
 import ConfirmModal from '../components/ConfirmModal'
 import { useToast } from '../context/ToastContext'
-import { LOCALE_MAP } from '../utils/locales'
 import { useAuth } from '../context/AuthContext'
-
-function formatPrice(amount, currency = 'TWD') {
-  const num = Number(amount)
-  if (isNaN(num)) return ''
-  const symbols = { TWD: 'NT$', USD: '$', JPY: '\u00A5' }
-  const prefix = symbols[currency] || currency + ' '
-  return `${prefix} ${num.toLocaleString()}`
-}
+import CounselorDirectoryTab from './counselor/CounselorDirectoryTab'
+import ChatsTab from './counselor/ChatsTab'
+import BookingsTab from './counselor/BookingsTab'
+import ReportsTab from './counselor/ReportsTab'
+import ScheduleTab from './counselor/ScheduleTab'
+import SharedNotesTab from './counselor/SharedNotesTab'
+import AssessmentsTab from './counselor/AssessmentsTab'
+import PricingTab from './counselor/PricingTab'
+import ApplyTab from './counselor/ApplyTab'
 
 export default function CounselorListPage() {
   const navigate = useNavigate()
@@ -437,746 +435,144 @@ export default function CounselorListPage() {
 
       {/* Counselor List Tab */}
       {tab === 'list' && (
-        <div className="space-y-4">
-          {/* Recommended counselors */}
-          {recommended.length > 0 && (
-            <>
-              <h2 className="text-xl font-semibold">{t('counselor.recommendedTitle')}</h2>
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {recommended.map((c) => (
-                  <div key={c.id} className="glass-card p-5 space-y-3 border-purple-500/30">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        {c.avatar && !failedAvatars.has(c.id) ? (
-                          <img
-                            src={c.avatar}
-                            alt={c.username}
-                            loading="lazy"
-                            decoding="async"
-                            className="w-10 h-10 rounded-full object-cover border border-purple-500/40"
-                            onError={() => setFailedAvatars(prev => new Set(prev).add(c.id))}
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-purple-500/25 flex items-center justify-center text-sm font-semibold">
-                            {String(c.display_name || c.username || '?').slice(0, 1).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <h3 className="text-lg font-semibold">{c.display_name || c.username}</h3>
-                          <p className="text-sm text-slate-400">{c.specialty}</p>
-                        </div>
-                      </div>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
-                        {t('counselor.recommendedBadge')}
-                      </span>
-                    </div>
-                    <p className="text-sm leading-relaxed opacity-80 whitespace-pre-line">{c.introduction}</p>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleStartChat(c.id)} className="btn-primary text-sm">{t('counselor.startChat')}</button>
-                      <button onClick={() => setBookingTarget({ id: c.id, username: c.username, hourly_rate: c.hourly_rate, currency: c.currency })} className="btn-secondary text-sm">{t('booking.book')}</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          <h2 className="text-xl font-semibold">{t('counselor.approvedList')}</h2>
-          {counselors.length === 0 ? (
-            <EmptyState
-              title={t('counselor.noApproved')}
-              description={t('counselor.noApprovedDesc')}
-              actionText={t('journal.writeFirst')}
-              onAction={() => navigate('/')}
-            />
-          ) : (
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {counselors.map((c) => (
-                <div key={c.id} className="glass-card p-5 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      {c.avatar && !failedAvatars.has(c.id) ? (
-                        <img
-                          src={c.avatar}
-                          alt={c.username}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-10 h-10 rounded-full object-cover border border-white/20"
-                          onError={() => setFailedAvatars(prev => new Set(prev).add(c.id))}
-                        />
-                      ) : (
-                      <div
-                        className="w-10 h-10 rounded-full bg-purple-500/25 flex items-center justify-center text-sm font-semibold"
-                      >
-                        {String(c.display_name || c.username || '?').slice(0, 1).toUpperCase()}
-                      </div>
-                      )}
-                      <div>
-                      <h3 className="text-lg font-semibold">{c.display_name || c.username}</h3>
-                      <p className="text-sm text-slate-400">{c.specialty}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-sm leading-relaxed opacity-80 whitespace-pre-line">{c.introduction}</p>
-                  <div className="flex items-center gap-3">
-                    <div className="text-sm font-medium">
-                      {c.hourly_rate ? (
-                        <span className="text-purple-500">
-                          {formatPrice(c.hourly_rate, c.currency)} / {t('pricing.perHour')}
-                        </span>
-                      ) : (
-                        <span className="opacity-50">{t('pricing.notSet')}</span>
-                      )}
-                    </div>
-                    {c.review_count > 0 && (
-                      <span className="text-sm text-yellow-400 font-medium">
-                        ★ {c.avg_rating?.toFixed(1)} ({c.review_count})
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleStartChat(c.id)}
-                      className="btn-primary text-sm"
-                    >
-                      {t('counselor.startChat')}
-                    </button>
-                    <button
-                      onClick={() => setBookingTarget({ id: c.id, username: c.username, hourly_rate: c.hourly_rate, currency: c.currency })}
-                      className="btn-secondary text-sm"
-                    >
-                      {t('booking.book')}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <CounselorDirectoryTab
+          t={t}
+          navigate={navigate}
+          counselors={counselors}
+          recommended={recommended}
+          failedAvatars={failedAvatars}
+          setFailedAvatars={setFailedAvatars}
+          handleStartChat={handleStartChat}
+          setBookingTarget={setBookingTarget}
+        />
       )}
 
       {/* My Conversations Tab */}
       {tab === 'chats' && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">{t('counselor.myChats')}</h2>
-          {conversations.length === 0 ? (
-            <EmptyState
-              title={t('counselor.noChats')}
-              description={t('counselor.noChatsDesc')}
-              actionText={t('counselor.listTab')}
-              onAction={() => setTab('list')}
-            />
-          ) : (
-            <div className="space-y-3">
-              {conversations.map((conv) => (
-                <div
-                  key={conv.id}
-                  onClick={() => navigate(`/chat/${conv.id}`)}
-                  onContextMenu={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setContextMenu({ x: e.clientX, y: e.clientY, type: 'conversation', id: conv.id })
-                  }}
-                  className="glass-card p-4 cursor-pointer hover:border-purple-500/30 transition-all flex justify-between items-center"
-                >
-                  <div>
-                    <h3 className="font-semibold">{conv.other_user.display_name || conv.other_user.username}</h3>
-                    {conv.last_message && (
-                      <p className="text-sm text-slate-400 mt-1">
-                        {conv.last_message.sender_name}: {conv.last_message.content}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      {conv.unread_count > 0 && (
-                        <span className="inline-block bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                          {conv.unread_count}
-                        </span>
-                      )}
-                      <p className="text-xs opacity-40 mt-1">
-                        {new Date(conv.updated_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
-                          timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(conv.id) }}
-                      className="text-xs px-2 py-1 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
-                      title={t('chat.deleteConversation')}
-                    >
-                      {t('noteDetail.delete')}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ChatsTab
+          t={t}
+          lang={lang}
+          user={user}
+          navigate={navigate}
+          conversations={conversations}
+          setTab={setTab}
+          setContextMenu={setContextMenu}
+          setDeleteConfirmId={setDeleteConfirmId}
+        />
       )}
 
       {/* My Bookings Tab */}
       {tab === 'bookings' && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">{t('booking.myBookings')}</h2>
-          {bookings.length === 0 ? (
-            <EmptyState
-              title={t('booking.noBookings')}
-              description={t('booking.noBookingsDesc')}
-              actionText={t('counselor.listTab')}
-              onAction={() => setTab('list')}
-            />
-          ) : (
-            <div className="space-y-3">
-              {bookings.map((b) => (
-                <div
-                  key={b.id}
-                  className="glass-card p-4"
-                  onContextMenu={(e) => {
-                    if (b.status === 'pending' || b.status === 'confirmed') {
-                      e.preventDefault()
-                      setContextMenu({ x: e.clientX, y: e.clientY, type: 'booking', id: b.id, status: b.status })
-                    }
-                  }}
-                >
-                  <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">
-                      {b.counselor_name} — {b.date}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      {b.start_time?.slice(0, 5)} - {b.end_time?.slice(0, 5)}
-                    </p>
-                    <span className={`text-xs font-medium ${
-                      b.status === 'confirmed' ? 'text-green-500' :
-                      b.status === 'cancelled' ? 'text-red-500' :
-                      b.status === 'completed' ? 'text-blue-500' :
-                      'text-yellow-500'
-                    }`}>
-                      {BOOKING_STATUS_MAP[b.status] || b.status}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    {isCounselor && (b.status === 'pending' || b.status === 'confirmed') && (
-                      <>
-                        {b.status === 'pending' && (
-                          <button
-                            onClick={() => handleBookingAction(b.id, 'confirm')}
-                            className="btn-primary text-xs"
-                          >
-                            {t('booking.confirm')}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleBookingAction(b.id, 'cancel')}
-                          className="btn-danger text-xs"
-                        >
-                          {t('booking.cancel')}
-                        </button>
-                      </>
-                    )}
-                    {!isCounselor && (b.status === 'pending' || b.status === 'confirmed') && (
-                      <button
-                        onClick={() => handleUserCancel(b.id)}
-                        className="btn-danger text-xs"
-                      >
-                        {t('booking.cancel')}
-                      </button>
-                    )}
-                    {b.status === 'completed' && !isCounselor && !b.has_review && (
-                      <button
-                        onClick={() => {
-                          setReviewingBookingId(reviewingBookingId === b.id ? null : b.id)
-                          setReviewRating(0)
-                          setReviewContent('')
-                        }}
-                        className="btn-secondary text-xs"
-                      >
-                        {t('review.leaveReview')}
-                      </button>
-                    )}
-                    {b.status === 'completed' && b.has_review && (
-                      <span className="text-xs text-green-500 font-medium">{t('review.alreadyReviewed')}</span>
-                    )}
-                  </div>
-                  </div>
-                  {reviewingBookingId === b.id && (
-                    <div className="mt-3 p-3 rounded-xl bg-white/5 border border-white/10 space-y-3">
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setReviewRating(star)}
-                            className={`text-xl cursor-pointer transition-colors ${star <= reviewRating ? 'text-yellow-400' : 'text-white/20'}`}
-                          >
-                            ★
-                          </button>
-                        ))}
-                      </div>
-                      <textarea
-                        value={reviewContent}
-                        onChange={(e) => setReviewContent(e.target.value)}
-                        placeholder={t('review.contentPlaceholder')}
-                        className="glass-input text-sm min-h-[60px] resize-y"
-                      />
-                      <button
-                        onClick={() => handleSubmitReview(b.id)}
-                        disabled={reviewSubmitting || reviewRating < 1}
-                        className="btn-primary text-xs"
-                      >
-                        {reviewSubmitting ? t('common.loading') : t('review.submit')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <BookingsTab
+          t={t}
+          bookings={bookings}
+          isCounselor={isCounselor}
+          setTab={setTab}
+          setContextMenu={setContextMenu}
+          BOOKING_STATUS_MAP={BOOKING_STATUS_MAP}
+          handleBookingAction={handleBookingAction}
+          handleUserCancel={handleUserCancel}
+          reviewingBookingId={reviewingBookingId}
+          setReviewingBookingId={setReviewingBookingId}
+          reviewRating={reviewRating}
+          setReviewRating={setReviewRating}
+          reviewContent={reviewContent}
+          setReviewContent={setReviewContent}
+          reviewSubmitting={reviewSubmitting}
+          handleSubmitReview={handleSubmitReview}
+        />
       )}
 
       {/* Reports Tab */}
       {tab === 'reports' && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-xl font-semibold">{t('report.title')}</h2>
-            <p className="text-sm text-slate-400 mt-1">{t('report.description')}</p>
-          </div>
-
-          <div className="glass p-4 space-y-2">
-            <p className="text-sm font-medium">{t('report.includesTitle')}</p>
-            <ul className="text-sm text-slate-400 space-y-1 list-disc list-inside">
-              <li>{t('report.includesMoodTrend')}</li>
-              <li>{t('report.includesStress')}</li>
-              <li>{t('report.includesAssessments')}</li>
-              <li>{t('report.includesShareable')}</li>
-            </ul>
-          </div>
-
-          <form onSubmit={handleGenerateReport} className="glass p-6 space-y-4 max-w-lg">
-            <input
-              type="text"
-              value={reportTitle}
-              onChange={(e) => setReportTitle(e.target.value)}
-              placeholder={t('report.reportTitle')}
-              className="glass-input"
-              required
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-slate-400 block mb-1">{t('report.startDate')}</label>
-                <input
-                  type="date"
-                  value={reportStartDate}
-                  onChange={(e) => setReportStartDate(e.target.value)}
-                  className="glass-input"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-400 block mb-1">{t('report.endDate')}</label>
-                <input
-                  type="date"
-                  value={reportEndDate}
-                  onChange={(e) => setReportEndDate(e.target.value)}
-                  className="glass-input"
-                  required
-                />
-              </div>
-            </div>
-            <button type="submit" disabled={reportGenerating} className="btn-primary">
-              {reportGenerating ? t('common.loading') : t('report.generate')}
-            </button>
-          </form>
-
-          {reports.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold">{t('report.existingReports')}</h3>
-              {reports.map((r) => (
-                <div key={r.id} className="glass-card p-4 flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">{r.title}</p>
-                    <p className="text-sm text-slate-400">
-                      {r.period_start} — {r.period_end}
-                    </p>
-                    <p className="text-xs opacity-40">
-                      {t('report.expires')}: {new Date(r.expires_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
-                        timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleCopyReportLink(r.token)}
-                    className="btn-secondary text-xs"
-                  >
-                    {t('report.copyLink')}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ReportsTab
+          t={t}
+          lang={lang}
+          user={user}
+          reports={reports}
+          reportTitle={reportTitle}
+          setReportTitle={setReportTitle}
+          reportStartDate={reportStartDate}
+          setReportStartDate={setReportStartDate}
+          reportEndDate={reportEndDate}
+          setReportEndDate={setReportEndDate}
+          reportGenerating={reportGenerating}
+          handleGenerateReport={handleGenerateReport}
+          handleCopyReportLink={handleCopyReportLink}
+        />
       )}
 
       {/* Schedule Management Tab (counselors only) */}
       {tab === 'schedule' && isCounselor && (
-        <ScheduleManager />
+        <ScheduleTab />
       )}
 
       {/* Shared Notes Tab (counselors only) */}
       {tab === 'shared' && isCounselor && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">{t('share.receivedTitle')}</h2>
-          {sharedNotes.length === 0 ? (
-            <EmptyState
-              title={t('share.noShared')}
-              description={t('share.noSharedDesc')}
-              actionText={t('schedule.tab')}
-              onAction={() => setTab('schedule')}
-            />
-          ) : (
-            <div className="space-y-3">
-              {sharedNotes.map((sn) => (
-                <div
-                  key={sn.id}
-                  className="glass-card p-4 space-y-2 cursor-pointer hover:border-purple-500/30 transition-all"
-                  onClick={() => setExpandedNoteId(expandedNoteId === sn.id ? null : sn.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">
-                      {sn.author || t('share.anonymousUser')}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs opacity-40">
-                        {new Date(sn.shared_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
-                          timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </span>
-                      <span className="text-xs opacity-40">{expandedNoteId === sn.id ? '▲' : '▼'}</span>
-                    </div>
-                  </div>
-                  {expandedNoteId === sn.id ? (
-                    <>
-                      <p className="text-sm opacity-80 whitespace-pre-wrap">{sn.note_content || sn.note_preview}</p>
-                      {sn.note_tags?.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {sn.note_tags.map((tag) => (
-                            <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {sn.note_ai_feedback && (
-                        <div className="glass-card p-3 border-l-4 border-purple-500/50 mt-2">
-                          <p className="text-xs font-semibold text-purple-400 mb-1">{t('noteDetail.aiFeedback')}</p>
-                          <p className="text-xs opacity-70 whitespace-pre-wrap">{sn.note_ai_feedback}</p>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-sm opacity-80">{sn.note_preview}</p>
-                  )}
-                  <div className="flex items-center gap-3 text-xs opacity-60">
-                    {sn.sentiment_score != null && (
-                      <span>{t('dashboard.avgSentiment')}: {sn.sentiment_score?.toFixed(2)}</span>
-                    )}
-                    {sn.stress_index != null && (
-                      <span>{t('noteCard.stress')}: {sn.stress_index}/10</span>
-                    )}
-                    {sn.is_anonymous && (
-                      <span className="text-purple-500">{t('share.anonymousLabel')}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <SharedNotesTab
+          t={t}
+          lang={lang}
+          user={user}
+          sharedNotes={sharedNotes}
+          expandedNoteId={expandedNoteId}
+          setExpandedNoteId={setExpandedNoteId}
+          setTab={setTab}
+        />
       )}
 
       {/* Shared Assessments Tab (counselors only) */}
       {tab === 'assessments' && isCounselor && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">{t('share.assessmentsTitle')}</h2>
-          {sharedAssessments.length === 0 ? (
-            <EmptyState
-              title={t('share.noAssessments')}
-              description={t('share.noAssessmentsDesc')}
-              actionText={t('schedule.tab')}
-              onAction={() => setTab('schedule')}
-            />
-          ) : (
-            <div className="space-y-3">
-              {sharedAssessments.map((sa) => {
-                const isExpanded = expandedAssessmentId === sa.id
-                const qCount = sa.assessment_type === 'phq9' ? 9 : 7
-                return (
-                  <div
-                    key={sa.id}
-                    className="glass-card p-4 space-y-2 cursor-pointer hover:border-purple-500/30 transition-all"
-                    onClick={() => setExpandedAssessmentId(isExpanded ? null : sa.id)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{sa.username}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs opacity-40">
-                          {new Date(sa.shared_at).toLocaleDateString(LOCALE_MAP[lang] || lang, {
-                            timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </span>
-                        <span className="text-xs opacity-40">{isExpanded ? '▲' : '▼'}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs px-2 py-1 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 font-medium">
-                        {(sa.assessment_type || '').toUpperCase()}
-                      </span>
-                      <span className="text-lg font-bold">{sa.total_score}</span>
-                    </div>
-                    {isExpanded && sa.responses ? (
-                      <div className="space-y-2 mt-2">
-                        {sa.responses.map((r, i) => (
-                          <div key={i} className="flex items-start gap-2 text-sm">
-                            <span className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                              r === 0 ? 'bg-green-500/20 text-green-400' :
-                              r === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-                              r === 2 ? 'bg-orange-500/20 text-orange-400' :
-                              'bg-red-500/20 text-red-400'
-                            }`}>
-                              {r}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="opacity-80">{t(`assessment.${sa.assessment_type}_q${i + 1}`)}</p>
-                              <p className={`text-xs mt-0.5 ${
-                                r === 0 ? 'text-green-400' :
-                                r === 1 ? 'text-yellow-400' :
-                                r === 2 ? 'text-orange-400' :
-                                'text-red-400'
-                              }`}>
-                                {t(`assessment.option${r}`)}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : sa.responses ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {sa.responses.map((r, i) => (
-                          <span key={i} className={`text-xs w-6 h-6 rounded-full flex items-center justify-center font-medium ${
-                            r === 0 ? 'bg-green-500/20 text-green-400' :
-                            r === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-                            r === 2 ? 'bg-orange-500/20 text-orange-400' :
-                            'bg-red-500/20 text-red-400'
-                          }`}>
-                            {r}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
-                    <p className="text-xs opacity-50">
-                      {t('share.assessmentDate')}: {new Date(sa.assessment_date).toLocaleDateString(LOCALE_MAP[lang] || lang)}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        <AssessmentsTab
+          t={t}
+          lang={lang}
+          user={user}
+          sharedAssessments={sharedAssessments}
+          expandedAssessmentId={expandedAssessmentId}
+          setExpandedAssessmentId={setExpandedAssessmentId}
+          setTab={setTab}
+        />
       )}
 
       {/* Edit Profile Tab (counselors only) */}
       {tab === 'pricing' && isCounselor && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">{t('counselor.editProfile')}</h2>
-          <p className="text-sm text-slate-400">{t('counselor.editProfileDesc')}</p>
-          <form onSubmit={handleSaveProfile} className="glass p-6 space-y-4 max-w-lg">
-            <div>
-              <label className="text-sm text-slate-400 block mb-1">{t('counselor.displayNameLabel')}</label>
-              <input
-                type="text"
-                value={editDisplayName}
-                onChange={(e) => setEditDisplayName(e.target.value)}
-                placeholder={t('counselor.displayNamePlaceholder')}
-                className="glass-input"
-                maxLength={50}
-              />
-            </div>
-            <div>
-              <label className="text-sm text-slate-400 block mb-1">{t('counselor.specialtyLabel')}</label>
-              <input
-                type="text"
-                value={editSpecialty}
-                onChange={(e) => setEditSpecialty(e.target.value)}
-                placeholder={t('counselor.specialtyPlaceholder')}
-                className="glass-input"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-slate-400 block mb-1">{t('counselor.introPlaceholder')}</label>
-              <textarea
-                value={editIntroduction}
-                onChange={(e) => setEditIntroduction(e.target.value)}
-                placeholder={t('counselor.introPlaceholder')}
-                className="glass-input min-h-[120px] resize-y"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-slate-400 block mb-1">{t('pricing.hourlyRate')}</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={pricingRate}
-                onChange={(e) => setPricingRate(e.target.value)}
-                placeholder="1500"
-                className="glass-input"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-slate-400 block mb-1">{t('pricing.currency')}</label>
-              <select
-                value={pricingCurrency}
-                onChange={(e) => setPricingCurrency(e.target.value)}
-                className="glass-input"
-              >
-                <option value="TWD">TWD (NT$)</option>
-                <option value="USD">USD ($)</option>
-                <option value="JPY">JPY ({'\u00A5'})</option>
-              </select>
-            </div>
-            <button type="submit" disabled={pricingSaving} className="btn-primary">
-              {pricingSaving ? t('settings.saving') : t('settings.save')}
-            </button>
-          </form>
-        </div>
+        <PricingTab
+          t={t}
+          editDisplayName={editDisplayName}
+          setEditDisplayName={setEditDisplayName}
+          editSpecialty={editSpecialty}
+          setEditSpecialty={setEditSpecialty}
+          editIntroduction={editIntroduction}
+          setEditIntroduction={setEditIntroduction}
+          pricingRate={pricingRate}
+          setPricingRate={setPricingRate}
+          pricingCurrency={pricingCurrency}
+          setPricingCurrency={setPricingCurrency}
+          pricingSaving={pricingSaving}
+          handleSaveProfile={handleSaveProfile}
+        />
       )}
 
       {/* Apply Tab */}
       {tab === 'apply' && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">{t('counselor.applyTitle')}</h2>
-
-          {myProfile ? (
-            <div className="glass-card p-6 space-y-3">
-              <p className="text-lg font-semibold">{t('counselor.yourStatus')}</p>
-              <div className="space-y-2">
-                <p>
-                  <span className="text-slate-400">{t('counselor.licenseNumber')}</span>
-                  {myProfile.license_number}
-                </p>
-                <p>
-                  <span className="text-slate-400">{t('counselor.specialtyLabel')}</span>
-                  {myProfile.specialty}
-                </p>
-                <p>
-                  <span className="text-slate-400">{t('counselor.statusLabel')}</span>
-                  <span
-                    className={`font-semibold ${
-                      myProfile.status === 'approved'
-                        ? 'text-green-500'
-                        : myProfile.status === 'rejected'
-                          ? 'text-red-500'
-                          : 'text-yellow-500'
-                    }`}
-                  >
-                    {STATUS_MAP[myProfile.status]}
-                  </span>
-                </p>
-              </div>
-              {myProfile.status === 'rejected' && (
-                <p className="text-sm text-slate-400">
-                  {t('counselor.rejectedMsg')}
-                </p>
-              )}
-              {myProfile.status === 'pending' && (
-                <p className="text-sm text-slate-400">
-                  {t('counselor.pendingMsg')}
-                </p>
-              )}
-            </div>
-          ) : applySuccess ? (
-            <div className="glass-card p-6 text-center space-y-2">
-              <p className="text-lg font-semibold text-green-500">{t('counselor.applySuccess')}</p>
-              <p className="text-slate-400">{t('counselor.applySuccessMsg')}</p>
-            </div>
-          ) : (
-            <form onSubmit={handleApply} className="glass p-6 space-y-4">
-              <p className="text-sm text-slate-400">
-                {t('counselor.applyDescription')}
-              </p>
-              {applyError && (
-                <p className="text-red-500 text-sm">{applyError}</p>
-              )}
-              <input
-                type="text"
-                value={licenseNumber}
-                onChange={(e) => setLicenseNumber(e.target.value)}
-                placeholder={t('counselor.licensePlaceholder')}
-                className="glass-input"
-                required
-              />
-              <input
-                type="text"
-                value={specialty}
-                onChange={(e) => setSpecialty(e.target.value)}
-                placeholder={t('counselor.specialtyPlaceholder')}
-                className="glass-input"
-                required
-              />
-              <textarea
-                value={introduction}
-                onChange={(e) => setIntroduction(e.target.value)}
-                placeholder={t('counselor.introPlaceholder')}
-                className="glass-input min-h-[120px] resize-y"
-                required
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm text-slate-400 block mb-1">{t('pricing.hourlyRate')} ({t('pricing.optional')})</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={applyRate}
-                    onChange={(e) => setApplyRate(e.target.value)}
-                    placeholder="1500"
-                    className="glass-input"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-slate-400 block mb-1">{t('pricing.currency')}</label>
-                  <select
-                    value={applyCurrency}
-                    onChange={(e) => setApplyCurrency(e.target.value)}
-                    className="glass-input"
-                  >
-                    <option value="TWD">TWD (NT$)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="JPY">JPY ({'\u00A5'})</option>
-                  </select>
-                </div>
-              </div>
-              <button type="submit" disabled={applyLoading} className="btn-primary">
-                {applyLoading ? t('counselor.submitting') : t('counselor.submitApply')}
-              </button>
-            </form>
-          )}
-        </div>
+        <ApplyTab
+          t={t}
+          myProfile={myProfile}
+          applySuccess={applySuccess}
+          applyError={applyError}
+          applyLoading={applyLoading}
+          handleApply={handleApply}
+          STATUS_MAP={STATUS_MAP}
+          licenseNumber={licenseNumber}
+          setLicenseNumber={setLicenseNumber}
+          specialty={specialty}
+          setSpecialty={setSpecialty}
+          introduction={introduction}
+          setIntroduction={setIntroduction}
+          applyRate={applyRate}
+          setApplyRate={setApplyRate}
+          applyCurrency={applyCurrency}
+          setApplyCurrency={setApplyCurrency}
+        />
       )}
 
       {/* Context Menu */}
