@@ -32,7 +32,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from .models import (
+from ..models import (
     AIChatMessage, AIChatSession,
     Booking, Conversation, CounselorReview, Course, CounselorProfile,
     DailySleep, DashboardLayout, Feedback, Habit, HabitLog, HealthMetric, JournalStreak,
@@ -43,7 +43,7 @@ from .models import (
     UserAchievement, UserLessonProgress, UserMetric, UserSubscription, WeeklySummary,
     WellnessSession,
 )
-from .serializers import (
+from ..serializers import (
     AIChatMessageSerializer,
     AIChatSessionSerializer,
     AdminCounselorSerializer,
@@ -90,16 +90,16 @@ from .serializers import (
     WeeklySummarySerializer,
     WellnessSessionSerializer,
 )
-from .services.analytics import (
+from ..services.analytics import (
     get_activity_mood_correlation, get_calendar_data, get_frequent_tags,
     get_gratitude_stats, get_mood_trends, get_mood_weather_correlation,
     get_sleep_mood_correlation, get_stress_by_tag, get_year_pixels,
 )
-from .services.alerts import check_mood_alerts
-from .services.audit import log_action
-from .services.pdf_export import generate_notes_pdf, generate_weekly_summary_pdf
-from .services.search import search_notes
-from .throttles import (
+from ..services.alerts import check_mood_alerts
+from ..services.audit import log_action
+from ..services.pdf_export import generate_notes_pdf, generate_weekly_summary_pdf
+from ..services.search import search_notes
+from ..throttles import (
     AIChatThrottle, BookingThrottle, DeleteAccountThrottle, ExportThrottle,
     GeneralWriteThrottle, LoginRateThrottle, MessageThrottle, NoteCreateThrottle,
     PasswordResetRateThrottle, RefreshTokenThrottle, RegisterRateThrottle, UploadThrottle,
@@ -145,7 +145,7 @@ def _get_openai_client():
 
 def create_notification_if_enabled(user, notification_type, **kwargs):
     """Create a Notification only if the user hasn't disabled this type."""
-    from .models import NotificationPreference
+    from ..models import NotificationPreference
     pref = NotificationPreference.objects.filter(
         user=user, notification_type=notification_type,
     ).first()
@@ -1874,7 +1874,7 @@ class AIChatSendMessageView(APIView):
             return error_response('message_too_long', f'Message cannot exceed {MAX_AI_CHAT_MESSAGE_LENGTH} characters.')
 
         # Analyze sentiment locally
-        from .services.ai_chat import analyze_user_message, generate_ai_response, _get_lang
+        from ..services.ai_chat import analyze_user_message, generate_ai_response, _get_lang
         sentiment = analyze_user_message(content)
 
         # Save user message
@@ -2297,7 +2297,7 @@ class SleepAnalysisView(APIView):
     """綜合睡眠分析 - 統計、情緒關聯、壓力關聯、問題識別、建議"""
 
     def get(self, request):
-        from .services.sleep_analysis import (
+        from ..services.sleep_analysis import (
             analyze_sleep_mood_correlation,
             analyze_sleep_stress_correlation,
             get_sleep_statistics,
@@ -2327,7 +2327,7 @@ class SleepCalendarView(APIView):
     """睡眠日曆 - 每日睡眠記錄 + quality_score + pattern"""
 
     def get(self, request):
-        from .serializers import DailySleepDetailSerializer
+        from ..serializers import DailySleepDetailSerializer
 
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
@@ -2402,7 +2402,7 @@ class SleepTrendsView(APIView):
             weeks[week_start]['sleep_hours'].append(sleep.sleep_hours)
 
             # 計算品質分數
-            from .services.sleep_analysis import calculate_quality_score
+            from ..services.sleep_analysis import calculate_quality_score
             score = calculate_quality_score(
                 sleep.sleep_hours,
                 sleep.deep_sleep_minutes,
@@ -2437,7 +2437,7 @@ class SleepInsightsView(APIView):
 
     def get(self, request):
         from datetime import timedelta
-        from .services.sleep_analysis import calculate_quality_score
+        from ..services.sleep_analysis import calculate_quality_score
 
         insights = []
         user = request.user
@@ -3417,7 +3417,7 @@ class HealthSummaryView(APIView):
             }
 
         # Health-mood correlation: average sentiment on days with health data
-        from .services.analytics import get_health_mood_correlation
+        from ..services.analytics import get_health_mood_correlation
         health_mood = get_health_mood_correlation(user, days)
 
         return Response({
@@ -3691,7 +3691,7 @@ class DashboardLayoutView(APIView):
             return Response(serializer.data)
         except DashboardLayout.DoesNotExist:
             # Return default layout if user hasn't customized yet
-            from .services.dashboard_service import get_default_layout
+            from ..services.dashboard_service import get_default_layout
             default_layout = get_default_layout()
             return Response({
                 'layout_config': default_layout,
@@ -3719,7 +3719,7 @@ class DashboardLayoutResetView(APIView):
 
     def post(self, request):
         """Reset dashboard layout to default configuration."""
-        from .services.dashboard_service import get_default_layout
+        from ..services.dashboard_service import get_default_layout
 
         default_layout = get_default_layout()
 
@@ -3758,7 +3758,7 @@ class UserMetricListView(APIView):
         if serializer.is_valid():
             try:
                 # Calculate initial current_value
-                from .services.dashboard_service import update_metric_current_value
+                from ..services.dashboard_service import update_metric_current_value
                 metric_type = serializer.validated_data['metric_type']
                 current_value = update_metric_current_value(request.user, metric_type)
 
@@ -3810,7 +3810,7 @@ class UserMetricDetailView(APIView):
 
         if serializer.is_valid():
             # Recalculate current_value if needed
-            from .services.dashboard_service import update_metric_current_value
+            from ..services.dashboard_service import update_metric_current_value
             current_value = update_metric_current_value(request.user, metric.metric_type)
 
             serializer.save(current_value=current_value)
@@ -3840,7 +3840,7 @@ class DashboardWidgetDataView(APIView):
 
     def get(self, request, widget_id):
         """Get data for a specific widget."""
-        from .services.dashboard_service import get_widget_data
+        from ..services.dashboard_service import get_widget_data
 
         # Validate widget_id
         valid_widgets = [
@@ -3871,7 +3871,7 @@ class UserMetricRefreshView(APIView):
 
     def post(self, request):
         """Refresh current values for all user's active metrics."""
-        from .services.dashboard_service import update_metric_current_value
+        from ..services.dashboard_service import update_metric_current_value
 
         metrics = UserMetric.objects.filter(user=request.user, is_active=True)
         updated_count = 0
