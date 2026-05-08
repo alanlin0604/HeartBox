@@ -234,4 +234,65 @@ Suggested questionnaire answers:
 | Storage | Encrypted, within user account, on Neon PostgreSQL |
 | User revocation | Android Health Connect system settings; in-app Settings → Delete Account |
 | Privacy policy URL | https://heartbox.tw/privacy#health-data |
-| Demo account for review | demo@heartbox.tw / DemoPass2026 (create this with seeded health data before submitting) |
+| Demo account for review | demo@heartbox.tw / DemoPass2026 — seed via `python manage.py seed_demo_account` (see backend/api/management/commands/seed_demo_account.py) |
+
+---
+
+## Submission flow — Play Console click-through
+
+Run through these in order. Cross off as you go; nothing here is optional
+unless flagged. Counts assume the asia-east1 Cloud Run backend is already
+serving prod traffic.
+
+### 0. Pre-flight (do once, before opening Play Console)
+- [ ] `python manage.py seed_demo_account` — confirms `demo@heartbox.tw / DemoPass2026` exists in prod with 14 days of journal/health data. Verify by logging in at https://heartbox.tw/login.
+- [ ] Trigger the release AAB build: GitHub → Actions → **Mobile Build** → Run workflow → `platform=android, build_type=release`. Wait for green, download `android-apk` artifact (contains the `.aab`).
+
+### 1. Main store listing  (Store presence → Main store listing)
+For each of zh-TW (default), en-US, ja-JP — paste from §1/§2/§3 above:
+- [ ] App name (≤30 chars)
+- [ ] Short description (≤80 chars)
+- [ ] Full description (≤4000 chars)
+- [ ] App icon: `frontend/public/logo-icon.png` (512×512)
+- [ ] Feature graphic: `frontend/store-assets/feature-graphic-{zh,en,ja}.png` (1024×500)
+
+### 2. Screenshots  (each locale, 4–8 phone shots, 1080×2400 PNG)
+Public/unauth pages auto-captured by `npm run store:screenshots`:
+- [ ] `01-landing.png`, `02-login.png`, `03-register.png`, `04-privacy.png`
+
+Authenticated pages — capture from a running emulator (Pixel 6/7, 1080×2400) signed in as `demo`. Save to `frontend/store-assets/screenshots/{lang}/` where `{lang}` is one of `zh-TW`, `en`, `ja` (matches the screenshot script's locale codes; Play Console maps them to its zh-TW / en-US / ja-JP slots automatically):
+- [ ] `06-journal.png` — note list (shows 14-day streak, mood tags)
+- [ ] `07-dashboard.png` — mood trend + stress radar populated
+- [ ] `08-ai-chat.png` — open the pinned "關於工作疲憊" session
+- [ ] `09-health.png` — health metrics + weekly summary
+
+Switch the device language between locales before each batch — UI strings differ.
+
+### 3. App content  (App content → ...)
+- [ ] **Privacy policy URL:** https://heartbox.tw/privacy
+- [ ] **App access:** select "All functionality is available without restrictions" — but provide demo creds anyway (paste `demo@heartbox.tw / DemoPass2026` in the reviewer note box)
+- [ ] **Ads:** No
+- [ ] **Content rating questionnaire:** answers per the "Content rating" section above. Submit, then wait for the IARC rating to land (usually instant).
+- [ ] **Target audience:** 13+
+- [ ] **News app:** No
+- [ ] **Data safety:** declare "Health data" + "Personal info" + "App activity" collected, all encrypted in transit and at rest, optional, not shared, can be deleted (Settings → Delete Account)
+- [ ] **Health Apps Declaration:** paste the table above into the form. The "data types" list must match Health Connect's enum exactly — keep wording verbatim.
+- [ ] **Government apps:** No
+
+### 4. Production release  (Production → Releases)
+- [ ] Create a new release on the Production track
+- [ ] Upload the `.aab` from step 0
+- [ ] Release notes — keep short, ≤500 chars, mention Health Connect integration
+- [ ] **Save → Review → Start rollout to Production**
+
+### 5. After submission
+- Identity verification can take 1–15 days; until it lands, the release sits in "in review". No action needed from your side unless Google emails for follow-up.
+- If rejected for "Health & Fitness category misuse" — switch primary category to "Lifestyle" and resubmit (the category dropdown is in step 1).
+
+### Asset paths quick reference
+```
+frontend/public/logo-icon.png                            # App icon (512×512)
+frontend/store-assets/feature-graphic-{zh,en,ja}.png     # Feature graphic
+frontend/store-assets/screenshots/{lang}/0[1-9]-*.png    # Screenshots
+frontend/android/app/build/outputs/bundle/release/*.aab  # AAB (after CI build)
+```
