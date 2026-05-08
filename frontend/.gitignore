@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local lighthouse audit artifacts (regenerable; contain machine-specific timings)
+lighthouse-*.json
+lighthouse-*.html
+lighthouse-report*.json
