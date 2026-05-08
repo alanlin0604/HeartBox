@@ -73,10 +73,10 @@
 ## 🚀 快速開始
 
 ### 環境需求
-- Node.js 20+
+- Node.js 22+ (CI 用 22)
 - Python 3.12+
 - PostgreSQL 14+
-- Redis 5+
+- Redis 5+ (選用，留空則 Channels 走 InMemory)
 
 ### 前端開發
 
@@ -122,6 +122,20 @@ python manage.py runserver
 
 # 7. 開啟瀏覽器
 # http://localhost:8000/admin
+```
+
+### 管理指令
+
+```bash
+cd backend
+# Play Store 審查者用的 demo 帳號（demo / DemoPass2026），含 14 天日記、健康指標、AI 對話
+python manage.py seed_demo_account            # 首次建立或補資料
+python manage.py seed_demo_account --reset    # 清掉現有 demo 內容後重建
+
+# 其他
+python manage.py reset_users --confirm        # 清掉除 root 之外的所有帳號（CASCADE）
+python manage.py load_knowledge_base          # 載入 RAG 用的心理學知識庫
+python manage.py generate_weekly_report       # 手動觸發週報產生
 ```
 
 ### 移動端開發
@@ -196,8 +210,8 @@ HeartBox 高度重視用戶隱私和數據安全：
 - **累積佈局偏移 (CLS)**: <0.1
 
 ### 代碼品質
-- **ESLint**: 無錯誤
-- **Security Audit**: 0 個漏洞
+- **Security Audit**: 0 個漏洞（npm audit + pip-audit）
+- **ESLint**: 81 個 react-hooks 規則待清理（不阻塞 ship）
 - **Bundle 大小**: ~1.5MB (未壓縮)
 
 ## 🤝 貢獻
