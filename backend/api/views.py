@@ -530,6 +530,8 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         return MoodNoteSerializer
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return MoodNote.objects.none()
         qs = MoodNote.objects.filter(user=self.request.user, is_deleted=False)
         if self.action == 'list':
             params = self.request.query_params

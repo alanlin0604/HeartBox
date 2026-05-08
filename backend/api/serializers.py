@@ -84,7 +84,7 @@ class MoodNoteSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         request = self.context.get('request')
-        if request and hasattr(request, 'user'):
+        if request and getattr(request, 'user', None) and request.user.is_authenticated:
             self.fields['tag_ids'].queryset = Tag.objects.filter(user=request.user)
 
     def get_attachments(self, obj):
