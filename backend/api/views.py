@@ -488,6 +488,8 @@ class TagViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Tag.objects.none()
         return Tag.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -3563,6 +3565,8 @@ class HabitViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Habit.objects.none()
         return Habit.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -3885,3 +3889,52 @@ class UserMetricRefreshView(APIView):
             'message': f'Refreshed {updated_count} metrics',
             'updated_count': updated_count
         })
+
+
+# ============================================================================
+# drf_spectacular schema policy
+# ----------------------------------------------------------------------------
+# These APIViews handle internal flows or have non-trivial response shapes
+# (computed dicts, side-effect endpoints, admin-only). Setting schema = None
+# tells drf_spectacular to skip them without emitting "unable to guess
+# serializer" warnings during OpenAPI generation.
+#
+# To document one of them: remove it from this list and either set
+# `serializer_class = X` on the class or wrap it with @extend_schema(...).
+# The properly-documented ViewSets (TagViewSet, MoodNoteViewSet, etc.) already
+# expose a working schema; this list only suppresses the un-introspectable
+# tail.
+# ============================================================================
+_UNDOCUMENTED_VIEWS = [
+    'AcceptFriendRequestView', 'AchievementCheckView', 'AchievementsView',
+    'AddCommentView', 'AdminCounselorActionView', 'AdminStatsView',
+    'AIChatSendMessageView', 'AIChatSessionDetailView', 'AIChatSessionListCreateView',
+    'AISuggestionsView', 'AlertsView', 'AnalyticsView',
+    'AvailableSlotsView', 'BookingActionView', 'BookingCreateView',
+    'BookingUserCancelView', 'CalendarView', 'ConversationCreateView',
+    'ConversationDeleteView', 'CounselorReviewCreateView', 'DailyPromptView',
+    'DailySleepView', 'DashboardLayoutResetView', 'DashboardLayoutView',
+    'DashboardWidgetDataView', 'DeleteAccountView', 'DeleteCommentView',
+    'ExportCSVView', 'ExportDataView', 'ExportPDFView',
+    'ForgotPasswordView', 'FriendActivityView', 'FriendRequestCreateView',
+    'GoogleLoginCallbackView', 'HabitAnalyticsView', 'HealthSummaryView',
+    'HealthSyncView', 'ImportCSVView', 'JournalStreakView',
+    'LessonCompleteView', 'Login2FAView', 'LogoutOtherDevicesView',
+    'MessageListView', 'MonthlyReviewView', 'MoodPredictionView',
+    'MySubscriptionView', 'NoteAttachmentUploadView', 'NotificationPreferenceView',
+    'NotificationReadView', 'OnThisDayView', 'PreviewCSVView',
+    'PushSubscriptionView', 'QuoteActionView', 'RejectFriendRequestView',
+    'ReminderSettingsView', 'RemoveFriendView', 'ResendVerificationView',
+    'ResetPasswordView', 'ShareAssessmentView', 'ShareNoteView',
+    'ShareNoteWithFriendsView', 'SleepAnalysisView', 'SleepCalendarView',
+    'SleepInsightsView', 'SleepTrendsView', 'TherapistReportPublicView',
+    'TimeSlotListView', 'TOTPDisableView', 'TOTPSetupView',
+    'TOTPVerifyView', 'UnshareNoteView', 'UserMetricDetailView',
+    'UserMetricListView', 'UserMetricRefreshView', 'UserSearchView',
+    'VerifyEmailView', 'WeeklySummaryView', 'YearlyReviewView',
+    'YearPixelsView',
+]
+for _name in _UNDOCUMENTED_VIEWS:
+    _cls = globals().get(_name)
+    if _cls is not None:
+        _cls.schema = None

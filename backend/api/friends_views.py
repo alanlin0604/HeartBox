@@ -357,3 +357,16 @@ class FriendActivityView(APIView):
 
         activities = get_friend_activity(request.user, hours=hours)
         return Response({'activities': activities})
+
+
+# drf_spectacular schema policy — see backend/api/views.py for rationale.
+_UNDOCUMENTED_VIEWS = [
+    'AcceptFriendRequestView', 'AddCommentView', 'DeleteCommentView',
+    'FriendActivityView', 'FriendRequestCreateView', 'RejectFriendRequestView',
+    'RemoveFriendView', 'ShareNoteWithFriendsView', 'UnshareNoteView',
+    'UserSearchView',
+]
+for _name in _UNDOCUMENTED_VIEWS:
+    _cls = globals().get(_name)
+    if _cls is not None:
+        _cls.schema = None
