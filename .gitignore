@@ -70,3 +70,8 @@ htmlcov/
 
 # Test databases
 test_db.sqlite3
+
+# Local audit artifacts (regeneratable, not worth tracking)
+lighthouse-*.json
+lighthouse-*.html
+npm-audit.json
