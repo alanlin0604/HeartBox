@@ -122,6 +122,7 @@ export default function PageTransition({
 }
 
 // Preset configurations for common use cases
+// eslint-disable-next-line react-refresh/only-export-components
 export const pageTransitionPresets = {
   default: { mode: 'slideUp', duration: 0.3 },
   fast: { mode: 'fade', duration: 0.15 },

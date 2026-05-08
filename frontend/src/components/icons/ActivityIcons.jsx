@@ -224,6 +224,7 @@ export const NatureIcon = ({ className = "w-5 h-5" }) => (
 )
 
 // Activity Icon Map for easy access
+// eslint-disable-next-line react-refresh/only-export-components
 export const ACTIVITY_ICONS = {
   exercise: ExerciseIcon,
   social: SocialIcon,

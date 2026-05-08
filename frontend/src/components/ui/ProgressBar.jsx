@@ -178,6 +178,7 @@ export function CircularProgress({
 export default LinearProgress
 
 // Preset configurations
+// eslint-disable-next-line react-refresh/only-export-components
 export const progressPresets = {
   uploadFile: {
     variant: 'primary',
