@@ -1208,6 +1208,8 @@
   "habit.frequencyCustom": "自訂",
   "habit.targetCount": "目標次數",
   "habit.isActive": "啟用",
+  "habit.reminder": "每日提醒",
+  "habit.reminderHint": "選定時間提醒打卡，當天已打卡就不會通知",
   "habit.checkIn": "打卡",
   "habit.checked": "已完成",
   "habit.streak": "連續天數",

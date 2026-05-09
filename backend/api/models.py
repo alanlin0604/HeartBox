@@ -226,6 +226,7 @@ class Notification(models.Model):
         ('friend_share', '好友分享日記'),
         ('friend_comment', '好友留言'),
         ('post_reaction', '社群貼文有人回應'),
+        ('habit_reminder', '習慣打卡提醒'),
     ]
 
     user = models.ForeignKey(
@@ -934,6 +935,12 @@ class Habit(models.Model):
     # Target settings
     target_frequency = models.CharField(max_length=20, default='daily')
     target_count = models.IntegerField(default=1)
+
+    # Reminder — fired by send_due_habit_reminders Celery task every 15 min.
+    # reminder_time stored as a wall-clock TimeField; the task interprets it
+    # in the habit owner's timezone (CustomUser.timezone). null=opted out.
+    reminder_enabled = models.BooleanField(default=False)
+    reminder_time = models.TimeField(null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

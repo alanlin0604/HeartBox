@@ -31,6 +31,8 @@ export default function HabitForm({ habit, onSubmit, onClose }) {
     target_frequency: 'daily',
     target_count: 1,
     is_active: true,
+    reminder_enabled: false,
+    reminder_time: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -45,6 +47,8 @@ export default function HabitForm({ habit, onSubmit, onClose }) {
         target_frequency: habit.target_frequency || 'daily',
         target_count: habit.target_count || 1,
         is_active: habit.is_active ?? true,
+        reminder_enabled: habit.reminder_enabled ?? false,
+        reminder_time: habit.reminder_time ? habit.reminder_time.slice(0, 5) : '',
       });
     }
   }, [habit]);
@@ -53,10 +57,18 @@ export default function HabitForm({ habit, onSubmit, onClose }) {
     e.preventDefault();
     setSubmitting(true);
     try {
+      // Backend TimeField is nullable — send null instead of '' so DRF accepts it.
+      // Also: if reminder is toggled on but no time chosen, treat as disabled.
+      const hasTime = !!formData.reminder_time;
+      const payload = {
+        ...formData,
+        reminder_enabled: formData.reminder_enabled && hasTime,
+        reminder_time: hasTime ? formData.reminder_time : null,
+      };
       if (habit) {
-        await onSubmit(habit.id, formData);
+        await onSubmit(habit.id, payload);
       } else {
-        await onSubmit(formData);
+        await onSubmit(payload);
       }
     } finally {
       setSubmitting(false);
@@ -247,6 +259,45 @@ export default function HabitForm({ habit, onSubmit, onClose }) {
                 `}
               />
             </button>
+          </div>
+
+          {/* Reminder */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-primary)]">
+                  {t('habit.reminder')}
+                </label>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                  {t('habit.reminderHint')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleChange('reminder_enabled', !formData.reminder_enabled)}
+                className={`
+                  relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0
+                  ${formData.reminder_enabled ? 'bg-orange-500' : 'bg-gray-600'}
+                `}
+                aria-label={t('habit.reminder')}
+              >
+                <span
+                  className={`
+                    inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                    ${formData.reminder_enabled ? 'translate-x-6' : 'translate-x-1'}
+                  `}
+                />
+              </button>
+            </div>
+            {formData.reminder_enabled && (
+              <input
+                type="time"
+                value={formData.reminder_time}
+                onChange={(e) => handleChange('reminder_time', e.target.value)}
+                className="glass-input w-full"
+                required
+              />
+            )}
           </div>
 
           {/* Actions */}

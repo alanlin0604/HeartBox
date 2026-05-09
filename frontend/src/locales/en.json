@@ -1208,6 +1208,8 @@
   "habit.frequencyCustom": "Custom",
   "habit.targetCount": "Target Count",
   "habit.isActive": "Active",
+  "habit.reminder": "Daily reminder",
+  "habit.reminderHint": "We'll ping you at this time unless you've already checked in today.",
   "habit.checkIn": "Check In",
   "habit.checked": "Completed",
   "habit.streak": "Day Streak",

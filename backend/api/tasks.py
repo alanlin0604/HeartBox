@@ -105,6 +105,92 @@ def send_push_notification_task(user_id, title, body, url='/'):
         logger.warning('User %d not found for push notification', user_id)
 
 
+@shared_task
+def send_due_habit_reminders():
+    """Fire reminders for habits whose reminder_time falls in the last 15 min
+    (in the user's local timezone) and that haven't been checked in today.
+
+    Runs every 15 minutes via django_celery_beat. Idempotent: if a reminder
+    was already created within the last 23 hours we skip — avoids re-firing
+    when the schedule overlaps the boundary.
+
+    Each fire creates an in-app Notification AND attempts a web-push (best
+    effort; push errors are swallowed since the in-app record is the
+    durable signal).
+    """
+    import zoneinfo
+    from datetime import timedelta
+    from django.utils import timezone as dj_tz
+
+    from api.models import Habit, HabitLog, Notification
+    from api.views import send_push_notification
+
+    WINDOW_SECONDS = 15 * 60   # we run every 15 min, fire if reminder hit in last 15 min
+    DEDUP_HOURS = 23           # one reminder per habit per day
+
+    now_utc = dj_tz.now()
+    fired = 0
+
+    qs = (
+        Habit.objects
+        .filter(reminder_enabled=True, is_active=True)
+        .exclude(reminder_time__isnull=True)
+        .select_related('user')
+    )
+    for habit in qs:
+        try:
+            tz_name = habit.user.timezone or 'Asia/Taipei'
+            tz = zoneinfo.ZoneInfo(tz_name)
+        except Exception:
+            tz = zoneinfo.ZoneInfo('Asia/Taipei')
+
+        now_local = now_utc.astimezone(tz)
+        rt = habit.reminder_time
+        target = now_local.replace(
+            hour=rt.hour, minute=rt.minute, second=0, microsecond=0,
+        )
+        delta = (now_local - target).total_seconds()
+        if not (0 <= delta < WINDOW_SECONDS):
+            continue
+
+        # Already checked in today (in user's timezone)?
+        if HabitLog.objects.filter(habit=habit, date=now_local.date()).exists():
+            continue
+
+        # Already reminded recently?
+        recent_cutoff = now_utc - timedelta(hours=DEDUP_HOURS)
+        already = Notification.objects.filter(
+            user=habit.user,
+            type='habit_reminder',
+            data__habit_id=habit.id,
+            created_at__gte=recent_cutoff,
+        ).exists()
+        if already:
+            continue
+
+        Notification.objects.create(
+            user=habit.user,
+            type='habit_reminder',
+            title=f'⏰ {habit.name}',
+            message='今天還沒打卡 — 動起來！',
+            data={'habit_id': habit.id, 'kind': 'reminder'},
+        )
+        try:
+            send_push_notification(
+                habit.user,
+                f'⏰ {habit.name}',
+                '今天還沒打卡 — 動起來！',
+                url='/habits',
+            )
+        except Exception as e:
+            logger.warning('Habit reminder push failed for habit %d: %s', habit.id, e)
+        fired += 1
+
+    if fired:
+        logger.info('send_due_habit_reminders fired %d reminders', fired)
+    return fired
+
+
 @shared_task(bind=True)
 def import_notes_task(self, job_id):
     """Process a stored CSV/JSON file for an ImportJob, updating progress and

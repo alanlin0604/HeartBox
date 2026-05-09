@@ -720,6 +720,7 @@ class HabitSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'description', 'category', 'color', 'icon',
             'target_frequency', 'target_count', 'is_active',
+            'reminder_enabled', 'reminder_time',
             'created_at', 'updated_at', 'streak', 'completion_rate',
             'checked_today',
         ]

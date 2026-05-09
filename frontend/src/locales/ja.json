@@ -1208,6 +1208,8 @@
   "habit.frequencyCustom": "カスタム",
   "habit.targetCount": "目標回数",
   "habit.isActive": "有効",
+  "habit.reminder": "毎日のリマインダー",
+  "habit.reminderHint": "指定時間にプッシュ通知。当日チェックイン済みなら通知しません。",
   "habit.checkIn": "チェックイン",
   "habit.checked": "完了",
   "habit.streak": "連続日数",
