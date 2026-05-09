@@ -1330,8 +1330,6 @@
   "dashboard.deleteFailed": "Failed to delete metric",
   "dashboard.habitCheckInFailed": "Failed to check in habit",
   "common.close": "Close",
-  "common.confirm": "Confirm",
-  "common.saving": "Saving...",
   "common.sending": "Sending...",
   "common.sharing": "Sharing...",
   "friends.title": "Friends",

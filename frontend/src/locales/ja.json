@@ -1330,8 +1330,6 @@
   "dashboard.deleteFailed": "指標の削除に失敗しました",
   "dashboard.habitCheckInFailed": "習慣チェックインに失敗しました",
   "common.close": "閉じる",
-  "common.confirm": "確認",
-  "common.saving": "保存中...",
   "common.sending": "送信中...",
   "common.sharing": "共有中...",
   "friends.title": "友達",

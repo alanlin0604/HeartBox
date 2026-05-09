@@ -437,7 +437,7 @@ export default function BreathingPage() {
                   <circle cx="100" cy="100" r="90" fill="none" stroke="var(--card-border)" strokeWidth="6" />
                   <circle
                     cx="100" cy="100" r="90" fill="none"
-                    stroke="#a78bfa" strokeWidth="6" strokeLinecap="round"
+                    stroke="#fb923c" strokeWidth="6" strokeLinecap="round"
                     strokeDasharray={circumference}
                     strokeDashoffset={circumference * (1 - medProgress)}
                     style={{ transition: 'stroke-dashoffset 1s linear' }}

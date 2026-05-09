@@ -227,7 +227,7 @@ export default function DashboardPage() {
                   tooltipStyle={tooltipStyle}
                   showLegend
                   lines={[
-                    { dataKey: 'avg_sentiment', stroke: '#a78bfa', name: t('dashboard.avgSentiment'), strokeWidth: 2 },
+                    { dataKey: 'avg_sentiment', stroke: '#fb923c', name: t('dashboard.avgSentiment'), strokeWidth: 2 },
                     { dataKey: 'avg_stress', stroke: '#f87171', name: t('dashboard.avgStress'), strokeWidth: 2 },
                   ]}
                 />
@@ -264,7 +264,7 @@ export default function DashboardPage() {
                 axisStroke={axisStroke}
                 tooltipStyle={tooltipStyle}
                 scatters={[
-                  { name: t('dashboard.temperatureLabel'), fill: '#a78bfa', data: correlation.scatter_data },
+                  { name: t('dashboard.temperatureLabel'), fill: '#fb923c', data: correlation.scatter_data },
                 ]}
               />
             </Suspense>

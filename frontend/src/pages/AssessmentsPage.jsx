@@ -274,7 +274,7 @@ export default function AssessmentsPage() {
                     axisStroke={axisStroke}
                     tooltipStyle={tooltipStyle}
                     lines={[
-                      { dataKey: 'score', stroke: '#a78bfa', strokeWidth: 2 },
+                      { dataKey: 'score', stroke: '#fb923c', strokeWidth: 2 },
                     ]}
                   />
                 </Suspense>

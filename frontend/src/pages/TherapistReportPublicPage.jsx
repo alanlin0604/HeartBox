@@ -94,7 +94,7 @@ export default function TherapistReportPublicPage() {
               axisStroke="#9ca3af"
               tooltipStyle={{}}
               lines={[
-                { dataKey: 'sentiment', stroke: '#a78bfa', strokeWidth: 2, name: t('publicReport.sentiment') },
+                { dataKey: 'sentiment', stroke: '#fb923c', strokeWidth: 2, name: t('publicReport.sentiment') },
                 { dataKey: 'stress', stroke: '#f87171', strokeWidth: 2, name: t('publicReport.stress') },
               ]}
             />

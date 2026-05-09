@@ -1330,8 +1330,6 @@
   "dashboard.deleteFailed": "刪除指標失敗",
   "dashboard.habitCheckInFailed": "習慣打卡失敗",
   "common.close": "關閉",
-  "common.confirm": "確認",
-  "common.saving": "儲存中...",
   "common.sending": "發送中...",
   "common.sharing": "分享中...",
   "friends.title": "好友",

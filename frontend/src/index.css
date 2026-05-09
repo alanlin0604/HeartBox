@@ -33,13 +33,13 @@
   --card-border: var(--border-secondary);
   --input-bg: rgba(255, 255, 255, 0.06);
   --input-border: var(--border-primary);
-  --tooltip-bg: rgba(30, 20, 60, 0.95);
+  --tooltip-bg: rgba(30, 25, 22, 0.95);
   --tooltip-border: var(--border-primary);
   --stress-bar-bg: var(--surface-primary);
   --chart-grid: rgba(255, 255, 255, 0.1);
   --chart-axis: var(--text-secondary);
-  --popup-bg: rgba(30, 20, 60, 0.97);
-  --nav-bg: #1a1440;
+  --popup-bg: rgba(30, 25, 22, 0.97);
+  --nav-bg: #1c1714;
   --nav-border: var(--border-primary);
 }
 
@@ -256,7 +256,7 @@ h4, h5, h6 {
 
 /* Select styling */
 .glass-input option {
-  background: #1e1b4b;
+  background: #1c1714;
   color: #e2e8f0;
 }
 
