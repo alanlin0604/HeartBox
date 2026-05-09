@@ -27,9 +27,11 @@ export default function FriendsActivity() {
     }
   }
 
-  useEffect(() => {
-    loadActivity(hours)
-  }, [])
+  // Mount-only initial fetch. User-driven changes to `hours` come through
+  // the click handler that calls loadActivity(h) directly, so we don't want
+  // this effect to re-fire on hours change.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadActivity(hours) }, [])
 
   const getActivityIcon = (type) => {
     switch (type) {

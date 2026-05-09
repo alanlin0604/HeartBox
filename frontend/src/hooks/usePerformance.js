@@ -1,4 +1,4 @@
-/* eslint-disable no-console -- dev-only perf debug hooks; gated by import.meta.env.DEV */
+/* eslint-disable no-console, react-hooks/purity, react-hooks/refs -- dev-only perf debug hooks deliberately use performance.now() in render and read ref.current outside effect; all gated by import.meta.env.DEV */
 import { useEffect, useRef } from 'react'
 
 /**

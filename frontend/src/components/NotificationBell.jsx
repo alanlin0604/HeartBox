@@ -64,29 +64,6 @@ export default memo(function NotificationBell() {
   const closedIntentionally = useRef(false)
   const panelRef = useRef(null)
 
-  // Load initial notifications
-  useEffect(() => {
-    loadNotifications()
-    connectWs()
-
-    return () => {
-      closedIntentionally.current = true
-      clearTimeout(reconnectTimer.current)
-      if (wsRef.current) wsRef.current.close()
-    }
-  }, [])
-
-  // Close panel on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
   const connectWs = () => {
     const token = getAccessToken()
     if (!token) return
@@ -145,6 +122,32 @@ export default memo(function NotificationBell() {
       console.warn('Failed to load notifications:', err)
     }
   }
+
+  // Load initial notifications. Mount-only by design — connectWs handles its
+  // own reconnect loop via setTimeout, so re-running this on every render
+  // would double-subscribe.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadNotifications()
+    connectWs()
+
+    return () => {
+      closedIntentionally.current = true
+      clearTimeout(reconnectTimer.current)
+      if (wsRef.current) wsRef.current.close()
+    }
+  }, [])
+
+  // Close panel on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (panelRef.current && !panelRef.current.contains(e.target)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const handleOpen = () => {
     setOpen(!open)

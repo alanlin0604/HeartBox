@@ -7,19 +7,19 @@ describe('usePerformance', () => {
   let originalPerformance
 
   beforeEach(() => {
-    originalPerformance = global.performance
+    originalPerformance = globalThis.performance
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.spyOn(console, 'log').mockImplementation(() => {})
   })
 
   afterEach(() => {
-    global.performance = originalPerformance
+    globalThis.performance = originalPerformance
     vi.restoreAllMocks()
   })
 
   it('logs initial render time in development', () => {
     let callCount = 0
-    global.performance = {
+    globalThis.performance = {
       now: () => {
         callCount++
         return callCount === 1 ? 0 : 10 // 0 for start, 10 for end
@@ -36,7 +36,7 @@ describe('usePerformance', () => {
 
   it('warns on slow renders exceeding threshold', () => {
     let callCount = 0
-    global.performance = {
+    globalThis.performance = {
       now: () => {
         callCount++
         // Return different values: 0 for first call, 50 for second
@@ -64,7 +64,7 @@ describe('usePerformance', () => {
 
   it('respects custom threshold', () => {
     let callCount = 0
-    global.performance = {
+    globalThis.performance = {
       now: () => {
         callCount++
         return callCount === 1 ? 0 : 30 // 0 for start, 30 for end

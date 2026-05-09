@@ -117,7 +117,9 @@ export default function CounselorListPage() {
     loadData()
   }, [])
 
-  // Sync tab state with URL search params
+  // Sync tab state with URL search params. setSearchParams is stable
+  // (react-router v6) but ESLint can't tell.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (location.state?.tab) {
       const tabMap = { bookings: 'bookings', received: 'shared', assessments: 'assessments' }
@@ -127,7 +129,10 @@ export default function CounselorListPage() {
     }
   }, [location.state])
 
-  // Update URL when tab changes
+  // Reflect tab → URL. Reverse direction (URL → tab on external nav) is
+  // handled by the location.state effect above; we don't depend on
+  // searchParams here to avoid a write-then-read loop.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const current = searchParams.get('tab')
     if (tab !== 'list' && current !== tab) {

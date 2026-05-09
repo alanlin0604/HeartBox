@@ -75,7 +75,9 @@ export default function BreathingPage() {
       .catch(() => {})
   }, [])
 
-  // Cleanup intervals and audio on unmount
+  // Cleanup intervals and audio on unmount. stopAmbient is declared lower
+  // but the cleanup runs on unmount, well after the closure has captured it.
+  /* eslint-disable react-hooks/immutability, react-hooks/exhaustive-deps */
   useEffect(() => {
     return () => {
       if (breathIntervalRef.current) clearInterval(breathIntervalRef.current)
@@ -83,6 +85,7 @@ export default function BreathingPage() {
       stopAmbient()
     }
   }, [])
+  /* eslint-enable react-hooks/immutability, react-hooks/exhaustive-deps */
 
   // --- Breathing logic ---
   const startBreathing = (exercise) => {

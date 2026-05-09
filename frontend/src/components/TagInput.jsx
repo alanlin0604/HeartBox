@@ -22,18 +22,6 @@ export default function TagInput({ value = [], onChange }) {
   const [allTags, setAllTags] = useState([])
   const inputRef = useRef(null)
 
-  useEffect(() => {
-    loadTags()
-  }, [])
-
-  useEffect(() => {
-    if (input.trim()) {
-      loadSuggestions(input)
-    } else {
-      setSuggestions([])
-    }
-  }, [input])
-
   async function loadTags() {
     try {
       const tags = await tagAPI.list()
@@ -54,6 +42,18 @@ export default function TagInput({ value = [], onChange }) {
       console.error('Failed to load tag suggestions:', err)
     }
   }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only
+  useEffect(() => { loadTags() }, [])
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: re-run on input change only
+  useEffect(() => {
+    if (input.trim()) {
+      loadSuggestions(input)
+    } else {
+      setSuggestions([])
+    }
+  }, [input])
 
   async function handleCreateTag() {
     const name = input.trim().toLowerCase()

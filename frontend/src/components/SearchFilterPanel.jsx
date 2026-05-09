@@ -91,7 +91,7 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
       }
       onFilterChange(next)
     }, 300)
-  }, [filters, onFilterChange])
+  }, [filters, onFilterChange, t, toast])
 
   const clearFilters = useCallback(() => {
     setSearch('')

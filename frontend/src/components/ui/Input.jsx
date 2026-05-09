@@ -10,7 +10,7 @@
  * - Inline validation feedback
  */
 
-import { forwardRef, useState } from 'react'
+import { forwardRef, useId, useState } from 'react'
 
 const Input = forwardRef(function Input({
   label,
@@ -27,7 +27,8 @@ const Input = forwardRef(function Input({
   ...props
 }, ref) {
   const [isFocused, setIsFocused] = useState(false)
-  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`
+  const generatedId = useId()
+  const inputId = id || generatedId
 
   // 根據 type 自動設定 autoComplete
   const getAutoComplete = () => {

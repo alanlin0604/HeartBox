@@ -10,7 +10,7 @@
  * - Accessible (ARIA, focus management)
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Modal from './Modal'
 import Button from './Button'
 
@@ -65,8 +65,9 @@ export default function ConfirmDialog({
   const [isProcessing, setIsProcessing] = useState(false)
   const confirmButtonRef = useRef(null)
 
-  // Handle async confirm
-  const handleConfirm = async () => {
+  // Handle async confirm. Wrapped in useCallback so the keydown effect below
+  // doesn't re-bind the document listener on every render.
+  const handleConfirm = useCallback(async () => {
     if (!onConfirm) return
 
     setIsProcessing(true)
@@ -79,7 +80,7 @@ export default function ConfirmDialog({
     } finally {
       setIsProcessing(false)
     }
-  }
+  }, [onConfirm, onClose])
 
   // Keyboard shortcuts
   useEffect(() => {

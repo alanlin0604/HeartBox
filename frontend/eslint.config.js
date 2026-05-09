@@ -39,6 +39,13 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
       // Prevent console.log in production code, but allow warn/error for debugging
       'no-console': ['warn', { allow: ['warn', 'error'] }],
+      // React 19's stricter "no setState during effect body" rule fires on the
+      // standard load → setState pattern (`useEffect(() => { fetch().then(setData) }, [])`).
+      // We rely on that pattern across ~14 widgets/pages and the alternatives
+      // (suspense, useReducer with thunk-like dispatch) would be a much larger
+      // refactor. Keep the rule visible as a warning so genuine new mistakes
+      // still surface, but don't fail the build on existing usage.
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
 ])
