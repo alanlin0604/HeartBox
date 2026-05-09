@@ -1204,6 +1204,59 @@ class PostReaction(models.Model):
         return f'{self.user.username} {self.reaction_type} on post #{self.post.id}'
 
 
+class PostReport(models.Model):
+    """User-submitted report on a PublicPost. Multiple reports can stack on
+    the same post; admins resolve them via ModeratePostView. A post is
+    auto-hidden once REPORT_AUTOHIDE_THRESHOLD (default 3) distinct users
+    report it — crude but effective abuse defense before manual review."""
+
+    REASON_CHOICES = [
+        ('spam', 'Spam'),
+        ('harassment', 'Harassment / Bullying'),
+        ('hate', 'Hate speech'),
+        ('self_harm', 'Self-harm / Suicide'),
+        ('sexual', 'Sexual content'),
+        ('violence', 'Violence / Threats'),
+        ('misinfo', 'Misinformation'),
+        ('other', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('reviewed_kept', 'Reviewed — post kept'),
+        ('reviewed_removed', 'Reviewed — post removed'),
+        ('dismissed', 'Dismissed (invalid report)'),
+    ]
+
+    post = models.ForeignKey(
+        'PublicPost', on_delete=models.CASCADE, related_name='reports',
+    )
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='post_reports_filed',
+    )
+    reason = models.CharField(max_length=20, choices=REASON_CHOICES)
+    note = models.TextField(blank=True, default='')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='post_reports_reviewed',
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        # One reporter can only report a given post once.
+        unique_together = [['post', 'reporter']]
+        indexes = [
+            models.Index(fields=['status', '-created_at'], name='postreport_status_created'),
+            models.Index(fields=['post', '-created_at'], name='postreport_post_created'),
+        ]
+
+    def __str__(self):
+        return f'Report on post #{self.post_id} by {self.reporter.username} ({self.reason})'
+
+
 class ImportJob(models.Model):
     """Tracks an asynchronous CSV/JSON import. Created by ImportStartView, run
     by import_notes_task, polled by ImportJobStatusView."""

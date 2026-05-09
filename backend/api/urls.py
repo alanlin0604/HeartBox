@@ -126,7 +126,11 @@ from .friends_views import (
     UnshareNoteView as UnshareNoteWithFriendView,
     UserSearchView,
 )
-from .community_views import PublicPostViewSet
+from .community_views import (
+    ModeratePostView,
+    PublicPostViewSet,
+    ReportListView,
+)
 
 router = DefaultRouter()
 router.register(r'notes', MoodNoteViewSet, basename='moodnote')
@@ -292,6 +296,9 @@ urlpatterns = [
     path('friends/share/<int:share_id>/comments/', CommentListView.as_view(), name='friend-comment-list'),
     path('friends/comment/<int:comment_id>/', DeleteCommentView.as_view(), name='friend-delete-comment'),
     path('friends/activity/', FriendActivityView.as_view(), name='friend-activity'),
+    # Community moderation (staff-only)
+    path('community/reports/', ReportListView.as_view(), name='community-report-list'),
+    path('community/posts/<int:pk>/moderate/', ModeratePostView.as_view(), name='community-post-moderate'),
     # Notes CRUD
     path('', include(router.urls)),
 ]

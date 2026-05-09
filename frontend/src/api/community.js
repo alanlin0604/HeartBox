@@ -57,11 +57,22 @@ export const getMyPosts = async () => {
   return api.get('/community/posts/my_posts/')
 }
 
+/**
+ * Report a post for abusive content.
+ * @param {number} postId
+ * @param {'spam'|'harassment'|'hate'|'self_harm'|'sexual'|'violence'|'misinfo'|'other'} reason
+ * @param {string} note - Optional free-form note (max 500 chars).
+ */
+export const reportPost = async (postId, reason, note = '') => {
+  return api.post(`/community/posts/${postId}/report/`, { reason, note })
+}
+
 export const communityAPI = {
   getPosts,
   createPost,
   getPost,
   deletePost,
   toggleReaction,
-  getMyPosts
+  getMyPosts,
+  reportPost,
 }

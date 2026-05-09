@@ -1,21 +1,25 @@
-"""
-Community Views - Anonymous post sharing and support reactions
-Simplified version without content moderation or reporting.
-"""
+"""Community Views — anonymous post sharing, support reactions, and the
+moderation pieces (report flow + admin review) that gate this from going
+public. The moderation policy itself lives in
+``api/services/content_moderation.py``."""
 import logging
 
-from django.db import transaction
-from django.db.models import Count, Q, Prefetch
-from rest_framework import viewsets, permissions, status
+from django.db.models import Count, Q
+from django.utils import timezone
+from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import APIView
 
-from .models import PublicPost, PostReaction
+from .models import PostReaction, PostReport, PublicPost
 from .serializers import (
-    PublicPostSerializer,
-    PublicPostCreateSerializer,
     PostReactionSerializer,
+    PublicPostCreateSerializer,
+    PublicPostSerializer,
+)
+from .services.content_moderation import (
+    maybe_autohide_post, screen_content,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,11 +61,28 @@ class PublicPostViewSet(viewsets.ModelViewSet):
         return PublicPostSerializer
 
     def create(self, request, *args, **kwargs):
-        """Create a new anonymous post."""
+        """Create a new anonymous post.
+
+        Runs the content through ``screen_content`` first so blatant abuse /
+        ad spam is rejected at write time with a 400 carrying a machine-
+        readable ``code`` the frontend can map to a localized message.
+        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Create post
+        allowed, reason = screen_content(serializer.validated_data.get('content', ''))
+        if not allowed:
+            code_map = {
+                'empty':            'community.content_empty',
+                'too_short':        'community.content_too_short',
+                'too_long':         'community.content_too_long',
+                'blocked_keyword':  'community.content_blocked',
+            }
+            return Response(
+                {'detail': reason, 'code': code_map.get(reason, 'community.content_rejected')},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         post = serializer.save(user=request.user)
 
         # Optionally analyze sentiment (if AI service available)
@@ -156,3 +177,137 @@ class PublicPostViewSet(viewsets.ModelViewSet):
 
         serializer = PublicPostSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def report(self, request, pk=None):
+        """File a report against a post.
+
+        Body: ``{"reason": "<one of REASON_CHOICES>", "note": "<optional>"}``
+
+        - Reporter can only report a given post once (DB-level unique).
+        - Reporter cannot report their own post.
+        - Once REPORT_AUTOHIDE_THRESHOLD distinct reporters file a report,
+          the post is automatically hidden pending admin review.
+        """
+        post = self.get_object()
+        if post.user_id == request.user.id:
+            return Response(
+                {'detail': 'You cannot report your own post.', 'code': 'community.cannot_report_own'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        reason = request.data.get('reason')
+        valid_reasons = {choice[0] for choice in PostReport.REASON_CHOICES}
+        if reason not in valid_reasons:
+            return Response(
+                {'detail': f'reason must be one of {sorted(valid_reasons)}',
+                 'code': 'community.invalid_reason'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        note = (request.data.get('note') or '').strip()[:500]
+
+        report, created = PostReport.objects.get_or_create(
+            post=post, reporter=request.user,
+            defaults={'reason': reason, 'note': note},
+        )
+        if not created:
+            return Response(
+                {'detail': 'You have already reported this post.', 'code': 'community.already_reported'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        autohid = maybe_autohide_post(post)
+        return Response({
+            'reported': True,
+            'auto_hidden': autohid,
+            'report_id': report.id,
+        }, status=status.HTTP_201_CREATED)
+
+
+# --- Admin moderation surface ---
+
+class IsStaffUser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.is_staff)
+
+
+class ReportListView(APIView):
+    """GET /api/community/reports/?status=open  — staff-only.
+    Returns the queue of open reports, newest first, for manual review."""
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        status_filter = request.query_params.get('status', 'open')
+        valid_statuses = {choice[0] for choice in PostReport.STATUS_CHOICES}
+        if status_filter and status_filter not in valid_statuses:
+            return Response({'detail': 'invalid status filter'}, status=400)
+
+        qs = PostReport.objects.select_related('post', 'post__user', 'reporter')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        qs = qs.order_by('-created_at')[:200]
+
+        data = [{
+            'id': r.id,
+            'reason': r.reason,
+            'note': r.note,
+            'status': r.status,
+            'reporter': r.reporter.username,
+            'created_at': r.created_at,
+            'post': {
+                'id': r.post_id,
+                'content': r.post.content,
+                'author': r.post.user.username,
+                'is_active': r.post.is_active,
+                'created_at': r.post.created_at,
+                'open_report_count': r.post.reports.filter(status='open').count(),
+            },
+        } for r in qs]
+        return Response(data)
+
+
+class ModeratePostView(APIView):
+    """POST /api/community/posts/<pk>/moderate/ — staff-only.
+    Body: ``{"action": "remove" | "keep" | "dismiss"}``.
+
+    - ``remove`` hides the post (is_active=False) and marks all open reports
+      as ``reviewed_removed``.
+    - ``keep`` leaves the post visible (or unhides it if it was auto-hidden)
+      and marks reports ``reviewed_kept``.
+    - ``dismiss`` marks reports ``dismissed`` without touching the post.
+    """
+    permission_classes = [IsStaffUser]
+
+    def post(self, request, pk):
+        try:
+            post = PublicPost.objects.get(pk=pk)
+        except PublicPost.DoesNotExist:
+            return Response({'detail': 'Post not found.'}, status=404)
+
+        action_kind = request.data.get('action')
+        if action_kind not in ('remove', 'keep', 'dismiss'):
+            return Response({'detail': 'action must be remove / keep / dismiss'}, status=400)
+
+        now = timezone.now()
+        new_status = {
+            'remove':  'reviewed_removed',
+            'keep':    'reviewed_kept',
+            'dismiss': 'dismissed',
+        }[action_kind]
+
+        if action_kind == 'remove':
+            post.is_active = False
+            post.save(update_fields=['is_active'])
+        elif action_kind == 'keep' and not post.is_active:
+            post.is_active = True
+            post.save(update_fields=['is_active'])
+
+        affected = post.reports.filter(status='open').update(
+            status=new_status, reviewed_by=request.user, reviewed_at=now,
+        )
+        return Response({
+            'action': action_kind,
+            'is_active': post.is_active,
+            'reports_resolved': affected,
+        })

@@ -1,13 +1,22 @@
 import { useState, useEffect, useRef } from 'react'
-import { getPosts, createPost, toggleReaction, getMyPosts } from '../api/community'
-import { useTheme } from '../context/ThemeContext'
+import { getPosts, createPost, toggleReaction, reportPost } from '../api/community'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 import { Card, Button, Modal } from '../components/ui'
 import SkeletonCard from '../components/SkeletonCard'
 
+const REPORT_REASONS = [
+  { value: 'spam', icon: '🗑️' },
+  { value: 'harassment', icon: '⚠️' },
+  { value: 'hate', icon: '🚫' },
+  { value: 'self_harm', icon: '🆘' },
+  { value: 'sexual', icon: '🔞' },
+  { value: 'violence', icon: '💢' },
+  { value: 'misinfo', icon: '❓' },
+  { value: 'other', icon: '📝' },
+]
+
 export default function CommunityPage() {
-  const { theme } = useTheme()
   const { t } = useLang()
   const toast = useToast()
   const [posts, setPosts] = useState([])
@@ -18,6 +27,11 @@ export default function CommunityPage() {
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
   const fetchIdRef = useRef(0)
+  // Report dialog state
+  const [reportingPost, setReportingPost] = useState(null)
+  const [reportReason, setReportReason] = useState('spam')
+  const [reportNote, setReportNote] = useState('')
+  const [reportSubmitting, setReportSubmitting] = useState(false)
 
   useEffect(() => {
     document.title = `${t('community.title')} — ${t('app.name')}`
@@ -70,10 +84,52 @@ export default function CommunityPage() {
       // Refresh posts
       fetchPosts(1, false)
     } catch (err) {
-      console.error('Failed to create post:', err)
-      toast?.error(t('common.operationFailed'))
+      // Surface the moderation reject reason if backend sent a `code`
+      const code = err.response?.data?.code
+      const codeMap = {
+        'community.content_blocked': t('community.contentBlocked') || 'Your post was blocked by the content filter.',
+        'community.content_too_short': t('community.contentTooShort'),
+        'community.content_too_long': t('community.contentTooLong') || 'Post is too long.',
+        'community.content_empty': t('community.contentTooShort'),
+      }
+      toast?.error(codeMap[code] || t('common.operationFailed'))
     } finally {
       setCreating(false)
+    }
+  }
+
+  const openReportDialog = (post) => {
+    setReportingPost(post)
+    setReportReason('spam')
+    setReportNote('')
+  }
+
+  const closeReportDialog = () => {
+    setReportingPost(null)
+    setReportNote('')
+  }
+
+  const handleSubmitReport = async () => {
+    if (!reportingPost) return
+    setReportSubmitting(true)
+    try {
+      const res = await reportPost(reportingPost.id, reportReason, reportNote.trim())
+      toast?.success(t('community.reportSubmitted') || 'Report submitted. Thanks for keeping the community safe.')
+      // If the post got auto-hidden by the threshold, drop it from the visible list.
+      if (res.data?.auto_hidden) {
+        setPosts(prev => prev.filter(p => p.id !== reportingPost.id))
+      }
+      closeReportDialog()
+    } catch (err) {
+      const code = err.response?.data?.code
+      const codeMap = {
+        'community.cannot_report_own': t('community.cannotReportOwn') || 'You cannot report your own post.',
+        'community.already_reported': t('community.alreadyReported') || 'You have already reported this post.',
+        'community.invalid_reason': t('community.invalidReason') || 'Invalid report reason.',
+      }
+      toast?.error(codeMap[code] || t('common.operationFailed'))
+    } finally {
+      setReportSubmitting(false)
     }
   }
 
@@ -185,9 +241,21 @@ export default function CommunityPage() {
                 })}
               </div>
 
-              {/* Timestamp */}
-              <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                {new Date(post.created_at).toLocaleString()}
+              {/* Timestamp + report */}
+              <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>{new Date(post.created_at).toLocaleString()}</span>
+                <button
+                  onClick={() => openReportDialog(post)}
+                  className="text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                  title={t('community.report') || 'Report this post'}
+                  aria-label={t('community.report') || 'Report'}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                    <line x1="4" y1="22" x2="4" y2="15"/>
+                  </svg>
+                  <span className="hidden sm:inline">{t('community.report') || 'Report'}</span>
+                </button>
               </div>
             </Card>
           ))}
@@ -245,6 +313,69 @@ export default function CommunityPage() {
               className="bg-gradient-to-r from-rose-500 to-orange-500 text-white"
             >
               {creating ? t('common.saving') : t('community.publish')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Report Post Modal */}
+      <Modal
+        isOpen={!!reportingPost}
+        onClose={closeReportDialog}
+        title={t('community.reportPost') || 'Report this post'}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t('community.reportIntro') || 'Tell us what’s wrong with this post. We review every report.'}
+          </p>
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              {t('community.reportReason') || 'Reason'}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {REPORT_REASONS.map(({ value, icon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setReportReason(value)}
+                  className={`flex items-center gap-2 p-3 rounded-lg border text-sm transition ${
+                    reportReason === value
+                      ? 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                      : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  <span className="text-lg">{icon}</span>
+                  <span>{t(`community.reportReason.${value}`) || value}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              {t('community.reportNote') || 'Additional context (optional)'}
+            </label>
+            <textarea
+              value={reportNote}
+              onChange={(e) => setReportNote(e.target.value.slice(0, 500))}
+              placeholder={t('community.reportNotePlaceholder') || 'Any details a reviewer should know...'}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+              rows={3}
+              maxLength={500}
+            />
+            <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {reportNote.length} / 500
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={closeReportDialog} disabled={reportSubmitting}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={handleSubmitReport}
+              disabled={reportSubmitting}
+              className="bg-rose-600 text-white hover:bg-rose-700"
+            >
+              {reportSubmitting ? t('common.saving') : (t('community.submitReport') || 'Submit report')}
             </Button>
           </div>
         </div>
