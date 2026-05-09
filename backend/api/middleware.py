@@ -1,3 +1,4 @@
+import logging
 from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
@@ -5,6 +6,8 @@ from channels.middleware import BaseMiddleware
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from rest_framework_simplejwt.tokens import AccessToken
+
+logger = logging.getLogger(__name__)
 
 
 @database_sync_to_async
@@ -67,7 +70,9 @@ class UserTimezoneMiddleware:
                     import zoneinfo
                     tz.activate(zoneinfo.ZoneInfo(user_tz))
             except Exception:
-                pass
+                # Token expired / malformed / user gone — fall back to server tz silently.
+                # Logging at debug since this fires on every anon request too.
+                logger.debug('TimezoneMiddleware: could not resolve user tz', exc_info=True)
 
         response = self.get_response(request)
         tz.deactivate()

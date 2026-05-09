@@ -306,6 +306,7 @@ def ingest_rows(
         try:
             progress_cb(total, total)
         except Exception:
-            pass
+            # Final progress report shouldn't sink the whole import.
+            logger.warning('Import: final progress_cb failed', exc_info=True)
 
     return created, errors

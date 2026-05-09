@@ -1,3 +1,4 @@
+import logging
 import math
 import zoneinfo
 from datetime import timedelta
@@ -7,6 +8,8 @@ import pandas as pd
 from django.db.models import Avg
 from django.utils import timezone
 from scipy import stats
+
+logger = logging.getLogger(__name__)
 
 
 def _user_now(user_timezone='Asia/Taipei'):
@@ -465,6 +468,8 @@ def get_health_mood_correlation(user, days=30):
                     ],
                 }
             except Exception:
-                pass
+                # NaN / insufficient variance / shape mismatch — drop this metric,
+                # the rest of the correlation report is still valuable.
+                logger.warning('pearsonr failed for metric %s', metric_type, exc_info=True)
 
     return _sanitize(result)

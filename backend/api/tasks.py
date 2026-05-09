@@ -3,20 +3,9 @@ from datetime import timedelta
 
 from celery import shared_task
 from django.conf import settings
-from django.core.mail import send_mail
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
-
-
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
-def send_email_task(self, subject, message, from_email, recipient_list):
-    """Send email asynchronously via Celery."""
-    try:
-        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
-    except Exception as exc:
-        logger.warning('Email send failed, retrying: %s', exc)
-        self.retry(exc=exc)
 
 
 @shared_task
@@ -89,20 +78,6 @@ def generate_weekly_summaries():
 
     logger.info('Generated %d weekly summaries', created_count)
     return created_count
-
-
-@shared_task
-def send_push_notification_task(user_id, title, body, url='/'):
-    """Send push notification asynchronously."""
-    from api.views import send_push_notification
-    from django.contrib.auth import get_user_model
-
-    User = get_user_model()
-    try:
-        user = User.objects.get(pk=user_id)
-        send_push_notification(user, title, body, url)
-    except User.DoesNotExist:
-        logger.warning('User %d not found for push notification', user_id)
 
 
 @shared_task
