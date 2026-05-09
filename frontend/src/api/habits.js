@@ -1,5 +1,11 @@
 import api from './axios';
-import { getCached, setCache } from './cache';
+import { getCached, setCache, invalidate } from './cache';
+
+// Drop all habit-related cached responses (list, single, calendar, analytics)
+// after any mutation so the next read sees the freshly updated state. Without
+// this, creating a habit and immediately calling loadHabits() returns the
+// 30s-cached list and the new habit appears to be missing until refresh.
+const invalidateHabitCaches = () => invalidate('habit');
 
 // Get all habits
 export const getHabits = () => {
@@ -14,7 +20,10 @@ export const getHabits = () => {
 
 // Create new habit
 export const createHabit = (data) => {
-  return api.post('/habits/', data);
+  return api.post('/habits/', data).then(res => {
+    invalidateHabitCaches();
+    return res;
+  });
 };
 
 // Get single habit
@@ -30,22 +39,34 @@ export const getHabit = (id) => {
 
 // Update habit
 export const updateHabit = (id, data) => {
-  return api.patch(`/habits/${id}/`, data);
+  return api.patch(`/habits/${id}/`, data).then(res => {
+    invalidateHabitCaches();
+    return res;
+  });
 };
 
 // Delete habit
 export const deleteHabit = (id) => {
-  return api.delete(`/habits/${id}/`);
+  return api.delete(`/habits/${id}/`).then(res => {
+    invalidateHabitCaches();
+    return res;
+  });
 };
 
 // Check in (mark as completed today)
 export const checkInHabit = (id, note = '') => {
-  return api.post(`/habits/${id}/check_in/`, { note });
+  return api.post(`/habits/${id}/check_in/`, { note }).then(res => {
+    invalidateHabitCaches();
+    return res;
+  });
 };
 
 // Undo today's check-in
 export const uncheckInHabit = (id) => {
-  return api.delete(`/habits/${id}/check_in/`);
+  return api.delete(`/habits/${id}/check_in/`).then(res => {
+    invalidateHabitCaches();
+    return res;
+  });
 };
 
 // Get 90-day calendar
