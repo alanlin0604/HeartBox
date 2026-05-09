@@ -350,6 +350,8 @@
   "booking.noBookingsDesc": "カウンセラーの時間枠を予約すると、ここに表示されます。",
   "common.cancel": "キャンセル",
   "common.save": "保存",
+  "common.loadFailed": "読み込みに失敗しました",
+  "common.checkConnection": "接続を確認してもう一度お試しください。",
   "common.delete": "削除",
   "common.edit": "編集",
   "common.create": "作成",

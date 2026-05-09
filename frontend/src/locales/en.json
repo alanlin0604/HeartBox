@@ -235,6 +235,8 @@
   "common.loading": "Loading...",
   "common.cancel": "Cancel",
   "common.save": "Save",
+  "common.loadFailed": "Failed to load",
+  "common.checkConnection": "Check your connection and try again.",
   "common.delete": "Delete",
   "common.edit": "Edit",
   "common.create": "Create",

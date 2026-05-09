@@ -351,6 +351,8 @@
   "booking.noBookingsDesc": "與諮商師預約時段後，預約紀錄會顯示在這裡。",
   "common.cancel": "取消",
   "common.save": "儲存",
+  "common.loadFailed": "載入失敗",
+  "common.checkConnection": "請檢查網路連線後再試一次。",
   "common.delete": "刪除",
   "common.edit": "編輯",
   "common.create": "新增",

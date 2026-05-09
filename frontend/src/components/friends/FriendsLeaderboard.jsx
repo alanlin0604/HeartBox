@@ -17,25 +17,49 @@ export default function FriendsLeaderboard() {
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState([])
+  // Distinguish "no data" (legitimately zero friends) from "fetch failed"
+  // (network / 404 / 500). Without this we'd show the empty-state copy on a
+  // backend outage and the user would think the feature works but is empty.
+  const [errored, setErrored] = useState(false)
+  const [reloadCount, setReloadCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setErrored(false)
     getLeaderboard()
       .then(res => {
         if (cancelled) return
         setRows(res.data?.leaderboard || [])
       })
       .catch(() => {
-        if (!cancelled) toast?.error(t('common.operationFailed'))
+        if (cancelled) return
+        setErrored(true)
+        toast?.error(t('common.operationFailed'))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
     return () => { cancelled = true }
-  }, [t, toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadCount])
 
   if (loading) return <LoadingSpinner />
+
+  if (errored) {
+    return (
+      <div className="glass p-8 rounded-xl text-center space-y-3">
+        <p className="text-base font-medium">{t('common.loadFailed') || 'Failed to load'}</p>
+        <p className="text-sm text-slate-400">{t('common.checkConnection') || 'Check your connection and try again.'}</p>
+        <button
+          onClick={() => setReloadCount((n) => n + 1)}
+          className="btn-primary mt-2"
+        >
+          {t('common.retry') || 'Retry'}
+        </button>
+      </div>
+    )
+  }
 
   if (rows.length === 0) {
     return (
