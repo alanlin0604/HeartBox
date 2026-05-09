@@ -94,28 +94,32 @@ jobs:
           ./gradlew assembleDebug
         working-directory: frontend
 
-      - name: Build release APK
+      # Release builds produce BOTH the signed AAB (required by Play Store
+      # since 2021-08) AND a signed APK (handy for sideloading / device QA).
+      # `-Pandroid.injected.signing.store.file` is resolved relative to the
+      # gradle daemon working dir (~/.gradle/daemon/...), not the project,
+      # so an absolute path is required.
+      - name: Build release AAB + APK
         if: inputs.build_type == 'release'
-        # `-Pandroid.injected.signing.store.file` is resolved relative to the
-        # gradle daemon working dir (~/.gradle/daemon/...), not the project,
-        # so an absolute path is required.
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease \
+          ./gradlew bundleRelease assembleRelease \
             -Pandroid.injected.signing.store.file="$PWD/app/heartbox.keystore" \
             -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
             -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
             -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
         working-directory: frontend
 
-      # Upload APK
+      # Upload APK + AAB. Play Store wants the .aab; the .apk is for
+      # device QA before promoting the bundle to production.
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: |
             frontend/android/app/build/outputs/apk/debug/*.apk
             frontend/android/app/build/outputs/apk/release/*.apk
+            frontend/android/app/build/outputs/bundle/release/*.aab
 
   # ===== iOS Build =====
   ios:
