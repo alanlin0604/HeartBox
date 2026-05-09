@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { getSleepAnalysis, getSleepTrends } from '../api/sleep'
-import { useTheme } from '../context/ThemeContext'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 import { Card, Button } from '../components/ui'
@@ -9,7 +8,6 @@ import SleepTrendsChart from '../components/sleep/SleepTrendsChart'
 import SleepCorrelation from '../components/sleep/SleepCorrelation'
 
 export default function SleepAnalysisPage() {
-  const { theme } = useTheme()
   const { t } = useLang()
   const toast = useToast()
   const [analysisData, setAnalysisData] = useState(null)

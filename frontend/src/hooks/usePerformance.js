@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- dev-only perf debug hooks; gated by import.meta.env.DEV */
 import { useEffect, useRef } from 'react'
 
 /**

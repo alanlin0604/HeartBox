@@ -33,32 +33,15 @@ const ChevronRight = () => (
   </svg>
 )
 
-// Sentiment Indicator with Color + Pattern
+// Sentiment Indicator — sr-only label, color/pattern handled separately on the cell.
 const SentimentIndicator = ({ score }) => {
   if (score == null) return null
-
-  let color, pattern, label
-  if (score >= 0.3) {
-    color = 'rgba(34, 197, 94, 0.6)'
-    pattern = 'smile'
-    label = 'Positive'
-  } else if (score >= -0.3) {
-    color = 'rgba(250, 204, 21, 0.5)'
-    pattern = 'neutral'
-    label = 'Neutral'
-  } else if (score >= -0.6) {
-    color = 'rgba(249, 115, 22, 0.5)'
-    pattern = 'slight-frown'
-    label = 'Somewhat negative'
-  } else {
-    color = 'rgba(239, 68, 68, 0.6)'
-    pattern = 'frown'
-    label = 'Negative'
-  }
-
-  return (
-    <span className="sr-only">{label}</span>
-  )
+  let label
+  if (score >= 0.3) label = 'Positive'
+  else if (score >= -0.3) label = 'Neutral'
+  else if (score >= -0.6) label = 'Somewhat negative'
+  else label = 'Negative'
+  return <span className="sr-only">{label}</span>
 }
 
 function sentimentColor(score) {
@@ -67,15 +50,6 @@ function sentimentColor(score) {
   if (score >= -0.3) return 'rgba(250, 204, 21, 0.5)'
   if (score >= -0.6) return 'rgba(249, 115, 22, 0.5)'
   return 'rgba(239, 68, 68, 0.6)'
-}
-
-// Pattern overlay for better differentiation (not just color)
-function sentimentPattern(score) {
-  if (score == null) return 'none'
-  if (score >= 0.3) return 'dots' // positive: dots
-  if (score >= -0.3) return 'none' // neutral: no pattern
-  if (score >= -0.6) return 'lines-diagonal' // somewhat negative: diagonal lines
-  return 'lines-cross' // negative: cross hatch
 }
 
 export default memo(function MoodCalendar() {
@@ -181,7 +155,6 @@ export default memo(function MoodCalendar() {
             const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
             const info = dayMap[dateStr]
             const bg = info ? sentimentColor(info.avg_sentiment) : 'transparent'
-            const pattern = info ? sentimentPattern(info.avg_sentiment) : 'none'
 
             const getSentimentLabel = (score) => {
               if (!score && score !== 0) return ''

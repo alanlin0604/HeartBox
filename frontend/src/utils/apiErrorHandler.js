@@ -93,6 +93,7 @@ function getStatusMessage(status, t) {
  */
 function logError(error, status, message) {
   if (import.meta.env.DEV) {
+    /* eslint-disable no-console -- dev-only structured error log */
     console.group(`🚨 API Error [${status}]`)
     console.error('Message:', message)
     console.error('Error:', error)
@@ -107,6 +108,7 @@ function logError(error, status, message) {
       console.error('Response:', error.response.data)
     }
     console.groupEnd()
+    /* eslint-enable no-console */
   }
 }
 

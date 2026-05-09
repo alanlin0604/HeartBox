@@ -220,7 +220,7 @@ export default function PersonalDashboardPage() {
         breakpoints={{ lg: 1024, md: 768, sm: 0 }}
         cols={{ lg: 12, md: 8, sm: 1 }}
         rowHeight={60}
-        onLayoutChange={(layout, allLayouts) => handleLayoutChange(layout)}
+        onLayoutChange={(layout) => handleLayoutChange(layout)}
         isDraggable={isEditMode}
         isResizable={isEditMode}
         draggableHandle=".drag-handle"

@@ -111,7 +111,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <Card variant="default" padding="lg" className="w-full max-w-md" animate staggerDelay={0.1}>
         <div className="flex justify-end mb-4 gap-2">
-          {LANG_OPTIONS.map((opt, index) => (
+          {LANG_OPTIONS.map((opt) => (
             <Badge
               key={opt.code}
               variant={lang === opt.code ? 'primary' : 'outline'}

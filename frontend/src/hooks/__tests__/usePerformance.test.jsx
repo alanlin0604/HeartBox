@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- test asserts on console.log/warn; spies wired below */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { usePerformance, useRenderCount, useWhyDidYouUpdate } from '../usePerformance'

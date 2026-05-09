@@ -77,7 +77,6 @@ const variantStyles = {
 }
 
 export default function Toast({
-  id,
   type = 'info',
   message,
   duration = 3000,

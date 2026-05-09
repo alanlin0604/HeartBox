@@ -47,6 +47,7 @@ export const config = {
 
 // Log configuration in development (without sensitive data)
 if (import.meta.env.DEV) {
+  // eslint-disable-next-line no-console -- dev-only startup banner
   console.log('📋 App Configuration:', {
     apiUrl: config.apiUrl,
     mode: config.mode,

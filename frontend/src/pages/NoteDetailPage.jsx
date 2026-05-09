@@ -31,7 +31,6 @@ export default function NoteDetailPage() {
   const [editTags, setEditTags] = useState('')
   const [saving, setSaving] = useState(false)
   const [shares, setShares] = useState([])
-  const [sharesLoading, setSharesLoading] = useState(false)
   const editorRef = useRef(null)
   const [editorContent, setEditorContent] = useState('')
 
@@ -48,11 +47,9 @@ export default function NoteDetailPage() {
   }, [id, navigate])
 
   const loadShares = () => {
-    setSharesLoading(true)
     getNoteShares(id)
       .then((res) => setShares(res.data.results || res.data))
       .catch(() => {})
-      .finally(() => setSharesLoading(false))
   }
 
   useEffect(() => {

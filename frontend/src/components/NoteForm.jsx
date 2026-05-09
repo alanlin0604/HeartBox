@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from 'react'
 import { useLang } from '../context/LanguageContext'
-import { getAnalytics } from '../api/analytics'
 import { ACTIVITY_ICONS } from './icons/ActivityIcons'
 import TagInput from './TagInput'
 
@@ -82,7 +81,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     } catch { return fallback }
   }
   const writeJSON = (key, value) => {
-    try { localStorage.setItem(key, JSON.stringify(value)) } catch {}
+    try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* quota / private mode */ }
   }
 
   const [customTemplates, setCustomTemplates] = useState(() => loadJSON(TEMPLATES_KEY, []))
@@ -142,7 +141,6 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const [temperature, setTemperature] = useState('')
   const [selectedTags, setSelectedTags] = useState([])
   const [files, setFiles] = useState([])
-  const [tagSuggestions, setTagSuggestions] = useState([])
   const [selectedActivities, setSelectedActivities] = useState([])
   const [isRecording, setIsRecording] = useState(false)
   const [metadataType, setMetadataType] = useState(null)
@@ -209,16 +207,6 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     return () => {
       recognitionRef.current?.stop()
     }
-  }, [])
-
-  // Fetch frequent tags for autocomplete suggestions
-  useEffect(() => {
-    getAnalytics('week', 90)
-      .then((res) => {
-        const tags = res.data.frequent_tags || []
-        setTagSuggestions(tags.map((t) => t.name))
-      })
-      .catch(() => {})
   }, [])
 
   // Manage object URLs for file previews

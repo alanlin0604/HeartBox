@@ -41,7 +41,7 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
     } catch { /* quota */ }
   }
   const clearSearchHistory = () => {
-    try { localStorage.removeItem('heartbox_search_history') } catch {}
+    try { localStorage.removeItem('heartbox_search_history') } catch { /* private mode */ }
     setShowHistory(false)
   }
   const searchHistory = getSearchHistory()

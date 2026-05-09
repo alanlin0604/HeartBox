@@ -34,9 +34,7 @@ describe('HighlightText', () => {
   })
 
   it('escapes regex special characters in keyword', () => {
-    const { container } = render(
-      <HighlightText text="Price is $100" keyword="$100" />
-    )
+    render(<HighlightText text="Price is $100" keyword="$100" />)
     const mark = screen.getByText('$100')
     expect(mark.tagName).toBe('MARK')
   })

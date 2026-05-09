@@ -470,7 +470,7 @@ export default function SettingsPage() {
                           if (idx >= 0) { const n = [...prev]; n[idx] = { ...n[idx], enabled: val }; return n }
                           return [...prev, { notification_type: type, enabled: val }]
                         })
-                      } catch {}
+                      } catch { /* network err — preference UI stays in last-known state */ }
                     }}
                     className="w-5 h-5 accent-orange-500"
                   />

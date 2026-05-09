@@ -218,14 +218,14 @@ export default function BreathingPage() {
       noiseNodeRef.current = source
       gainNodeRef.current = gain
       setAmbientOn(true)
-    } catch {}
+    } catch { /* AudioContext unavailable / autoplay blocked */ }
   }, [])
 
   const stopAmbient = useCallback(() => {
     try {
       noiseNodeRef.current?.stop()
       audioCtxRef.current?.close()
-    } catch {}
+    } catch { /* node already stopped */ }
     audioCtxRef.current = null
     noiseNodeRef.current = null
     setAmbientOn(false)
@@ -262,7 +262,7 @@ export default function BreathingPage() {
       osc2.stop(now + 3)
 
       setTimeout(() => ctx.close(), 3500)
-    } catch {}
+    } catch { /* AudioContext unavailable */ }
   }, [])
 
   // Play chime when breathing or meditation completes
