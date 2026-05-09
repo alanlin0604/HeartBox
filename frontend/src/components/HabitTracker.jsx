@@ -26,10 +26,15 @@ export default function HabitTracker() {
   const [editingHabit, setEditingHabit] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  const loadHabits = useCallback(async () => {
-    setLoading(true);
+  // `force=true` bypasses the 30s GET cache. We use it after every mutation
+  // so the UI reflects the change without a manual page refresh — relying on
+  // invalidate() alone left a window where the stale cached entry came back.
+  // The `silent` flag skips the loading spinner so an optimistic UI update
+  // (e.g. just-flipped check-in) isn't blanked out during the background sync.
+  const loadHabits = useCallback(async (force = false, silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const res = await getHabits();
+      const res = await getHabits(force);
       // DRF global pagination wraps list responses in {count, results: [...]};
       // tolerate both shapes so the page doesn't crash if pagination is toggled.
       const list = Array.isArray(res.data) ? res.data : (res.data?.results || []);
@@ -38,7 +43,7 @@ export default function HabitTracker() {
       console.error('Failed to load habits:', error);
       toast?.error(t('habit.loadError'));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [t, toast]);
 
@@ -51,7 +56,7 @@ export default function HabitTracker() {
       await createHabit(data);
       toast?.success(t('habit.createSuccess'));
       setShowForm(false);
-      await loadHabits();
+      await loadHabits(true, true);
     } catch (error) {
       console.error('Failed to create habit:', error);
       toast?.error(t('common.operationFailed'));
@@ -64,7 +69,7 @@ export default function HabitTracker() {
       await updateHabit(id, data);
       toast?.success(t('common.saveSuccess'));
       setEditingHabit(null);
-      await loadHabits();
+      await loadHabits(true, true);
     } catch (error) {
       console.error('Failed to update habit:', error);
       toast?.error(t('common.operationFailed'));
@@ -77,7 +82,7 @@ export default function HabitTracker() {
       await deleteHabit(id);
       toast?.success(t('habit.deleteSuccess'));
       setDeleteConfirm(null);
-      await loadHabits();
+      await loadHabits(true, true);
     } catch (error) {
       console.error('Failed to delete habit:', error);
       toast?.error(t('common.operationFailed'));
@@ -85,22 +90,29 @@ export default function HabitTracker() {
   };
 
   const handleCheckIn = async (id, note = '') => {
+    // Optimistic flip so the green checkmark appears the instant the button
+    // is tapped — even before the server round-trip lands.
+    setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, checked_today: true } : h)));
     try {
       await checkInHabit(id, note);
       toast?.success(t('habit.checkInSuccess'));
-      await loadHabits();
+      await loadHabits(true, true);  // pull fresh streak / completion_rate from server
     } catch (error) {
+      // Roll back optimistic state on failure
+      setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, checked_today: false } : h)));
       console.error('Failed to check in:', error);
       toast?.error(t('common.operationFailed'));
     }
   };
 
   const handleUncheckIn = async (id) => {
+    setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, checked_today: false } : h)));
     try {
       await uncheckInHabit(id);
       toast?.success(t('habit.uncheckInSuccess') || t('common.saveSuccess'));
-      await loadHabits();
+      await loadHabits(true, true);
     } catch (error) {
+      setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, checked_today: true } : h)));
       console.error('Failed to undo check-in:', error);
       toast?.error(t('common.operationFailed'));
     }

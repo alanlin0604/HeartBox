@@ -7,11 +7,15 @@ import { getCached, setCache, invalidate } from './cache';
 // 30s-cached list and the new habit appears to be missing until refresh.
 const invalidateHabitCaches = () => invalidate('habit');
 
-// Get all habits
-export const getHabits = () => {
+// Get all habits. Pass `force=true` to bypass the 30s cache after a mutation
+// (HabitTracker does this after create/update/delete/check-in so the UI
+// reflects the change immediately without a full page refresh).
+export const getHabits = (force = false) => {
   const key = 'habits:list';
-  const cached = getCached(key);
-  if (cached) return Promise.resolve(cached);
+  if (!force) {
+    const cached = getCached(key);
+    if (cached) return Promise.resolve(cached);
+  }
   return api.get('/habits/').then(res => {
     setCache(key, res, 30_000); // 30s cache
     return res;
