@@ -126,7 +126,7 @@ export default function RegisterPage() {
         <div className="flex justify-center mb-3">
           <img src="/logo-icon.png" alt="HeartBox" decoding="async" className="w-36 h-36 object-contain" />
         </div>
-        <h1 className="text-2xl font-bold text-center mb-2 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+        <h1 className="text-2xl font-bold text-center mb-2 bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text text-transparent">
           {t('app.displayName')}
         </h1>
         <p className="text-center text-slate-400 text-sm mb-6">{t('register.title')}</p>
@@ -194,7 +194,7 @@ export default function RegisterPage() {
 
         <p className="mt-4 text-center text-sm text-slate-400">
           {t('register.hasAccount')}{' '}
-          <Link to="/login" className="text-purple-500 hover:text-purple-400 opacity-100">
+          <Link to="/login" className="text-orange-500 hover:text-orange-400 opacity-100">
             {t('register.login')}
           </Link>
         </p>

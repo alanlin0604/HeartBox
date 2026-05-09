@@ -268,15 +268,15 @@ export default function JournalPage() {
 
           {/* Daily AI Prompt */}
           {dailyPrompt && (
-            <div className="glass-card p-4 border-l-4 border-purple-500/50">
+            <div className="glass-card p-4 border-l-4 border-orange-500/50">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-purple-400 mb-1">{t('journal.dailyPrompt')}</h3>
+                  <h3 className="text-sm font-semibold text-orange-400 mb-1">{t('journal.dailyPrompt')}</h3>
                   <p className="text-sm opacity-80">{dailyPrompt}</p>
                 </div>
                 <button
                   onClick={() => setPromptContent(dailyPrompt)}
-                  className="text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 hover:bg-purple-500/25 transition-colors cursor-pointer whitespace-nowrap flex-shrink-0"
+                  className="text-xs px-3 py-1.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/20 hover:bg-orange-500/25 transition-colors cursor-pointer whitespace-nowrap flex-shrink-0"
                 >
                   {t('journal.usePrompt')}
                 </button>
@@ -305,7 +305,7 @@ export default function JournalPage() {
               <h2 className="text-lg font-semibold">{showTrash ? t('journal.trash') : t('journal.recentNotes')}</h2>
               <button
                 onClick={() => { setShowTrash(!showTrash); if (!showTrash) loadTrash() }}
-                className={`text-xs px-2 py-1 rounded border transition-colors ${showTrash ? 'border-purple-500 text-purple-500' : 'border-[var(--card-border)] opacity-50 hover:opacity-100'}`}
+                className={`text-xs px-2 py-1 rounded border transition-colors ${showTrash ? 'border-orange-500 text-orange-500' : 'border-[var(--card-border)] opacity-50 hover:opacity-100'}`}
               >
                 {showTrash ? t('journal.recentNotes') : t('journal.trash')}
               </button>
@@ -365,7 +365,7 @@ export default function JournalPage() {
                       <div className="flex items-center justify-between text-xs opacity-60">
                         <span>{t('journal.deletedAt')}: {new Date(note.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang, { timeZone: user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone })}</span>
                         <div className="flex gap-2">
-                          <button onClick={() => handleRestore(note.id)} className="text-purple-500 hover:text-purple-400">{t('journal.restore')}</button>
+                          <button onClick={() => handleRestore(note.id)} className="text-orange-500 hover:text-orange-400">{t('journal.restore')}</button>
                           <button onClick={() => setPermanentDeleteId(note.id)} className="text-red-500 hover:text-red-400">{t('journal.permanentDelete')}</button>
                         </div>
                       </div>
@@ -396,7 +396,7 @@ export default function JournalPage() {
                         type="checkbox"
                         checked={selected.has(note.id)}
                         onChange={() => toggleSelect(note.id)}
-                        className="mt-4 w-4 h-4 accent-purple-500 cursor-pointer flex-shrink-0"
+                        className="mt-4 w-4 h-4 accent-orange-500 cursor-pointer flex-shrink-0"
                       />
                     )}
                     <div className="flex-1 min-w-0 relative" onContextMenu={(e) => handleContextMenu(e, note.id)}>
@@ -484,7 +484,7 @@ export default function JournalPage() {
           <button
             role="menuitem"
             tabIndex={0}
-            className="w-full text-left px-4 py-2 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer focus:bg-purple-500/10 outline-none"
+            className="w-full text-left px-4 py-2 text-sm hover:bg-orange-500/10 transition-colors cursor-pointer focus:bg-orange-500/10 outline-none"
             onClick={() => handleTogglePin(contextMenu.noteId)}
           >
             {notes.find((n) => n.id === contextMenu.noteId)?.is_pinned
@@ -494,7 +494,7 @@ export default function JournalPage() {
           <button
             role="menuitem"
             tabIndex={0}
-            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-purple-500/10 transition-colors cursor-pointer focus:bg-purple-500/10 outline-none"
+            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-orange-500/10 transition-colors cursor-pointer focus:bg-orange-500/10 outline-none"
             onClick={() => { setContextMenu(null); setDeleteConfirmId(contextMenu.noteId) }}
           >
             {t('noteDetail.delete')}

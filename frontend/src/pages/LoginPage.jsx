@@ -122,8 +122,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       {/* Decorative gradient orbs */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full blur-3xl -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-full blur-3xl -z-10" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-orange-500/10 to-rose-500/10 rounded-full blur-3xl -z-10" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-br from-blue-500/10 to-orange-500/10 rounded-full blur-3xl -z-10" />
 
       <Card padding="lg" className="w-full max-w-md">
         {/* Language Selector */}
@@ -153,7 +153,7 @@ export default function LoginPage() {
             src="/logo-icon.png"
             alt="HeartBox"
             decoding="async"
-            className="w-32 h-32 object-contain drop-shadow-[0_0_20px_rgba(167,139,250,0.2)]"
+            className="w-32 h-32 object-contain drop-shadow-[0_0_20px_rgba(251, 146, 60,0.2)]"
           />
         </div>
 

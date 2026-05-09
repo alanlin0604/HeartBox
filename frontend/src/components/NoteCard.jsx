@@ -48,7 +48,7 @@ export default memo(function NoteCard({ note, highlight }) {
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-500 border border-purple-500/20"
+                className="text-xs px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-500 border border-orange-500/20"
               >
                 #{tag}
               </span>

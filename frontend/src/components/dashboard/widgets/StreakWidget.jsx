@@ -29,7 +29,7 @@ export default function StreakWidget({ widgetId, isEditMode, onSettings }) {
   if (loading) {
     return (
       <div className="glass p-4 rounded-xl h-full flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent"></div>
       </div>
     );
   }
@@ -38,7 +38,7 @@ export default function StreakWidget({ widgetId, isEditMode, onSettings }) {
     return (
       <div className="glass p-4 rounded-xl h-full flex flex-col">
         <header className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-purple-500">{t('dashboard.widget.streak.title')}</h3>
+          <h3 className="font-semibold text-orange-500">{t('dashboard.widget.streak.title')}</h3>
           <button
             className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
             onClick={onSettings}
@@ -61,7 +61,7 @@ export default function StreakWidget({ widgetId, isEditMode, onSettings }) {
     return (
       <div className="glass p-4 rounded-xl h-full flex flex-col">
         <header className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-purple-500">{t('dashboard.widget.streak.title')}</h3>
+          <h3 className="font-semibold text-orange-500">{t('dashboard.widget.streak.title')}</h3>
           <button
             className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
             onClick={onSettings}
@@ -95,7 +95,7 @@ export default function StreakWidget({ widgetId, isEditMode, onSettings }) {
         </div>
       )}
       <header className="flex justify-between items-center mb-3">
-        <h3 className="font-semibold text-purple-500">{t('dashboard.widget.streak.title')}</h3>
+        <h3 className="font-semibold text-orange-500">{t('dashboard.widget.streak.title')}</h3>
         <button
           className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
           onClick={onSettings}
@@ -113,7 +113,7 @@ export default function StreakWidget({ widgetId, isEditMode, onSettings }) {
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-500">
               <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
             </svg>
-            <span className="text-5xl font-bold text-purple-500">{data.current_streak || 0}</span>
+            <span className="text-5xl font-bold text-orange-500">{data.current_streak || 0}</span>
           </div>
           <p className="text-sm text-slate-400">{t('dashboard.widget.streak.current')}</p>
         </div>

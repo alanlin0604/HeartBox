@@ -294,12 +294,12 @@ export default function BreathingPage() {
       {courseId && (
         <button
           onClick={() => navigate(`/learn/courses/${courseId}`)}
-          className="glass p-4 w-full text-left flex items-center gap-3 hover:bg-purple-500/5 transition-colors cursor-pointer"
+          className="glass p-4 w-full text-left flex items-center gap-3 hover:bg-orange-500/5 transition-colors cursor-pointer"
         >
           <span className="text-2xl">📚</span>
           <div className="flex-1 min-w-0">
             <p className="text-sm text-slate-400">{t('breathe.learnMore')}</p>
-            <p className="text-sm font-semibold text-purple-400">{t('breathe.learnMoreLink')}</p>
+            <p className="text-sm font-semibold text-orange-400">{t('breathe.learnMoreLink')}</p>
           </div>
         </button>
       )}
@@ -309,7 +309,7 @@ export default function BreathingPage() {
         <button
           onClick={() => setTab('breathing')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'breathing' ? 'bg-purple-500/30 text-purple-400' : 'opacity-60 hover:opacity-100'
+            tab === 'breathing' ? 'bg-orange-500/30 text-orange-400' : 'opacity-60 hover:opacity-100'
           }`}
         >
           {t('breathe.breathingTab')}
@@ -317,7 +317,7 @@ export default function BreathingPage() {
         <button
           onClick={() => setTab('meditation')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'meditation' ? 'bg-purple-500/30 text-purple-400' : 'opacity-60 hover:opacity-100'
+            tab === 'meditation' ? 'bg-orange-500/30 text-orange-400' : 'opacity-60 hover:opacity-100'
           }`}
         >
           {t('breathe.meditationTab')}
@@ -333,10 +333,10 @@ export default function BreathingPage() {
                 <button
                   key={ex.id}
                   onClick={() => startBreathing(ex)}
-                  className="glass p-4 text-left hover:bg-purple-500/5 transition-colors cursor-pointer"
+                  className="glass p-4 text-left hover:bg-orange-500/5 transition-colors cursor-pointer"
                 >
                   <h3 className="font-semibold">{t(ex.nameKey)}</h3>
-                  <p className="text-xs text-purple-400 mt-0.5">{t(`breathe.desc.${ex.id}`)}</p>
+                  <p className="text-xs text-orange-400 mt-0.5">{t(`breathe.desc.${ex.id}`)}</p>
                   <p className="text-sm text-slate-400 mt-1">
                     {ex.steps.map(s => `${t(`breathe.phase.${s.phase}`)} ${s.duration}s`).join(' → ')}
                   </p>
@@ -350,7 +350,7 @@ export default function BreathingPage() {
             <div className="glass p-8 flex flex-col items-center gap-6">
               <div className="relative w-48 h-48 flex items-center justify-center">
                 <div
-                  className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500/40 to-blue-500/40 flex items-center justify-center"
+                  className="w-32 h-32 rounded-full bg-gradient-to-br from-orange-500/40 to-blue-500/40 flex items-center justify-center"
                   style={{
                     transform: `scale(${breathScale})`,
                     transition: `transform ${currentPhase === 'hold' ? '0.3s' : (currentPhase === 'inhale' ? '1s' : '1.5s')} ease-in-out`,
@@ -398,7 +398,7 @@ export default function BreathingPage() {
                     onClick={() => setMedDuration(d)}
                     className={`w-16 h-16 rounded-full text-lg font-semibold transition-all ${
                       medDuration === d
-                        ? 'bg-purple-500/30 text-purple-400 border-2 border-purple-500/40'
+                        ? 'bg-orange-500/30 text-orange-400 border-2 border-orange-500/40'
                         : 'border-2 border-[var(--card-border)] opacity-60 hover:opacity-100'
                     }`}
                   >
@@ -414,7 +414,7 @@ export default function BreathingPage() {
                 <button
                   onClick={toggleAmbient}
                   className={`w-12 h-6 rounded-full transition-colors relative ${
-                    ambientOn ? 'bg-purple-500' : 'bg-[var(--card-border)]'
+                    ambientOn ? 'bg-orange-500' : 'bg-[var(--card-border)]'
                   }`}
                 >
                   <span className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${

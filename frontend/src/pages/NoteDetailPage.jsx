@@ -259,7 +259,7 @@ export default function NoteDetailPage() {
             {tags.map((tag) => (
               <span
                 key={tag}
-                className="text-xs px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-500 border border-purple-500/20"
+                className="text-xs px-2.5 py-1 rounded-full bg-orange-500/15 text-orange-500 border border-orange-500/20"
               >
                 #{tag}
               </span>
@@ -297,8 +297,8 @@ export default function NoteDetailPage() {
 
         {/* AI Feedback */}
         {note.ai_feedback && (
-          <div className="glass-card p-4 border-l-4 border-purple-500/50">
-            <h3 className="text-sm font-semibold text-purple-500 mb-2">{t('noteDetail.aiFeedback')}</h3>
+          <div className="glass-card p-4 border-l-4 border-orange-500/50">
+            <h3 className="text-sm font-semibold text-orange-500 mb-2">{t('noteDetail.aiFeedback')}</h3>
             <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-80">
               {note.ai_feedback}
             </p>
@@ -314,7 +314,7 @@ export default function NoteDetailPage() {
             <h3 className="text-sm font-semibold text-slate-400">{t('share.sharedWith')}</h3>
             <div className="flex flex-wrap gap-2">
               {shares.map((s) => (
-                <span key={s.id} className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                <span key={s.id} className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/20">
                   {s.shared_with_username}
                   <button
                     onClick={() => handleUnshare(s.id)}

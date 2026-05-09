@@ -9,8 +9,8 @@
   "id": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#0f0c29",
-  "theme_color": "#7c3aed",
+  "background_color": "#1c0f0a",
+  "theme_color": "#C2410C",
   "categories": ["health", "lifestyle", "productivity"],
   "icons": [
     {

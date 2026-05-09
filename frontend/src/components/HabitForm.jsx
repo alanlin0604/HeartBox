@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useLang } from '../context/LanguageContext';
 
 const COLORS = [
-  '#8b5cf6', // purple-500
-  '#ec4899', // pink-500
+  '#8b5cf6', // orange-500
+  '#ec4899', // rose-500
   '#3b82f6', // blue-500
   '#10b981', // green-500
   '#f59e0b', // amber-500
@@ -153,7 +153,7 @@ export default function HabitForm({ habit, onSubmit, onClose }) {
                   onClick={() => handleChange('color', color)}
                   className={`
                     w-10 h-10 rounded-lg transition-all duration-200
-                    ${formData.color === color ? 'ring-2 ring-offset-2 ring-purple-500 scale-110' : 'hover:scale-105'}
+                    ${formData.color === color ? 'ring-2 ring-offset-2 ring-orange-500 scale-110' : 'hover:scale-105'}
                   `}
                   style={{ backgroundColor: color }}
                   aria-label={`Color ${color}`}
@@ -175,7 +175,7 @@ export default function HabitForm({ habit, onSubmit, onClose }) {
                   onClick={() => handleChange('icon', icon)}
                   className={`
                     w-12 h-12 rounded-lg text-2xl transition-all duration-200
-                    ${formData.icon === icon ? 'bg-purple-500/20 ring-2 ring-purple-500 scale-110' : 'bg-[var(--card-bg)] hover:bg-purple-500/10 hover:scale-105'}
+                    ${formData.icon === icon ? 'bg-orange-500/20 ring-2 ring-orange-500 scale-110' : 'bg-[var(--card-bg)] hover:bg-orange-500/10 hover:scale-105'}
                   `}
                 >
                   {icon}
@@ -199,8 +199,8 @@ export default function HabitForm({ habit, onSubmit, onClose }) {
                     py-2 px-4 rounded-lg text-sm font-medium transition-all duration-200
                     ${
                       formData.target_frequency === freq.value
-                        ? 'bg-purple-500 text-white'
-                        : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:bg-purple-500/10'
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-[var(--card-bg)] text-[var(--text-secondary)] hover:bg-orange-500/10'
                     }
                   `}
                 >
@@ -237,7 +237,7 @@ export default function HabitForm({ habit, onSubmit, onClose }) {
               onClick={() => handleChange('is_active', !formData.is_active)}
               className={`
                 relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                ${formData.is_active ? 'bg-purple-500' : 'bg-gray-600'}
+                ${formData.is_active ? 'bg-orange-500' : 'bg-gray-600'}
               `}
             >
               <span

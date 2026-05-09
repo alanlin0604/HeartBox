@@ -80,7 +80,7 @@ export default function PsychoContentPage() {
         <button
           onClick={() => setTab('courses')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'courses' ? 'bg-purple-500/30 text-purple-400' : 'opacity-60 hover:opacity-100'
+            tab === 'courses' ? 'bg-orange-500/30 text-orange-400' : 'opacity-60 hover:opacity-100'
           }`}
         >
           {t('learn.coursesTab')}
@@ -88,7 +88,7 @@ export default function PsychoContentPage() {
         <button
           onClick={() => setTab('articles')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === 'articles' ? 'bg-purple-500/30 text-purple-400' : 'opacity-60 hover:opacity-100'
+            tab === 'articles' ? 'bg-orange-500/30 text-orange-400' : 'opacity-60 hover:opacity-100'
           }`}
         >
           {t('learn.articlesTab')}
@@ -110,7 +110,7 @@ export default function PsychoContentPage() {
                 <button
                   key={course.id}
                   onClick={() => navigate(`/learn/courses/${course.id}`)}
-                  className="glass p-5 text-left hover:bg-purple-500/5 transition-colors cursor-pointer"
+                  className="glass p-5 text-left hover:bg-orange-500/5 transition-colors cursor-pointer"
                 >
                   <div className="flex items-start gap-4">
                     <span className="text-3xl">{course.icon_emoji}</span>
@@ -120,7 +120,7 @@ export default function PsychoContentPage() {
                       <div className="mt-3 flex items-center gap-3">
                         <div className="flex-1 h-2 rounded-full bg-[var(--card-border)] overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-purple-500 transition-all"
+                            className="h-full rounded-full bg-orange-500 transition-all"
                             style={{ width: `${pct}%` }}
                           />
                         </div>
@@ -148,7 +148,7 @@ export default function PsychoContentPage() {
                 onClick={() => setCategory(cat.value)}
                 className={`text-sm px-4 py-2 rounded-lg transition-colors ${
                   category === cat.value
-                    ? 'bg-purple-500/30 text-purple-400'
+                    ? 'bg-orange-500/30 text-orange-400'
                     : 'opacity-60 hover:opacity-100'
                 }`}
               >
@@ -170,12 +170,12 @@ export default function PsychoContentPage() {
                   <div key={article.id} className="glass overflow-hidden">
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : article.id)}
-                      className="w-full p-4 flex items-center justify-between text-left hover:bg-purple-500/5 transition-colors cursor-pointer"
+                      className="w-full p-4 flex items-center justify-between text-left hover:bg-orange-500/5 transition-colors cursor-pointer"
                     >
                       <div>
                         <h3 className="font-semibold">{title}</h3>
                         <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-                          <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-400">
+                          <span className="px-2 py-0.5 rounded bg-orange-500/15 text-orange-400">
                             {t(`learn.${article.category}`)}
                           </span>
                           <span>{article.reading_time} {t('learn.minRead')}</span>

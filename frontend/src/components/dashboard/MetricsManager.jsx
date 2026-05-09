@@ -120,7 +120,7 @@ export default function MetricsManager({ isOpen, onClose }) {
         <div className="flex justify-between items-center">
           <button
             onClick={() => setShowForm(!showForm)}
-            className="px-4 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors text-sm font-medium"
           >
             {showForm ? t('common.cancel') : t('dashboard.metrics.create')}
           </button>
@@ -157,7 +157,7 @@ export default function MetricsManager({ isOpen, onClose }) {
               <select
                 value={formData.metric_type}
                 onChange={(e) => setFormData({ ...formData, metric_type: e.target.value })}
-                className="w-full px-3 py-2 bg-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 {metricTypes.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -176,7 +176,7 @@ export default function MetricsManager({ isOpen, onClose }) {
                 min="0"
                 value={formData.target_value}
                 onChange={(e) => setFormData({ ...formData, target_value: e.target.value })}
-                className="w-full px-3 py-2 bg-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-3 py-2 bg-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 placeholder="0.0"
                 required
               />
@@ -184,7 +184,7 @@ export default function MetricsManager({ isOpen, onClose }) {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full px-4 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg transition-colors font-medium disabled:opacity-50"
+              className="w-full px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors font-medium disabled:opacity-50"
             >
               {submitting ? t('common.saving') : t('common.save')}
             </button>
@@ -194,7 +194,7 @@ export default function MetricsManager({ isOpen, onClose }) {
         {/* Metrics List */}
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent"></div>
           </div>
         ) : metrics.length === 0 ? (
           <div className="text-center py-8">

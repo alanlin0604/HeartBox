@@ -9,7 +9,7 @@
   /* Background - Use design token gradient */
   --bg-gradient-from: var(--color-slate-900);
   --bg-gradient-via: var(--color-slate-800);
-  --bg-gradient-to: #312E81;
+  --bg-gradient-to: #3B1A0E;
 
   /* Text hierarchy - Use design tokens */
   --text-primary: var(--color-slate-50);
@@ -164,7 +164,7 @@ h4, h5, h6 {
   margin: 0;
 }
 .tiptap blockquote {
-  border-left: 3px solid rgba(139, 92, 246, 0.5);
+  border-left: 3px solid rgba(249, 115, 22, 0.5);
   padding-left: 1em;
   margin: 0.5em 0;
   opacity: 0.8;
@@ -247,7 +247,7 @@ h4, h5, h6 {
 
 .glass-input:focus {
   border-color: var(--color-primary-400);
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.1);
 }
 
 .glass-input::placeholder {
@@ -269,7 +269,7 @@ h4, h5, h6 {
 [data-theme="light"] .prose.prose-invert {
   --tw-prose-body: var(--text-primary);
   --tw-prose-headings: var(--text-primary);
-  --tw-prose-links: #7c3aed;
+  --tw-prose-links: var(--color-primary-700);
   --tw-prose-bold: var(--text-primary);
   --tw-prose-counters: var(--text-secondary);
   --tw-prose-bullets: var(--text-secondary);
@@ -730,12 +730,12 @@ h4, h5, h6 {
 }
 
 .react-grid-item.react-grid-placeholder {
-  background: rgba(168, 85, 247, 0.2);
+  background: rgba(249, 115, 22, 0.2);
   opacity: 0.5;
   transition-duration: 250ms;
   z-index: 2;
   border-radius: 12px;
-  border: 2px dashed rgba(168, 85, 247, 0.5);
+  border: 2px dashed rgba(249, 115, 22, 0.5);
 }
 
 .react-resizable-handle {
@@ -755,8 +755,8 @@ h4, h5, h6 {
   bottom: 3px;
   width: 8px;
   height: 8px;
-  border-right: 2px solid rgba(168, 85, 247, 0.5);
-  border-bottom: 2px solid rgba(168, 85, 247, 0.5);
+  border-right: 2px solid rgba(249, 115, 22, 0.5);
+  border-bottom: 2px solid rgba(249, 115, 22, 0.5);
 }
 
 .dashboard-widget {

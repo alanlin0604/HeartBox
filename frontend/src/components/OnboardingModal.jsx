@@ -32,7 +32,7 @@ export default function OnboardingModal({ onComplete }) {
         {/* Step indicators */}
         <div className="flex justify-center gap-2">
           {steps.map((_, i) => (
-            <div key={i} className={`w-2 h-2 rounded-full ${i === step ? 'bg-purple-500' : 'bg-gray-400/30'}`} />
+            <div key={i} className={`w-2 h-2 rounded-full ${i === step ? 'bg-orange-500' : 'bg-gray-400/30'}`} />
           ))}
         </div>
 

@@ -76,7 +76,7 @@ export default function MonthlyReview() {
     <div className="space-y-6">
       {/* Header with Month/Year Selector */}
       <div className="glass p-6">
-        <h1 className="text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+        <h1 className="text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-rose-400">
           {t('review.monthlyReview')}
         </h1>
         <div className="flex gap-4">
@@ -85,7 +85,7 @@ export default function MonthlyReview() {
             <select
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="bg-white/10 border border-white/20 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="bg-white/10 border border-white/20 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
               {Array.from({ length: 10 }, (_, i) => now.getFullYear() - i).map((y) => (
                 <option key={y} value={y}>
@@ -99,7 +99,7 @@ export default function MonthlyReview() {
             <select
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
-              className="bg-white/10 border border-white/20 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="bg-white/10 border border-white/20 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
               {monthNames.map((name, idx) => (
                 <option key={idx} value={idx + 1}>
@@ -196,7 +196,7 @@ export default function MonthlyReview() {
             {review.top_tags.map((tag, index) => (
               <span
                 key={index}
-                className="px-4 py-2 rounded-full bg-purple-500/20 border border-purple-500/30 text-sm"
+                className="px-4 py-2 rounded-full bg-orange-500/20 border border-orange-500/30 text-sm"
               >
                 {tag.name} <span className="text-slate-400">({tag.count})</span>
               </span>

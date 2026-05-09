@@ -75,7 +75,7 @@ export default function SleepTracker() {
                 title={t(opt.labelKey)}
                 className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                   quality === opt.value
-                    ? 'bg-purple-500/30 text-purple-400 border border-purple-500/40'
+                    ? 'bg-orange-500/30 text-orange-400 border border-orange-500/40'
                     : 'border border-[var(--card-border)] opacity-60 hover:opacity-100'
                 }`}
               >

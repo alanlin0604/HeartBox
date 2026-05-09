@@ -49,7 +49,7 @@ export default function HabitCard({ habit, onCheckIn, onEdit, onDelete }) {
         <div className="flex space-x-1">
           <button
             onClick={() => onEdit(habit)}
-            className="p-2 hover:bg-purple-500/10 rounded-lg transition-colors"
+            className="p-2 hover:bg-orange-500/10 rounded-lg transition-colors"
             aria-label={t('common.edit')}
           >
             <svg
@@ -112,7 +112,7 @@ export default function HabitCard({ habit, onCheckIn, onEdit, onDelete }) {
 
         {/* Completion Rate */}
         <div className="text-right">
-          <div className="text-2xl font-bold text-purple-400">
+          <div className="text-2xl font-bold text-orange-400">
             {Math.round(habit.completion_rate || 0)}%
           </div>
           <div className="text-xs text-[var(--text-secondary)]">
@@ -124,7 +124,7 @@ export default function HabitCard({ habit, onCheckIn, onEdit, onDelete }) {
       {/* Progress Bar */}
       <div className="h-2 bg-[var(--card-bg)] rounded-full mb-4 overflow-hidden">
         <div
-          className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-1000"
+          className="h-full bg-gradient-to-r from-orange-500 to-rose-500 rounded-full transition-all duration-1000"
           style={{ width: `${habit.completion_rate || 0}%` }}
         />
       </div>
@@ -139,7 +139,7 @@ export default function HabitCard({ habit, onCheckIn, onEdit, onDelete }) {
           ${
             isCheckedToday
               ? 'bg-green-500/20 text-green-400 cursor-default'
-              : 'bg-purple-500 hover:bg-purple-600 text-white'
+              : 'bg-orange-500 hover:bg-orange-600 text-white'
           }
           ${checking ? 'opacity-50 cursor-wait' : ''}
           disabled:opacity-50

@@ -147,7 +147,7 @@ export default function DashboardPage() {
 
         {/* Gratitude stats */}
         {(data?.gratitude_count > 0 || data?.gratitude_streak > 0) && (
-          <Card padding="md" className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20">
+          <Card padding="md" className="bg-gradient-to-br from-orange-500/10 to-rose-500/10 border-orange-500/20">
             <div className="flex flex-wrap items-center gap-6">
               {data?.gratitude_count > 0 && (
                 <div className="flex items-center gap-3">
@@ -303,7 +303,7 @@ export default function DashboardPage() {
                 axisStroke={axisStroke}
                 tooltipStyle={tooltipStyle}
                 bars={[
-                  { dataKey: 'count', name: t('dashboard.tagCount'), fill: '#7c3aed' },
+                  { dataKey: 'count', name: t('dashboard.tagCount'), fill: '#C2410C' },
                 ]}
               />
             </Suspense>
@@ -392,9 +392,9 @@ export default function DashboardPage() {
               </div>
             )}
             {healthData.summary.hrv && (
-              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+              <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
                 <p className="text-xs text-slate-400">{t('health.hrv')}</p>
-                <p className="text-lg font-bold text-purple-400">
+                <p className="text-lg font-bold text-orange-400">
                   {Math.round(healthData.summary.hrv.latest || 0)} ms
                 </p>
                 <p className="text-xs opacity-50">
@@ -459,7 +459,7 @@ export default function DashboardPage() {
         ) : (
           /* Empty state when no health data */
           <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500/20 to-orange-500/20 flex items-center justify-center">
               <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>

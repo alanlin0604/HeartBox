@@ -27,7 +27,7 @@ const AIChatMessage = memo(function AIChatMessage({ msg, lang }) {
       <div
         className={`max-w-[75%] p-3 rounded-2xl ${
           isUser
-            ? 'bg-purple-500/30 rounded-br-md'
+            ? 'bg-orange-500/30 rounded-br-md'
             : 'glass-card rounded-bl-md'
         }`}
       >
@@ -286,7 +286,7 @@ export default function AIChatPage() {
                   onContextMenu={(e) => handleContextMenu(e, session.id)}
                   className={`p-3 rounded-xl cursor-pointer transition-all group ${
                     activeSessionId === session.id
-                      ? 'bg-purple-500/20 border border-purple-500/30'
+                      ? 'bg-orange-500/20 border border-orange-500/30'
                       : 'hover:bg-[var(--card-bg)] border border-transparent'
                   }`}
                 >
@@ -360,9 +360,9 @@ export default function AIChatPage() {
                   <span className="text-lg mr-2 mt-1">🤖</span>
                   <div className="glass-card p-3 rounded-2xl rounded-bl-md">
                     <div className="flex items-center gap-1.5 text-sm opacity-60">
-                      <span className="inline-block w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="inline-block w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="inline-block w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="inline-block w-2 h-2 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="inline-block w-2 h-2 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="inline-block w-2 h-2 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                       <span className="ml-1">{t('aiChat.typing')}</span>
                     </div>
                   </div>
@@ -425,7 +425,7 @@ export default function AIChatPage() {
           <button
             role="menuitem"
             tabIndex={0}
-            className="w-full text-left px-4 py-2 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer focus:bg-purple-500/10 outline-none"
+            className="w-full text-left px-4 py-2 text-sm hover:bg-orange-500/10 transition-colors cursor-pointer focus:bg-orange-500/10 outline-none"
             onClick={() => handleRenameStart(contextMenu.sessionId)}
           >
             {t('aiChat.rename')}
@@ -433,7 +433,7 @@ export default function AIChatPage() {
           <button
             role="menuitem"
             tabIndex={0}
-            className="w-full text-left px-4 py-2 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer focus:bg-purple-500/10 outline-none"
+            className="w-full text-left px-4 py-2 text-sm hover:bg-orange-500/10 transition-colors cursor-pointer focus:bg-orange-500/10 outline-none"
             onClick={() => handleTogglePin(contextMenu.sessionId)}
           >
             {sessions.find((s) => s.id === contextMenu.sessionId)?.is_pinned
@@ -443,7 +443,7 @@ export default function AIChatPage() {
           <button
             role="menuitem"
             tabIndex={0}
-            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-purple-500/10 transition-colors cursor-pointer focus:bg-purple-500/10 outline-none"
+            className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-orange-500/10 transition-colors cursor-pointer focus:bg-orange-500/10 outline-none"
             onClick={() => { setContextMenu(null); setDeleteConfirmId(contextMenu.sessionId) }}
           >
             {t('aiChat.deleteSession')}

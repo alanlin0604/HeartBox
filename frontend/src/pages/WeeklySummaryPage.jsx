@@ -150,7 +150,7 @@ export default function WeeklySummaryPage() {
                 {detail.top_activities.map((act) => {
                   const label = t(`activities.${act.name}`) !== `activities.${act.name}` ? t(`activities.${act.name}`) : act.name
                   return (
-                    <span key={act.name} className="text-xs px-3 py-1 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                    <span key={act.name} className="text-xs px-3 py-1 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/20">
                       {label} ({act.count})
                     </span>
                   )
@@ -160,8 +160,8 @@ export default function WeeklySummaryPage() {
           )}
 
           {detail.ai_summary && (
-            <div className="glass-card p-4 border-l-4 border-purple-500/50">
-              <h3 className="text-sm font-semibold text-purple-400 mb-2">{t('weeklySummary.aiSummary')}</h3>
+            <div className="glass-card p-4 border-l-4 border-orange-500/50">
+              <h3 className="text-sm font-semibold text-orange-400 mb-2">{t('weeklySummary.aiSummary')}</h3>
               <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-80">{detail.ai_summary}</p>
             </div>
           )}
@@ -198,7 +198,7 @@ export default function WeeklySummaryPage() {
               <button
                 key={s.id}
                 onClick={() => handleViewSummary(s.week_start)}
-                className="w-full glass-card p-3 flex items-center justify-between text-sm hover:bg-purple-500/10 transition-colors cursor-pointer"
+                className="w-full glass-card p-3 flex items-center justify-between text-sm hover:bg-orange-500/10 transition-colors cursor-pointer"
               >
                 <span>{t('weeklySummary.weekOf', { date: s.week_start })}</span>
                 <span className="text-slate-400">{s.note_count} {t('weeklySummary.notes')}</span>

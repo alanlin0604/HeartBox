@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext'
 import { isRememberedLogin, setAuthTokens } from '../utils/tokenStorage'
 import { subscribeToPush, unsubscribePush } from '../utils/pushNotifications'
 import useHealthSync from '../hooks/useHealthSync'
+import { getLastHealthBreadcrumbs, clearHealthBreadcrumbs, _crumb as crumb } from '../services/healthKit'
 import { Card, Button, Input, Tabs } from '../components/ui'
 
 export default function SettingsPage() {
@@ -350,7 +351,7 @@ export default function SettingsPage() {
                     }}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                       fontScale === opt.scale
-                        ? 'bg-purple-500/30 text-purple-400'
+                        ? 'bg-orange-500/30 text-orange-400'
                         : 'opacity-60 hover:opacity-100 border border-[var(--card-border)]'
                     }`}
                   >
@@ -436,7 +437,7 @@ export default function SettingsPage() {
                   }}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                     idleTimeout === opt.value
-                      ? 'bg-purple-500/30 text-purple-400'
+                      ? 'bg-orange-500/30 text-orange-400'
                       : 'opacity-60 hover:opacity-100 border border-[var(--card-border)]'
                   }`}
                 >
@@ -472,7 +473,7 @@ export default function SettingsPage() {
                         })
                       } catch {}
                     }}
-                    className="w-5 h-5 accent-purple-500"
+                    className="w-5 h-5 accent-orange-500"
                   />
                 </label>
               )
@@ -499,7 +500,7 @@ export default function SettingsPage() {
                     setPushEnabled(false)
                   }
                 }}
-                className="w-5 h-5 accent-purple-500"
+                className="w-5 h-5 accent-orange-500"
               />
             </label>
           </div>
@@ -532,15 +533,69 @@ export default function SettingsPage() {
                   ) : (
                     <button
                       onClick={async () => {
-                        const ok = await health.connect()
-                        if (ok) toast?.success(t('health.connected'))
-                        else toast?.error(t('health.connectFailed'))
+                        crumb('btn:connect:clicked')
+                        try {
+                          const ok = await health.connect()
+                          crumb('btn:connect:returned', ok)
+                          if (ok) toast?.success(t('health.connected'))
+                          else toast?.error(t('health.connectFailed'))
+                        } catch (e) {
+                          crumb('btn:connect:threw', String(e?.message || e))
+                          toast?.error(t('health.connectFailed'))
+                        }
                       }}
                       className="btn-primary text-sm"
                     >
                       {t('health.connect')}
                     </button>
                   )}
+                </div>
+
+                {/* Diagnostic breadcrumbs — shows where the last connect attempt died.
+                    Survives the native crash via localStorage; helps debug Health
+                    Connect issues without needing adb logcat. */}
+                <div className="text-xs bg-red-500/10 rounded-lg p-3 border border-red-500/30 space-y-2">
+                  <div className="font-bold text-red-400">DEBUG BUILD v7 — patched plugin try/catch</div>
+                  <button
+                    onClick={async () => {
+                      // eslint-disable-next-line no-alert
+                      alert('A: button clicked, about to call health.connect()')
+                      crumb('TEST-BTN:clicked')
+                      try {
+                        const ok = await health.connect()
+                        // eslint-disable-next-line no-alert
+                        alert('E: health.connect() returned: ' + ok)
+                        crumb('TEST-BTN:returned', ok)
+                      } catch (e) {
+                        // eslint-disable-next-line no-alert
+                        alert('X: health.connect() threw: ' + (e?.message || e))
+                        crumb('TEST-BTN:threw', String(e?.message || e))
+                      }
+                    }}
+                    className="w-full py-2 px-3 bg-red-600 text-white rounded text-sm font-bold"
+                  >
+                    🧪 TEST connect (alert probe)
+                  </button>
+                  {(() => {
+                    const crumbs = getLastHealthBreadcrumbs()
+                    if (crumbs.length === 0) return <div className="opacity-60">No breadcrumbs yet.</div>
+                    return (
+                      <details>
+                        <summary className="cursor-pointer text-slate-300">
+                          {crumbs.length} steps, last: {crumbs[crumbs.length - 1].stage}
+                        </summary>
+                        <pre className="mt-2 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed">
+                          {crumbs.map(c => `${c.ts.split('T')[1]?.slice(0, 12)} ${c.stage}${c.payload !== undefined ? ' ' + JSON.stringify(c.payload) : ''}`).join('\n')}
+                        </pre>
+                        <button
+                          onClick={() => { clearHealthBreadcrumbs(); window.location.reload() }}
+                          className="mt-2 text-[11px] underline opacity-70"
+                        >
+                          Clear & reload
+                        </button>
+                      </details>
+                    )
+                  })()}
                 </div>
 
                 {health.enabled && (
@@ -584,7 +639,7 @@ export default function SettingsPage() {
                           {t('health.heartRate')}
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-purple-400" />
+                          <span className="w-2 h-2 rounded-full bg-orange-400" />
                           {t('health.hrv')}
                         </div>
                         <div className="flex items-center gap-2">
@@ -779,13 +834,13 @@ export default function SettingsPage() {
       <Card variant="default" padding="md">
         <h2 className="text-lg font-semibold mb-3">{t('settings.legal')}</h2>
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-          <Link to="/privacy" className="text-purple-400 hover:text-purple-300 underline">
+          <Link to="/privacy" className="text-orange-400 hover:text-orange-300 underline">
             {t('legal.privacy')}
           </Link>
-          <Link to="/privacy#health-data" className="text-purple-400 hover:text-purple-300 underline">
+          <Link to="/privacy#health-data" className="text-orange-400 hover:text-orange-300 underline">
             {t('settings.healthDataPolicy')}
           </Link>
-          <Link to="/terms" className="text-purple-400 hover:text-purple-300 underline">
+          <Link to="/terms" className="text-orange-400 hover:text-orange-300 underline">
             {t('legal.terms')}
           </Link>
         </div>

@@ -374,7 +374,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
             const isActive = tpl.isGratitude && metadataType === 'gratitude'
             const baseColor = tpl.isGratitude
               ? (isActive ? 'bg-amber-500/30 border-amber-400/50' : 'bg-amber-500/20 border-amber-400/40 hover:bg-amber-500/30')
-              : 'bg-purple-500/25 border-purple-400/40 hover:bg-purple-500/35'
+              : 'bg-orange-500/25 border-orange-400/40 hover:bg-orange-500/35'
             return (
               <button
                 key={tpl.id}
@@ -426,7 +426,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
                 autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveTemplate() } }}
               />
-              <button type="button" onClick={saveTemplate} className="text-xs text-purple-400 hover:text-purple-300 cursor-pointer">{t('common.save')}</button>
+              <button type="button" onClick={saveTemplate} className="text-xs text-orange-400 hover:text-orange-300 cursor-pointer">{t('common.save')}</button>
               <button type="button" onClick={() => { setShowSaveTemplate(false); setTemplateName('') }} className="text-xs opacity-50 hover:opacity-100 cursor-pointer">{t('common.cancel')}</button>
             </div>
           )}
@@ -472,7 +472,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
                   focus-visible:outline-2 focus-visible:outline-offset-2
                   focus-visible:outline-[var(--color-primary-400)]
                   ${selectedActivities.includes(act.id)
-                    ? 'bg-purple-500/25 border-purple-500/40 text-purple-400 shadow-sm'
+                    ? 'bg-orange-500/25 border-orange-500/40 text-orange-400 shadow-sm'
                     : 'border-[var(--card-border)] opacity-60 hover:opacity-100 hover:border-[var(--border-primary)]'
                   }
                 `.trim().replace(/\s+/g, ' ')}
@@ -517,7 +517,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="glass-card p-4 border-2 border-dashed border-white/10 rounded-xl text-center cursor-pointer hover:border-purple-500/30 transition-colors"
+        className="glass-card p-4 border-2 border-dashed border-white/10 rounded-xl text-center cursor-pointer hover:border-orange-500/30 transition-colors"
       >
         <p className="text-sm text-slate-400">{t('noteForm.attachHint')}</p>
         <input

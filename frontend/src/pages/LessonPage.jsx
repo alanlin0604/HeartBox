@@ -109,7 +109,7 @@ export default function LessonPage() {
       <div className="glass p-6">
         <h1 className="text-2xl font-bold mb-4">{title}</h1>
         <div className="flex items-center gap-3 text-xs text-slate-400 mb-6">
-          <span className="px-2 py-0.5 rounded bg-purple-500/15 text-purple-400">
+          <span className="px-2 py-0.5 rounded bg-orange-500/15 text-orange-400">
             {t(`learn.${article.category}`)}
           </span>
           <span>{article.reading_time} {t('learn.minRead')}</span>
@@ -150,7 +150,7 @@ export default function LessonPage() {
         {prevLesson ? (
           <button
             onClick={() => navigate(`/learn/courses/${courseId}/lessons/${prevLesson.id}`)}
-            className="glass px-4 py-3 flex items-center gap-2 hover:bg-purple-500/5 transition-colors cursor-pointer text-sm"
+            className="glass px-4 py-3 flex items-center gap-2 hover:bg-orange-500/5 transition-colors cursor-pointer text-sm"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
@@ -161,7 +161,7 @@ export default function LessonPage() {
         {nextLesson ? (
           <button
             onClick={() => navigate(`/learn/courses/${courseId}/lessons/${nextLesson.id}`)}
-            className="glass px-4 py-3 flex items-center gap-2 hover:bg-purple-500/5 transition-colors cursor-pointer text-sm"
+            className="glass px-4 py-3 flex items-center gap-2 hover:bg-orange-500/5 transition-colors cursor-pointer text-sm"
           >
             <span className="text-slate-400">{nextLesson[`title_${langKey}`] || nextLesson.title_en}</span>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

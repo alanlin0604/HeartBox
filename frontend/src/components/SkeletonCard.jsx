@@ -8,14 +8,14 @@ export default function SkeletonCard({ lines = 3, showAvatar = false }) {
     <div className="glass-card p-4 animate-pulse space-y-3">
       {showAvatar && (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-purple-500/10" />
-          <div className="h-4 bg-purple-500/10 rounded w-24" />
+          <div className="w-10 h-10 rounded-full bg-orange-500/10" />
+          <div className="h-4 bg-orange-500/10 rounded w-24" />
         </div>
       )}
       {Array.from({ length: lines }, (_, i) => (
         <div
           key={i}
-          className="h-3 bg-purple-500/10 rounded"
+          className="h-3 bg-orange-500/10 rounded"
           style={{ width: `${85 - i * 15}%` }}
         />
       ))}

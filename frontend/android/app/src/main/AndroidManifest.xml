@@ -61,4 +61,16 @@
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
+
+    <!-- Required by Android 11+ package visibility rules so the Health Connect
+         SDK can locate the Health Connect APK and resolve permission intents.
+         Without this, getPackageInfo() throws NameNotFoundException on devices
+         where Health Connect is a separate APK (Android 13 and below) — the
+         capgo plugin's auth flow then crashes the process. -->
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
+    </queries>
 </manifest>

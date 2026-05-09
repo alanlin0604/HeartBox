@@ -45,8 +45,8 @@ export default memo(function EmptyState({
   // Variant styles for different contexts
   const variants = {
     default: {
-      iconBg: 'bg-gradient-to-br from-purple-500/20 to-pink-500/20',
-      iconColor: 'text-purple-400',
+      iconBg: 'bg-gradient-to-br from-orange-500/20 to-rose-500/20',
+      iconColor: 'text-orange-400',
       titleColor: 'text-[var(--text-primary)]',
       descColor: 'text-[var(--text-secondary)]'
     },

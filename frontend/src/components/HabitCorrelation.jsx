@@ -142,7 +142,7 @@ export default function HabitCorrelation() {
       </ResponsiveContainer>
 
       {/* Legend Explanation */}
-      <div className="mt-6 p-4 bg-purple-500/10 rounded-lg">
+      <div className="mt-6 p-4 bg-orange-500/10 rounded-lg">
         <p className="text-sm text-[var(--text-secondary)]">
           💡 {t('habit.correlationTip')}
         </p>

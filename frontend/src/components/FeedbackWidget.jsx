@@ -44,7 +44,7 @@ export default function FeedbackWidget() {
         <div className="flex items-center gap-2">
           <span className="text-xl">💬</span>
           <div>
-            <p className="text-sm font-semibold group-hover:text-purple-400 transition-colors">
+            <p className="text-sm font-semibold group-hover:text-orange-400 transition-colors">
               {t('feedback.title')}
             </p>
             <p className="text-xs opacity-50 mt-0.5">{t('feedback.subtitle')}</p>

@@ -16,6 +16,28 @@ const LAST_SYNC_KEY = 'heartbox_health_last_sync'
 const HEALTH_ENABLED_KEY = 'heartbox_health_enabled'
 const MIN_SYNC_GAP_MS = 30 * 60 * 1000 // 30 min throttle
 
+// Diagnostic breadcrumb: persists across native crash so we can see where the
+// last Health.* call died. Read on app boot via getLastHealthBreadcrumb().
+const BREADCRUMB_KEY = 'heartbox_health_breadcrumb'
+export function _crumb(stage, payload) { return crumb(stage, payload) }
+function crumb(stage, payload) {
+  try {
+    const entry = { stage, payload, ts: new Date().toISOString() }
+    const existing = JSON.parse(localStorage.getItem(BREADCRUMB_KEY) || '[]')
+    existing.push(entry)
+    // Keep only last 30 entries
+    while (existing.length > 30) existing.shift()
+    localStorage.setItem(BREADCRUMB_KEY, JSON.stringify(existing))
+  } catch { /* ignore */ }
+}
+export function getLastHealthBreadcrumbs() {
+  try { return JSON.parse(localStorage.getItem(BREADCRUMB_KEY) || '[]') }
+  catch { return [] }
+}
+export function clearHealthBreadcrumbs() {
+  try { localStorage.removeItem(BREADCRUMB_KEY) } catch { /* ignore */ }
+}
+
 let inFlight = null
 
 let platform = 'web'
@@ -26,34 +48,23 @@ let isAvailable = false
  * Call this once on app startup.
  */
 export async function initHealthService() {
+  crumb('init:start')
   try {
-    // Get platform (android, ios, or web)
     platform = Capacitor.getPlatform()
-    if (import.meta.env.DEV) {
-      console.log('[HealthKit] Platform detected:', platform)
-    }
+    crumb('init:platform', platform)
 
     if (platform === 'web') {
       isAvailable = false
-      if (import.meta.env.DEV) {
-        console.log('[HealthKit] Running in web mode, health features disabled')
-      }
+      crumb('init:web-skip')
       return
     }
 
-    // Check if health plugin is available
+    crumb('init:before-isAvailable')
     const result = await Health.isAvailable()
+    crumb('init:isAvailable-returned', result)
     isAvailable = result.available
-
-    if (import.meta.env.DEV) {
-      console.log('[HealthKit] Health plugin availability:', result)
-      console.log('[HealthKit] isAvailable:', isAvailable)
-    }
   } catch (error) {
-    // Health plugin not available
-    if (import.meta.env.DEV) {
-      console.error('[HealthKit] Failed to initialize:', error)
-    }
+    crumb('init:error', String(error?.message || error))
     isAvailable = false
   }
 }
@@ -73,31 +84,48 @@ export function getPlatform() {
  * Returns true if granted, false otherwise.
  */
 export async function requestPermissions() {
-  if (!isAvailable) return false
+  crumb('reqPerms:start', { isAvailable })
+  if (!isAvailable) {
+    crumb('reqPerms:not-available')
+    return false
+  }
+
+  // Re-probe right before the heavy call — Health.isAvailable is cheap and
+  // catches the case where HC was uninstalled or its provider isn't ready.
+  try {
+    crumb('reqPerms:before-reprobe')
+    const probe = await Health.isAvailable()
+    crumb('reqPerms:reprobe-returned', probe)
+    if (!probe?.available) {
+      isAvailable = false
+      return false
+    }
+  } catch (e) {
+    crumb('reqPerms:reprobe-error', String(e?.message || e))
+    return false
+  }
 
   try {
+    // eslint-disable-next-line no-alert
+    alert('PRE-NATIVE: about to call Health.requestAuthorization (last alert before native call)')
+    crumb('reqPerms:before-requestAuthorization')
     const result = await Health.requestAuthorization({
       read: [
         'steps',
         'heartRate',
         'heartRateVariability',
         'calories',
-        // Note: 'exerciseTime' not supported on Android Health Connect
-        // Use 'workouts' API separately if needed
         'sleep',
       ],
     })
-
-    if (import.meta.env.DEV) {
-      console.log('[HealthKit] Authorization result:', result)
-    }
-
-    // Check if we got at least some read permissions
+    // eslint-disable-next-line no-alert
+    alert('POST-NATIVE: Health.requestAuthorization returned')
+    crumb('reqPerms:requestAuthorization-returned', result)
     return result.readAuthorized.length > 0
   } catch (error) {
-    if (import.meta.env.DEV) {
-      console.error('[HealthKit] Authorization failed:', error)
-    }
+    // eslint-disable-next-line no-alert
+    alert('CATCH: requestAuthorization threw: ' + (error?.message || error))
+    crumb('reqPerms:requestAuthorization-error', String(error?.message || error))
     return false
   }
 }

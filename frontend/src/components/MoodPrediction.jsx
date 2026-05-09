@@ -86,7 +86,7 @@ export default function MoodPrediction() {
     <div className="space-y-6">
       {/* Header */}
       <div className="glass p-6">
-        <h1 className="text-3xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+        <h1 className="text-3xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-rose-400">
           {t('prediction.title')}
         </h1>
         <p className="text-slate-400">{t('prediction.subtitle')}</p>
@@ -174,7 +174,7 @@ export default function MoodPrediction() {
           <ul className="space-y-2">
             {prediction.recommendations.map((rec, index) => (
               <li key={index} className="flex items-start gap-2 text-sm text-slate-200">
-                <span className="text-purple-400 mt-1">•</span>
+                <span className="text-orange-400 mt-1">•</span>
                 <span>{rec}</span>
               </li>
             ))}

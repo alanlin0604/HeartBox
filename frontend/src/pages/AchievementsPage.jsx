@@ -88,7 +88,7 @@ export default function AchievementsPage() {
             onClick={() => setCategory(cat)}
             className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
               category === cat
-                ? 'bg-purple-500/30 text-purple-500'
+                ? 'bg-orange-500/30 text-orange-500'
                 : 'opacity-60 hover:opacity-100'
             }`}
           >
@@ -141,7 +141,7 @@ export default function AchievementsPage() {
                   className={`h-full rounded-full transition-all duration-500 ${
                     a.unlocked
                       ? 'bg-gradient-to-r from-yellow-500 to-amber-400'
-                      : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                      : 'bg-gradient-to-r from-orange-500 to-rose-500'
                   }`}
                   style={{ width: `${Math.min((a.current / a.threshold) * 100, 100)}%` }}
                 />

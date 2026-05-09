@@ -208,7 +208,7 @@ export default memo(function NotificationBell() {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-xs text-purple-500 hover:text-purple-400 cursor-pointer"
+                className="text-xs text-orange-500 hover:text-orange-400 cursor-pointer"
               >
                 {t('notification.markAllRead')}
               </button>
@@ -226,13 +226,13 @@ export default memo(function NotificationBell() {
               <div
                 key={notif.id}
                 onClick={() => handleClickItem(notif)}
-                className={`p-3 cursor-pointer hover:bg-purple-500/10 transition-colors border-b border-[var(--card-border)] ${
-                  !notif.is_read ? 'bg-purple-500/10' : ''
+                className={`p-3 cursor-pointer hover:bg-orange-500/10 transition-colors border-b border-[var(--card-border)] ${
+                  !notif.is_read ? 'bg-orange-500/10' : ''
                 }`}
               >
                 <div className="flex items-start gap-2">
                   {!notif.is_read && (
-                    <span className="w-2 h-2 rounded-full bg-purple-500 mt-1.5 shrink-0" />
+                    <span className="w-2 h-2 rounded-full bg-orange-500 mt-1.5 shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{NOTIF_TYPE_KEYS[notif.type] ? t(NOTIF_TYPE_KEYS[notif.type]) : notif.data?.assessment_id ? t('notification.type.assessmentShare') : notif.title}</p>

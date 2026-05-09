@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   initHealthService, isHealthAvailable, requestPermissions,
-  checkPermissions, readHealthData, getPlatform,
+  checkPermissions, readHealthData, getPlatform, _crumb as crumb,
 } from '../services/healthKit'
 import { syncHealthData } from '../api/health'
 
@@ -66,18 +66,31 @@ export default function useHealthSync() {
 
   // Connect: request permissions and start syncing
   const connect = useCallback(async () => {
-    if (!isHealthAvailable()) return false
+    // eslint-disable-next-line no-alert
+    alert('B: hook.connect entered. avail=' + isHealthAvailable() + ' platform=' + platform)
+    crumb('hook:connect:start', { available, platform, isAvailFn: isHealthAvailable() })
+    if (!isHealthAvailable()) {
+      crumb('hook:connect:not-available-early-return')
+      return false
+    }
 
+    // eslint-disable-next-line no-alert
+    alert('C: about to call requestPermissions()')
+    crumb('hook:connect:before-requestPermissions')
     const granted = await requestPermissions()
+    // eslint-disable-next-line no-alert
+    alert('D: requestPermissions returned: ' + granted)
+    crumb('hook:connect:requestPermissions-returned', granted)
     if (!granted) return false
 
     localStorage.setItem(HEALTH_ENABLED_KEY, 'true')
     setEnabled(true)
 
-    // Immediate sync
+    crumb('hook:connect:before-doSync')
     await doSync()
+    crumb('hook:connect:after-doSync')
     return true
-  }, [doSync])
+  }, [doSync, available, platform])
 
   // Disconnect: stop syncing
   const disconnect = useCallback(() => {

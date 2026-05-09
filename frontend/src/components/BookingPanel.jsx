@@ -89,7 +89,7 @@ export default function BookingPanel({ counselorId, counselorName, hourlyRate, c
             {hourlyRate && (
               <div className="glass-card p-3 text-center">
                 <p className="text-sm text-slate-400">{t('pricing.sessionFee')}</p>
-                <p className="text-lg font-bold text-purple-500">
+                <p className="text-lg font-bold text-orange-500">
                   {formatPrice(hourlyRate, currency)} / {t('pricing.perHour')}
                 </p>
               </div>
@@ -119,7 +119,7 @@ export default function BookingPanel({ counselorId, counselorName, hourlyRate, c
                         key={slot.id}
                         onClick={() => handleBook(slot)}
                         disabled={booking}
-                        className="glass-card p-3 text-center cursor-pointer hover:border-purple-500/30 transition-all"
+                        className="glass-card p-3 text-center cursor-pointer hover:border-orange-500/30 transition-all"
                       >
                         <span className="text-sm font-medium">
                           {slot.start_time?.slice(0, 5)} - {slot.end_time?.slice(0, 5)}

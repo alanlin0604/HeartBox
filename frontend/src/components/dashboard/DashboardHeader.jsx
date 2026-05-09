@@ -33,7 +33,7 @@ export default function DashboardHeader({
           onClick={onToggleEdit}
           className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
             isEditMode
-              ? 'bg-purple-500 hover:bg-purple-600'
+              ? 'bg-orange-500 hover:bg-orange-600'
               : 'bg-white/10 hover:bg-white/20'
           }`}
         >

@@ -126,7 +126,7 @@ export default function Layout() {
       {/* Skip to main content link for accessibility */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-purple-600 focus:text-white focus:rounded-lg focus:text-sm"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-orange-600 focus:text-white focus:rounded-lg focus:text-sm"
       >
         {t('aria.skipToContent')}
       </a>
@@ -168,7 +168,7 @@ export default function Layout() {
         className="nav-bar sticky z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between"
         style={{ top: 'env(safe-area-inset-top)' }}
       >
-        <h1 className="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent flex items-center gap-2 flex-shrink-0">
+        <h1 className="text-xl font-bold bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text text-transparent flex items-center gap-2 flex-shrink-0">
           <img src="/logo.png" alt="HeartBox" decoding="async" className="w-12 h-12 object-contain" />
           {t('app.displayName')}
         </h1>
@@ -207,7 +207,7 @@ export default function Layout() {
               end={link.end}
               onMouseEnter={() => ROUTE_PRELOADS[link.to]?.()}
               className={({ isActive }) =>
-                `font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
+                `font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${isActive ? 'text-orange-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
               <img src={link.icon} alt="" className="w-6 h-6 lg:w-7 lg:h-7 object-contain flex-shrink-0" />
@@ -218,7 +218,7 @@ export default function Layout() {
             <NavLink
               to="/admin"
               className={({ isActive }) =>
-                `font-medium transition-colors ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
+                `font-medium transition-colors ${isActive ? 'text-orange-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
               {t('nav.admin')}
@@ -235,7 +235,7 @@ export default function Layout() {
               {user?.avatar ? (
                 <img src={user.avatar} alt={user.username} loading="lazy" decoding="async" className="w-7 h-7 rounded-full object-cover border border-white/20" />
               ) : (
-                <span className="w-7 h-7 rounded-full bg-purple-500/25 text-xs flex items-center justify-center">
+                <span className="w-7 h-7 rounded-full bg-orange-500/25 text-xs flex items-center justify-center">
                   {user?.username?.slice(0, 1)?.toUpperCase()}
                 </span>
               )}
@@ -261,7 +261,7 @@ export default function Layout() {
                 {/* Settings */}
                 <button
                   onClick={() => { navigate('/settings'); setMenuOpen(false) }}
-                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer flex items-center gap-2"
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-orange-500/10 transition-colors cursor-pointer flex items-center gap-2"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="3" />
@@ -273,7 +273,7 @@ export default function Layout() {
                 {/* Theme toggle */}
                 <button
                   onClick={() => { toggleTheme(); setMenuOpen(false) }}
-                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-purple-500/10 transition-colors cursor-pointer flex items-center gap-2"
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-orange-500/10 transition-colors cursor-pointer flex items-center gap-2"
                   aria-label={theme === 'dark' ? t('aria.switchToLight') : t('aria.switchToDark')}
                 >
                   <span className="text-base w-4 text-center">{theme === 'dark' ? '☀️' : '🌙'}</span>
@@ -294,7 +294,7 @@ export default function Layout() {
                         onClick={() => { setLang(opt.code); setMenuOpen(false) }}
                         className={`px-2 py-0.5 text-xs rounded cursor-pointer transition-all ${
                           lang === opt.code
-                            ? 'bg-purple-500/30 text-purple-500 font-bold'
+                            ? 'bg-orange-500/30 text-orange-500 font-bold'
                             : 'opacity-50 hover:opacity-100'
                         }`}
                       >
@@ -334,7 +334,7 @@ export default function Layout() {
               end={link.end}
               onClick={() => setMobileNavOpen(false)}
               className={({ isActive }) =>
-                `block font-medium transition-colors py-1 flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
+                `block font-medium transition-colors py-1 flex items-center gap-2 ${isActive ? 'text-orange-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
               <img src={link.icon} alt="" className="w-7 h-7 object-contain" />
@@ -346,7 +346,7 @@ export default function Layout() {
               to="/admin"
               onClick={() => setMobileNavOpen(false)}
               className={({ isActive }) =>
-                `block font-medium transition-colors py-1 ${isActive ? 'text-purple-500' : 'opacity-60 hover:opacity-100'}`
+                `block font-medium transition-colors py-1 ${isActive ? 'text-orange-500' : 'opacity-60 hover:opacity-100'}`
               }
             >
               {t('nav.admin')}
@@ -391,7 +391,7 @@ export default function Layout() {
               end={link.end}
               onClick={() => { setMobileNavOpen(false); setMoreOpen(false) }}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors ${isActive ? 'text-purple-500' : 'opacity-60'}`
+                `flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors ${isActive ? 'text-orange-500' : 'opacity-60'}`
               }
             >
               <img src={link.icon} alt="" className="w-8 h-8 object-contain" />
@@ -402,7 +402,7 @@ export default function Layout() {
           <div className="relative" ref={moreRef}>
             <button
               onClick={() => setMoreOpen(!moreOpen)}
-              className={`flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors cursor-pointer ${moreOpen ? 'text-purple-500' : 'opacity-60'}`}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors cursor-pointer ${moreOpen ? 'text-orange-500' : 'opacity-60'}`}
             >
               <span className="text-lg">{'\u2630'}</span>
               <span>{t('nav.more')}</span>
@@ -415,7 +415,7 @@ export default function Layout() {
                     to={link.to}
                     onClick={() => { setMoreOpen(false); setMobileNavOpen(false) }}
                     className={({ isActive }) =>
-                      `block px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-70 hover:opacity-100'}`
+                      `block px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-orange-500' : 'opacity-70 hover:opacity-100'}`
                     }
                   >
                     <img src={link.icon} alt="" className="w-7 h-7 object-contain" />
@@ -427,7 +427,7 @@ export default function Layout() {
                     to="/admin"
                     onClick={() => { setMoreOpen(false); setMobileNavOpen(false) }}
                     className={({ isActive }) =>
-                      `block px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-purple-500' : 'opacity-70 hover:opacity-100'}`
+                      `block px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-orange-500' : 'opacity-70 hover:opacity-100'}`
                     }
                   >
                     <span>{'\u2699\uFE0F'}</span>
@@ -453,7 +453,7 @@ export default function Layout() {
           <div className="popup-panel p-6 w-full max-w-sm text-center space-y-4" role="dialog" aria-modal="true">
             <h2 className="text-lg font-semibold">{t('idle.warningTitle')}</h2>
             <p className="opacity-70">{t('idle.warningDesc')}</p>
-            <p className="text-3xl font-bold text-purple-500">{idleCountdown}s</p>
+            <p className="text-3xl font-bold text-orange-500">{idleCountdown}s</p>
             <button onClick={dismissIdle} className="btn-primary">{t('idle.stayLoggedIn')}</button>
           </div>
         </div>

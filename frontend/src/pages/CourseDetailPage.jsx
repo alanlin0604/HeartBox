@@ -64,7 +64,7 @@ export default function CourseDetailPage() {
             <div className="mt-4 flex items-center gap-3">
               <div className="flex-1 h-2.5 rounded-full bg-[var(--card-border)] overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-purple-500 transition-all"
+                  className="h-full rounded-full bg-orange-500 transition-all"
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -82,7 +82,7 @@ export default function CourseDetailPage() {
             <button
               key={lesson.id}
               onClick={() => navigate(`/learn/courses/${courseId}/lessons/${lesson.id}`)}
-              className="glass w-full p-4 flex items-center gap-4 hover:bg-purple-500/5 transition-colors cursor-pointer text-left"
+              className="glass w-full p-4 flex items-center gap-4 hover:bg-orange-500/5 transition-colors cursor-pointer text-left"
             >
               <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                 lesson.is_completed

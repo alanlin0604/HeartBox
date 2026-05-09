@@ -70,7 +70,7 @@ const Button = forwardRef(function Button({
     primary: `
       bg-gradient-to-br from-[var(--color-primary-500)] to-[var(--color-primary-400)]
       text-white border-none shadow-sm
-      hover:from-[var(--color-primary-400)] hover:to-[#E879F9]
+      hover:from-[var(--color-primary-400)] hover:to-[var(--color-secondary-400)]
       hover:shadow-md hover:-translate-y-0.5
       active:scale-98 active:shadow-sm
       focus-visible:outline-[var(--color-primary-400)]

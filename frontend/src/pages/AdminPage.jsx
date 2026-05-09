@@ -30,7 +30,7 @@ export default function AdminPage() {
             onClick={() => setTab(i)}
             className={`px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
               tab === i
-                ? 'bg-purple-600 text-white'
+                ? 'bg-orange-600 text-white'
                 : 'glass opacity-70 hover:opacity-100'
             }`}
           >
@@ -63,12 +63,12 @@ function StatsTab() {
   if (!stats) return <p className="opacity-60">{t('common.loading')}</p>
 
   const cards = [
-    { label: t('admin.totalUsers'), value: stats.total_users, color: 'from-purple-500 to-indigo-500' },
-    { label: t('admin.totalNotes'), value: stats.total_notes, color: 'from-pink-500 to-rose-500' },
+    { label: t('admin.totalUsers'), value: stats.total_users, color: 'from-orange-500 to-indigo-500' },
+    { label: t('admin.totalNotes'), value: stats.total_notes, color: 'from-rose-500 to-rose-500' },
     { label: t('admin.pendingCounselors'), value: stats.pending_counselors, color: 'from-amber-500 to-orange-500' },
     { label: t('admin.todayNewUsers'), value: stats.today_new_users, color: 'from-emerald-500 to-teal-500' },
     { label: t('admin.todayNewNotes'), value: stats.today_new_notes, color: 'from-cyan-500 to-blue-500' },
-    { label: t('admin.activeUsers'), value: stats.active_users, color: 'from-violet-500 to-purple-500' },
+    { label: t('admin.activeUsers'), value: stats.active_users, color: 'from-violet-500 to-orange-500' },
   ]
 
   return (
@@ -130,7 +130,7 @@ function UsersTab() {
 
   const roleBadge = (u) => {
     if (u.is_superuser) return <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-400">{t('admin.roleSuperAdmin')}</span>
-    if (u.is_staff) return <span className="px-2 py-0.5 rounded-full text-xs bg-purple-500/20 text-purple-400">{t('admin.roleAdmin')}</span>
+    if (u.is_staff) return <span className="px-2 py-0.5 rounded-full text-xs bg-orange-500/20 text-orange-400">{t('admin.roleAdmin')}</span>
     if (u.is_counselor) return <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/20 text-emerald-400">{t('admin.roleCounselor')}</span>
     return <span className="px-2 py-0.5 rounded-full text-xs bg-gray-500/20 opacity-60">{t('admin.roleUser')}</span>
   }
@@ -142,7 +142,7 @@ function UsersTab() {
         placeholder={t('admin.searchPlaceholder')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="glass w-full md:w-80 px-4 py-2 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+        className="glass w-full md:w-80 px-4 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
       />
 
       {loading ? (
@@ -187,7 +187,7 @@ function UsersTab() {
                         </button>
                         <button
                           onClick={() => requestToggle(u, 'is_staff')}
-                          className={`px-2 py-1 rounded text-xs cursor-pointer ${u.is_staff ? 'bg-gray-500/20 opacity-70 hover:bg-gray-500/30' : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'}`}
+                          className={`px-2 py-1 rounded text-xs cursor-pointer ${u.is_staff ? 'bg-gray-500/20 opacity-70 hover:bg-gray-500/30' : 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'}`}
                         >
                           {u.is_staff ? t('admin.actionRemoveAdmin') : t('admin.actionMakeAdmin')}
                         </button>
@@ -226,7 +226,7 @@ function UsersTab() {
                   </button>
                   <button
                     onClick={() => requestToggle(u, 'is_staff')}
-                    className={`px-2 py-1 rounded text-xs cursor-pointer ${u.is_staff ? 'bg-gray-500/20 opacity-70' : 'bg-purple-500/20 text-purple-400'}`}
+                    className={`px-2 py-1 rounded text-xs cursor-pointer ${u.is_staff ? 'bg-gray-500/20 opacity-70' : 'bg-orange-500/20 text-orange-400'}`}
                   >
                     {u.is_staff ? t('admin.actionRemoveAdmin') : t('admin.actionMakeAdmin')}
                   </button>
@@ -308,7 +308,7 @@ function CounselorsTab() {
             onClick={() => setFilter(f.value)}
             className={`px-3 py-1.5 rounded-lg text-sm cursor-pointer transition-colors ${
               filter === f.value
-                ? 'bg-purple-600 text-white'
+                ? 'bg-orange-600 text-white'
                 : 'glass opacity-70 hover:opacity-100'
             }`}
           >
@@ -394,7 +394,7 @@ function FeedbackTab() {
         </div>
         <div className="glass p-5 rounded-xl">
           <p className="text-sm text-slate-400 mb-1">{t('admin.feedbackTotal', { count: feedbacks.length })}</p>
-          <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-indigo-500 bg-clip-text text-transparent">
+          <p className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-indigo-500 bg-clip-text text-transparent">
             {feedbacks.length}
           </p>
         </div>

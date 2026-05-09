@@ -68,7 +68,7 @@ const Input = forwardRef(function Input({
   const stateStyles = error
     ? 'border-[var(--color-secondary-600)] focus:border-[var(--color-secondary-600)] focus:shadow-[0_0_0_3px_rgba(244,63,94,0.1)]'
     : isFocused
-    ? 'border-[var(--color-primary-400)] shadow-[0_0_0_3px_rgba(167,139,250,0.1)]'
+    ? 'border-[var(--color-primary-400)] shadow-[0_0_0_3px_rgba(251, 146, 60,0.1)]'
     : 'border-[var(--input-border)] hover:border-[var(--border-primary)]'
 
   const widthClass = fullWidth ? 'w-full' : ''

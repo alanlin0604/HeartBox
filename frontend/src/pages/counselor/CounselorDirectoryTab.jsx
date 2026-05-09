@@ -19,7 +19,7 @@ export default function CounselorDirectoryTab({
           <h2 className="text-xl font-semibold">{t('counselor.recommendedTitle')}</h2>
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {recommended.map((c) => (
-              <div key={c.id} className="glass-card p-5 space-y-3 border-purple-500/30">
+              <div key={c.id} className="glass-card p-5 space-y-3 border-orange-500/30">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     {c.avatar && !failedAvatars.has(c.id) ? (
@@ -28,11 +28,11 @@ export default function CounselorDirectoryTab({
                         alt={c.username}
                         loading="lazy"
                         decoding="async"
-                        className="w-10 h-10 rounded-full object-cover border border-purple-500/40"
+                        className="w-10 h-10 rounded-full object-cover border border-orange-500/40"
                         onError={() => setFailedAvatars(prev => new Set(prev).add(c.id))}
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-purple-500/25 flex items-center justify-center text-sm font-semibold">
+                      <div className="w-10 h-10 rounded-full bg-orange-500/25 flex items-center justify-center text-sm font-semibold">
                         {String(c.display_name || c.username || '?').slice(0, 1).toUpperCase()}
                       </div>
                     )}
@@ -41,7 +41,7 @@ export default function CounselorDirectoryTab({
                       <p className="text-sm text-slate-400">{c.specialty}</p>
                     </div>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/20">
                     {t('counselor.recommendedBadge')}
                   </span>
                 </div>
@@ -81,7 +81,7 @@ export default function CounselorDirectoryTab({
                     />
                   ) : (
                   <div
-                    className="w-10 h-10 rounded-full bg-purple-500/25 flex items-center justify-center text-sm font-semibold"
+                    className="w-10 h-10 rounded-full bg-orange-500/25 flex items-center justify-center text-sm font-semibold"
                   >
                     {String(c.display_name || c.username || '?').slice(0, 1).toUpperCase()}
                   </div>
@@ -96,7 +96,7 @@ export default function CounselorDirectoryTab({
               <div className="flex items-center gap-3">
                 <div className="text-sm font-medium">
                   {c.hourly_rate ? (
-                    <span className="text-purple-500">
+                    <span className="text-orange-500">
                       {formatPrice(c.hourly_rate, c.currency)} / {t('pricing.perHour')}
                     </span>
                   ) : (

@@ -88,7 +88,7 @@ export default function AISuggestions({ onUsePrompt }) {
               {onUsePrompt && (
                 <button
                   onClick={handleUsePrompt}
-                  className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 rounded-lg text-sm transition-colors"
+                  className="px-4 py-2 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 rounded-lg text-sm transition-colors"
                 >
                   {t('ai.usePrompt')}
                 </button>
@@ -149,7 +149,7 @@ export default function AISuggestions({ onUsePrompt }) {
               {suggestions.reflection_questions.map((question, index) => (
                 <div
                   key={index}
-                  className="p-3 rounded-lg bg-white/5 border border-white/10 hover:border-purple-500/30 transition-colors cursor-pointer"
+                  className="p-3 rounded-lg bg-white/5 border border-white/10 hover:border-orange-500/30 transition-colors cursor-pointer"
                   onClick={() => onUsePrompt && onUsePrompt(question)}
                 >
                   <p className="text-sm text-slate-200">• {question}</p>

@@ -65,7 +65,7 @@ export default function DataImportPage() {
 
   return (
     <div className="min-h-screen p-6 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-8">
+      <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-rose-400 mb-8">
         {t('import.title')}
       </h1>
 
@@ -76,7 +76,7 @@ export default function DataImportPage() {
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${
                 step >= s
-                  ? 'bg-purple-500 text-white'
+                  ? 'bg-orange-500 text-white'
                   : 'bg-white/10 text-slate-400'
               }`}
             >
@@ -85,7 +85,7 @@ export default function DataImportPage() {
             {s < 4 && (
               <div
                 className={`w-16 h-1 mx-2 ${
-                  step > s ? 'bg-purple-500' : 'bg-white/10'
+                  step > s ? 'bg-orange-500' : 'bg-white/10'
                 }`}
               />
             )}
@@ -106,7 +106,7 @@ export default function DataImportPage() {
           <h2 className="text-xl font-semibold mb-4">{t('import.step1Title')}</h2>
           <p className="text-slate-400 mb-6">{t('import.step1Description')}</p>
 
-          <div className="border-2 border-dashed border-white/20 rounded-lg p-12 text-center hover:border-purple-500/50 transition-colors">
+          <div className="border-2 border-dashed border-white/20 rounded-lg p-12 text-center hover:border-orange-500/50 transition-colors">
             <input
               type="file"
               accept=".csv"
@@ -152,13 +152,13 @@ export default function DataImportPage() {
             <h2 className="text-xl font-semibold mb-4">{t('import.step2Title')}</h2>
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 bg-white/5 rounded-lg">
-                <div className="text-2xl font-bold text-purple-400">
+                <div className="text-2xl font-bold text-orange-400">
                   {preview.total_rows}
                 </div>
                 <div className="text-sm text-slate-400">{t('import.totalRows')}</div>
               </div>
               <div className="p-4 bg-white/5 rounded-lg">
-                <div className="text-2xl font-bold text-purple-400">
+                <div className="text-2xl font-bold text-orange-400">
                   {preview.columns.length}
                 </div>
                 <div className="text-sm text-slate-400">{t('import.totalColumns')}</div>
@@ -231,7 +231,7 @@ export default function DataImportPage() {
             <button
               onClick={handleConfirmImport}
               disabled={loading}
-              className="px-6 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg font-semibold transition-colors disabled:opacity-50"
+              className="px-6 py-2 bg-orange-500 hover:bg-orange-600 rounded-lg font-semibold transition-colors disabled:opacity-50"
             >
               {loading ? t('common.importing') : t('import.confirmImport')}
             </button>
@@ -265,7 +265,7 @@ export default function DataImportPage() {
 
           <button
             onClick={handleReset}
-            className="w-full px-6 py-3 bg-purple-500 hover:bg-purple-600 rounded-lg font-semibold transition-colors"
+            className="w-full px-6 py-3 bg-orange-500 hover:bg-orange-600 rounded-lg font-semibold transition-colors"
           >
             {t('import.importAnother')}
           </button>

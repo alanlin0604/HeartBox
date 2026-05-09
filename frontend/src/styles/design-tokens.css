@@ -1,40 +1,43 @@
 /**
  * HeartBox Design System
- * Modern Wellness UI - Soft Glassmorphism + Warm Minimalism
+ * Modern Wellness UI - Warm Terracotta + Crimson Heart palette
+ * Derived from the new heart-on-treasure-box brand mark.
  *
- * Last Updated: 2026-04-11
+ * Last Updated: 2026-05-09
  */
 
 :root {
   /* ==================== Color Palette ==================== */
 
-  /* Primary - Warm Purple Gradient */
-  --color-primary-50: #FAF5FF;
-  --color-primary-100: #F3E8FF;
-  --color-primary-200: #E9D5FF;
-  --color-primary-300: #D8B4FE;
-  --color-primary-400: #C084FC;
-  --color-primary-500: #A78BFA;
-  --color-primary-600: #9333EA;
-  --color-primary-700: #7E22CE;
-  --color-primary-800: #6B21A8;
-  --color-primary-900: #581C87;
+  /* Primary - Warm Terracotta (the box body, #C2410C). Tailwind orange scale. */
+  --color-primary-50:  #FFF7ED;
+  --color-primary-100: #FFEDD5;
+  --color-primary-200: #FED7AA;
+  --color-primary-300: #FDBA74;
+  --color-primary-400: #FB923C;
+  --color-primary-500: #F97316;
+  --color-primary-600: #EA580C;
+  --color-primary-700: #C2410C;  /* matches logo box body */
+  --color-primary-800: #9A3412;
+  --color-primary-900: #7C2D12;  /* matches logo box rim */
 
-  /* Secondary - Soft Coral */
-  --color-secondary-50: #FFF1F2;
+  /* Secondary - Crimson Heart (the heart, #E11D48). Tailwind rose scale. */
+  --color-secondary-50:  #FFF1F2;
   --color-secondary-100: #FFE4E6;
   --color-secondary-200: #FECDD3;
   --color-secondary-300: #FDA4AF;
   --color-secondary-400: #FB7185;
-  --color-secondary-500: #FCA5A5;
-  --color-secondary-600: #F43F5E;
-  --color-secondary-700: #E11D48;
+  --color-secondary-500: #F43F5E;
+  --color-secondary-600: #E11D48;  /* matches logo heart */
+  --color-secondary-700: #BE123C;
 
-  /* Accent - Golden Sunset */
-  --color-accent-50: #FFFBEB;
-  --color-accent-100: #FEF3C7;
-  --color-accent-200: #FDE68A;
-  --color-accent-300: #FCD34D;
+  /* Accent - Warm Cream (the lid/paper, #FEF3E2). Mostly used for hover wash
+     and highlighted surfaces over dark mode; deeper steps remain golden so
+     existing data-viz callouts stay readable. */
+  --color-accent-50:  #FEF8EF;
+  --color-accent-100: #FEF3E2;  /* matches logo lid cream */
+  --color-accent-200: #FDE3C0;
+  --color-accent-300: #F4A261;  /* matches logo bookmark stripe */
   --color-accent-400: #FBBF24;
   --color-accent-500: #F59E0B;
   --color-accent-600: #D97706;
@@ -81,23 +84,23 @@
   --mood-angry: #F87171;                      /* Red */
 
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-400) 100%);
-  --gradient-primary-hover: linear-gradient(135deg, var(--color-primary-400) 0%, #E879F9 100%);
-  --gradient-sunset: linear-gradient(135deg, #FCA5A5 0%, #FCD34D 50%, #C084FC 100%);
+  --gradient-primary: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-secondary-500) 100%);
+  --gradient-primary-hover: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-secondary-400) 100%);
+  --gradient-sunset: linear-gradient(135deg, var(--color-secondary-400) 0%, var(--color-accent-300) 50%, var(--color-primary-400) 100%);
   --gradient-calm: linear-gradient(135deg, var(--color-calm-400) 0%, var(--color-primary-400) 100%);
   --gradient-success: linear-gradient(135deg, var(--color-success-400) 0%, var(--color-calm-400) 100%);
 
-  /* Background Gradient */
+  /* Background Gradient — warm terracotta tinted dark instead of indigo */
   --bg-gradient-main: linear-gradient(180deg,
     var(--color-slate-900) 0%,
     var(--color-slate-800) 50%,
-    #312E81 100%
+    #3B1A0E 100%
   );
 
   --bg-gradient-dark: linear-gradient(135deg,
     var(--color-slate-950) 0%,
     var(--color-slate-900) 50%,
-    #1E1B4B 100%
+    #2A0F08 100%
   );
 
   /* ==================== Glass Effects ==================== */
@@ -196,10 +199,11 @@
   --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.15);
   --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
 
-  /* Glow Shadows */
-  --shadow-glow-purple: 0 0 20px rgba(167, 139, 250, 0.3);
-  --shadow-glow-pink: 0 0 20px rgba(252, 165, 165, 0.3);
-  --shadow-glow-blue: 0 0 20px rgba(147, 197, 253, 0.3);
+  /* Glow Shadows — name kept for backwards compatibility, hue updated. */
+  --shadow-glow-purple: 0 0 20px rgba(249, 115, 22, 0.3);   /* now warm terracotta */
+  --shadow-glow-pink:   0 0 20px rgba(225, 29, 72, 0.3);     /* now crimson heart */
+  --shadow-glow-blue:   0 0 20px rgba(147, 197, 253, 0.3);
+  --shadow-glow-warm:   0 0 24px rgba(249, 115, 22, 0.35);   /* alias of new primary */
 
   /* ==================== Animation ==================== */
 

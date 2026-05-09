@@ -354,7 +354,7 @@ export default function CounselorListPage() {
         <button
           onClick={() => setTab('list')}
           className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-            tab === 'list' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+            tab === 'list' ? 'bg-orange-500/30 text-orange-500' : 'opacity-60 hover:opacity-100'
           }`}
         >
           {t('counselor.listTab')}
@@ -362,7 +362,7 @@ export default function CounselorListPage() {
         <button
           onClick={() => setTab('chats')}
           className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-            tab === 'chats' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+            tab === 'chats' ? 'bg-orange-500/30 text-orange-500' : 'opacity-60 hover:opacity-100'
           }`}
         >
           {t('counselor.chatsTab')} {conversations.length > 0 && `(${conversations.length})`}
@@ -370,7 +370,7 @@ export default function CounselorListPage() {
         <button
           onClick={() => setTab('bookings')}
           className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-            tab === 'bookings' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+            tab === 'bookings' ? 'bg-orange-500/30 text-orange-500' : 'opacity-60 hover:opacity-100'
           }`}
         >
           {t('booking.myBookings')}
@@ -378,7 +378,7 @@ export default function CounselorListPage() {
         <button
           onClick={() => setTab('reports')}
           className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-            tab === 'reports' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+            tab === 'reports' ? 'bg-orange-500/30 text-orange-500' : 'opacity-60 hover:opacity-100'
           }`}
         >
           {t('report.tab')}
@@ -386,7 +386,7 @@ export default function CounselorListPage() {
         <button
           onClick={() => setTab('apply')}
           className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-            tab === 'apply' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+            tab === 'apply' ? 'bg-orange-500/30 text-orange-500' : 'opacity-60 hover:opacity-100'
           }`}
         >
           {t('counselor.applyTab')}
@@ -395,7 +395,7 @@ export default function CounselorListPage() {
           <button
             onClick={() => setTab('pricing')}
             className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-              tab === 'pricing' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+              tab === 'pricing' ? 'bg-orange-500/30 text-orange-500' : 'opacity-60 hover:opacity-100'
             }`}
           >
             {t('counselor.editProfile')}
@@ -405,7 +405,7 @@ export default function CounselorListPage() {
           <button
             onClick={() => setTab('schedule')}
             className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-              tab === 'schedule' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+              tab === 'schedule' ? 'bg-orange-500/30 text-orange-500' : 'opacity-60 hover:opacity-100'
             }`}
           >
             {t('schedule.tab')}
@@ -415,7 +415,7 @@ export default function CounselorListPage() {
           <button
             onClick={() => setTab('shared')}
             className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-              tab === 'shared' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+              tab === 'shared' ? 'bg-orange-500/30 text-orange-500' : 'opacity-60 hover:opacity-100'
             }`}
           >
             {t('share.receivedTab')} {sharedNotes.length > 0 && `(${sharedNotes.length})`}
@@ -425,7 +425,7 @@ export default function CounselorListPage() {
           <button
             onClick={() => setTab('assessments')}
             className={`px-4 py-2 rounded-xl font-medium transition-all cursor-pointer ${
-              tab === 'assessments' ? 'bg-purple-500/30 text-purple-500' : 'opacity-60 hover:opacity-100'
+              tab === 'assessments' ? 'bg-orange-500/30 text-orange-500' : 'opacity-60 hover:opacity-100'
             }`}
           >
             {t('share.assessmentsTab')} {sharedAssessments.length > 0 && `(${sharedAssessments.length})`}

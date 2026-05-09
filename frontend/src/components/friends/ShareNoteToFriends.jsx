@@ -119,7 +119,7 @@ export default function ShareNoteToFriends({ noteId, onClose, onShared }) {
                       ${isAlreadyShared
                         ? 'bg-green-500/10 border border-green-500/30 opacity-60'
                         : isSelected
-                        ? 'bg-purple-500/20 border border-purple-500/50'
+                        ? 'bg-orange-500/20 border border-orange-500/50'
                         : 'bg-white/5 hover:bg-white/10'
                       }
                     `}
@@ -129,7 +129,7 @@ export default function ShareNoteToFriends({ noteId, onClose, onShared }) {
                       checked={isSelected}
                       onChange={() => toggleFriend(friend.user_id)}
                       disabled={isAlreadyShared}
-                      className="w-5 h-5 rounded accent-purple-500 disabled:opacity-50"
+                      className="w-5 h-5 rounded accent-orange-500 disabled:opacity-50"
                     />
                     {friend.avatar ? (
                       <img
@@ -138,7 +138,7 @@ export default function ShareNoteToFriends({ noteId, onClose, onShared }) {
                         className="w-10 h-10 rounded-full object-cover border border-white/20"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-purple-500/25 flex items-center justify-center text-purple-400 font-semibold">
+                      <div className="w-10 h-10 rounded-full bg-orange-500/25 flex items-center justify-center text-orange-400 font-semibold">
                         {friend.username.slice(0, 1).toUpperCase()}
                       </div>
                     )}

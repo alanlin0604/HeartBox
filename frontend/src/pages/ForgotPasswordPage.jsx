@@ -40,7 +40,7 @@ export default function ForgotPasswordPage() {
             {loading ? t('common.loading') : t('password.sendReset')}
           </button>
         </form>
-        <Link to="/login" className="text-sm text-purple-400 hover:text-purple-300">
+        <Link to="/login" className="text-sm text-orange-400 hover:text-orange-300">
           {t('password.backToLogin')}
         </Link>
       </div>

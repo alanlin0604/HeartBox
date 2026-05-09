@@ -32,7 +32,7 @@ export default function MoodTrendsWidget({ widgetId, isEditMode, onSettings }) {
   if (loading) {
     return (
       <div className="glass p-4 rounded-xl h-full flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent"></div>
       </div>
     );
   }
@@ -41,7 +41,7 @@ export default function MoodTrendsWidget({ widgetId, isEditMode, onSettings }) {
     return (
       <div className="glass p-4 rounded-xl h-full flex flex-col">
         <header className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent">{t('dashboard.widget.moodTrends.title')}</h3>
+          <h3 className="font-semibold bg-gradient-to-r from-rose-400 to-orange-500 bg-clip-text text-transparent">{t('dashboard.widget.moodTrends.title')}</h3>
           <button
             className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
             onClick={onSettings}
@@ -64,7 +64,7 @@ export default function MoodTrendsWidget({ widgetId, isEditMode, onSettings }) {
     return (
       <div className="glass p-4 rounded-xl h-full flex flex-col">
         <header className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent">{t('dashboard.widget.moodTrends.title')}</h3>
+          <h3 className="font-semibold bg-gradient-to-r from-rose-400 to-orange-500 bg-clip-text text-transparent">{t('dashboard.widget.moodTrends.title')}</h3>
           <button
             className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
             onClick={onSettings}
@@ -107,7 +107,7 @@ export default function MoodTrendsWidget({ widgetId, isEditMode, onSettings }) {
         </div>
       )}
       <header className="flex justify-between items-center mb-3">
-        <h3 className="font-semibold bg-gradient-to-r from-pink-400 to-purple-500 bg-clip-text text-transparent">{t('dashboard.widget.moodTrends.title')}</h3>
+        <h3 className="font-semibold bg-gradient-to-r from-rose-400 to-orange-500 bg-clip-text text-transparent">{t('dashboard.widget.moodTrends.title')}</h3>
         <button
           className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
           onClick={onSettings}
@@ -152,7 +152,7 @@ export default function MoodTrendsWidget({ widgetId, isEditMode, onSettings }) {
         </ResponsiveContainer>
         <div className="text-center mt-2">
           <p className="text-xs text-slate-400">
-            {t('dashboard.widget.moodTrends.avgMood')}: <span className="font-semibold text-purple-400">{data.avg_mood?.toFixed(2) || 'N/A'}</span>
+            {t('dashboard.widget.moodTrends.avgMood')}: <span className="font-semibold text-orange-400">{data.avg_mood?.toFixed(2) || 'N/A'}</span>
           </p>
         </div>
       </main>

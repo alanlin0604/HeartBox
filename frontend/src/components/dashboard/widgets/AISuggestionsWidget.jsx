@@ -29,7 +29,7 @@ export default function AISuggestionsWidget({ widgetId, isEditMode, onSettings }
   if (loading) {
     return (
       <div className="glass p-4 rounded-xl h-full flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-400 border-t-transparent"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-400 border-t-transparent"></div>
       </div>
     );
   }
@@ -38,7 +38,7 @@ export default function AISuggestionsWidget({ widgetId, isEditMode, onSettings }
     return (
       <div className="glass p-4 rounded-xl h-full flex flex-col">
         <header className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-purple-400">{t('dashboard.widget.aiSuggestions.title')}</h3>
+          <h3 className="font-semibold text-orange-400">{t('dashboard.widget.aiSuggestions.title')}</h3>
           <button
             className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
             onClick={onSettings}
@@ -61,7 +61,7 @@ export default function AISuggestionsWidget({ widgetId, isEditMode, onSettings }
     return (
       <div className="glass p-4 rounded-xl h-full flex flex-col">
         <header className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-purple-400">{t('dashboard.widget.aiSuggestions.title')}</h3>
+          <h3 className="font-semibold text-orange-400">{t('dashboard.widget.aiSuggestions.title')}</h3>
           <button
             className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
             onClick={onSettings}
@@ -113,7 +113,7 @@ export default function AISuggestionsWidget({ widgetId, isEditMode, onSettings }
         </div>
       )}
       <header className="flex justify-between items-center mb-3">
-        <h3 className="font-semibold text-purple-400">{t('dashboard.widget.aiSuggestions.title')}</h3>
+        <h3 className="font-semibold text-orange-400">{t('dashboard.widget.aiSuggestions.title')}</h3>
         <button
           className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
           onClick={onSettings}
@@ -128,7 +128,7 @@ export default function AISuggestionsWidget({ widgetId, isEditMode, onSettings }
       <main className="flex-1 overflow-auto space-y-2">
         {data.suggestions.map((suggestion, idx) => (
           <div key={idx} className="flex items-start gap-3 p-3 bg-white/5 rounded-lg">
-            <div className="text-purple-400 mt-0.5">
+            <div className="text-orange-400 mt-0.5">
               {suggestionIcons[idx % suggestionIcons.length]}
             </div>
             <p className="text-sm flex-1 opacity-90">{suggestion}</p>

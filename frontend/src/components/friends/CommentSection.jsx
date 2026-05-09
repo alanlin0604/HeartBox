@@ -98,7 +98,7 @@ export default function CommentSection({ shareId, currentUserId, onCommentAdded 
                   className="w-10 h-10 rounded-full object-cover border border-white/20 flex-shrink-0"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-pink-500/25 flex items-center justify-center text-pink-400 text-sm font-semibold flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-rose-500/25 flex items-center justify-center text-rose-400 text-sm font-semibold flex-shrink-0">
                   {comment.commenter_username.slice(0, 1).toUpperCase()}
                 </div>
               )}

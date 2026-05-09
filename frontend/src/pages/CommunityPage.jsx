@@ -112,7 +112,7 @@ export default function CommunityPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text text-transparent">
             {t('community.title')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -121,7 +121,7 @@ export default function CommunityPage() {
         </div>
         <Button
           onClick={() => setShowCreateModal(true)}
-          className="bg-gradient-to-r from-pink-500 to-purple-500 text-white"
+          className="bg-gradient-to-r from-rose-500 to-orange-500 text-white"
         >
           {t('community.createPost')}
         </Button>
@@ -153,7 +153,7 @@ export default function CommunityPage() {
               {/* Category Badge */}
               {post.category && (
                 <div className="mb-4">
-                  <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
                     {post.category}
                   </span>
                 </div>
@@ -172,7 +172,7 @@ export default function CommunityPage() {
                       onClick={() => handleReaction(post.id, type)}
                       className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
                         hasReacted
-                          ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md'
+                          ? 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-md'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
@@ -222,7 +222,7 @@ export default function CommunityPage() {
               value={newPostContent}
               onChange={(e) => setNewPostContent(e.target.value)}
               placeholder={t('community.postPlaceholder')}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
               rows={6}
               maxLength={5000}
             />
@@ -242,7 +242,7 @@ export default function CommunityPage() {
             <Button
               onClick={handleCreatePost}
               disabled={creating || newPostContent.trim().length < 10}
-              className="bg-gradient-to-r from-pink-500 to-purple-500 text-white"
+              className="bg-gradient-to-r from-rose-500 to-orange-500 text-white"
             >
               {creating ? t('common.saving') : t('community.publish')}
             </Button>

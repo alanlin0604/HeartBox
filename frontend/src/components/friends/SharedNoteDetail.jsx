@@ -56,7 +56,7 @@ export default function SharedNoteDetail({ shareId, onClose, onUpdate }) {
                 className="w-10 h-10 rounded-full object-cover border border-white/20"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-purple-500/25 flex items-center justify-center text-purple-400 font-semibold">
+              <div className="w-10 h-10 rounded-full bg-orange-500/25 flex items-center justify-center text-orange-400 font-semibold">
                 {shareData.shared_by_username.slice(0, 1).toUpperCase()}
               </div>
             )}

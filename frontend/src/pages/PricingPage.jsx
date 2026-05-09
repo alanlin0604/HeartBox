@@ -41,8 +41,8 @@ export default function PricingPage() {
 
   const tierColors = {
     free: 'border-gray-500/30',
-    pro: 'border-purple-500/50',
-    counselor: 'border-pink-500/50',
+    pro: 'border-orange-500/50',
+    counselor: 'border-rose-500/50',
   }
 
   if (loading) return <div className="text-center py-12 opacity-60">{t('common.loading')}</div>
@@ -58,7 +58,7 @@ export default function PricingPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {plans.map(plan => (
-          <div key={plan.id} className={`glass p-6 space-y-4 border-2 ${tierColors[plan.tier] || ''} ${currentSub?.plan === plan.id ? 'ring-2 ring-purple-500' : ''}`}>
+          <div key={plan.id} className={`glass p-6 space-y-4 border-2 ${tierColors[plan.tier] || ''} ${currentSub?.plan === plan.id ? 'ring-2 ring-orange-500' : ''}`}>
             <h2 className="text-xl font-bold text-center">{plan.name}</h2>
             <div className="text-center">
               <span className="text-3xl font-bold">{plan.price > 0 ? `${plan.currency} ${plan.price}` : t('subscription.free')}</span>

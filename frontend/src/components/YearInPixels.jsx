@@ -102,7 +102,7 @@ export default function YearInPixels() {
                     <div
                       key={idx}
                       className={`w-3.5 h-3.5 rounded-[2px] transition-all ${
-                        cell.date ? `${getSentimentColor(cell.score)} cursor-pointer hover:ring-1 hover:ring-purple-400` : ''
+                        cell.date ? `${getSentimentColor(cell.score)} cursor-pointer hover:ring-1 hover:ring-orange-400` : ''
                       }`}
                       onMouseEnter={() => cell.date && setHovered(cell)}
                       onMouseLeave={() => setHovered(null)}

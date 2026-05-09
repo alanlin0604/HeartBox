@@ -51,7 +51,7 @@ export default function WidgetSettings({ widget, isOpen, onClose, onToggle }) {
           <button
             onClick={() => onToggle(widget.id)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              widget.enabled ? 'bg-purple-500' : 'bg-slate-600'
+              widget.enabled ? 'bg-orange-500' : 'bg-slate-600'
             }`}
             aria-label={widget.enabled ? t('dashboard.disable') : t('dashboard.enable')}
           >

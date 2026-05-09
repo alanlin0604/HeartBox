@@ -79,7 +79,7 @@ export default function SharedWithMe() {
                         className="w-8 h-8 rounded-full object-cover border border-white/20"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-purple-500/25 flex items-center justify-center text-purple-400 text-xs font-semibold">
+                      <div className="w-8 h-8 rounded-full bg-orange-500/25 flex items-center justify-center text-orange-400 text-xs font-semibold">
                         {share.shared_by_username.slice(0, 1).toUpperCase()}
                       </div>
                     )}

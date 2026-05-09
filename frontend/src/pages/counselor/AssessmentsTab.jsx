@@ -27,7 +27,7 @@ export default function AssessmentsTab({
             return (
               <div
                 key={sa.id}
-                className="glass-card p-4 space-y-2 cursor-pointer hover:border-purple-500/30 transition-all"
+                className="glass-card p-4 space-y-2 cursor-pointer hover:border-orange-500/30 transition-all"
                 onClick={() => setExpandedAssessmentId(isExpanded ? null : sa.id)}
               >
                 <div className="flex items-center justify-between">
@@ -45,7 +45,7 @@ export default function AssessmentsTab({
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs px-2 py-1 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20 font-medium">
+                  <span className="text-xs px-2 py-1 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/20 font-medium">
                     {(sa.assessment_type || '').toUpperCase()}
                   </span>
                   <span className="text-lg font-bold">{sa.total_score}</span>

@@ -32,7 +32,7 @@ export default function ChatsTab({
                 e.stopPropagation()
                 setContextMenu({ x: e.clientX, y: e.clientY, type: 'conversation', id: conv.id })
               }}
-              className="glass-card p-4 cursor-pointer hover:border-purple-500/30 transition-all flex justify-between items-center"
+              className="glass-card p-4 cursor-pointer hover:border-orange-500/30 transition-all flex justify-between items-center"
             >
               <div>
                 <h3 className="font-semibold">{conv.other_user.display_name || conv.other_user.username}</h3>
@@ -45,7 +45,7 @@ export default function ChatsTab({
               <div className="flex items-center gap-3">
                 <div className="text-right">
                   {conv.unread_count > 0 && (
-                    <span className="inline-block bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    <span className="inline-block bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
                       {conv.unread_count}
                     </span>
                   )}

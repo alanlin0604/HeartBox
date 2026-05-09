@@ -25,7 +25,7 @@ export default function SharedNotesTab({
           {sharedNotes.map((sn) => (
             <div
               key={sn.id}
-              className="glass-card p-4 space-y-2 cursor-pointer hover:border-purple-500/30 transition-all"
+              className="glass-card p-4 space-y-2 cursor-pointer hover:border-orange-500/30 transition-all"
               onClick={() => setExpandedNoteId(expandedNoteId === sn.id ? null : sn.id)}
             >
               <div className="flex items-center justify-between">
@@ -50,15 +50,15 @@ export default function SharedNotesTab({
                   {sn.note_tags?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {sn.note_tags.map((tag) => (
-                        <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                        <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/20">
                           {tag}
                         </span>
                       ))}
                     </div>
                   )}
                   {sn.note_ai_feedback && (
-                    <div className="glass-card p-3 border-l-4 border-purple-500/50 mt-2">
-                      <p className="text-xs font-semibold text-purple-400 mb-1">{t('noteDetail.aiFeedback')}</p>
+                    <div className="glass-card p-3 border-l-4 border-orange-500/50 mt-2">
+                      <p className="text-xs font-semibold text-orange-400 mb-1">{t('noteDetail.aiFeedback')}</p>
                       <p className="text-xs opacity-70 whitespace-pre-wrap">{sn.note_ai_feedback}</p>
                     </div>
                   )}
@@ -74,7 +74,7 @@ export default function SharedNotesTab({
                   <span>{t('noteCard.stress')}: {sn.stress_index}/10</span>
                 )}
                 {sn.is_anonymous && (
-                  <span className="text-purple-500">{t('share.anonymousLabel')}</span>
+                  <span className="text-orange-500">{t('share.anonymousLabel')}</span>
                 )}
               </div>
             </div>

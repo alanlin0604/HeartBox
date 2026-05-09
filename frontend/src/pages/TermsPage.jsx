@@ -9,7 +9,7 @@ export default function TermsPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card variant="default" padding="lg" className="w-full max-w-3xl space-y-6" animate staggerDelay={0.1}>
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text text-transparent">
           {t('terms.heading')}
         </h1>
         <p className="text-sm text-slate-400">{t('terms.lastUpdated')}</p>

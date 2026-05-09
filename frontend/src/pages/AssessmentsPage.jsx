@@ -156,7 +156,7 @@ export default function AssessmentsPage() {
             key={type}
             onClick={() => setTab(type)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              tab === type ? 'bg-purple-500/30 text-purple-400' : 'opacity-60 hover:opacity-100'
+              tab === type ? 'bg-orange-500/30 text-orange-400' : 'opacity-60 hover:opacity-100'
             }`}
           >
             {type === 'phq9' ? 'PHQ-9' : 'GAD-7'}
@@ -166,7 +166,7 @@ export default function AssessmentsPage() {
 
       {/* Result banner */}
       {result && (
-        <div className="glass p-4 border-l-4 border-purple-500/50 mb-6">
+        <div className="glass p-4 border-l-4 border-orange-500/50 mb-6">
           <div className="flex items-center justify-between">
             <p className="font-semibold">
               {t('assessment.yourScore')}: <span className={getScoreColor(tab, result.total_score)}>{result.total_score}</span>
@@ -210,7 +210,7 @@ export default function AssessmentsPage() {
                       onClick={() => handleAnswer(i, val)}
                       className={`text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
                         responses[i] === val
-                          ? 'bg-purple-500/30 border-purple-500/40 text-purple-400'
+                          ? 'bg-orange-500/30 border-orange-500/40 text-orange-400'
                           : 'border-[var(--card-border)] opacity-60 hover:opacity-100'
                       }`}
                     >
@@ -251,7 +251,7 @@ export default function AssessmentsPage() {
                       </div>
                       <button
                         onClick={() => openShareModal(item.id)}
-                        className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-colors cursor-pointer"
+                        className="text-xs px-2 py-1 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 transition-colors cursor-pointer"
                       >
                         {t('assessment.shareToCounselor')}
                       </button>
@@ -298,7 +298,7 @@ export default function AssessmentsPage() {
                     key={c.id}
                     onClick={() => handleShare(shareModal, c.id)}
                     disabled={sharingId === c.id}
-                    className="w-full glass-card p-3 flex items-center justify-between text-sm hover:bg-purple-500/10 transition-colors cursor-pointer"
+                    className="w-full glass-card p-3 flex items-center justify-between text-sm hover:bg-orange-500/10 transition-colors cursor-pointer"
                   >
                     <span className="font-medium">{c.display_name || c.username}</span>
                     <span className="text-xs text-slate-400">{c.specialty}</span>

@@ -73,7 +73,7 @@ export default function SleepAnalysisPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
             {t('sleep.analysisTitle')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -96,13 +96,13 @@ export default function SleepAnalysisPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/20">
+        <Card className="p-6 bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/20">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                 {t('sleep.avgDuration')}
               </p>
-              <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+              <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
                 {stats.avg_duration ? `${stats.avg_duration.toFixed(1)}h` : '--'}
               </p>
             </div>

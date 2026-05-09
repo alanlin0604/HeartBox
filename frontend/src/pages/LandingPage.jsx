@@ -39,15 +39,15 @@ export default function LandingPage() {
       {/* Hero Section - Modern Design */}
       <header className="relative flex flex-col items-center justify-center text-center px-4 pt-20 pb-16 sm:pt-24 sm:pb-20 overflow-hidden">
         {/* Decorative gradient orbs */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl -z-10" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl -z-10" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-orange-500/20 to-rose-500/20 rounded-full blur-3xl -z-10" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-br from-blue-500/20 to-orange-500/20 rounded-full blur-3xl -z-10" />
 
         {/* Logo with subtle animation */}
         <div className="mb-6 animate-scale-in">
           <img
             src="/logo.png"
             alt="HeartBox"
-            className="w-24 h-24 drop-shadow-[0_0_20px_rgba(167,139,250,0.3)]"
+            className="w-24 h-24 drop-shadow-[0_0_20px_rgba(251, 146, 60,0.3)]"
           />
         </div>
 
@@ -84,7 +84,7 @@ export default function LandingPage() {
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
             {t('landing.featuresTitle')}
           </h2>
-          <div className="w-20 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full" />
+          <div className="w-20 h-1 bg-gradient-to-r from-orange-500 to-rose-500 mx-auto rounded-full" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -17,7 +17,7 @@ const MessageItem = memo(function MessageItem({ msg, user, lang, t, onQuoteActio
       <div
         className={`max-w-[70%] p-3 rounded-2xl ${
           isMine
-            ? 'bg-purple-500/30 rounded-br-md'
+            ? 'bg-orange-500/30 rounded-br-md'
             : 'glass-card rounded-bl-md'
         }`}
       >
@@ -72,9 +72,9 @@ function QuoteCard({ metadata, t, isMine, onAction }) {
   }
 
   return (
-    <div className="border-2 border-purple-500/50 rounded-xl p-3 space-y-2">
+    <div className="border-2 border-orange-500/50 rounded-xl p-3 space-y-2">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400">
+        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">
           {t('chat.quoteLabel')}
         </span>
         {quoteStatus && (
@@ -84,7 +84,7 @@ function QuoteCard({ metadata, t, isMine, onAction }) {
         )}
       </div>
       <p className="text-sm">{description}</p>
-      <p className="text-lg font-bold text-purple-400">{formatted}</p>
+      <p className="text-lg font-bold text-orange-400">{formatted}</p>
       {!isMine && !quoteStatus && onAction && (
         <div className="flex gap-2 pt-1">
           <button
@@ -302,7 +302,7 @@ export default function ChatPage() {
               {otherUser.avatar ? (
                 <img src={otherUser.avatar} alt={otherUser.display_name || otherUser.username} loading="lazy" decoding="async" className="w-7 h-7 rounded-full object-cover border border-white/20" />
               ) : (
-                <span className="w-7 h-7 rounded-full bg-purple-500/25 text-xs flex items-center justify-center">
+                <span className="w-7 h-7 rounded-full bg-orange-500/25 text-xs flex items-center justify-center">
                   {(otherUser.display_name || otherUser.username)?.slice(0, 1).toUpperCase()}
                 </span>
               )}
@@ -340,8 +340,8 @@ export default function ChatPage() {
 
       {/* Quote Form - Fixed above input */}
       {showQuoteForm && (
-        <form onSubmit={handleSendQuote} className="glass p-3 space-y-2 border-t border-purple-500/30 sticky bottom-16 shrink-0">
-          <div className="flex items-center gap-2 text-sm font-medium text-purple-400">
+        <form onSubmit={handleSendQuote} className="glass p-3 space-y-2 border-t border-orange-500/30 sticky bottom-16 shrink-0">
+          <div className="flex items-center gap-2 text-sm font-medium text-orange-400">
             <span>{t('chat.quoteLabel')}</span>
           </div>
           <textarea
@@ -399,7 +399,7 @@ export default function ChatPage() {
             type="button"
             onClick={() => setShowQuoteForm(!showQuoteForm)}
             className={`px-2 py-1 rounded-lg text-lg cursor-pointer transition-colors ${
-              showQuoteForm ? 'text-purple-400 bg-purple-500/20' : 'opacity-60 hover:opacity-100'
+              showQuoteForm ? 'text-orange-400 bg-orange-500/20' : 'opacity-60 hover:opacity-100'
             }`}
             title={t('chat.sendQuote')}
           >
