@@ -49,7 +49,7 @@ export default function ExportPDFButton() {
         window.URL.revokeObjectURL(url)
       }
       setExpanded(false)
-    } catch (err) {
+    } catch {
       toast?.error(t('common.operationFailed'))
     } finally {
       setLoading(false)

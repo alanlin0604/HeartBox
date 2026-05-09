@@ -12,8 +12,7 @@ import { isRememberedLogin, setAuthTokens } from '../utils/tokenStorage'
 import { subscribeToPush, unsubscribePush } from '../utils/pushNotifications'
 import useHealthSync from '../hooks/useHealthSync'
 import { getLastHealthBreadcrumbs, clearHealthBreadcrumbs, _crumb as crumb } from '../services/healthKit'
-import { Card, Button, Input, Tabs } from '../components/ui'
-
+import { Card, Button, Input } from '../components/ui'
 export default function SettingsPage() {
   const location = useLocation()
   const { user, refreshUser } = useAuth()

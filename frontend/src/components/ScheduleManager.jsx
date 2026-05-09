@@ -28,7 +28,7 @@ export default function ScheduleManager() {
     try {
       const res = await getMySchedule()
       setSlots(res.data)
-    } catch (err) {
+    } catch {
       toast?.error(t('common.operationFailed'))
     } finally {
       setLoading(false)
@@ -49,7 +49,7 @@ export default function ScheduleManager() {
         end_time: endTime,
       })
       setSlots((prev) => [...prev, res.data])
-    } catch (err) {
+    } catch {
       toast?.error(t('common.operationFailed'))
     } finally {
       setSaving(false)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useLang } from '../context/LanguageContext'
 
 export default function EditorToolbar({ editor, showVoice = false, isListening = false, onToggleVoice }) {

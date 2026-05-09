@@ -172,7 +172,7 @@ export default function CounselorListPage() {
       } catch {
         // User is not a counselor — that's fine
       }
-    } catch (err) {
+    } catch {
       toast?.error(t('common.operationFailed'))
       setError(t('counselor.loadFailed'))
     } finally {

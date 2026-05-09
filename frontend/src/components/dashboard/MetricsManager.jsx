@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLang } from '../../context/LanguageContext';
-import { getMetrics, createMetric, updateMetric, deleteMetric, refreshMetrics } from '../../api/dashboard';
+import { getMetrics, createMetric, deleteMetric, refreshMetrics } from '../../api/dashboard'
 import Modal from '../ui/Modal';
 import { LinearProgress } from '../ui/ProgressBar';
 

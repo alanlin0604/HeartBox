@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAnalytics } from '../api/analytics'
 import { getHealthSummary } from '../api/health'
@@ -10,8 +10,7 @@ import SkeletonCard from '../components/SkeletonCard'
 import MoodCalendar from '../components/MoodCalendar'
 import YearInPixels from '../components/YearInPixels'
 import EmptyState from '../components/EmptyState'
-import { Card, Button } from '../components/ui'
-
+import { Card } from '../components/ui'
 const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
 const LazyScatterChart = lazy(() => import('../components/charts/LazyScatterChart'))
 const LazyBarChart = lazy(() => import('../components/charts/LazyBarChart'))

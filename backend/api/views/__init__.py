@@ -273,7 +273,7 @@ _UNDOCUMENTED_VIEWS = [
     'ExportCSVView', 'ExportDataView', 'ExportPDFView',
     'ForgotPasswordView', 'FriendActivityView', 'FriendRequestCreateView',
     'GoogleLoginCallbackView', 'HabitAnalyticsView', 'HealthSummaryView',
-    'HealthSyncView', 'ImportCSVView', 'JournalStreakView',
+    'HealthSyncView', 'ImportCSVView', 'ImportJobStatusView', 'JournalStreakView',
     'LessonCompleteView', 'Login2FAView', 'LogoutOtherDevicesView',
     'MessageListView', 'MonthlyReviewView', 'MoodPredictionView',
     'MySubscriptionView', 'NoteAttachmentUploadView', 'NotificationPreferenceView',

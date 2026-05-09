@@ -206,7 +206,7 @@ export default function ChatPage() {
       const convList = res.data.results || res.data
       const conv = convList.find((c) => c.id === parseInt(id))
       if (conv) setOtherUser(conv.other_user)
-    } catch (err) {
+    } catch {
       toast?.error(t('common.operationFailed'))
     }
   }
@@ -215,7 +215,7 @@ export default function ChatPage() {
     try {
       const res = await getMessages(id)
       setMessages(res.data)
-    } catch (err) {
+    } catch {
       toast?.error(t('common.operationFailed'))
     } finally {
       setLoading(false)

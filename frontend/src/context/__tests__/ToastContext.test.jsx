@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, renderHook, act } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { ToastProvider, useToast } from '../ToastContext'
 
 // Mock LanguageContext

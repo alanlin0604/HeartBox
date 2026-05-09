@@ -328,3 +328,11 @@ class ModeratePostView(APIView):
             'is_active': post.is_active,
             'reports_resolved': affected,
         })
+
+
+# drf_spectacular schema policy — see backend/api/views/__init__.py for rationale.
+_UNDOCUMENTED_VIEWS = ['ReportListView', 'ModeratePostView']
+for _name in _UNDOCUMENTED_VIEWS:
+    _cls = globals().get(_name)
+    if _cls is not None:
+        _cls.schema = None

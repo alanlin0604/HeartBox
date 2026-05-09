@@ -87,7 +87,7 @@ export default function NoteDetailPage() {
       await deleteNote(id)
       toast?.success(t('noteDetail.deleted'))
       navigate('/')
-    } catch (err) {
+    } catch {
       setDeleting(false)
       toast?.error(t('noteDetail.deleteFailed'))
     }

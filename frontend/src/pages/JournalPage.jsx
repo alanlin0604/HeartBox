@@ -103,7 +103,7 @@ export default function JournalPage() {
       setHasNext(!!data.next)
       setTotalCount(data.count || 0)
       setPage(p)
-    } catch (err) {
+    } catch {
       if (id !== fetchIdRef.current) return
       toast?.error(t('common.operationFailed'))
     } finally {
@@ -199,7 +199,7 @@ export default function JournalPage() {
       } else {
         toast?.success(t('noteForm.saved'))
       }
-    } catch (err) {
+    } catch {
       toast?.error(t('noteForm.saveFailed'))
     } finally {
       setCreating(false)

@@ -18,7 +18,7 @@ export default memo(function AlertBanner() {
   useEffect(() => {
     getAlerts()
       .then((res) => setAlerts(res.data.alerts || []))
-      .catch((err) => {
+      .catch(() => {
         toast?.error(t('common.operationFailed'))
       })
   }, [])

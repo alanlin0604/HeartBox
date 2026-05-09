@@ -41,7 +41,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'email', 'bio', 'avatar', 'is_counselor', 'is_staff', 'timezone', 'onboarding_completed', 'email_verified', 'created_at', 'updated_at')
         read_only_fields = ('id', 'username', 'is_staff', 'email_verified', 'created_at', 'updated_at')
 
-    def get_is_counselor(self, obj):
+    def get_is_counselor(self, obj) -> bool:
         return hasattr(obj, 'counselor_profile') and obj.counselor_profile.is_approved
 
 
@@ -54,7 +54,7 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'color', 'created_at', 'note_count')
         read_only_fields = ('id', 'created_at')
 
-    def get_note_count(self, obj):
+    def get_note_count(self, obj) -> int:
         return obj.notes.filter(is_deleted=False).count()
 
     def validate_name(self, value):
@@ -87,7 +87,7 @@ class MoodNoteSerializer(serializers.ModelSerializer):
         if request and getattr(request, 'user', None) and request.user.is_authenticated:
             self.fields['tag_ids'].queryset = Tag.objects.filter(user=request.user)
 
-    def get_attachments(self, obj):
+    def get_attachments(self, obj) -> list:
         return NoteAttachmentSerializer(obj.attachments.all(), many=True).data
 
     def create(self, validated_data):
@@ -198,7 +198,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('id', 'username', 'email', 'is_superuser', 'date_joined', 'created_at')
 
-    def get_is_counselor(self, obj):
+    def get_is_counselor(self, obj) -> bool:
         return hasattr(obj, 'counselor_profile') and obj.counselor_profile.is_approved
 
 
@@ -225,7 +225,7 @@ class ConversationSerializer(serializers.ModelSerializer):
         model = Conversation
         fields = ('id', 'other_user', 'last_message', 'unread_count', 'updated_at')
 
-    def get_other_user(self, obj):
+    def get_other_user(self, obj) -> dict | None:
         request_user = self.context['request'].user
         other = obj.counselor if obj.user == request_user else obj.user
         avatar = None
@@ -238,7 +238,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             display_name = profile.display_name
         return {'id': other.id, 'username': other.username, 'display_name': display_name, 'avatar': avatar}
 
-    def get_last_message(self, obj):
+    def get_last_message(self, obj) -> dict | None:
         # Prefetch ordered by -created_at, so first element is latest
         msgs = obj.messages.all()
         if msgs:
@@ -248,7 +248,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             return {'content': msg.content[:80], 'created_at': msg.created_at, 'sender_name': sender_name}
         return None
 
-    def get_unread_count(self, obj):
+    def get_unread_count(self, obj) -> int:
         request_user = self.context['request'].user
         # Use prefetched messages to avoid N+1
         return sum(1 for m in obj.messages.all() if not m.is_read and m.sender_id != request_user.id)
@@ -300,7 +300,7 @@ class BookingSerializer(serializers.ModelSerializer):
                   'price', 'payment_note', 'created_at', 'has_review')
         read_only_fields = ('id', 'user', 'counselor', 'status', 'price', 'payment_note', 'created_at')
 
-    def get_has_review(self, obj):
+    def get_has_review(self, obj) -> bool:
         return hasattr(obj, 'review') and obj.review is not None
 
 
@@ -335,12 +335,12 @@ class SharedNoteSerializer(serializers.ModelSerializer):
                   'note_created_at', 'note_tags', 'note_ai_feedback', 'shared_with_username')
         read_only_fields = fields
 
-    def get_author(self, obj):
+    def get_author(self, obj) -> str:
         if obj.is_anonymous:
             return None
         return obj.note.user.username
 
-    def get_note_content(self, obj):
+    def get_note_content(self, obj) -> str:
         """Return full note content via decryption (never expose raw search_text)."""
         try:
             return obj.note.content or ''
@@ -348,7 +348,7 @@ class SharedNoteSerializer(serializers.ModelSerializer):
             logger.warning('SharedNote %s: decryption failed: %s', obj.pk, e)
             return ''
 
-    def get_note_tags(self, obj):
+    def get_note_tags(self, obj) -> list:
         meta = obj.note.metadata or {}
         return meta.get('tags', [])
 
@@ -523,7 +523,7 @@ class TherapistReportSerializer(serializers.ModelSerializer):
                   'report_data', 'expires_at', 'share_url', 'created_at')
         read_only_fields = ('id', 'token', 'report_data', 'expires_at', 'share_url', 'created_at')
 
-    def get_share_url(self, obj):
+    def get_share_url(self, obj) -> str:
         request = self.context.get('request')
         if request:
             return request.build_absolute_uri(f'/api/reports/public/{obj.token}/')
@@ -564,12 +564,12 @@ class CourseListSerializer(serializers.ModelSerializer):
                   'category', 'icon_emoji', 'order',
                   'lesson_count', 'completed_count', 'progress_pct')
 
-    def get_lesson_count(self, obj):
+    def get_lesson_count(self, obj) -> int:
         if hasattr(obj, '_lesson_count'):
             return obj._lesson_count
         return obj.lessons.filter(is_published=True).count()
 
-    def get_completed_count(self, obj):
+    def get_completed_count(self, obj) -> int:
         completed_ids = self.context.get('completed_ids', set())
         if completed_ids is not None and hasattr(obj, '_lesson_count'):
             lesson_ids = set(obj.lessons.filter(is_published=True).values_list('id', flat=True))
@@ -581,7 +581,7 @@ class CourseListSerializer(serializers.ModelSerializer):
             user=request.user, article__course=obj, completed_at__isnull=False,
         ).count()
 
-    def get_progress_pct(self, obj):
+    def get_progress_pct(self, obj) -> float:
         total = self.get_lesson_count(obj)
         if total == 0:
             return 0
@@ -622,16 +622,16 @@ class CourseDetailSerializer(serializers.ModelSerializer):
                   'category', 'icon_emoji', 'order',
                   'lessons', 'lesson_count', 'completed_count', 'progress_pct')
 
-    def get_lessons(self, obj):
+    def get_lessons(self, obj) -> list:
         lessons = obj.lessons.filter(is_published=True).order_by('lesson_order')
         return CourseLessonSerializer(lessons, many=True, context=self.context).data
 
-    def get_lesson_count(self, obj):
+    def get_lesson_count(self, obj) -> int:
         if hasattr(obj, '_lesson_count'):
             return obj._lesson_count
         return obj.lessons.filter(is_published=True).count()
 
-    def get_completed_count(self, obj):
+    def get_completed_count(self, obj) -> int:
         completed_ids = self.context.get('completed_ids', set())
         if completed_ids is not None and hasattr(obj, '_lesson_count'):
             lesson_ids = set(obj.lessons.filter(is_published=True).values_list('id', flat=True))
@@ -643,7 +643,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
             user=request.user, article__course=obj, completed_at__isnull=False,
         ).count()
 
-    def get_progress_pct(self, obj):
+    def get_progress_pct(self, obj) -> float:
         total = self.get_lesson_count(obj)
         if total == 0:
             return 0
@@ -728,13 +728,13 @@ class HabitSerializer(serializers.ModelSerializer):
             'streak', 'completion_rate', 'checked_today',
         ]
 
-    def get_checked_today(self, obj):
+    def get_checked_today(self, obj) -> bool:
         """True if a HabitLog exists for today — used by the frontend to show
         the post-check-in 'done' state without needing the dashboard refetch."""
         from django.utils import timezone
         return HabitLog.objects.filter(habit=obj, date=timezone.now().date()).exists()
 
-    def get_streak(self, obj):
+    def get_streak(self, obj) -> int:
         """Calculate current consecutive days streak."""
         from datetime import timedelta
         from django.utils import timezone
@@ -754,7 +754,7 @@ class HabitSerializer(serializers.ModelSerializer):
 
         return streak
 
-    def get_completion_rate(self, obj):
+    def get_completion_rate(self, obj) -> float:
         """Calculate completion rate for last 30 days."""
         from datetime import timedelta
         from django.utils import timezone
@@ -868,7 +868,7 @@ class FriendshipSerializer(serializers.ModelSerializer):
         fields = ['id', 'user_id', 'username', 'email', 'avatar', 'streak_days', 'total_entries', 'friendship_since']
         read_only_fields = ['id', 'friendship_since']
 
-    def get_streak_days(self, obj):
+    def get_streak_days(self, obj) -> int:
         """Get friend's current streak."""
         try:
             streak = JournalStreak.objects.get(user=obj.friend)
@@ -876,7 +876,7 @@ class FriendshipSerializer(serializers.ModelSerializer):
         except JournalStreak.DoesNotExist:
             return 0
 
-    def get_total_entries(self, obj):
+    def get_total_entries(self, obj) -> int:
         """Get friend's total journal entries."""
         return MoodNote.objects.filter(user=obj.friend, is_deleted=False).count()
 
@@ -916,14 +916,14 @@ class SharedWithFriendSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'shared_at']
 
-    def get_content_preview(self, obj):
+    def get_content_preview(self, obj) -> str:
         """Return first 100 chars of note content."""
         content = obj.note.search_text
         if len(content) > 100:
             return content[:100] + '...'
         return content
 
-    def get_comment_count(self, obj):
+    def get_comment_count(self, obj) -> int:
         """Return comment count for this share."""
         return obj.comments.count()
 
@@ -936,7 +936,7 @@ class SharedWithFriendDetailSerializer(SharedWithFriendSerializer):
     class Meta(SharedWithFriendSerializer.Meta):
         fields = SharedWithFriendSerializer.Meta.fields + ['decrypted_content', 'tags']
 
-    def get_tags(self, obj):
+    def get_tags(self, obj) -> list:
         """Return tags for the note."""
         return TagSerializer(obj.note.tags.all(), many=True).data
 
@@ -1004,13 +1004,13 @@ class PublicPostSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'sentiment_score', 'category', 'created_at']
 
-    def get_reaction_counts(self, obj):
+    def get_reaction_counts(self, obj) -> dict:
         """Count reactions by type."""
         from django.db.models import Count
         reactions = obj.reactions.values('reaction_type').annotate(count=Count('id'))
         return {r['reaction_type']: r['count'] for r in reactions}
 
-    def get_user_reacted(self, obj):
+    def get_user_reacted(self, obj) -> list:
         """List of reaction types current user has given."""
         request = self.context.get('request')
         if request and request.user.is_authenticated:
@@ -1019,7 +1019,7 @@ class PublicPostSerializer(serializers.ModelSerializer):
             )
         return []
 
-    def get_is_owner(self, obj):
+    def get_is_owner(self, obj) -> bool:
         """Check if current user owns this post."""
         request = self.context.get('request')
         if request and request.user.is_authenticated:

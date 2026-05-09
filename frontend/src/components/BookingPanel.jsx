@@ -38,7 +38,7 @@ export default function BookingPanel({ counselorId, counselorName, hourlyRate, c
     try {
       const res = await getAvailableSlots(counselorId, val)
       setSlots(res.data)
-    } catch (err) {
+    } catch {
       toast?.error(t('common.operationFailed'))
       setSlots([])
     } finally {

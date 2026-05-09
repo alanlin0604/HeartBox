@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, memo } from 'react'
+import { useEffect, useRef, useState, memo } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
 import { usePerformance } from '../hooks/usePerformance'
