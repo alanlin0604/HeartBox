@@ -554,49 +554,39 @@ export default function SettingsPage() {
                 {/* Diagnostic breadcrumbs — shows where the last connect attempt died.
                     Survives the native crash via localStorage; helps debug Health
                     Connect issues without needing adb logcat. */}
-                <div className="text-xs bg-red-500/10 rounded-lg p-3 border border-red-500/30 space-y-2">
-                  <div className="font-bold text-red-400">DEBUG BUILD v7 — patched plugin try/catch</div>
-                  <button
-                    onClick={async () => {
-                      // eslint-disable-next-line no-alert
-                      alert('A: button clicked, about to call health.connect()')
-                      crumb('TEST-BTN:clicked')
-                      try {
-                        const ok = await health.connect()
-                        // eslint-disable-next-line no-alert
-                        alert('E: health.connect() returned: ' + ok)
-                        crumb('TEST-BTN:returned', ok)
-                      } catch (e) {
-                        // eslint-disable-next-line no-alert
-                        alert('X: health.connect() threw: ' + (e?.message || e))
-                        crumb('TEST-BTN:threw', String(e?.message || e))
-                      }
-                    }}
-                    className="w-full py-2 px-3 bg-red-600 text-white rounded text-sm font-bold"
-                  >
-                    🧪 TEST connect (alert probe)
-                  </button>
-                  {(() => {
-                    const crumbs = getLastHealthBreadcrumbs()
-                    if (crumbs.length === 0) return <div className="opacity-60">No breadcrumbs yet.</div>
-                    return (
-                      <details>
-                        <summary className="cursor-pointer text-slate-300">
-                          {crumbs.length} steps, last: {crumbs[crumbs.length - 1].stage}
-                        </summary>
-                        <pre className="mt-2 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed">
-                          {crumbs.map(c => `${c.ts.split('T')[1]?.slice(0, 12)} ${c.stage}${c.payload !== undefined ? ' ' + JSON.stringify(c.payload) : ''}`).join('\n')}
-                        </pre>
-                        <button
-                          onClick={() => { clearHealthBreadcrumbs(); window.location.reload() }}
-                          className="mt-2 text-[11px] underline opacity-70"
-                        >
-                          Clear & reload
-                        </button>
-                      </details>
-                    )
-                  })()}
-                </div>
+                {/* HC diagnostic panel — only shown when the user explicitly
+                    sets `localStorage.heartbox_health_debug = '1'`. Breadcrumbs
+                    are still recorded silently on every connect attempt so the
+                    panel has data the moment it's enabled. See
+                    docs/health-connect-debug-progress.md. */}
+                {(() => {
+                  if (typeof window === 'undefined') return null
+                  if (window.localStorage?.getItem('heartbox_health_debug') !== '1') return null
+                  const crumbs = getLastHealthBreadcrumbs()
+                  return (
+                    <div className="text-xs bg-amber-500/10 rounded-lg p-3 border border-amber-500/30 space-y-2">
+                      <div className="font-bold text-amber-400">Health Connect diagnostic</div>
+                      {crumbs.length === 0 ? (
+                        <div className="opacity-60">No breadcrumbs yet — try connecting once.</div>
+                      ) : (
+                        <details open>
+                          <summary className="cursor-pointer text-slate-300">
+                            {crumbs.length} steps, last: {crumbs[crumbs.length - 1].stage}
+                          </summary>
+                          <pre className="mt-2 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed">
+                            {crumbs.map(c => `${c.ts.split('T')[1]?.slice(0, 12)} ${c.stage}${c.payload !== undefined ? ' ' + JSON.stringify(c.payload) : ''}`).join('\n')}
+                          </pre>
+                          <button
+                            onClick={() => { clearHealthBreadcrumbs(); window.location.reload() }}
+                            className="mt-2 text-[11px] underline opacity-70"
+                          >
+                            Clear & reload
+                          </button>
+                        </details>
+                      )}
+                    </div>
+                  )
+                })()}
 
                 {health.enabled && (
                   <>

@@ -210,8 +210,10 @@ HeartBox 高度重視用戶隱私和數據安全：
 - **累積佈局偏移 (CLS)**: <0.1
 
 ### 代碼品質
-- **Security Audit**: 0 個漏洞（npm audit + pip-audit）
-- **ESLint**: 81 個 react-hooks 規則待清理（不阻塞 ship）
+- **Security Audit**: 0 個漏洞（npm audit）
+- **ESLint**: 79 errors / 123 warnings（多數為 react-hooks 規則，不阻塞 ship — 待 dedicated sprint 清）
+- **drf_spectacular schema**: 0 errors / 37 warnings（warnings 為 SerializerMethodField 沒寫 return type hint，cosmetic）
+- **Vitest**: 78/78 passing
 - **Bundle 大小**: ~1.5MB (未壓縮)
 
 ## 🤝 貢獻

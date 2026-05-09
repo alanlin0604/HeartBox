@@ -1,273 +1,82 @@
-# HeartBox 待實作功能清單
+# HeartBox 功能完成度
 
-> 本文檔記錄尚未完成的功能，供日後繼續開發使用
+> 紀錄所有功能的實際完成狀態。每次完成新東西就更新一次。
 
-## 已完成功能 (5/11)
-
-- ✅ A1. 標籤系統 - 自定義標籤、過濾、標籤雲
-- ✅ A2. 日記提醒 - 每日提醒、連續天數、習慣養成
-- ✅ A3. 日記回顧 - 一年前今天、月度年度回顧
-- ✅ B1. AI 日記建議 - 寫作提示、情緒洞察、個人化問題
-- ✅ B2. 情緒預測 - 趨勢預測、壓力預警、健康提示
+**最後更新：** 2026-05-09
+**完成度：** 10 / 11 (91%)
 
 ---
 
-## 待實作功能 (6/11)
+## ✅ 已完成 (10)
 
-### C1. 匿名分享社群
+### Tier A — 日記增強
 
-**功能描述：**
-讓用戶可以匿名分享日記到公共社群，獲得其他用戶的支持與回應。
+- **A1. 標籤系統** — 自訂標籤、過濾、標籤雲
+- **A2. 日記提醒** — 每日提醒、連續天數、`JournalStreak` model
+- **A3. 日記回顧** — 一年前今天、月/年度回顧
 
-**核心功能：**
-1. **匿名發布**
-   - 用戶可選擇性地將日記發布到社群（完全匿名）
-   - 自動過濾敏感個人資訊
-   - 可設定可見範圍（公開/僅限已驗證用戶）
+### Tier B — AI
 
-2. **支持系統**
-   - 其他用戶可給予「擁抱」「支持」等情感回應
-   - 不顯示具體回應者身份（保持雙向匿名）
-   - 回應統計顯示
+- **B1. AI 日記建議** — 寫作提示、情緒洞察
+- **B2. 情緒預測** — 趨勢、壓力預警
 
-3. **討論區**
-   - 針對特定主題（焦慮、壓力、人際關係等）的討論區
-   - 用戶可匿名發起話題或回覆
-   - 版主審核機制
+### Tier C — 社交
 
-**技術實作要點：**
-- 後端：
-  - `PublicPost` model (匿名發布的日記)
-  - `PostReaction` model (支持/回應記錄)
-  - `CommunityTopic` model (討論區話題)
-  - 內容審核 API (防止濫用)
-  
-- 前端：
-  - `CommunityFeed.jsx` (社群動態)
-  - `PostCard.jsx` (匿名貼文卡片)
-  - `TopicDiscussion.jsx` (話題討論頁)
+- **C1. 匿名分享社群** — `PublicPost` / `PostReaction` / `PostReport` model；3 種反應；
+  `PostReport` 8 種理由 + 自動隱藏門檻（3 個獨立檢舉）；admin 審核 endpoint；
+  關鍵字內容過濾；反應通知（保持匿名）。
+  Files: `backend/api/community_views.py`, `backend/api/services/content_moderation.py`,
+  `frontend/src/pages/CommunityPage.jsx`.
+- **C2. 好友系統** — `Friendship` / `FriendRequest` / `SharedNote` / `FriendComment` model；
+  搜尋 / 邀請 / 接受 / 拒絕 / 移除；分享日記給好友；好友動態 feed；streak 排行榜
+  （Tab 頁面：好友 / 排行榜 / 共享日記 / 動態）。
+  Files: `backend/api/friends_views.py`, `backend/api/services/friends_service.py`,
+  `frontend/src/pages/FriendsPage.jsx`, `frontend/src/components/friends/*.jsx`.
 
-**注意事項：**
-- 需要完善的內容審核機制
-- 考慮反濫用措施（發布頻率限制、舉報機制）
-- 保護用戶隱私（確保完全匿名）
+### Tier D — 健康分析
 
----
+- **D1. 習慣追蹤器** — `Habit` / `HabitLog` model；CRUD + 每日打卡（idempotent，可 undo）；
+  打卡備註；90 天熱力圖；習慣與心情關聯分析（`HabitAnalyticsView`）。
+  Files: `backend/api/views/health.py` (HabitViewSet), `frontend/src/components/HabitCard.jsx`.
 
-### C2. 好友系統
+### Tier E — 個人化
 
-**功能描述：**
-允許用戶添加好友，互相分享日記並給予鼓勵。
-
-**核心功能：**
-1. **好友管理**
-   - 搜尋用戶並發送好友邀請
-   - 接受/拒絕好友請求
-   - 好友列表管理
-
-2. **日記分享**
-   - 選擇性地與特定好友分享日記
-   - 好友可查看分享的日記並留言
-   - 分享權限管理
-
-3. **互相打氣**
-   - 好友動態通知（XXX 寫了新日記）
-   - 可給好友的日記留言鼓勵
-   - 連續記錄比較（友善競爭）
-
-**技術實作要點：**
-- 後端：
-  - `Friendship` model (好友關係，雙向確認)
-  - `FriendRequest` model (好友請求)
-  - `SharedWithFriend` model (好友分享記錄)
-  - `FriendComment` model (好友留言)
-  
-- 前端：
-  - `FriendsList.jsx` (好友列表)
-  - `FriendRequests.jsx` (好友請求管理)
-  - `FriendActivity.jsx` (好友動態)
-  - `ShareToFriend.jsx` (分享給好友對話框)
+- **E1. 個人化儀表板** — `DashboardLayout` / `UserMetric` model；可拖拽 widget；
+  目前 widget：streak / mood trends / on-this-day / habit check-in / AI suggestions / sleep stats。
+  Files: `frontend/src/pages/PersonalDashboardPage.jsx`, `frontend/src/components/dashboard/widgets/*.jsx`.
+- **E2. 數據匯入** — CSV / JSON / Day One / Journey 格式；欄位 mapping UI（後端真套用）；
+  > 500 行走 Celery `import_notes_task` 背景處理（無 broker 自動 fallback 到 daemon thread）；
+  `ImportJob` model + 進度輪詢 endpoint；前端進度條。
+  Files: `backend/api/services/import_service.py`, `backend/api/tasks.py`,
+  `frontend/src/pages/DataImportPage.jsx`.
 
 ---
 
-### D1. 習慣追蹤器
-
-**功能描述：**
-追蹤自定義習慣的完成情況，並分析習慣與情緒的關聯。
-
-**核心功能：**
-1. **自定義習慣**
-   - 建立自訂習慣（運動、閱讀、冥想等）
-   - 設定目標頻率（每日/每週 X 次）
-   - 習慣分類與標籤
-
-2. **打卡記錄**
-   - 每日打卡介面
-   - 習慣完成歷史日曆視圖
-   - 連續完成天數統計
-
-3. **關聯分析**
-   - 分析「完成某習慣的日子」與「情緒分數」的關聯
-   - 視覺化展示習慣對心情的影響
-   - 建議：哪些習慣對心情提升最有幫助
-
-**技術實作要點：**
-- 後端：
-  - `Habit` model (用戶自定義習慣)
-  - `HabitLog` model (打卡記錄)
-  - 關聯分析服務 `habit_analytics.py`
-  
-- 前端：
-  - `HabitTracker.jsx` (習慣追蹤主頁)
-  - `HabitCheckIn.jsx` (打卡介面)
-  - `HabitCorrelation.jsx` (習慣-情緒關聯圖表)
-
----
+## 🔴 還未做 (1)
 
 ### D2. 睡眠深度分析
 
-**功能描述：**
-深度分析睡眠數據（來自手動輸入或健康裝置），提供改善建議。
+**現況：** Backend 95% 完整 — `SleepAnalysisView` / `SleepCalendarView` / `SleepTrendsView` /
+`SleepInsightsView` 都有真實計算邏輯（`backend/api/services/sleep_analysis.py`，
+品質分數、模式辨識、改善建議），前端 `SleepAnalysisPage` 渲染圖表都正常。
 
-**核心功能：**
-1. **睡眠週期分析**
-   - 記錄每日睡眠時間、入睡時間、起床時間
-   - 計算睡眠品質分數
-   - 識別睡眠模式（早睡早起 vs 晚睡晚起）
+**缺：** Apple Health / Health Connect 自動同步 — `HealthSyncView` 是 stub，
+依賴使用者手動輸入睡眠資料。
 
-2. **關聯分析**
-   - 睡眠時數與情緒的關聯
-   - 睡眠品質與壓力的關聯
-   - 視覺化呈現（散點圖、趨勢圖）
-
-3. **改善建議**
-   - 基於睡眠數據提供個人化建議
-   - 識別睡眠問題（失眠、睡眠不足、作息不規律）
-   - 推薦睡眠衛生習慣
-
-**技術實作要點：**
-- 後端：
-  - `DailySleep` model 已存在，需增強分析功能
-  - `sleep_analysis.py` 服務（睡眠週期分析）
-  - 整合健康裝置數據（HealthKit / Google Fit）
-  
-- 前端：
-  - `SleepAnalysis.jsx` (睡眠分析主頁)
-  - `SleepCalendar.jsx` (睡眠日曆視圖)
-  - `SleepCorrelation.jsx` (睡眠-情緒關聯)
-
-**注意事項：**
-- DailySleep model 已存在且有基本欄位
-- 需要整合現有的健康數據同步功能
+**Blocker：** 整合工作卡在 paused 的 Health Connect crash 調查
+（[`docs/health-connect-debug-progress.md`](docs/health-connect-debug-progress.md)）。
+等 capgo plugin 在 Galaxy A52 上的 native crash 解了再動。
 
 ---
 
-### E1. 個人化儀表板
+## 加值修復（spec 沒列、做了）
 
-**功能描述：**
-讓用戶自訂儀表板，選擇要顯示的 Widget 和排列方式。
-
-**核心功能：**
-1. **Widget 系統**
-   - 提供多種 Widget：
-     - 連續記錄統計
-     - 最近心情趨勢
-     - 一年前今天
-     - 習慣打卡
-     - AI 建議
-     - 睡眠統計
-   - 用戶可選擇啟用/停用
-
-2. **拖拽排列**
-   - 拖拽調整 Widget 位置
-   - 調整 Widget 大小（1x1, 2x1, 2x2 等）
-   - 儲存個人化佈局
-
-3. **關鍵指標**
-   - 用戶可自選要追蹤的關鍵指標
-   - 設定指標目標值
-   - 進度視覺化
-
-**技術實作要點：**
-- 後端：
-  - `DashboardLayout` model (儲存用戶佈局設定)
-  - `UserMetric` model (自訂關鍵指標)
-  
-- 前端：
-  - 使用 `react-grid-layout` 或類似函式庫
-  - `DashboardBuilder.jsx` (儀表板編輯器)
-  - `Widget*.jsx` (各種 Widget 元件)
-  - `WidgetSettings.jsx` (Widget 設定對話框)
-
----
-
-### E2. 數據匯入
-
-**功能描述：**
-支援從其他平台匯入歷史日記數據。
-
-**核心功能：**
-1. **CSV/JSON 匯入**
-   - 上傳 CSV 或 JSON 檔案
-   - 欄位對應介面（讓用戶指定哪一欄是日期、內容等）
-   - 批次匯入並自動分析情緒
-
-2. **歷史遷移**
-   - 支援從常見日記 APP 匯入（Day One, Journey 等）
-   - 匯入格式範本下載
-   - 匯入進度顯示
-
-3. **資料驗證**
-   - 檢查日期格式、必填欄位
-   - 重複資料檢測
-   - 匯入預覽（確認後再正式匯入）
-
-**技術實作要點：**
-- 後端：
-  - `ImportCSVView` 已存在於 `/notes/import/`
-  - 需要增強功能：欄位對應、批次處理、錯誤處理
-  - `import_service.py` (處理不同格式)
-  
-- 前端：
-  - `DataImport.jsx` (匯入主頁)
-  - `FieldMapping.jsx` (欄位對應介面)
-  - `ImportPreview.jsx` (匯入預覽)
-
-**注意事項：**
-- CSV 匯入功能已部分實作，需要擴展
-- 考慮大量資料匯入的性能問題（使用非同步任務）
-
----
-
-## 實作優先順序建議
-
-1. **高優先級**（核心功能增強）
-   - E2. 數據匯入（部分已有，易於完成）
-   - D1. 習慣追蹤器（高價值功能）
-   - E1. 個人化儀表板（提升用戶體驗）
-
-2. **中優先級**（社交功能）
-   - C2. 好友系統（增加用戶黏性）
-   - C1. 匿名分享社群（需謹慎設計）
-
-3. **低優先級**（專業分析）
-   - D2. 睡眠深度分析（數據整合複雜）
-
----
-
-## 技術債務提醒
-
-- 部分功能需要整合現有系統：
-  - 健康數據同步 (HealthKit/Google Fit) 已有基礎
-  - CSV 匯入功能已部分實作
-  - 分享功能已有 SharedNote model
-
-- 需要考慮的非功能性需求：
-  - 性能優化（大量數據處理）
-  - 安全性（匿名社群的內容審核）
-  - 可擴展性（Widget 系統架構）
-
----
-
-**最後更新：** 2026-04-19  
-**完成進度：** 5/11 (45%)
+- LoginPage 預熱 + 「正在喚醒伺服器」提示（Cloud Run cold-start UX）
+- 登入合併 user payload 省 1 趟 `/profile/` roundtrip
+- views.py 3820 行 → 9 個主題模組（auth / notes / analytics / health / counselor /
+  messaging / wellness / admin / dashboard）
+- CounselorListPage 1240 行 → 9 個 tab 元件
+- drf_spectacular schema 78 errors → 0 errors
+- Brand 全面換色：紫 → terracotta orange + crimson rose（heart-on-treasure-box logo）
+- 版本徽章（每頁右下角小字 `v{時間}-{git-sha}`）
+- demo 帳號 seed 指令（Play Store 審查者用）

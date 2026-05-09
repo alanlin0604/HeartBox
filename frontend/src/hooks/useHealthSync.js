@@ -64,22 +64,21 @@ export default function useHealthSync() {
     }
   }, [syncing])
 
-  // Connect: request permissions and start syncing
+  // Connect: request permissions and start syncing.
+  // Breadcrumbs (crumb()) are kept on the hot path so future debugging can
+  // re-enable the diagnostic panel by setting `localStorage.heartbox_health_debug = '1'`.
+  // The interactive alert() probes used during the paused HC crash hunt are
+  // gone — see docs/health-connect-debug-progress.md for the recipe to bring
+  // them back if needed.
   const connect = useCallback(async () => {
-    // eslint-disable-next-line no-alert
-    alert('B: hook.connect entered. avail=' + isHealthAvailable() + ' platform=' + platform)
     crumb('hook:connect:start', { available, platform, isAvailFn: isHealthAvailable() })
     if (!isHealthAvailable()) {
       crumb('hook:connect:not-available-early-return')
       return false
     }
 
-    // eslint-disable-next-line no-alert
-    alert('C: about to call requestPermissions()')
     crumb('hook:connect:before-requestPermissions')
     const granted = await requestPermissions()
-    // eslint-disable-next-line no-alert
-    alert('D: requestPermissions returned: ' + granted)
     crumb('hook:connect:requestPermissions-returned', granted)
     if (!granted) return false
 

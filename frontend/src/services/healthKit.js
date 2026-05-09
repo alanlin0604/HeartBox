@@ -106,8 +106,6 @@ export async function requestPermissions() {
   }
 
   try {
-    // eslint-disable-next-line no-alert
-    alert('PRE-NATIVE: about to call Health.requestAuthorization (last alert before native call)')
     crumb('reqPerms:before-requestAuthorization')
     const result = await Health.requestAuthorization({
       read: [
@@ -118,13 +116,9 @@ export async function requestPermissions() {
         'sleep',
       ],
     })
-    // eslint-disable-next-line no-alert
-    alert('POST-NATIVE: Health.requestAuthorization returned')
     crumb('reqPerms:requestAuthorization-returned', result)
     return result.readAuthorized.length > 0
   } catch (error) {
-    // eslint-disable-next-line no-alert
-    alert('CATCH: requestAuthorization threw: ' + (error?.message || error))
     crumb('reqPerms:requestAuthorization-error', String(error?.message || error))
     return false
   }
