@@ -132,6 +132,7 @@ from .community_views import (
     PublicPostViewSet,
     ReportListView,
 )
+from .views import cron as cron_views
 
 router = DefaultRouter()
 router.register(r'notes', MoodNoteViewSet, basename='moodnote')
@@ -301,6 +302,9 @@ urlpatterns = [
     # Community moderation (staff-only)
     path('community/reports/', ReportListView.as_view(), name='community-report-list'),
     path('community/posts/<int:pk>/moderate/', ModeratePostView.as_view(), name='community-post-moderate'),
+    # Internal cron (Cloud Scheduler -> shared-secret POST)
+    path('internal/cron/habit-reminders/', cron_views.run_habit_reminders, name='cron-habit-reminders'),
+    path('internal/cron/weekly-summaries/', cron_views.run_weekly_summaries, name='cron-weekly-summaries'),
     # Notes CRUD
     path('', include(router.urls)),
 ]

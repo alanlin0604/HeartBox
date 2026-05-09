@@ -22,6 +22,28 @@ Set these in your hosting platform:
 - `THROTTLE_LOGIN=10/hour`
 - `THROTTLE_REGISTER=5/hour`
 - `THROTTLE_PASSWORD_RESET=5/hour`
+- `CRON_SECRET=<long random>` — required for the scheduled-task endpoints below
+
+## 1a. Scheduled tasks (Cloud Scheduler → cron endpoints)
+Cloud Run has no Celery beat process; an external scheduler hits the API
+on a fixed cadence. Each endpoint validates `X-Cron-Secret: $CRON_SECRET`.
+
+```bash
+SVC_URL=https://heartbox-api-<hash>-de.a.run.app
+SECRET="<same value as CRON_SECRET>"
+
+# Habit reminders — every 15 minutes
+gcloud scheduler jobs create http habit-reminders \
+  --schedule="*/15 * * * *" --time-zone="Asia/Taipei" \
+  --uri="$SVC_URL/api/internal/cron/habit-reminders/" --http-method=POST \
+  --headers="X-Cron-Secret=$SECRET" --location=asia-east1
+
+# Weekly summaries — Monday 06:00 local
+gcloud scheduler jobs create http weekly-summaries \
+  --schedule="0 6 * * 1" --time-zone="Asia/Taipei" \
+  --uri="$SVC_URL/api/internal/cron/weekly-summaries/" --http-method=POST \
+  --headers="X-Cron-Secret=$SECRET" --location=asia-east1
+```
 
 ## 2. Database Migration
 Run in backend:
