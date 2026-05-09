@@ -52,6 +52,7 @@ from .views import (
     FeedbackCreateView,
     GoogleLoginCallbackView,
     ImportCSVView,
+    ImportJobStatusView,
     PreviewCSVView,
     LessonCompleteView,
     Login2FAView,
@@ -157,6 +158,7 @@ urlpatterns = [
     # CSV Import (must be before router.urls so it matches before notes/<pk>/)
     path('notes/import/preview/', PreviewCSVView.as_view(), name='notes-import-preview'),
     path('notes/import/', ImportCSVView.as_view(), name='notes-import'),
+    path('notes/import/jobs/<int:pk>/', ImportJobStatusView.as_view(), name='notes-import-job-status'),
     # PDF Export (must be before router.urls so it matches before notes/<pk>/)
     path('notes/export/', ExportPDFView.as_view(), name='notes-export'),
     # Counselor

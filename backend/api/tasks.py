@@ -103,3 +103,82 @@ def send_push_notification_task(user_id, title, body, url='/'):
         send_push_notification(user, title, body, url)
     except User.DoesNotExist:
         logger.warning('User %d not found for push notification', user_id)
+
+
+@shared_task(bind=True)
+def import_notes_task(self, job_id):
+    """Process a stored CSV/JSON file for an ImportJob, updating progress and
+    error fields on the model so ImportJobStatusView can poll. Designed to be
+    safe under CELERY_TASK_ALWAYS_EAGER (local dev) and a real worker (prod).
+    """
+    import os
+
+    from django.conf import settings
+    from django.core.cache import cache
+    from django.utils import timezone as tz
+
+    from api.models import ImportJob
+    from api.services.import_service import ingest_rows, parse_file
+
+    try:
+        job = ImportJob.objects.get(pk=job_id)
+    except ImportJob.DoesNotExist:
+        logger.warning('ImportJob %d not found', job_id)
+        return
+
+    job.status = 'running'
+    job.started_at = tz.now()
+    job.save(update_fields=['status', 'started_at'])
+
+    storage_path = os.path.join(settings.MEDIA_ROOT, job.storage_key)
+    try:
+        with open(storage_path, 'rb') as fh:
+            blob = fh.read()
+        _fmt, _cols, rows = parse_file(job.filename, blob)
+        job.total_rows = len(rows)
+        job.save(update_fields=['total_rows'])
+
+        # Throttle progress updates: every 25 rows or 1 second, whichever first.
+        last_save_at = [tz.now()]
+        last_save_n = [0]
+
+        def progress_cb(processed, total):
+            now = tz.now()
+            if (processed - last_save_n[0]) >= 25 or (now - last_save_at[0]).total_seconds() >= 1.0:
+                ImportJob.objects.filter(pk=job.pk).update(processed_rows=processed)
+                last_save_n[0] = processed
+                last_save_at[0] = now
+
+        created, errors = ingest_rows(
+            job.user, rows, mapping=job.mapping or None, progress_cb=progress_cb,
+        )
+        job.processed_rows = job.total_rows
+        job.imported_count = created
+        job.errors = errors[:50]
+        job.status = 'done'
+        job.completed_at = tz.now()
+        job.save()
+
+        # Invalidate analytics caches so charts pick up the new notes.
+        if created > 0:
+            uid = job.user_id
+            now = tz.now()
+            cache.delete_many([
+                f'analytics_{uid}_week_30',
+                f'analytics_{uid}_month_30',
+                f'analytics_{uid}_week_7',
+                f'calendar_{uid}_{now.year}_{now.month}',
+            ])
+    except Exception as e:
+        logger.exception('Import job %d failed', job_id)
+        job.status = 'failed'
+        job.error_message = f'{e.__class__.__name__}: {e}'
+        job.completed_at = tz.now()
+        job.save(update_fields=['status', 'error_message', 'completed_at'])
+    finally:
+        # Best-effort cleanup of the staged file.
+        try:
+            if storage_path and os.path.exists(storage_path):
+                os.remove(storage_path)
+        except OSError:
+            logger.warning('Could not remove staged import file %s', storage_path)

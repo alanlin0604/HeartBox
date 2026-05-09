@@ -139,6 +139,7 @@ from .notes import (  # noqa: E402
     ExportDataView,
     ExportPDFView,
     ImportCSVView,
+    ImportJobStatusView,
     MoodNoteViewSet,
     NoteAttachmentUploadView,
     NoteSharesListView,

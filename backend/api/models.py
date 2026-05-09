@@ -1202,3 +1202,50 @@ class PostReaction(models.Model):
 
     def __str__(self):
         return f'{self.user.username} {self.reaction_type} on post #{self.post.id}'
+
+
+class ImportJob(models.Model):
+    """Tracks an asynchronous CSV/JSON import. Created by ImportStartView, run
+    by import_notes_task, polled by ImportJobStatusView."""
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('done', 'Done'),
+        ('failed', 'Failed'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='import_jobs',
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    fmt = models.CharField(max_length=10, blank=True, default='')   # 'csv' / 'json'
+    filename = models.CharField(max_length=255, blank=True, default='')
+    storage_key = models.CharField(max_length=500, blank=True, default='')  # path under MEDIA_ROOT
+    mapping = models.JSONField(default=dict, blank=True)
+    total_rows = models.PositiveIntegerField(default=0)
+    processed_rows = models.PositiveIntegerField(default=0)
+    imported_count = models.PositiveIntegerField(default=0)
+    errors = models.JSONField(default=list, blank=True)
+    error_message = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at'], name='importjob_user_created'),
+            models.Index(fields=['status', '-created_at'], name='importjob_status_created'),
+        ]
+
+    def __str__(self):
+        return f'ImportJob #{self.pk} ({self.user.username}, {self.status})'
+
+    @property
+    def progress_percent(self):
+        if self.total_rows <= 0:
+            return 0
+        return round(self.processed_rows / self.total_rows * 100, 1)

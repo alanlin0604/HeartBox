@@ -503,190 +503,192 @@ class OnThisDayView(APIView):
         return Response(results)
 
 
+# How many rows we ingest synchronously before falling back to a Celery
+# background job. Tuned so most everyday imports (a few weeks of journal
+# entries) complete inline; bulk migrations from Day One / Journey go async.
+SYNC_IMPORT_LIMIT = 500
+
+
 class PreviewCSVView(APIView):
-    """Preview CSV import without actually creating notes"""
+    """Preview an import file (CSV or JSON) without writing anything.
+
+    Returns total row count, the first 5 rows, the discovered columns, and a
+    suggested column-to-standard-field mapping. The frontend pre-fills its
+    mapping dropdowns from `suggested_mapping`.
+    """
     throttle_classes = [GeneralWriteThrottle]
 
     def post(self, request):
+        from ..services.import_service import detect_format, parse_file, suggest_mapping
+
         file = request.FILES.get('file')
         if not file:
             return error_response('error.upload_file_required', 'A file is required.', 400)
 
-        if not file.name.endswith('.csv'):
-            return error_response('csv_invalid_format', 'Only CSV files are accepted.', 400)
+        if not detect_format(file.name):
+            return error_response('csv_invalid_format', 'Only .csv and .json files are accepted.', 400)
 
         try:
-            content = file.read().decode('utf-8-sig')
-            reader = csv.DictReader(io.StringIO(content))
-
-            # Get column headers
-            fieldnames = reader.fieldnames or []
-
-            # Preview first 5 rows
-            preview_rows = []
-            for i, row in enumerate(reader):
-                if i >= 5:
-                    break
-                preview_rows.append(dict(row))
-
-            # Count total rows
-            reader_count = csv.DictReader(io.StringIO(content))
-            total_rows = sum(1 for _ in reader_count)
-
-            # Suggest column mapping
-            COLUMN_MAP = {
-                'created': 'date',
-                'sentiment': 'mood',
-                'created_at': 'date',
-                'created_date': 'date',
-                'entry': 'content',
-                'text': 'content',
-                'body': 'content',
-                'note': 'content',
-            }
-
-            suggested_mapping = {}
-            for col in fieldnames:
-                col_lower = col.strip().lower()
-                suggested_mapping[col] = COLUMN_MAP.get(col_lower, col_lower)
-
-            return Response({
-                'total_rows': total_rows,
-                'preview_rows': preview_rows,
-                'columns': fieldnames,
-                'suggested_mapping': suggested_mapping,
-            })
-
+            blob = file.read()
+            fmt, columns, rows = parse_file(file.name, blob)
+        except ValueError as e:
+            return error_response('csv_parse_error', str(e), 400)
         except Exception as e:
-            logger.exception('CSV preview error')
-            return error_response('csv_parse_error', f'Invalid CSV file: {str(e)}', 400)
+            logger.exception('Import preview error')
+            return error_response('csv_parse_error', f'Could not parse file: {e}', 400)
+
+        return Response({
+            'format': fmt,
+            'total_rows': len(rows),
+            'preview_rows': rows[:5],
+            'columns': columns,
+            'suggested_mapping': suggest_mapping(columns),
+            'sync_limit': SYNC_IMPORT_LIMIT,
+        })
 
 
 class ImportCSVView(APIView):
+    """Import notes from a CSV / JSON file.
+
+    Small files (≤ SYNC_IMPORT_LIMIT rows) are processed inline so the
+    frontend gets an instant ``{imported, errors}`` response. Larger files
+    are staged on disk, an ``ImportJob`` is created, and ``import_notes_task``
+    is dispatched — the response then carries ``{job_id, status: 'pending'}``
+    and the frontend polls ImportJobStatusView for progress.
+
+    Honors a JSON ``mapping`` param of shape ``{<source column>: <target>}``
+    where target is one of date / content / mood / stress / tags / weather /
+    temperature / _ignore. Without one, the importer falls back to
+    DEFAULT_COLUMN_MAP from import_service.
+    """
     throttle_classes = [GeneralWriteThrottle]
 
     def post(self, request):
+        import json as _json
+        import os
+        import secrets
+
+        from django.conf import settings
+        from django.utils import timezone as tz
+
+        from ..models import ImportJob
+        from ..services.import_service import (
+            detect_format, ingest_rows, parse_file,
+        )
+        from ..tasks import import_notes_task
+
         file = request.FILES.get('file')
         if not file:
             return error_response('error.upload_file_required', 'A file is required.', 400)
 
-        if not file.name.endswith('.csv'):
-            return error_response('csv_invalid_format', 'Only CSV files are accepted.', 400)
+        if not detect_format(file.name):
+            return error_response('csv_invalid_format', 'Only .csv and .json files are accepted.', 400)
 
+        # Optional user mapping arrives as a JSON-encoded string in form data.
+        mapping = None
+        raw_mapping = request.data.get('mapping')
+        if raw_mapping:
+            try:
+                mapping = _json.loads(raw_mapping) if isinstance(raw_mapping, str) else dict(raw_mapping)
+                if not isinstance(mapping, dict):
+                    raise ValueError('mapping must be an object')
+            except (ValueError, TypeError) as e:
+                return error_response('csv_invalid_mapping', f'Invalid mapping payload: {e}', 400)
+
+        blob = file.read()
         try:
-            content = file.read().decode('utf-8-sig')
-            reader = csv.DictReader(io.StringIO(content))
-        except Exception:
-            logger.exception('CSV import parse error')
-            return error_response('csv_parse_error', 'Invalid CSV file.', 400)
+            fmt, _cols, rows = parse_file(file.name, blob)
+        except ValueError as e:
+            return error_response('csv_parse_error', str(e), 400)
+        except Exception as e:
+            logger.exception('Import parse error')
+            return error_response('csv_parse_error', f'Could not parse file: {e}', 400)
 
-        # Normalize column names to lowercase for case-insensitive matching
-        # Also map export column names to import column names:
-        #   Export: ID, Content, Sentiment, Stress, Tags, Weather, Temperature, Pinned, Created
-        #   Import: date, content, mood, stress, tags
-        COLUMN_MAP = {
-            'created': 'date',
-            'sentiment': 'mood',
-        }
+        # --- Sync path: small file, do it now ---
+        if len(rows) <= SYNC_IMPORT_LIMIT:
+            created, errors = ingest_rows(request.user, rows, mapping=mapping)
+            if created > 0:
+                uid = request.user.id
+                now = tz.now()
+                cache.delete_many([
+                    f'analytics_{uid}_week_30',
+                    f'analytics_{uid}_month_30',
+                    f'analytics_{uid}_week_7',
+                    f'calendar_{uid}_{now.year}_{now.month}',
+                ])
+            return Response({
+                'mode': 'sync',
+                'imported': created,
+                'errors': errors[:10],
+                'total_rows': len(rows),
+            })
 
-        created_count = 0
-        errors = []
+        # --- Async path: stage file under MEDIA_ROOT/imports/ and dispatch ---
+        imports_dir = os.path.join(settings.MEDIA_ROOT, 'imports')
+        os.makedirs(imports_dir, exist_ok=True)
+        suffix = '.json' if fmt == 'json' else '.csv'
+        storage_key = os.path.join('imports', f'{secrets.token_hex(8)}{suffix}')
+        with open(os.path.join(settings.MEDIA_ROOT, storage_key), 'wb') as fh:
+            fh.write(blob)
 
-        for i, row in enumerate(reader, start=1):
-            if i > 1000:  # Limit to 1000 rows
-                break
+        job = ImportJob.objects.create(
+            user=request.user,
+            status='pending',
+            fmt=fmt,
+            filename=file.name,
+            storage_key=storage_key,
+            mapping=mapping or {},
+            total_rows=len(rows),
+        )
 
-            # Normalize keys: lowercase + map export names to import names
-            normalized = {}
-            for k, v in row.items():
-                if k is None:
-                    continue
-                key = k.strip().lower()
-                key = COLUMN_MAP.get(key, key)
-                normalized[key] = (v or '').strip()
-
-            date_str = normalized.get('date', '')
-            content_text = normalized.get('content', '')
-            mood = normalized.get('mood', '')
-            stress = normalized.get('stress', '')
-
-            if not content_text:
-                errors.append(f'Row {i}: missing content')
-                continue
-
-            note = MoodNote(user=request.user)
-            note.set_content(content_text)
-
-            # Parse metadata
-            metadata = {}
-            if mood:
-                metadata['imported_mood'] = mood
-            tags = normalized.get('tags', '')
-            if tags:
-                metadata['tags'] = [t.strip() for t in tags.split(',') if t.strip()]
-            weather = normalized.get('weather', '')
-            if weather:
-                metadata['weather'] = weather
-            temperature = normalized.get('temperature', '')
-            if temperature:
-                metadata['temperature'] = temperature
-            note.metadata = metadata
-
-            # Parse stress
-            if stress:
-                try:
-                    stress_val = int(stress)
-                    if 0 <= stress_val <= 10:
-                        note.stress_index = stress_val
-                except ValueError:
-                    pass
-
-            # Parse sentiment score (from export format)
-            sentiment = normalized.get('mood', '')
-            if sentiment:
-                try:
-                    score = float(sentiment)
-                    if -1.0 <= score <= 1.0:
-                        note.sentiment_score = score
-                except ValueError:
-                    pass
-
-            note.save()
-
-            # Parse date — must update AFTER save because auto_now_add
-            # ignores manual values during save()
-            if date_str:
-                try:
-                    from django.utils.dateparse import parse_datetime, parse_date
-                    parsed = parse_datetime(date_str) or parse_date(date_str)
-                    if parsed:
-                        from django.utils import timezone as tz
-                        if hasattr(parsed, 'hour'):
-                            if tz.is_naive(parsed):
-                                parsed = tz.make_aware(parsed)
-                            MoodNote.objects.filter(pk=note.pk).update(created_at=parsed)
-                        else:
-                            aware_dt = tz.make_aware(
-                                tz.datetime.combine(parsed, tz.datetime.min.time())
-                            )
-                            MoodNote.objects.filter(pk=note.pk).update(created_at=aware_dt)
-                except Exception:
-                    logger.exception('CSV import: failed to parse date for row %d', i)
-
-            created_count += 1
-
-        # Invalidate analytics/calendar caches so charts update immediately
-        if created_count > 0:
-            uid = request.user.id
-            now = timezone.now()
-            cache.delete_many([
-                f'analytics_{uid}_week_30',
-                f'analytics_{uid}_month_30',
-                f'analytics_{uid}_week_7',
-                f'calendar_{uid}_{now.year}_{now.month}',
-            ])
+        # Dispatch path: prefer Celery when a real broker is configured (Redis
+        # via REDIS_URL or CELERY_BROKER_URL), otherwise spawn a background
+        # thread so local dev / Cloud Run without Redis still gets non-blocking
+        # imports + working polling. The thread dies with the gunicorn worker;
+        # that's fine here since the prod path always has a real broker.
+        import os
+        import threading
+        broker_configured = bool(os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL'))
+        if broker_configured:
+            try:
+                import_notes_task.delay(job.id)
+            except Exception:
+                logger.warning('Celery broker dispatch failed; falling back to thread for job %d', job.id)
+                threading.Thread(target=import_notes_task, args=(job.id,), daemon=True).start()
+        else:
+            threading.Thread(target=import_notes_task, args=(job.id,), daemon=True).start()
 
         return Response({
-            'imported': created_count,
-            'errors': errors[:10],  # Return first 10 errors
+            'mode': 'async',
+            'job_id': job.id,
+            'status': 'pending',
+            'total_rows': len(rows),
+        })
+
+
+class ImportJobStatusView(APIView):
+    """Poll endpoint for an ImportJob owned by the requesting user."""
+    throttle_classes = [GeneralWriteThrottle]
+
+    def get(self, request, pk):
+        from ..models import ImportJob
+        try:
+            job = ImportJob.objects.get(pk=pk, user=request.user)
+        except ImportJob.DoesNotExist:
+            return error_response('import_job_not_found', 'Import job not found.', 404)
+
+        return Response({
+            'job_id': job.id,
+            'status': job.status,
+            'fmt': job.fmt,
+            'filename': job.filename,
+            'total_rows': job.total_rows,
+            'processed_rows': job.processed_rows,
+            'imported_count': job.imported_count,
+            'progress_percent': job.progress_percent,
+            'errors': (job.errors or [])[:10],
+            'error_message': job.error_message,
+            'created_at': job.created_at,
+            'started_at': job.started_at,
+            'completed_at': job.completed_at,
         })
