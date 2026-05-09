@@ -40,7 +40,7 @@ export default function StreakWidget({ widgetId, isEditMode, onSettings }) {
         <header className="flex justify-between items-center mb-3">
           <h3 className="font-semibold text-orange-500">{t('dashboard.widget.streak.title')}</h3>
           <button
-            className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
+            className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
             onClick={onSettings}
             aria-label={t('dashboard.settings')}
           >
@@ -63,7 +63,7 @@ export default function StreakWidget({ widgetId, isEditMode, onSettings }) {
         <header className="flex justify-between items-center mb-3">
           <h3 className="font-semibold text-orange-500">{t('dashboard.widget.streak.title')}</h3>
           <button
-            className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
+            className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
             onClick={onSettings}
             aria-label={t('dashboard.settings')}
           >
@@ -97,7 +97,7 @@ export default function StreakWidget({ widgetId, isEditMode, onSettings }) {
       <header className="flex justify-between items-center mb-3">
         <h3 className="font-semibold text-orange-500">{t('dashboard.widget.streak.title')}</h3>
         <button
-          className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
+          className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
           onClick={onSettings}
           aria-label={t('dashboard.settings')}
         >

@@ -156,7 +156,7 @@ export default function FriendSearch({ onClose, onRequestSent }) {
                     <button
                       onClick={() => setShowMessageFor(user.id)}
                       disabled={sendingTo === user.id}
-                      className="text-xs btn-primary text-white px-3 py-1.5"
+                      className="text-sm btn-primary text-white px-4 py-2 whitespace-nowrap"
                     >
                       {sendingTo === user.id ? t('common.sending') : t('friends.sendRequest')}
                     </button>

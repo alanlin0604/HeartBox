@@ -74,24 +74,27 @@ export default function FriendRequests({ onClose, onUpdate }) {
       <div className="popup-panel w-full max-w-2xl max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-[var(--card-border)]">
-          <h2 className="text-xl font-semibold">{t('friends.requests')}</h2>
+          <h2 className="text-xl font-semibold truncate pr-2">{t('friends.requests')}</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-300 transition-colors"
+            className="shrink-0 p-2 -m-2 rounded-lg text-[var(--text-secondary)] hover:bg-white/5 transition-colors"
+            aria-label={t('common.close')}
           >
             <CloseIcon />
           </button>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs — flex-1 with min-w-0 + truncate so long CJK labels + count
+            badges don't get clipped on narrow viewports. Brand orange to
+            match the rest of the app. */}
         <div className="flex gap-2 mb-4">
           <button
             onClick={() => setActiveTab('received')}
             className={`
-              flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all
+              flex-1 min-w-0 px-3 py-3 rounded-lg font-medium text-sm transition-all truncate
               ${activeTab === 'received'
-                ? 'bg-blue-500/20 text-blue-400'
-                : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                ? 'bg-orange-500/20 text-orange-400'
+                : 'text-[var(--text-secondary)] hover:bg-white/5'
               }
             `}
           >
@@ -100,10 +103,10 @@ export default function FriendRequests({ onClose, onUpdate }) {
           <button
             onClick={() => setActiveTab('sent')}
             className={`
-              flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all
+              flex-1 min-w-0 px-3 py-3 rounded-lg font-medium text-sm transition-all truncate
               ${activeTab === 'sent'
-                ? 'bg-blue-500/20 text-blue-400'
-                : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
+                ? 'bg-orange-500/20 text-orange-400'
+                : 'text-[var(--text-secondary)] hover:bg-white/5'
               }
             `}
           >
@@ -213,7 +216,7 @@ export default function FriendRequests({ onClose, onUpdate }) {
                     </span>
                   </div>
                   {request.message && (
-                    <p className="text-sm text-slate-400 mt-3 ml-15">
+                    <p className="text-sm text-[var(--text-secondary)] mt-3 ml-[52px]">
                       {request.message}
                     </p>
                   )}

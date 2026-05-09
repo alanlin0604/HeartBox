@@ -117,15 +117,15 @@ export default function FriendsLeaderboard() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-base flex items-center gap-2">
-                    <span className="truncate">{row.username}</span>
+                  <div className="font-semibold text-base flex items-center gap-2 min-w-0">
+                    <span className="truncate min-w-0">{row.username}</span>
                     {row.is_self && (
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/30 text-orange-300 font-medium">
+                      <span className="shrink-0 text-[10px] px-2 py-0.5 rounded bg-orange-500/30 text-orange-300 font-medium">
                         {t('friends.you') || 'You'}
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-[var(--text-secondary)] truncate">
                     {row.total_entries} {t('friends.entries')} · {t('streak.best') || 'Best'} {row.longest_streak}
                   </div>
                 </div>
