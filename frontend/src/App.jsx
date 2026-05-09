@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/LoadingSpinner'
 import PageTransition from './components/PageTransition'
 import OfflineIndicator from './components/OfflineIndicator'
+import VersionBadge from './components/VersionBadge'
 
 // All page modules are code-split. Logged-in users land on JournalPage (or whatever
 // authed route they hit) and never download the auth/legal pages; first-time visitors
@@ -79,6 +80,7 @@ export default function App() {
   return (
     <>
       <OfflineIndicator />
+      <VersionBadge />
       <ErrorBoundary key={location.pathname}>
       <AnimatePresence mode="wait" initial={false}>
         <Routes location={location} key={location.pathname}>
