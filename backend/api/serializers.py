@@ -713,15 +713,26 @@ class JournalStreakSerializer(serializers.ModelSerializer):
 class HabitSerializer(serializers.ModelSerializer):
     streak = serializers.SerializerMethodField()
     completion_rate = serializers.SerializerMethodField()
+    checked_today = serializers.SerializerMethodField()
 
     class Meta:
         model = Habit
         fields = [
             'id', 'name', 'description', 'category', 'color', 'icon',
             'target_frequency', 'target_count', 'is_active',
-            'created_at', 'updated_at', 'streak', 'completion_rate'
+            'created_at', 'updated_at', 'streak', 'completion_rate',
+            'checked_today',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'streak', 'completion_rate']
+        read_only_fields = [
+            'id', 'created_at', 'updated_at',
+            'streak', 'completion_rate', 'checked_today',
+        ]
+
+    def get_checked_today(self, obj):
+        """True if a HabitLog exists for today — used by the frontend to show
+        the post-check-in 'done' state without needing the dashboard refetch."""
+        from django.utils import timezone
+        return HabitLog.objects.filter(habit=obj, date=timezone.now().date()).exists()
 
     def get_streak(self, obj):
         """Calculate current consecutive days streak."""

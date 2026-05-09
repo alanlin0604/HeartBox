@@ -43,6 +43,11 @@ export const checkInHabit = (id, note = '') => {
   return api.post(`/habits/${id}/check_in/`, { note });
 };
 
+// Undo today's check-in
+export const uncheckInHabit = (id) => {
+  return api.delete(`/habits/${id}/check_in/`);
+};
+
 // Get 90-day calendar
 export const getHabitCalendar = (id) => {
   const key = `habit:${id}:calendar`;

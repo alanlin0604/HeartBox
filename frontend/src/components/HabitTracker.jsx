@@ -8,6 +8,7 @@ import {
   updateHabit,
   deleteHabit,
   checkInHabit,
+  uncheckInHabit,
 } from '../api/habits';
 import LoadingSpinner from './LoadingSpinner';
 import EmptyState from './EmptyState';
@@ -80,13 +81,24 @@ export default function HabitTracker() {
     }
   };
 
-  const handleCheckIn = async (id) => {
+  const handleCheckIn = async (id, note = '') => {
     try {
-      await checkInHabit(id);
+      await checkInHabit(id, note);
       toast?.success(t('habit.checkInSuccess'));
       await loadHabits();
     } catch (error) {
       console.error('Failed to check in:', error);
+      toast?.error(t('common.operationFailed'));
+    }
+  };
+
+  const handleUncheckIn = async (id) => {
+    try {
+      await uncheckInHabit(id);
+      toast?.success(t('habit.uncheckInSuccess') || t('common.saveSuccess'));
+      await loadHabits();
+    } catch (error) {
+      console.error('Failed to undo check-in:', error);
       toast?.error(t('common.operationFailed'));
     }
   };
@@ -169,6 +181,7 @@ export default function HabitTracker() {
               key={habit.id}
               habit={habit}
               onCheckIn={handleCheckIn}
+              onUncheckIn={handleUncheckIn}
               onEdit={handleEdit}
               onDelete={(id) => setDeleteConfirm(id)}
             />

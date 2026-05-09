@@ -638,24 +638,33 @@ class HabitViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post', 'delete'])
     def check_in(self, request, pk=None):
-        """Check in for a habit."""
+        """POST: check in for today (idempotent — re-checking is a no-op).
+        DELETE: undo today's check-in."""
         habit = self.get_object()
         today = timezone.now().date()
 
-        # Check if already checked in today
-        if HabitLog.objects.filter(habit=habit, date=today).exists():
-            return Response({'error': 'Already checked in today'}, status=400)
+        if request.method == 'DELETE':
+            removed = HabitLog.objects.filter(habit=habit, date=today).delete()[0]
+            return Response({'removed': removed})
+
+        existing = HabitLog.objects.filter(habit=habit, date=today).first()
+        if existing:
+            # Idempotent: caller is allowed to update the note even if already checked in.
+            new_note = request.data.get('note')
+            if new_note is not None and new_note != existing.note:
+                existing.note = new_note
+                existing.save(update_fields=['note'])
+            return Response(HabitLogSerializer(existing).data)
 
         log = HabitLog.objects.create(
             habit=habit,
             user=request.user,
             date=today,
-            note=request.data.get('note', '')
+            note=request.data.get('note', '') or '',
         )
-
-        return Response(HabitLogSerializer(log).data)
+        return Response(HabitLogSerializer(log).data, status=201)
 
     @action(detail=True, methods=['get'])
     def calendar(self, request, pk=None):
