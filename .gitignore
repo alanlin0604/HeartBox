@@ -45,8 +45,9 @@ chroma_db/
 Thumbs.db
 nul
 
-# Claude Code
-.claude/
+# Claude Code — local config + worktrees stay private; shared skills ship with the repo.
+.claude/*
+!.claude/skills/
 
 # Capacitor native build artifacts
 frontend/android/.gradle/
