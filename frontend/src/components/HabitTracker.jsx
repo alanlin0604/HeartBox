@@ -51,12 +51,17 @@ export default function HabitTracker() {
     loadHabits();
   }, [loadHabits]);
 
+  // All mutation handlers patch the in-memory list directly using either the
+  // optimistic value (instant feedback) or the API response (authoritative).
+  // No follow-up GET, so the page never goes through a re-fetch render.
+
   const handleCreate = async (data) => {
     try {
-      await createHabit(data);
+      const res = await createHabit(data);
+      // Backend returns the full HabitSerializer payload — append it.
+      setHabits((prev) => [...prev, res.data]);
       toast?.success(t('habit.createSuccess'));
       setShowForm(false);
-      await loadHabits(true, true);
     } catch (error) {
       console.error('Failed to create habit:', error);
       toast?.error(t('common.operationFailed'));
@@ -66,10 +71,10 @@ export default function HabitTracker() {
 
   const handleUpdate = async (id, data) => {
     try {
-      await updateHabit(id, data);
+      const res = await updateHabit(id, data);
+      setHabits((prev) => prev.map((h) => (h.id === id ? res.data : h)));
       toast?.success(t('common.saveSuccess'));
       setEditingHabit(null);
-      await loadHabits(true, true);
     } catch (error) {
       console.error('Failed to update habit:', error);
       toast?.error(t('common.operationFailed'));
@@ -80,39 +85,64 @@ export default function HabitTracker() {
   const handleDelete = async (id) => {
     try {
       await deleteHabit(id);
+      setHabits((prev) => prev.filter((h) => h.id !== id));
       toast?.success(t('habit.deleteSuccess'));
       setDeleteConfirm(null);
-      await loadHabits(true, true);
     } catch (error) {
       console.error('Failed to delete habit:', error);
       toast?.error(t('common.operationFailed'));
     }
   };
 
+  // Check-in returns a HabitLog (not a Habit), so streak / completion_rate
+  // can drift up to 1 entry. Bump them client-side too — close enough until
+  // the next mount-time refresh or until the user navigates back.
   const handleCheckIn = async (id, note = '') => {
-    // Optimistic flip so the green checkmark appears the instant the button
-    // is tapped — even before the server round-trip lands.
-    setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, checked_today: true } : h)));
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === id
+          ? {
+              ...h,
+              checked_today: true,
+              streak: (h.streak || 0) + 1,
+            }
+          : h,
+      ),
+    );
     try {
       await checkInHabit(id, note);
       toast?.success(t('habit.checkInSuccess'));
-      await loadHabits(true, true);  // pull fresh streak / completion_rate from server
     } catch (error) {
-      // Roll back optimistic state on failure
-      setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, checked_today: false } : h)));
+      // Roll back on failure
+      setHabits((prev) =>
+        prev.map((h) =>
+          h.id === id
+            ? { ...h, checked_today: false, streak: Math.max(0, (h.streak || 1) - 1) }
+            : h,
+        ),
+      );
       console.error('Failed to check in:', error);
       toast?.error(t('common.operationFailed'));
     }
   };
 
   const handleUncheckIn = async (id) => {
-    setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, checked_today: false } : h)));
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === id
+          ? { ...h, checked_today: false, streak: Math.max(0, (h.streak || 1) - 1) }
+          : h,
+      ),
+    );
     try {
       await uncheckInHabit(id);
       toast?.success(t('habit.uncheckInSuccess') || t('common.saveSuccess'));
-      await loadHabits(true, true);
     } catch (error) {
-      setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, checked_today: true } : h)));
+      setHabits((prev) =>
+        prev.map((h) =>
+          h.id === id ? { ...h, checked_today: true, streak: (h.streak || 0) + 1 } : h,
+        ),
+      );
       console.error('Failed to undo check-in:', error);
       toast?.error(t('common.operationFailed'));
     }
