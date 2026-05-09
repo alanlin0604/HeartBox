@@ -115,6 +115,7 @@ from .friends_views import (
     FriendActivityView,
     FriendListView,
     FriendRequestCreateView,
+    LeaderboardView,
     ReceivedFriendRequestsView,
     RejectFriendRequestView,
     RemoveFriendView,
@@ -296,6 +297,7 @@ urlpatterns = [
     path('friends/share/<int:share_id>/comments/', CommentListView.as_view(), name='friend-comment-list'),
     path('friends/comment/<int:comment_id>/', DeleteCommentView.as_view(), name='friend-delete-comment'),
     path('friends/activity/', FriendActivityView.as_view(), name='friend-activity'),
+    path('friends/leaderboard/', LeaderboardView.as_view(), name='friend-leaderboard'),
     # Community moderation (staff-only)
     path('community/reports/', ReportListView.as_view(), name='community-report-list'),
     path('community/posts/<int:pk>/moderate/', ModeratePostView.as_view(), name='community-post-moderate'),

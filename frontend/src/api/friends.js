@@ -158,3 +158,14 @@ export const getFriendActivity = (hours = 24) => {
     return res;
   });
 };
+
+/** Get streak leaderboard (self + all friends, sorted by current_streak desc). */
+export const getLeaderboard = () => {
+  const key = 'friends:leaderboard';
+  const cached = getCached(key);
+  if (cached) return Promise.resolve(cached);
+  return api.get('/friends/leaderboard/').then(res => {
+    setCache(key, res, 60_000);
+    return res;
+  });
+};

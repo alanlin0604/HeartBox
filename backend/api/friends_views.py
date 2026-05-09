@@ -359,12 +359,64 @@ class FriendActivityView(APIView):
         return Response({'activities': activities})
 
 
+class LeaderboardView(APIView):
+    """GET /api/friends/leaderboard/ — current_streak ranking of self + friends.
+
+    Returns a list sorted by current_streak (desc) so the frontend can render
+    a comparison bar. The response includes ``is_self`` so the user's row can
+    be highlighted, and ``total_entries`` for a richer comparison.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .models import Friendship, JournalStreak, MoodNote
+
+        # Collect (user, is_self) pairs.
+        rows = [(request.user, True)]
+        for fs in Friendship.objects.filter(user=request.user).select_related('friend'):
+            rows.append((fs.friend, False))
+
+        user_ids = [u.id for u, _ in rows]
+
+        # Bulk-fetch streak rows + entry counts to keep this O(1) queries.
+        streaks = {
+            s.user_id: s for s in JournalStreak.objects.filter(user_id__in=user_ids)
+        }
+        from django.db.models import Count
+        entry_counts = dict(
+            MoodNote.objects.filter(user_id__in=user_ids, is_deleted=False)
+                            .values('user_id')
+                            .annotate(c=Count('id'))
+                            .values_list('user_id', 'c')
+        )
+
+        results = []
+        for user, is_self in rows:
+            streak = streaks.get(user.id)
+            results.append({
+                'user_id': user.id,
+                'username': user.username,
+                'avatar': user.avatar.url if getattr(user, 'avatar', None) else None,
+                'is_self': is_self,
+                'current_streak': streak.current_streak if streak else 0,
+                'longest_streak': streak.longest_streak if streak else 0,
+                'total_entries': entry_counts.get(user.id, 0),
+                'last_entry_date': streak.last_entry_date.isoformat() if streak and streak.last_entry_date else None,
+            })
+
+        results.sort(key=lambda r: (-r['current_streak'], -r['total_entries'], r['username']))
+        for i, r in enumerate(results, start=1):
+            r['rank'] = i
+
+        return Response({'leaderboard': results, 'count': len(results)})
+
+
 # drf_spectacular schema policy — see backend/api/views.py for rationale.
 _UNDOCUMENTED_VIEWS = [
     'AcceptFriendRequestView', 'AddCommentView', 'DeleteCommentView',
-    'FriendActivityView', 'FriendRequestCreateView', 'RejectFriendRequestView',
-    'RemoveFriendView', 'ShareNoteWithFriendsView', 'UnshareNoteView',
-    'UserSearchView',
+    'FriendActivityView', 'FriendRequestCreateView', 'LeaderboardView',
+    'RejectFriendRequestView', 'RemoveFriendView', 'ShareNoteWithFriendsView',
+    'UnshareNoteView', 'UserSearchView',
 ]
 for _name in _UNDOCUMENTED_VIEWS:
     _cls = globals().get(_name)

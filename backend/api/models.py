@@ -225,6 +225,7 @@ class Notification(models.Model):
         ('friend_accepted', '好友已接受'),
         ('friend_share', '好友分享日記'),
         ('friend_comment', '好友留言'),
+        ('post_reaction', '社群貼文有人回應'),
     ]
 
     user = models.ForeignKey(

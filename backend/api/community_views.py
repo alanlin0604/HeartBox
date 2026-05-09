@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
 
-from .models import PostReaction, PostReport, PublicPost
+from .models import Notification, PostReaction, PostReport, PublicPost
 from .serializers import (
     PostReactionSerializer,
     PublicPostCreateSerializer,
@@ -156,6 +156,23 @@ class PublicPostViewSet(viewsets.ModelViewSet):
                 reaction_type=reaction_type
             )
             action_type = 'added'
+
+            # Notify the post author when someone (other than themselves) reacts.
+            # Stays anonymous — we don't reveal who reacted, just that someone
+            # did, to keep the community pseudo-anonymous.
+            if post.user_id != request.user.id:
+                emoji = {'hug': '🤗', 'support': '💪', 'heart': '❤️'}.get(reaction_type, '✨')
+                preview = post.content[:30] + ('…' if len(post.content) > 30 else '')
+                try:
+                    Notification.objects.create(
+                        user=post.user,
+                        type='post_reaction',
+                        title=f'有人{emoji}你的貼文',
+                        message=f'「{preview}」收到了一個 {reaction_type} 反應',
+                        data={'post_id': post.id, 'reaction_type': reaction_type},
+                    )
+                except Exception:
+                    logger.warning('Failed to create reaction notification for post %d', post.id)
 
         # Return updated post
         return Response({
