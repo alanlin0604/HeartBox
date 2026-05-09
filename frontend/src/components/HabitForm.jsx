@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useLang } from '../context/LanguageContext';
 
+// User-pickable habit accent colors. Brand orange/rose first so the
+// default-most-used selections match the rest of the app.
 const COLORS = [
-  '#8b5cf6', // orange-500
-  '#ec4899', // rose-500
-  '#3b82f6', // blue-500
-  '#10b981', // green-500
+  '#f97316', // orange-500 (brand)
+  '#fb923c', // orange-400
+  '#f43f5e', // rose-500 (brand)
+  '#ec4899', // pink-500
   '#f59e0b', // amber-500
-  '#ef4444', // red-500
+  '#10b981', // emerald-500
+  '#3b82f6', // blue-500
   '#06b6d4', // cyan-500
-  '#f97316', // orange-500
 ];
 
 const ICONS = ['✓', '🏃', '📚', '🧘', '💪', '🎯', '💧', '🌙', '☀️', '🍎', '🎨', '✍️'];

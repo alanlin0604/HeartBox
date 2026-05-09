@@ -323,7 +323,7 @@ export default function DashboardPage() {
               axisStroke={axisStroke}
               tooltipStyle={tooltipStyle}
               bars={[
-                { dataKey: 'avg_sentiment', name: t('dashboard.avgSentiment'), fill: '#a78bfa' },
+                { dataKey: 'avg_sentiment', name: t('dashboard.avgSentiment'), fill: '#fb923c' },
               ]}
             />
           </Suspense>

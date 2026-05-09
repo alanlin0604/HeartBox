@@ -99,7 +99,7 @@ export default function FriendsList() {
                         className="w-10 h-10 rounded-full object-cover border border-white/20"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-green-500/25 flex items-center justify-center text-green-400 font-semibold">
+                      <div className="w-10 h-10 rounded-full bg-orange-500/25 flex items-center justify-center text-orange-400 font-semibold">
                         {friend.username.slice(0, 1).toUpperCase()}
                       </div>
                     )}

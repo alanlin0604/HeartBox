@@ -30,7 +30,10 @@ export default function HabitTracker() {
     setLoading(true);
     try {
       const res = await getHabits();
-      setHabits(res.data || []);
+      // DRF global pagination wraps list responses in {count, results: [...]};
+      // tolerate both shapes so the page doesn't crash if pagination is toggled.
+      const list = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+      setHabits(list);
     } catch (error) {
       console.error('Failed to load habits:', error);
       toast?.error(t('habit.loadError'));

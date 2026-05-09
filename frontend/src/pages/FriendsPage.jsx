@@ -12,15 +12,15 @@ export default function FriendsPage() {
 
   const tabs = [
     { id: 'friends', label: t('friends.myFriends'), icon: UsersIcon },
-    { id: 'leaderboard', label: t('friends.leaderboard') || 'Leaderboard', icon: TrophyIcon },
-    { id: 'shared', label: t('friends.sharedWithMe'), icon: ShareIcon },
+    { id: 'leaderboard', label: t('friends.leaderboard'), icon: TrophyIcon },
+    { id: 'shared', label: t('friends.share.sharedWithMe'), icon: ShareIcon },
     { id: 'activity', label: t('friends.activity.title'), icon: ActivityIcon },
   ]
 
   return (
     <PageTransition>
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+        <h1 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text text-transparent">
           {t('friends.title')}
         </h1>
 
@@ -34,7 +34,7 @@ export default function FriendsPage() {
                 flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all
                 flex items-center justify-center gap-2
                 ${activeTab === tab.id
-                  ? 'bg-green-500/20 text-green-400'
+                  ? 'bg-orange-500/20 text-orange-400'
                   : 'text-slate-400 hover:text-slate-300 hover:bg-white/5'
                 }
               `}

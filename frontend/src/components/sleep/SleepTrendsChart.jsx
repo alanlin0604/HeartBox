@@ -87,9 +87,9 @@ export default function SleepTrendsChart({ data }) {
             yAxisId="left"
             type="monotone"
             dataKey="duration"
-            stroke="#8b5cf6"
+            stroke="#fb923c"
             strokeWidth={2}
-            dot={{ fill: '#8b5cf6', r: 3 }}
+            dot={{ fill: '#fb923c', r: 3 }}
             activeDot={{ r: 5 }}
           />
           <Line

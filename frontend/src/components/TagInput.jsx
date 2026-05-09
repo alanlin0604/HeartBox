@@ -2,15 +2,16 @@ import { useState, useEffect, useRef } from 'react'
 import { tagAPI } from '../api/tags'
 import { useLang } from '../context/LanguageContext'
 
+// User-pickable tag accent colors. Brand orange/rose first.
 const TAG_COLORS = [
-  '#6366f1', // indigo
-  '#8b5cf6', // violet
+  '#f97316', // orange (brand)
+  '#f43f5e', // rose (brand)
   '#ec4899', // pink
-  '#f43f5e', // rose
   '#f59e0b', // amber
   '#10b981', // emerald
   '#06b6d4', // cyan
   '#3b82f6', // blue
+  '#6366f1', // indigo
 ]
 
 export default function TagInput({ value = [], onChange }) {

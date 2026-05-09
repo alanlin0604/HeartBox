@@ -58,7 +58,7 @@ export default function HabitCheckInWidget({ widgetId, isEditMode, onSettings })
     return (
       <div className="glass p-4 rounded-xl h-full flex flex-col">
         <header className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-green-400">{t('dashboard.widget.habitCheckin.title')}</h3>
+          <h3 className="font-semibold text-orange-400">{t('dashboard.widget.habitCheckin.title')}</h3>
           <button
             className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
             onClick={onSettings}
@@ -81,7 +81,7 @@ export default function HabitCheckInWidget({ widgetId, isEditMode, onSettings })
     return (
       <div className="glass p-4 rounded-xl h-full flex flex-col">
         <header className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-green-400">{t('dashboard.widget.habitCheckin.title')}</h3>
+          <h3 className="font-semibold text-orange-400">{t('dashboard.widget.habitCheckin.title')}</h3>
           <button
             className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
             onClick={onSettings}
@@ -117,7 +117,7 @@ export default function HabitCheckInWidget({ widgetId, isEditMode, onSettings })
         </div>
       )}
       <header className="flex justify-between items-center mb-3">
-        <h3 className="font-semibold text-green-400">{t('dashboard.widget.habitCheckin.title')}</h3>
+        <h3 className="font-semibold text-orange-400">{t('dashboard.widget.habitCheckin.title')}</h3>
         <button
           className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded transition-colors"
           onClick={onSettings}

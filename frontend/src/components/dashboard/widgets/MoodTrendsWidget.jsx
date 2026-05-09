@@ -136,8 +136,8 @@ export default function MoodTrendsWidget({ widgetId, isEditMode, onSettings }) {
             />
             <defs>
               <linearGradient id="moodGradient" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#f472b6" />
-                <stop offset="100%" stopColor="#a855f7" />
+                <stop offset="0%" stopColor="#fb923c" />
+                <stop offset="100%" stopColor="#f43f5e" />
               </linearGradient>
             </defs>
             <Line
@@ -145,7 +145,7 @@ export default function MoodTrendsWidget({ widgetId, isEditMode, onSettings }) {
               dataKey="mood"
               stroke="url(#moodGradient)"
               strokeWidth={2}
-              dot={{ fill: '#a855f7', r: 4 }}
+              dot={{ fill: '#f43f5e', r: 4 }}
               activeDot={{ r: 6 }}
             />
           </LineChart>
