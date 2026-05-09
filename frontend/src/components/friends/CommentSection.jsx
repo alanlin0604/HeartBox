@@ -15,21 +15,26 @@ export default function CommentSection({ shareId, currentUserId, onCommentAdded 
   const [deletingId, setDeletingId] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
-  const loadComments = async () => {
-    try {
-      setLoading(true)
-      const res = await getComments(shareId)
-      setComments(res.data.results || [])
-    } catch (error) {
-      console.error('Failed to load comments:', error)
-      toast?.error(t('friends.comment.loadFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // Cancel-on-shareId-change so an older comments fetch can't land
+  // after the user has already navigated to a different share.
   useEffect(() => {
-    loadComments()
+    let cancelled = false
+    setLoading(true)
+    getComments(shareId)
+      .then((res) => {
+        if (cancelled) return
+        setComments(res.data.results || [])
+      })
+      .catch((error) => {
+        if (cancelled) return
+        console.error('Failed to load comments:', error)
+        toast?.error(t('friends.comment.loadFailed'))
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shareId])
 
   const handleAddComment = async (e) => {

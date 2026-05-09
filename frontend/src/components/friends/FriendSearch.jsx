@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useLang } from '../../context/LanguageContext'
 import { useToast } from '../../context/ToastContext'
 import { searchUsers, sendFriendRequest } from '../../api/friends'
@@ -13,6 +13,10 @@ export default function FriendSearch({ onClose, onRequestSent }) {
   const [sendingTo, setSendingTo] = useState(null)
   const [message, setMessage] = useState('')
   const [showMessageFor, setShowMessageFor] = useState(null)
+  // Race-condition guard: bumped on every search; only the latest fetch
+  // commits to state. Without this, fast typing can let a slow first
+  // request land after the latest one.
+  const fetchIdRef = useRef(0)
 
   const performSearch = async (searchQuery) => {
     if (!searchQuery.trim()) {
@@ -20,15 +24,18 @@ export default function FriendSearch({ onClose, onRequestSent }) {
       return
     }
 
+    const fetchId = ++fetchIdRef.current
     try {
       setLoading(true)
       const res = await searchUsers(searchQuery)
+      if (fetchId !== fetchIdRef.current) return
       setResults(res.data.users || [])
     } catch (error) {
+      if (fetchId !== fetchIdRef.current) return
       console.error('Search failed:', error)
       toast?.error(t('friends.search.failed'))
     } finally {
-      setLoading(false)
+      if (fetchId === fetchIdRef.current) setLoading(false)
     }
   }
 

@@ -14,24 +14,31 @@ export default function SharedNoteDetail({ shareId, onClose, onUpdate }) {
   const toast = useToast()
   const [loading, setLoading] = useState(true)
   const [shareData, setShareData] = useState(null)
+  const [refetchCounter, setRefetchCounter] = useState(0)
 
-  const loadDetail = async () => {
-    try {
-      setLoading(true)
-      const res = await getSharedNoteDetail(shareId)
-      setShareData(res.data)
-    } catch (error) {
-      console.error('Failed to load share detail:', error)
-      toast?.error(t('friends.share.detailFailed'))
-      onClose()
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // Cancel-on-shareId-change so a slow earlier fetch can't overwrite the
+  // newer detail when the user clicks between shared notes. Bumping
+  // refetchCounter triggers a fresh load (used by onCommentAdded below).
   useEffect(() => {
-    loadDetail()
-  }, [shareId])
+    let cancelled = false
+    setLoading(true)
+    getSharedNoteDetail(shareId)
+      .then((res) => {
+        if (cancelled) return
+        setShareData(res.data)
+      })
+      .catch((error) => {
+        if (cancelled) return
+        console.error('Failed to load share detail:', error)
+        toast?.error(t('friends.share.detailFailed'))
+        onClose()
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareId, refetchCounter])
 
   if (loading) {
     return (
@@ -117,7 +124,7 @@ export default function SharedNoteDetail({ shareId, onClose, onUpdate }) {
           shareId={shareId}
           currentUserId={user.id}
           onCommentAdded={() => {
-            loadDetail()
+            setRefetchCounter((n) => n + 1)
             if (onUpdate) onUpdate()
           }}
         />
