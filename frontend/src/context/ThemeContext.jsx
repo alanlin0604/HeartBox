@@ -5,8 +5,10 @@ const ThemeContext = createContext(null)
 function getInitialTheme() {
   const saved = localStorage.getItem('theme')
   if (saved) return saved
-  // Auto-detect system preference
-  if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark'
+  // First run: always light. The brand is warm-toned (orange + rose) and
+  // first-time users on a dark-defaulting Android phone reported the dark
+  // launch felt jarring. Once they toggle, the choice is persisted; the
+  // system-change listener below also kicks in if no manual flag is set.
   return 'light'
 }
 
