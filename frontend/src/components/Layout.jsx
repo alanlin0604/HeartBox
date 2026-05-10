@@ -352,27 +352,53 @@ export default function Layout() {
               {t('nav.admin')}
             </NavLink>
           )}
-          <div className="border-t border-[var(--card-border)] pt-3 flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => { navigate('/settings'); setMobileNavOpen(false) }}
-              className="text-sm opacity-60 hover:opacity-100"
-            >
-              {t('settings.title')}
-            </button>
-            <button
-              onClick={() => { toggleTheme(); setMobileNavOpen(false) }}
-              className="text-sm opacity-70 hover:opacity-100 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--card-border)] transition-colors"
-              aria-label={theme === 'dark' ? t('aria.switchToLight') : t('aria.switchToDark')}
-            >
-              <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
-              <span>{theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark')}</span>
-            </button>
-            <button
-              onClick={() => { logout(); setMobileNavOpen(false) }}
-              className="text-sm text-red-500 ml-auto"
-            >
-              {t('nav.logout')}
-            </button>
+          <div className="border-t border-[var(--card-border)] pt-3 space-y-3">
+            {/* Language picker (mobile) — desktop has its own in the user dropdown */}
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+              <div className="flex items-center gap-1">
+                {LANG_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.code}
+                    onClick={() => { setLang(opt.code); setMobileNavOpen(false) }}
+                    className={`px-2 py-1 text-xs rounded transition-all ${
+                      lang === opt.code
+                        ? 'bg-orange-500/30 text-orange-500 font-bold'
+                        : 'opacity-50 hover:opacity-100'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => { navigate('/settings'); setMobileNavOpen(false) }}
+                className="text-sm opacity-60 hover:opacity-100"
+              >
+                {t('settings.title')}
+              </button>
+              <button
+                onClick={() => { toggleTheme(); setMobileNavOpen(false) }}
+                className="text-sm opacity-70 hover:opacity-100 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--card-border)] transition-colors"
+                aria-label={theme === 'dark' ? t('aria.switchToLight') : t('aria.switchToDark')}
+              >
+                <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
+                <span>{theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark')}</span>
+              </button>
+              <button
+                onClick={() => { logout(); setMobileNavOpen(false) }}
+                className="text-sm text-red-500 ml-auto"
+              >
+                {t('nav.logout')}
+              </button>
+            </div>
           </div>
         </div>
       )}
