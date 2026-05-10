@@ -51,5 +51,13 @@
 	<string>HeartBox needs access to your health data to analyze the relationship between your physical health and emotional well-being.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>HeartBox records your wellness activities like breathing exercises and meditation sessions.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>HeartBox uses your microphone for voice journal entries — you can speak instead of typing.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>HeartBox transcribes your voice into text for journal entries when you use the voice input feature.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>HeartBox lets you attach photos to your journal entries.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>HeartBox lets you take photos to attach to your journal entries.</string>
 </dict>
 </plist>

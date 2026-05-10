@@ -1,7 +1,12 @@
-const CACHE_NAME = 'heartbox-cache-v7'
-const STATIC_CACHE = 'heartbox-static-v7'
-const IMAGE_CACHE = 'heartbox-images-v7'
-const FONT_CACHE = 'heartbox-fonts-v7'
+// STAMPED_VERSION is rewritten by scripts/postbuild-sw.cjs after every
+// vite build to a `<timestamp>-<git sha>` string. Source-tree value still
+// starts with `__` so dev (`npm run dev`) keeps a single 'dev' cache.
+const STAMPED_VERSION = '__CACHE_VERSION__'
+const VERSION = STAMPED_VERSION.startsWith('__') ? 'dev' : STAMPED_VERSION
+const CACHE_NAME = `heartbox-cache-${VERSION}`
+const STATIC_CACHE = `heartbox-static-${VERSION}`
+const IMAGE_CACHE = `heartbox-images-${VERSION}`
+const FONT_CACHE = `heartbox-fonts-${VERSION}`
 
 const APP_SHELL = ['/', '/index.html', '/manifest.json', '/offline.html', '/logo.png']
 const MAX_IMAGE_CACHE_SIZE = 50
