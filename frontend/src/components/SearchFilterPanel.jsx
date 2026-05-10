@@ -112,6 +112,7 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
             onFocus={() => searchHistory.length > 0 && setShowHistory(true)}
             onBlur={() => setTimeout(() => setShowHistory(false), 200)}
             placeholder={t('search.placeholder')}
+            aria-label={t('search.search')}
             className="glass-input text-sm w-full"
           />
           {showHistory && searchHistory.length > 0 && (
@@ -164,8 +165,9 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 border-t border-white/10">
           {/* Tag */}
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">{t('search.tag')}</label>
+            <label htmlFor="filter-tag" className="text-xs text-[var(--text-secondary)] mb-1 block">{t('search.tag')}</label>
             <input
+              id="filter-tag"
               type="text"
               value={localTag}
               onChange={(e) => { setLocalTag(e.target.value); updateFilter('tag', e.target.value) }}
@@ -176,9 +178,11 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
 
           {/* Sentiment range */}
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">{t('search.sentimentRange')}</label>
+            <span id="filter-sentiment-label" className="text-xs text-[var(--text-secondary)] mb-1 block">{t('search.sentimentRange')}</span>
             <div className="flex gap-2">
               <input
+                aria-labelledby="filter-sentiment-label"
+                aria-label={`${t('search.sentimentRange')} ${t('search.min') || 'min'}`}
                 type="number"
                 step="0.1"
                 min="-1"
@@ -188,8 +192,10 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
                 placeholder="-1.0"
                 className="glass-input text-sm w-full"
               />
-              <span className="self-center opacity-40">~</span>
+              <span className="self-center opacity-40" aria-hidden="true">~</span>
               <input
+                aria-labelledby="filter-sentiment-label"
+                aria-label={`${t('search.sentimentRange')} ${t('search.max') || 'max'}`}
                 type="number"
                 step="0.1"
                 min="-1"
@@ -204,9 +210,11 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
 
           {/* Stress range */}
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">{t('search.stressRange')}</label>
+            <span id="filter-stress-label" className="text-xs text-[var(--text-secondary)] mb-1 block">{t('search.stressRange')}</span>
             <div className="flex gap-2">
               <input
+                aria-labelledby="filter-stress-label"
+                aria-label={`${t('search.stressRange')} ${t('search.min') || 'min'}`}
                 type="number"
                 min="0"
                 max="10"
@@ -215,8 +223,10 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
                 placeholder="0"
                 className="glass-input text-sm w-full"
               />
-              <span className="self-center opacity-40">~</span>
+              <span className="self-center opacity-40" aria-hidden="true">~</span>
               <input
+                aria-labelledby="filter-stress-label"
+                aria-label={`${t('search.stressRange')} ${t('search.max') || 'max'}`}
                 type="number"
                 min="0"
                 max="10"
@@ -230,16 +240,20 @@ export default function SearchFilterPanel({ filters, onFilterChange }) {
 
           {/* Date range */}
           <div className="sm:col-span-2 lg:col-span-2">
-            <label className="text-xs text-slate-400 mb-1 block">{t('search.dateRange')}</label>
+            <span id="filter-date-label" className="text-xs text-[var(--text-secondary)] mb-1 block">{t('search.dateRange')}</span>
             <div className="flex gap-2">
               <input
+                aria-labelledby="filter-date-label"
+                aria-label={`${t('search.dateRange')} ${t('search.from') || 'from'}`}
                 type="date"
                 value={localDateFrom}
                 onChange={(e) => { setLocalDateFrom(e.target.value); updateFilter('date_from', e.target.value) }}
                 className="glass-input text-sm w-full"
               />
-              <span className="self-center opacity-40">~</span>
+              <span className="self-center opacity-40" aria-hidden="true">~</span>
               <input
+                aria-labelledby="filter-date-label"
+                aria-label={`${t('search.dateRange')} ${t('search.to') || 'to'}`}
                 type="date"
                 value={localDateTo}
                 onChange={(e) => { setLocalDateTo(e.target.value); updateFilter('date_to', e.target.value) }}

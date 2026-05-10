@@ -25,16 +25,21 @@ export default memo(function NoteCard({ note, highlight }) {
   const tags = note.metadata?.tags || []
 
   return (
-    <Link to={`/notes/${note.id}`} className="block">
+    <Link
+      to={`/notes/${note.id}`}
+      className="block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-400 rounded-xl"
+      aria-label={`${t('noteCard.viewEntry') || '查看日記'}: ${date}`}
+    >
       <div className="glass-card p-4">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">{date}</span>
+            <span className="text-xs text-[var(--text-secondary)]">{date}</span>
             {note.attachments?.length > 0 && (
               <span className="text-xs opacity-40" title={t('noteCard.hasAttachments')}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                 </svg>
+                <span className="sr-only">{t('noteCard.hasAttachments')}</span>
               </span>
             )}
           </div>

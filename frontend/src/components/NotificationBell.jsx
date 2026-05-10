@@ -5,12 +5,20 @@ import { getNotifications, markNotificationsRead } from '../api/notifications'
 import { getAccessToken } from '../utils/tokenStorage'
 import { LOCALE_MAP } from '../utils/locales'
 
+// Keep this in sync with backend Notification.TYPE_CHOICES (api/models.py).
 const NOTIF_TYPE_KEYS = {
   message: 'notification.type.message',
   booking: 'notification.type.booking',
   bookingStatus: 'notification.type.bookingStatus',
   share: 'notification.type.share',
   assessment_share: 'notification.type.assessmentShare',
+  system: 'notification.type.system',
+  friend_request: 'notification.type.friendRequest',
+  friend_accepted: 'notification.type.friendAccepted',
+  friend_share: 'notification.type.friendShare',
+  friend_comment: 'notification.type.friendComment',
+  post_reaction: 'notification.type.postReaction',
+  habit_reminder: 'notification.type.habitReminder',
 }
 
 function getLocalizedMessage(notif, t) {
