@@ -8,10 +8,21 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-@shared_task
-def generate_weekly_summaries():
-    """Generate weekly summaries for all active users. Scheduled every Monday."""
+@shared_task(bind=True, max_retries=3, default_retry_delay=300)
+def generate_weekly_summaries(self):
+    """Generate weekly summaries for all active users. Scheduled every Monday.
+
+    bind=True + retry: external aggregations + notification creates can fail
+    transiently (DB blip, OpenAI throttle). Retry once after 5 min, then
+    twice more. After 3 attempts we give up and surface the error to logs.
+
+    Connection hygiene: with `.iterator()` over a potentially large user
+    set on Cloud Run + Neon's pgbouncer, we can outlast the connection's
+    idle timeout. Periodically close-if-unusable so Django re-opens fresh
+    rather than throwing OperationalError mid-loop.
+    """
     from django.contrib.auth import get_user_model
+    from django.db import connection
     from api.models import MoodNote, Notification, WeeklySummary
 
     User = get_user_model()
@@ -22,66 +33,75 @@ def generate_weekly_summaries():
 
     users = User.objects.filter(is_active=True)
     created_count = 0
+    processed = 0
 
-    for user in users.iterator():
-        # Skip if summary already exists
-        if WeeklySummary.objects.filter(user=user, week_start=prev_week_start).exists():
-            continue
+    from django.db.models import Avg
+    from api.models import NotificationPreference
 
-        notes = MoodNote.objects.filter(
-            user=user,
-            is_deleted=False,
-            created_at__date__gte=prev_week_start,
-            created_at__date__lte=prev_week_end,
-        )
+    try:
+        for user in users.iterator():
+            # Refresh connection every 50 users to dodge idle-timeout drops.
+            if processed and processed % 50 == 0:
+                connection.close_if_unusable_or_obsolete()
+            processed += 1
 
-        note_count = notes.count()
-        if note_count == 0:
-            continue
+            if WeeklySummary.objects.filter(user=user, week_start=prev_week_start).exists():
+                continue
 
-        from django.db.models import Avg
-        aggs = notes.aggregate(
-            mood_avg=Avg('sentiment_score'),
-            stress_avg=Avg('stress_index'),
-        )
-
-        # Collect top activities from metadata
-        tag_counts = {}
-        for meta in notes.values_list('metadata', flat=True):
-            for tag in (meta or {}).get('tags', []):
-                tag_counts[tag] = tag_counts.get(tag, 0) + 1
-        top_activities = sorted(tag_counts, key=tag_counts.get, reverse=True)[:5]
-
-        WeeklySummary.objects.create(
-            user=user,
-            week_start=prev_week_start,
-            mood_avg=aggs['mood_avg'],
-            stress_avg=aggs['stress_avg'],
-            note_count=note_count,
-            top_activities=top_activities,
-        )
-
-        # Create notification (respecting user preferences)
-        from api.models import NotificationPreference
-        pref = NotificationPreference.objects.filter(
-            user=user, notification_type='weekly_report',
-        ).first()
-        if not pref or pref.enabled:
-            Notification.objects.create(
+            notes = MoodNote.objects.filter(
                 user=user,
-                type='system',
-                title='Weekly Summary Ready',
-                message=f'Your weekly summary for {prev_week_start} is ready.',
+                is_deleted=False,
+                created_at__date__gte=prev_week_start,
+                created_at__date__lte=prev_week_end,
+            )
+            note_count = notes.count()
+            if note_count == 0:
+                continue
+
+            aggs = notes.aggregate(
+                mood_avg=Avg('sentiment_score'),
+                stress_avg=Avg('stress_index'),
             )
 
-        created_count += 1
+            tag_counts = {}
+            for meta in notes.values_list('metadata', flat=True):
+                for tag in (meta or {}).get('tags', []):
+                    tag_counts[tag] = tag_counts.get(tag, 0) + 1
+            top_activities = sorted(tag_counts, key=tag_counts.get, reverse=True)[:5]
+
+            WeeklySummary.objects.create(
+                user=user,
+                week_start=prev_week_start,
+                mood_avg=aggs['mood_avg'],
+                stress_avg=aggs['stress_avg'],
+                note_count=note_count,
+                top_activities=top_activities,
+            )
+
+            pref = NotificationPreference.objects.filter(
+                user=user, notification_type='weekly_report',
+            ).first()
+            if not pref or pref.enabled:
+                Notification.objects.create(
+                    user=user,
+                    type='system',
+                    title='Weekly Summary Ready',
+                    message=f'Your weekly summary for {prev_week_start} is ready.',
+                )
+
+            created_count += 1
+    except Exception as exc:
+        logger.exception('generate_weekly_summaries failed at user %s, retrying', processed)
+        # Retry the whole task — created_count rows already committed will be
+        # skipped on next attempt by the WeeklySummary.exists() guard above.
+        raise self.retry(exc=exc)
 
     logger.info('Generated %d weekly summaries', created_count)
     return created_count
 
 
-@shared_task
-def send_due_habit_reminders():
+@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+def send_due_habit_reminders(self):
     """Fire reminders for habits whose reminder_time falls in the last 15 min
     (in the user's local timezone) and that haven't been checked in today.
 

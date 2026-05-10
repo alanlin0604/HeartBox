@@ -586,5 +586,19 @@ class GoogleLoginCallbackView(APIView):
             user.email_verified = True
             user.save(update_fields=['email_verified'])
 
+        # 2FA bypass guard: if user has password-flow 2FA enabled, Google
+        # OAuth must NOT issue a full token. Return a partial token and let
+        # the frontend prompt for the TOTP code (same flow as password login).
+        try:
+            totp_device = user.totp_device
+            if totp_device.confirmed:
+                partial_token = str(RefreshToken.for_user(user).access_token)
+                return Response({
+                    'requires_2fa': True,
+                    'partial_token': partial_token,
+                })
+        except TOTPDevice.DoesNotExist:
+            pass
+
         tokens = _issue_tokens(user)
         return Response(tokens)

@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -14,20 +15,19 @@ from api.models import (
 )
 
 
+@transaction.atomic
 def create_friendship(from_user, to_user):
-    """建立雙向好友關係"""
-    # 建立兩條記錄（雙向）
+    """建立雙向好友關係 — 原子操作避免單向半成品"""
     Friendship.objects.get_or_create(user=from_user, friend=to_user)
     Friendship.objects.get_or_create(user=to_user, friend=from_user)
 
 
+@transaction.atomic
 def remove_friendship(user, friend):
-    """刪除雙向好友關係"""
-    # 刪除好友關係
+    """刪除雙向好友關係 + 相關分享 — 原子操作"""
     Friendship.objects.filter(user=user, friend=friend).delete()
     Friendship.objects.filter(user=friend, friend=user).delete()
 
-    # 同時刪除相關分享
     SharedWithFriend.objects.filter(
         Q(shared_by=user, shared_with=friend) | Q(shared_by=friend, shared_with=user)
     ).delete()
