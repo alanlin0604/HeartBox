@@ -99,3 +99,22 @@ export function hasValidTokens() {
   const refresh = getRefreshToken();
   return Boolean(access && refresh);
 }
+
+/**
+ * Cheap check: is the access token within `bufferSeconds` of expiry (or
+ * already past)? Lets callers (e.g. WebSocket reconnect) decide whether
+ * to refresh proactively before opening a new connection. Returns true
+ * for a missing or malformed token so the caller falls back to refresh
+ * rather than presenting bad credentials.
+ */
+export function isAccessTokenExpiring(bufferSeconds = 60) {
+  const token = getAccessToken();
+  if (!token) return true;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (typeof payload.exp !== 'number') return true;
+    return Date.now() / 1000 + bufferSeconds >= payload.exp;
+  } catch {
+    return true;
+  }
+}

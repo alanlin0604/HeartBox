@@ -21,15 +21,13 @@ def generate_weekly_summaries(self):
     idle timeout. Periodically close-if-unusable so Django re-opens fresh
     rather than throwing OperationalError mid-loop.
     """
+    import zoneinfo
+    from datetime import datetime, time
     from django.contrib.auth import get_user_model
     from django.db import connection
     from api.models import MoodNote, Notification, WeeklySummary
 
     User = get_user_model()
-    today = timezone.now().date()
-    week_start = today - timedelta(days=today.weekday())  # Monday of this week
-    prev_week_start = week_start - timedelta(days=7)
-    prev_week_end = week_start - timedelta(days=1)
 
     users = User.objects.filter(is_active=True)
     created_count = 0
@@ -38,6 +36,20 @@ def generate_weekly_summaries(self):
     from django.db.models import Avg
     from api.models import NotificationPreference
 
+    def user_local_week(user_tz_name):
+        """Return (week_start_date, prev_week_start_date, prev_week_end_date,
+        prev_week_start_utc, prev_week_end_utc) for the user's timezone."""
+        tz = zoneinfo.ZoneInfo(user_tz_name or 'Asia/Taipei')
+        local_today = datetime.now(tz).date()
+        week_start = local_today - timedelta(days=local_today.weekday())
+        pws = week_start - timedelta(days=7)
+        pwe = week_start - timedelta(days=1)
+        # UTC bounds for the previous-week window so the SQL query is tz-correct
+        # regardless of which tz Django has activated at the moment.
+        start_utc = datetime.combine(pws, time.min).replace(tzinfo=tz)
+        end_utc = datetime.combine(pwe, time.max).replace(tzinfo=tz)
+        return pws, start_utc, end_utc
+
     try:
         for user in users.iterator():
             # Refresh connection every 50 users to dodge idle-timeout drops.
@@ -45,14 +57,16 @@ def generate_weekly_summaries(self):
                 connection.close_if_unusable_or_obsolete()
             processed += 1
 
+            prev_week_start, start_utc, end_utc = user_local_week(user.timezone)
+
             if WeeklySummary.objects.filter(user=user, week_start=prev_week_start).exists():
                 continue
 
             notes = MoodNote.objects.filter(
                 user=user,
                 is_deleted=False,
-                created_at__date__gte=prev_week_start,
-                created_at__date__lte=prev_week_end,
+                created_at__gte=start_utc,
+                created_at__lte=end_utc,
             )
             note_count = notes.count()
             if note_count == 0:

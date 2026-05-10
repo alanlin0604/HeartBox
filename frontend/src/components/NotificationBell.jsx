@@ -1,9 +1,36 @@
 import { useEffect, useRef, useState, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import { useLang } from '../context/LanguageContext'
 import { getNotifications, markNotificationsRead } from '../api/notifications'
-import { getAccessToken } from '../utils/tokenStorage'
+import {
+  getAccessToken,
+  getRefreshToken,
+  isAccessTokenExpiring,
+  setAccessToken,
+  setRefreshToken,
+} from '../utils/tokenStorage'
 import { LOCALE_MAP } from '../utils/locales'
+
+/**
+ * Refresh the access token if it's close to expiry, so the WS handshake
+ * uses a valid one. Returns the (possibly new) access token, or null if
+ * we can't refresh — in which case the caller should not connect.
+ */
+async function ensureFreshAccessToken() {
+  if (!isAccessTokenExpiring(60)) return getAccessToken()
+  const refresh = getRefreshToken()
+  if (!refresh) return null
+  try {
+    const apiBase = import.meta.env.VITE_API_URL || '/api'
+    const { data } = await axios.post(`${apiBase}/auth/refresh/`, { refresh })
+    setAccessToken(data.access)
+    if (data.refresh) setRefreshToken(data.refresh)
+    return data.access
+  } catch {
+    return null
+  }
+}
 
 // Keep this in sync with backend Notification.TYPE_CHOICES (api/models.py).
 const NOTIF_TYPE_KEYS = {
@@ -72,8 +99,12 @@ export default memo(function NotificationBell() {
   const closedIntentionally = useRef(false)
   const panelRef = useRef(null)
 
-  const connectWs = () => {
-    const token = getAccessToken()
+  const connectWs = async () => {
+    // Refresh the access token first if it's about to / has already expired.
+    // Without this, a reconnect after >30 min idle authenticates with an
+    // expired JWT, the consumer rejects it, and the channel stays dead until
+    // the user reloads.
+    const token = await ensureFreshAccessToken()
     if (!token) return
 
     closedIntentionally.current = false

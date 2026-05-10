@@ -121,6 +121,11 @@ class ChatConsumer(HeartbeatMixin, AuthMixin, AsyncJsonWebsocketConsumer):
             message_text = message_text[:5000]
 
         msg_data = await self.save_message(user.id, self.conv_id, message_text)
+        if msg_data is None:
+            # Either the conversation vanished or the DB write failed.
+            # Tell only the sender so they can retry; don't broadcast garbage.
+            await self.send_json({'error': 'Message could not be saved'})
+            return
         await self.channel_layer.group_send(self.group_name, {
             'type': 'chat.message',
             'data': msg_data,
@@ -139,44 +144,78 @@ class ChatConsumer(HeartbeatMixin, AuthMixin, AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self, user_id, conv_id, content):
+        """Persist a chat message + recipient notification atomically.
+
+        Returns the serialized message on success, None if the conversation
+        was deleted between accept() and now (handled gracefully — caller
+        sees no exception thrown across the WS).
+
+        The DB writes (message + notification) run in a single transaction
+        so a failure midway can't leave a recipient with a notification
+        that points at a never-saved message id. The downstream channel-
+        layer broadcast is intentionally OUTSIDE the transaction — Redis /
+        in-memory broadcast failures shouldn't roll back the persisted
+        message; the recipient still gets it via NotificationListView.
+        """
+        from django.db import transaction
         from .models import Conversation, Message, Notification
-        conv = Conversation.objects.get(id=conv_id)
-        msg = Message.objects.create(conversation=conv, sender_id=user_id, content=content)
-        conv.save()  # update updated_at
 
-        # Determine the recipient and create a notification
-        recipient_id = conv.counselor_id if conv.user_id == user_id else conv.user_id
-        notification = Notification.objects.create(
-            user_id=recipient_id,
-            type='message',
-            title='New message',
-            message=content[:100],
-            data={
-                'conversation_id': conv.id,
-                'message_id': msg.id,
-                'sender_name': msg.sender.username,
-            },
-        )
+        try:
+            with transaction.atomic():
+                try:
+                    conv = Conversation.objects.select_related().get(id=conv_id)
+                except Conversation.DoesNotExist:
+                    return None
+                msg = Message.objects.create(
+                    conversation=conv, sender_id=user_id, content=content,
+                )
+                conv.save()  # bump updated_at
 
-        # Push notification via channel layer (fire-and-forget from sync context)
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f'notifications_{recipient_id}',
-            {
-                'type': 'notify',
-                'data': {
-                    'id': notification.id,
-                    'type': notification.type,
-                    'title': notification.title,
-                    'message': notification.message,
-                    'data': notification.data,
-                    'is_read': False,
-                    'created_at': notification.created_at.isoformat(),
+                recipient_id = conv.counselor_id if conv.user_id == user_id else conv.user_id
+                notification = Notification.objects.create(
+                    user_id=recipient_id,
+                    type='message',
+                    title='New message',
+                    message=content[:100],
+                    data={
+                        'conversation_id': conv.id,
+                        'message_id': msg.id,
+                        'sender_name': msg.sender.username,
+                    },
+                )
+        except Exception:
+            # Surface to logs but don't tear down the WS — caller decides.
+            import logging
+            logging.getLogger(__name__).exception(
+                'save_message DB write failed; user=%s conv=%s', user_id, conv_id,
+            )
+            return None
+
+        # Best-effort notification fan-out — separate from the persisted writes.
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f'notifications_{recipient_id}',
+                {
+                    'type': 'notify',
+                    'data': {
+                        'id': notification.id,
+                        'type': notification.type,
+                        'title': notification.title,
+                        'message': notification.message,
+                        'data': notification.data,
+                        'is_read': False,
+                        'created_at': notification.created_at.isoformat(),
+                    },
                 },
-            },
-        )
+            )
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning(
+                'channel-layer notify fan-out failed for recipient=%s', recipient_id,
+            )
 
         return {
             'id': msg.id,
