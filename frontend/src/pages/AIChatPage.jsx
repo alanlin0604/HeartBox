@@ -34,7 +34,7 @@ const AIChatMessage = memo(function AIChatMessage({ msg, lang }) {
         <p className="text-sm leading-relaxed whitespace-pre-wrap">
           {msg.content}
         </p>
-        <p className="text-xs opacity-40 mt-1 text-right">
+        <p className="text-xs opacity-60 mt-1 text-right">
           {new Date(msg.created_at).toLocaleTimeString(
             LOCALE_MAP[lang] || lang,
             {
@@ -338,7 +338,7 @@ export default function AIChatPage() {
               </button>
               <span className="text-xl">🤖</span>
               <h3 className="font-semibold">{t('aiChat.title')}</h3>
-              <span className="ml-auto text-xs opacity-40 hidden sm:inline">
+              <span className="ml-auto text-xs opacity-60 hidden sm:inline">
                 {t('aiChat.disclaimer')}
               </span>
             </div>
@@ -346,7 +346,7 @@ export default function AIChatPage() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-3 px-1 pb-24">
               {messages.length === 0 ? (
-                <div className="text-center opacity-40 mt-12">
+                <div className="text-center opacity-60 mt-12">
                   <span className="text-4xl block mb-3">🤖</span>
                   {t('aiChat.empty')}
                 </div>

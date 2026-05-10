@@ -402,23 +402,20 @@ h4, h5, h6 {
   transform: scale(0.95);
 }
 
-/* ===== Focus Visible (Accessibility) ===== */
-.btn-primary:focus-visible,
-.btn-secondary:focus-visible,
-.btn-danger:focus-visible {
+/* ===== Focus Visible (Accessibility) =====
+ * Global keyboard-focus ring on every interactive element so we don't have
+ * to remember to add `focus-visible:outline-*` per component. Mouse clicks
+ * don't trigger :focus-visible, so the ring only appears when it's actually
+ * useful (Tab navigation). The branded button + form classes still ship
+ * specific styles below for any visual nuance.
+ */
+:where(a, button, [role="button"], [tabindex="0"]):focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: 2px solid var(--color-primary-400);
   outline-offset: 2px;
-}
-
-.glass-input:focus-visible,
-.glass:focus-visible {
-  outline: 2px solid var(--color-primary-400);
-  outline-offset: 2px;
-}
-
-.icon-button:focus-visible {
-  outline: 2px solid var(--color-primary-400);
-  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 /* ===== Reduced Motion ===== */

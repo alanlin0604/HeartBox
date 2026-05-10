@@ -305,6 +305,7 @@ export default function JournalPage() {
               <h2 className="text-lg font-semibold">{showTrash ? t('journal.trash') : t('journal.recentNotes')}</h2>
               <button
                 onClick={() => { setShowTrash(!showTrash); if (!showTrash) loadTrash() }}
+                aria-pressed={showTrash}
                 className={`text-xs px-2 py-1 rounded border transition-colors ${showTrash ? 'border-orange-500 text-orange-500' : 'border-[var(--card-border)] opacity-50 hover:opacity-100'}`}
               >
                 {showTrash ? t('journal.recentNotes') : t('journal.trash')}

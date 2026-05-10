@@ -150,6 +150,7 @@ export default function HabitCard({ habit, onCheckIn, onUncheckIn, onEdit, onDel
           value={note}
           onChange={(e) => setNote(e.target.value.slice(0, 280))}
           placeholder={t('habit.notePlaceholder') || 'Add a quick note (optional)...'}
+          aria-label={t('habit.addNote') || 'Add a note'}
           rows={2}
           maxLength={280}
           className="w-full mb-3 px-3 py-2 text-sm rounded-lg bg-white/5 border border-white/10 focus:border-orange-500/60 focus:outline-none resize-none"

@@ -53,6 +53,11 @@ export function AuthProvider({ children }) {
     if (data.requires_2fa) {
       return data; // Return 2FA data to caller without setting tokens
     }
+    // Clear any in-memory cache from a previous session BEFORE storing the
+    // new tokens. Otherwise a "log out + log in as another user on the same
+    // tab" flow would still see the previous user's cached responses for up
+    // to TTL seconds (60s default).
+    clearCache();
     setAuthTokens(data.access, data.refresh, rememberMe);
     if (data.user) {
       setUser(data.user);
