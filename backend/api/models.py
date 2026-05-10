@@ -74,7 +74,11 @@ class MoodNote(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-is_pinned', '-created_at']
+        # `-id` tie-break: two notes created in the same second (or on
+        # backfill where created_at gets bulk-set) otherwise reorder
+        # arbitrarily across pagination pages — page 1 and page 2 can
+        # then both contain the same row.
+        ordering = ['-is_pinned', '-created_at', '-id']
         indexes = [
             models.Index(fields=['user', '-created_at'], name='moodnote_user_created'),
             models.Index(fields=['user', 'sentiment_score'], name='moodnote_user_sentiment'),

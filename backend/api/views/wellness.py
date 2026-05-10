@@ -21,6 +21,8 @@ from . import error_response
 
 
 class AchievementsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
         from api.services.achievements import get_user_achievements_with_progress
         data = get_user_achievements_with_progress(request.user)
@@ -28,6 +30,8 @@ class AchievementsView(APIView):
 
 
 class AchievementCheckView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def post(self, request):
         from api.services.achievements import check_achievements
         newly_unlocked = check_achievements(request.user)

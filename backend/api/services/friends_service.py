@@ -34,36 +34,36 @@ def remove_friendship(user, friend):
 
 
 def get_friend_activity(user, hours=24):
-    """取得好友動態（最近 N 小時內的新日記）"""
-    # 取得所有好友
-    friends = Friendship.objects.filter(user=user).values_list('friend_id', flat=True)
+    """取得好友動態（最近 N 小時內的新日記）。
 
-    # 取得好友最近的日記
+    Bulk-fetches every friend's current_streak in one query instead of
+    one-per-note (was N+1 — 100 notes from active friends → 100 streak
+    lookups).
+    """
+    friends = list(Friendship.objects.filter(user=user).values_list('friend_id', flat=True))
+    if not friends:
+        return []
+
     cutoff_time = timezone.now() - timedelta(hours=hours)
     recent_notes = MoodNote.objects.filter(
         user_id__in=friends, created_at__gte=cutoff_time, is_deleted=False
     ).select_related('user')
 
-    # 格式化動態資料
-    activities = []
-    for note in recent_notes:
-        # 取得好友的 streak 資訊
-        try:
-            streak = JournalStreak.objects.get(user=note.user)
-            streak_days = streak.current_streak
-        except JournalStreak.DoesNotExist:
-            streak_days = 0
+    streak_by_user = dict(
+        JournalStreak.objects.filter(user_id__in=friends).values_list('user_id', 'current_streak')
+    )
 
-        activities.append({
+    return [
+        {
             'friend_id': note.user.id,
             'friend_username': note.user.username,
             'activity_type': 'new_entry',
-            'streak_days': streak_days,
+            'streak_days': streak_by_user.get(note.user_id, 0),
             'timestamp': note.created_at,
             'note_id': note.id,
-        })
-
-    return activities
+        }
+        for note in recent_notes
+    ]
 
 
 def send_friend_request(from_user, to_user, message=''):
