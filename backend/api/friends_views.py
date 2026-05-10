@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .views import error_response
 from .models import (
     FriendComment,
     FriendRequest,
@@ -55,9 +56,10 @@ class UserSearchView(APIView):
         query = request.data.get('query', '').strip()
 
         if len(query) < 2:
-            return Response(
-                {'error': 'Search query must be at least 2 characters'},
-                status=status.HTTP_400_BAD_REQUEST,
+            return error_response(
+                'friends.query_too_short',
+                'Search query must be at least 2 characters',
+                400,
             )
 
         # 搜尋用戶（排除自己）
@@ -79,29 +81,26 @@ class FriendRequestCreateView(APIView):
         message = request.data.get('message', '')
 
         if not to_user_id:
-            return Response(
-                {'error': 'to_user_id is required'}, status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                'friends.to_user_id_required', 'to_user_id is required', 400,
             )
 
         # 檢查目標用戶是否存在
         try:
             to_user = User.objects.get(id=to_user_id)
         except User.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            return error_response('friends.user_not_found', 'User not found', 404)
 
         # 不能發給自己
         if to_user == request.user:
-            return Response(
-                {'error': 'Cannot send friend request to yourself'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return error_response('friends.cannot_self_request', 'Cannot send friend request to yourself', 400)
 
         try:
             friend_request = send_friend_request(request.user, to_user, message)
             serializer = FriendRequestSerializer(friend_request)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ValueError as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response('friends.action_failed', str(e), 400)
 
 
 class ReceivedFriendRequestsView(generics.ListAPIView):
@@ -139,7 +138,7 @@ class AcceptFriendRequestView(APIView):
             serializer = FriendRequestSerializer(friend_request)
             return Response(serializer.data)
         except ValueError as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response('friends.action_failed', str(e), 400)
 
 
 class RejectFriendRequestView(APIView):
@@ -153,7 +152,7 @@ class RejectFriendRequestView(APIView):
             serializer = FriendRequestSerializer(friend_request)
             return Response(serializer.data)
         except ValueError as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response('friends.action_failed', str(e), 400)
 
 
 class RemoveFriendView(APIView):
@@ -165,13 +164,11 @@ class RemoveFriendView(APIView):
         try:
             friend = User.objects.get(id=friend_id)
         except User.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            return error_response('friends.user_not_found', 'User not found', 404)
 
         # 檢查是否為好友
         if not Friendship.objects.filter(user=request.user, friend=friend).exists():
-            return Response(
-                {'error': 'Not friends with this user'}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return error_response('friends.not_friends', 'Not friends with this user', 400)
 
         remove_friendship(request.user, friend)
         return Response({'message': 'Friend removed successfully'}, status=status.HTTP_200_OK)
@@ -190,21 +187,16 @@ class ShareNoteWithFriendsView(APIView):
         friend_ids = request.data.get('friend_ids', [])
 
         if not note_id:
-            return Response(
-                {'error': 'note_id is required'}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return error_response('friends.note_id_required', 'note_id is required', 400)
 
         if not friend_ids or not isinstance(friend_ids, list):
-            return Response(
-                {'error': 'friend_ids must be a non-empty list'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return error_response('friends.friend_ids_required', 'friend_ids must be a non-empty list', 400)
 
         # 檢查日記是否存在且屬於當前用戶
         try:
             note = MoodNote.objects.get(id=note_id, user=request.user, is_deleted=False)
         except MoodNote.DoesNotExist:
-            return Response({'error': 'Note not found'}, status=status.HTTP_404_NOT_FOUND)
+            return error_response('friends.note_not_found', 'Note not found', 404)
 
         # 分享給好友
         shares_created = share_note_with_friends(note, friend_ids)
@@ -231,7 +223,7 @@ class UnshareNoteView(APIView):
                 {'message': 'Share removed successfully'}, status=status.HTTP_200_OK
             )
         except SharedWithFriend.DoesNotExist:
-            return Response({'error': 'Share not found'}, status=status.HTTP_404_NOT_FOUND)
+            return error_response('friends.share_not_found', 'Share not found', 404)
 
 
 class SharedWithMeView(generics.ListAPIView):
@@ -287,21 +279,21 @@ class AddCommentView(APIView):
         content = request.data.get('content', '').strip()
 
         if not content:
-            return Response(
-                {'error': 'Comment content is required'}, status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                'friends.comment_required', 'Comment content is required', 400,
             )
 
         try:
             share = SharedWithFriend.objects.get(id=share_id)
         except SharedWithFriend.DoesNotExist:
-            return Response({'error': 'Share not found'}, status=status.HTTP_404_NOT_FOUND)
+            return error_response('friends.share_not_found', 'Share not found', 404)
 
         try:
             comment = add_comment_to_share(share, request.user, content)
             serializer = FriendCommentSerializer(comment)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except ValueError as e:
-            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+            return error_response('friends.forbidden', str(e), 403)
 
 
 class CommentListView(generics.ListAPIView):
@@ -337,7 +329,7 @@ class DeleteCommentView(APIView):
                 {'message': 'Comment deleted successfully'}, status=status.HTTP_200_OK
             )
         except FriendComment.DoesNotExist:
-            return Response({'error': 'Comment not found'}, status=status.HTTP_404_NOT_FOUND)
+            return error_response('friends.comment_not_found', 'Comment not found', 404)
 
 
 # ============ Activity Views ============

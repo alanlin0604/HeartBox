@@ -692,56 +692,78 @@ class HabitViewSet(viewsets.ModelViewSet):
 
 
 class HabitAnalyticsView(APIView):
-    """Habit and mood correlation analysis."""
+    """Habit and mood correlation analysis.
+
+    Pulls all habits + all habit logs + all mood notes for the user in the
+    last 30 days in 3 queries (was N+1: 1 habits + 3*habits queries — for
+    10 habits that was 31 queries). Then groups in Python.
+
+    Response shape matches what HabitCorrelation.jsx reads:
+        {"analytics": [
+            {"habit_id", "habit_name",
+             "avg_mood_completed", "avg_mood_not_completed",
+             "mood_difference", "days_completed"},
+            ...
+        ]}
+    Field names and the {analytics: ...} envelope are required for the
+    chart to render — earlier shape was a bare list with `_when_` infix
+    field names, which silently rendered as an empty chart.
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=30)
 
-        # Get all active habits
-        habits = Habit.objects.filter(user=request.user, is_active=True)
+        habits = list(Habit.objects.filter(user=request.user, is_active=True))
+        habit_ids = [h.id for h in habits]
+
+        # All check-ins in window, in one query.
+        log_rows = HabitLog.objects.filter(
+            habit_id__in=habit_ids,
+            date__gte=start_date,
+            date__lte=end_date,
+        ).values_list('habit_id', 'date')
+        completed_by_habit = {hid: set() for hid in habit_ids}
+        all_completed_dates = set()
+        for hid, d in log_rows:
+            completed_by_habit[hid].add(d)
+            all_completed_dates.add(d)
+
+        # All mood notes in window, in one query — keyed by date.
+        note_rows = MoodNote.objects.filter(
+            user=request.user,
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date,
+            sentiment_score__isnull=False,
+        ).values_list('created_at__date', 'sentiment_score')
+        sentiment_by_date = {}
+        for d, score in note_rows:
+            sentiment_by_date.setdefault(d, []).append(score)
+
+        def avg(scores):
+            return sum(scores) / len(scores) if scores else 0
 
         results = []
         for habit in habits:
-            # Get check-in dates
-            completed_dates = HabitLog.objects.filter(
-                habit=habit,
-                date__gte=start_date,
-                date__lte=end_date
-            ).values_list('date', flat=True)
-
+            completed_dates = completed_by_habit[habit.id]
             if not completed_dates:
                 continue
-
-            # Calculate average mood on check-in days
-            completed_mood = MoodNote.objects.filter(
-                user=request.user,
-                created_at__date__in=completed_dates
-            ).aggregate(avg_sentiment=Avg('sentiment_score'))
-
-            # Calculate average mood on non-check-in days
-            not_completed_mood = MoodNote.objects.filter(
-                user=request.user,
-                created_at__date__gte=start_date,
-                created_at__date__lte=end_date
-            ).exclude(
-                created_at__date__in=completed_dates
-            ).aggregate(avg_sentiment=Avg('sentiment_score'))
-
-            avg_completed = completed_mood['avg_sentiment'] or 0
-            avg_not_completed = not_completed_mood['avg_sentiment'] or 0
-
+            completed_scores = []
+            uncompleted_scores = []
+            for d, scores in sentiment_by_date.items():
+                bucket = completed_scores if d in completed_dates else uncompleted_scores
+                bucket.extend(scores)
+            avg_completed = avg(completed_scores)
+            avg_not_completed = avg(uncompleted_scores)
             results.append({
                 'habit_id': habit.id,
                 'habit_name': habit.name,
-                'avg_mood_when_completed': round(avg_completed, 2),
-                'avg_mood_when_not_completed': round(avg_not_completed, 2),
+                'avg_mood_completed': round(avg_completed, 2),
+                'avg_mood_not_completed': round(avg_not_completed, 2),
                 'mood_difference': round(avg_completed - avg_not_completed, 2),
-                'completion_days': len(completed_dates),
+                'days_completed': len(completed_dates),
             })
 
-        # Sort by mood difference (most impactful first)
         results.sort(key=lambda x: abs(x['mood_difference']), reverse=True)
-
-        return Response(results)
+        return Response({'analytics': results})
