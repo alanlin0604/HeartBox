@@ -42,6 +42,8 @@ export default function Layout() {
 
   const [moreOpen, setMoreOpen] = useState(false)
   const moreRef = useRef(null)
+  const [desktopMoreOpen, setDesktopMoreOpen] = useState(false)
+  const desktopMoreRef = useRef(null)
 
   const idleTimeout = parseInt(localStorage.getItem('heartbox_idle_timeout') || '30', 10)
   const idleEnabled = idleTimeout > 0
@@ -71,6 +73,9 @@ export default function Layout() {
       if (moreRef.current && !moreRef.current.contains(e.target)) {
         setMoreOpen(false)
       }
+      if (desktopMoreRef.current && !desktopMoreRef.current.contains(e.target)) {
+        setDesktopMoreOpen(false)
+      }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -94,26 +99,35 @@ export default function Layout() {
     document.documentElement.style.fontSize = parseFloat(scale) * 16 + 'px'
   }, [])
 
+  // Primary navigation — the most-used 6 features land in desktop nav and
+  // the first 4 also appear in mobile bottom nav. Everything else lives in
+  // the "More" dropdown to prevent the desktop nav bar from overflowing
+  // (we have 16 routes total).
   const navLinks = [
+    // Primary (desktop top bar; first 4 also mobile bottom)
     { to: '/', label: t('nav.journal'), icon: '/icons/日誌.webp', end: true },
     { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.webp' },
+    { to: '/habits', label: t('nav.habits'), icon: '/icons/習慣追蹤.webp' },
+    { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
     { to: '/personal-dashboard', label: t('nav.personalDashboard'), icon: '/icons/心情週報月報.webp' },
+    { to: '/friends', label: t('friends.title'), icon: '/icons/諮商師.webp' },
+    // Secondary (desktop "More" dropdown; rest of mobile More)
+    { to: '/counselors', label: t('nav.counselors'), icon: '/icons/諮商師.webp' },
     { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.webp' },
     { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.webp' },
-    { to: '/habits', label: t('nav.habits'), icon: '/icons/習慣追蹤.webp' },
     { to: '/sleep-analysis', label: t('nav.sleepAnalysis'), icon: '/icons/呼吸與冥想.webp' },
-    { to: '/friends', label: t('friends.title'), icon: '/icons/諮商師.webp' },
     { to: '/community', label: t('nav.community'), icon: '/icons/諮商師.webp' },
     { to: '/breathe', label: t('nav.breathe'), icon: '/icons/呼吸與冥想.webp' },
     { to: '/learn', label: t('nav.learn'), icon: '/icons/學習.webp' },
-    { to: '/counselors', label: t('nav.counselors'), icon: '/icons/諮商師.webp' },
-    { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
     { to: '/achievements', label: t('nav.achievements'), icon: '/icons/成就.webp' },
     { to: '/import', label: t('nav.dataImport'), icon: '/icons/功能指南.webp' },
     { to: '/guide', label: t('nav.guide'), icon: '/icons/功能指南.webp' },
   ]
 
-  // Bottom nav: first 4 items + "More"
+  // Desktop: primary 6 inline, rest in dropdown.
+  const desktopPrimaryLinks = navLinks.slice(0, 6)
+  const desktopMoreLinks = navLinks.slice(6)
+  // Mobile bottom: first 4 + More dropdown holding the rest.
   const bottomNavLinks = navLinks.slice(0, 4)
   const moreNavLinks = navLinks.slice(4)
 
@@ -203,8 +217,8 @@ export default function Layout() {
         </div>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-4 lg:gap-6 xl:gap-8 text-sm lg:text-base flex-shrink min-w-0">
-          {navLinks.map((link) => (
+        <div className="hidden md:flex items-center gap-3 lg:gap-5 xl:gap-6 text-sm lg:text-base flex-shrink min-w-0">
+          {desktopPrimaryLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -218,6 +232,42 @@ export default function Layout() {
               {link.label}
             </NavLink>
           ))}
+
+          {/* Desktop "More" dropdown — holds the remaining 10 routes so the
+              nav bar doesn't horizontally overflow on smaller laptops. */}
+          <div className="relative" ref={desktopMoreRef}>
+            <button
+              onClick={() => setDesktopMoreOpen(!desktopMoreOpen)}
+              aria-haspopup="menu"
+              aria-expanded={desktopMoreOpen}
+              className={`font-medium transition-colors flex items-center gap-1 whitespace-nowrap cursor-pointer ${desktopMoreOpen ? 'text-orange-500' : 'opacity-60 hover:opacity-100'}`}
+            >
+              <span className="text-lg leading-none">☰</span>
+              {t('nav.more')}
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${desktopMoreOpen ? 'rotate-180' : ''}`}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {desktopMoreOpen && (
+              <div role="menu" className="absolute right-0 top-9 w-56 rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)] py-2">
+                {desktopMoreLinks.map((link) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    onClick={() => setDesktopMoreOpen(false)}
+                    onMouseEnter={() => ROUTE_PRELOADS[link.to]?.()}
+                    className={({ isActive }) =>
+                      `px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-orange-500' : 'opacity-70 hover:opacity-100'}`
+                    }
+                  >
+                    <img src={link.icon} alt="" className="w-6 h-6 object-contain flex-shrink-0" />
+                    {link.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+
           {user?.is_staff && (
             <NavLink
               to="/admin"
