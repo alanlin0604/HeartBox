@@ -12,6 +12,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import transaction
 from django.utils.encoding import force_bytes, force_str
+from django.utils.html import escape as html_escape
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
 from rest_framework import exceptions, generics, permissions, status
@@ -127,17 +128,22 @@ class RegisterView(generics.CreateAPIView):
                 f'{s["verify_ignore"]}\n\n'
                 f'{s["team"]}'
             )
+            greeting_html = html_escape(greeting)
+            body_html = html_escape(s["verify_register_body"])
+            ignore_html = html_escape(s["verify_ignore"])
+            tagline_html = html_escape(s["tagline"])
+            btn_html = html_escape(s["verify_btn"])
             html_message = (
                 f'<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">'
                 f'<h2 style="color:#7c3aed">HeartBox</h2>'
-                f'<p>{greeting}</p>'
-                f'<p>{s["verify_register_body"]}</p>'
+                f'<p>{greeting_html}</p>'
+                f'<p>{body_html}</p>'
                 f'<p style="text-align:center;margin:28px 0">'
                 f'<a href="{verify_url}" style="background:#7c3aed;color:#fff;padding:12px 32px;'
-                f'border-radius:8px;text-decoration:none;font-weight:600">{s["verify_btn"]}</a></p>'
-                f'<p style="color:#888;font-size:13px">{s["verify_ignore"]}</p>'
+                f'border-radius:8px;text-decoration:none;font-weight:600">{btn_html}</a></p>'
+                f'<p style="color:#888;font-size:13px">{ignore_html}</p>'
                 f'<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
-                f'<p style="color:#aaa;font-size:12px">{s["tagline"]}</p>'
+                f'<p style="color:#aaa;font-size:12px">{tagline_html}</p>'
                 f'</div>'
             )
             send_mail(
@@ -236,15 +242,15 @@ class ForgotPasswordView(APIView):
             html_message = (
                 f'<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">'
                 f'<h2 style="color:#7c3aed">HeartBox</h2>'
-                f'<p>{greeting}</p>'
-                f'<p>{s["reset_html_body"]}</p>'
+                f'<p>{html_escape(greeting)}</p>'
+                f'<p>{html_escape(s["reset_html_body"])}</p>'
                 f'<p style="text-align:center;margin:28px 0">'
                 f'<a href="{reset_url}" style="background:#7c3aed;color:#fff;padding:12px 32px;'
-                f'border-radius:8px;text-decoration:none;font-weight:600">{s["reset_btn"]}</a></p>'
-                f'<p style="color:#888;font-size:13px">{s["reset_expire"]} '
-                f'{s["reset_ignore"]}</p>'
+                f'border-radius:8px;text-decoration:none;font-weight:600">{html_escape(s["reset_btn"])}</a></p>'
+                f'<p style="color:#888;font-size:13px">{html_escape(s["reset_expire"])} '
+                f'{html_escape(s["reset_ignore"])}</p>'
                 f'<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
-                f'<p style="color:#aaa;font-size:12px">{s["tagline"]}</p>'
+                f'<p style="color:#aaa;font-size:12px">{html_escape(s["tagline"])}</p>'
                 f'</div>'
             )
             try:
@@ -397,14 +403,14 @@ class ResendVerificationView(APIView):
         html_message = (
             f'<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">'
             f'<h2 style="color:#7c3aed">HeartBox</h2>'
-            f'<p>{greeting}</p>'
-            f'<p>{s["verify_resend_body"]}</p>'
+            f'<p>{html_escape(greeting)}</p>'
+            f'<p>{html_escape(s["verify_resend_body"])}</p>'
             f'<p style="text-align:center;margin:28px 0">'
             f'<a href="{verify_url}" style="background:#7c3aed;color:#fff;padding:12px 32px;'
-            f'border-radius:8px;text-decoration:none;font-weight:600">{s["verify_btn"]}</a></p>'
-            f'<p style="color:#888;font-size:13px">{s["verify_ignore"]}</p>'
+            f'border-radius:8px;text-decoration:none;font-weight:600">{html_escape(s["verify_btn"])}</a></p>'
+            f'<p style="color:#888;font-size:13px">{html_escape(s["verify_ignore"])}</p>'
             f'<hr style="border:none;border-top:1px solid #eee;margin:24px 0">'
-            f'<p style="color:#aaa;font-size:12px">{s["tagline"]}</p>'
+            f'<p style="color:#aaa;font-size:12px">{html_escape(s["tagline"])}</p>'
             f'</div>'
         )
         try:
@@ -507,6 +513,7 @@ class TOTPDisableView(APIView):
 
 class Login2FAView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
         import pyotp
@@ -542,6 +549,7 @@ class Login2FAView(APIView):
 
 class GoogleLoginCallbackView(APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
         from google.oauth2 import id_token

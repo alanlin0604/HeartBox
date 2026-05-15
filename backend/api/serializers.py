@@ -36,6 +36,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
     is_counselor = serializers.SerializerMethodField()
     avatar = serializers.ImageField(required=False, allow_null=True)
 
+    AVATAR_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
+    AVATAR_ALLOWED_FORMATS = {'JPEG', 'PNG', 'WEBP', 'GIF'}
+
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'bio', 'avatar', 'is_counselor', 'is_staff', 'timezone', 'onboarding_completed', 'email_verified', 'created_at', 'updated_at')
@@ -43,6 +46,30 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_is_counselor(self, obj) -> bool:
         return hasattr(obj, 'counselor_profile') and obj.counselor_profile.is_approved
+
+    def validate_avatar(self, value):
+        """Block oversized or non-image uploads.
+
+        Why: ImageField only checks Pillow can parse it. We additionally cap
+        size (2 MB) and pin allowed formats so unusual upload paths (e.g.
+        TIFF, BMP) don't sneak past mobile clients.
+        """
+        if value is None:
+            return value
+        if value.size > self.AVATAR_MAX_BYTES:
+            raise serializers.ValidationError('Avatar must be 2 MB or smaller.')
+        try:
+            from PIL import Image
+            value.seek(0)
+            img = Image.open(value)
+            img.verify()
+            fmt = (img.format or '').upper()
+            value.seek(0)
+        except Exception:
+            raise serializers.ValidationError('Avatar must be a valid image file.')
+        if fmt not in self.AVATAR_ALLOWED_FORMATS:
+            raise serializers.ValidationError(f'Avatar format {fmt} is not allowed.')
+        return value
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -729,48 +756,53 @@ class HabitSerializer(serializers.ModelSerializer):
             'streak', 'completion_rate', 'checked_today',
         ]
 
+    def _log_dates(self, obj):
+        """Return the set of HabitLog dates for this habit.
+
+        Why: when HabitViewSet prefetches the last 365 days into `_recent_logs`,
+        we read from memory (zero queries per habit). Fallback to a single
+        bulk query when the serializer is used outside the viewset.
+        """
+        cached = getattr(obj, '_log_dates_cache', None)
+        if cached is not None:
+            return cached
+        recent = getattr(obj, '_recent_logs', None)
+        if recent is not None:
+            dates = {log.date for log in recent}
+        else:
+            from datetime import timedelta
+            from django.utils import timezone
+            cutoff = timezone.now().date() - timedelta(days=365)
+            dates = set(
+                HabitLog.objects.filter(habit=obj, date__gte=cutoff).values_list('date', flat=True)
+            )
+        obj._log_dates_cache = dates
+        return dates
+
     def get_checked_today(self, obj) -> bool:
-        """True if a HabitLog exists for today — used by the frontend to show
-        the post-check-in 'done' state without needing the dashboard refetch."""
         from django.utils import timezone
-        return HabitLog.objects.filter(habit=obj, date=timezone.now().date()).exists()
+        return timezone.now().date() in self._log_dates(obj)
 
     def get_streak(self, obj) -> int:
-        """Calculate current consecutive days streak."""
         from datetime import timedelta
         from django.utils import timezone
-
+        dates = self._log_dates(obj)
         today = timezone.now().date()
         streak = 0
         check_date = today
-
-        while True:
-            if HabitLog.objects.filter(habit=obj, date=check_date).exists():
-                streak += 1
-                check_date -= timedelta(days=1)
-            else:
-                break
-            if streak > 365:
-                break
-
+        while check_date in dates and streak <= 365:
+            streak += 1
+            check_date -= timedelta(days=1)
         return streak
 
     def get_completion_rate(self, obj) -> float:
-        """Calculate completion rate for last 30 days."""
         from datetime import timedelta
         from django.utils import timezone
-
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=30)
-
-        total_days = 30
-        completed_days = HabitLog.objects.filter(
-            habit=obj,
-            date__gte=start_date,
-            date__lte=end_date
-        ).count()
-
-        return round((completed_days / total_days) * 100, 1) if total_days > 0 else 0.0
+        dates = self._log_dates(obj)
+        completed_days = sum(1 for d in dates if start_date <= d <= end_date)
+        return round((completed_days / 30) * 100, 1)
 
 
 class HabitLogSerializer(serializers.ModelSerializer):
@@ -870,7 +902,14 @@ class FriendshipSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'friendship_since']
 
     def get_streak_days(self, obj) -> int:
-        """Get friend's current streak."""
+        """Get friend's current streak.
+
+        Prefer the queryset-level annotation `_friend_streak` (added in
+        FriendListView via Subquery) to avoid 1 query per friend.
+        """
+        annotated = getattr(obj, '_friend_streak', None)
+        if annotated is not None:
+            return annotated
         try:
             streak = JournalStreak.objects.get(user=obj.friend)
             return streak.current_streak
@@ -879,6 +918,9 @@ class FriendshipSerializer(serializers.ModelSerializer):
 
     def get_total_entries(self, obj) -> int:
         """Get friend's total journal entries."""
+        annotated = getattr(obj, '_friend_total_entries', None)
+        if annotated is not None:
+            return annotated
         return MoodNote.objects.filter(user=obj.friend, is_deleted=False).count()
 
 
@@ -925,7 +967,14 @@ class SharedWithFriendSerializer(serializers.ModelSerializer):
         return content
 
     def get_comment_count(self, obj) -> int:
-        """Return comment count for this share."""
+        """Return comment count for this share.
+
+        Uses queryset-level annotation `_comment_count` when present
+        (added in Shared* views) to avoid N+1.
+        """
+        annotated = getattr(obj, '_comment_count', None)
+        if annotated is not None:
+            return annotated
         return obj.comments.count()
 
 
@@ -964,21 +1013,39 @@ class UserSearchSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'avatar', 'bio', 'is_friend', 'has_pending_request']
         read_only_fields = ['id', 'username', 'email', 'avatar', 'bio']
 
-    def get_is_friend(self, obj):
-        """Check if already friends with current user."""
+    def _friend_id_set(self):
+        """Memoize set of friend IDs for the current request user."""
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return Friendship.objects.filter(user=request.user, friend=obj).exists()
-        return False
+        if not request or not request.user.is_authenticated:
+            return set()
+        cached = self.context.get('_friend_id_set')
+        if cached is None:
+            cached = set(
+                Friendship.objects.filter(user=request.user).values_list('friend_id', flat=True)
+            )
+            self.context['_friend_id_set'] = cached
+        return cached
+
+    def _pending_request_to_set(self):
+        """Memoize set of user IDs the current request user has pending requests to."""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return set()
+        cached = self.context.get('_pending_request_to_set')
+        if cached is None:
+            cached = set(
+                FriendRequest.objects.filter(
+                    from_user=request.user, status='pending'
+                ).values_list('to_user_id', flat=True)
+            )
+            self.context['_pending_request_to_set'] = cached
+        return cached
+
+    def get_is_friend(self, obj):
+        return obj.id in self._friend_id_set()
 
     def get_has_pending_request(self, obj):
-        """Check if there's a pending friend request."""
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return FriendRequest.objects.filter(
-                from_user=request.user, to_user=obj, status='pending'
-            ).exists()
-        return False
+        return obj.id in self._pending_request_to_set()
 
 
 class PostReactionSerializer(serializers.ModelSerializer):
@@ -1006,7 +1073,16 @@ class PublicPostSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'sentiment_score', 'category', 'created_at']
 
     def get_reaction_counts(self, obj) -> dict:
-        """Count reactions by type."""
+        """Count reactions by type, using the prefetched relation when present.
+
+        Avoids re-querying the database when PublicPostViewSet already
+        prefetched `reactions` (audit 2026-05-15 N+1 fix).
+        """
+        if 'reactions' in getattr(obj, '_prefetched_objects_cache', {}):
+            counts = {}
+            for r in obj.reactions.all():
+                counts[r.reaction_type] = counts.get(r.reaction_type, 0) + 1
+            return counts
         from django.db.models import Count
         reactions = obj.reactions.values('reaction_type').annotate(count=Count('id'))
         return {r['reaction_type']: r['count'] for r in reactions}
@@ -1014,11 +1090,13 @@ class PublicPostSerializer(serializers.ModelSerializer):
     def get_user_reacted(self, obj) -> list:
         """List of reaction types current user has given."""
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return list(
-                obj.reactions.filter(user=request.user).values_list('reaction_type', flat=True)
-            )
-        return []
+        if not request or not request.user.is_authenticated:
+            return []
+        if 'reactions' in getattr(obj, '_prefetched_objects_cache', {}):
+            return [r.reaction_type for r in obj.reactions.all() if r.user_id == request.user.id]
+        return list(
+            obj.reactions.filter(user=request.user).values_list('reaction_type', flat=True)
+        )
 
     def get_is_owner(self, obj) -> bool:
         """Check if current user owns this post."""

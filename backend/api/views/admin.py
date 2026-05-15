@@ -15,6 +15,7 @@ from ..models import CounselorProfile, Feedback, MoodNote
 from ..serializers import (
     AdminCounselorSerializer, AdminUserSerializer, FeedbackSerializer,
 )
+from ..services.audit import log_action
 
 from . import User, error_response, logger
 
@@ -68,11 +69,23 @@ class AdminUserDetailView(generics.RetrieveUpdateAPIView):
 
     def perform_update(self, serializer):
         target = serializer.instance
+        old_is_staff = target.is_staff
+        new_is_staff = serializer.validated_data.get('is_staff', old_is_staff)
         # Prevent admin from demoting themselves
         if target.pk == self.request.user.pk and 'is_staff' in serializer.validated_data:
             if not serializer.validated_data['is_staff']:
                 raise exceptions.ValidationError({'detail': 'You cannot remove your own admin privileges.'})
         serializer.save()
+        # Audit privilege changes so unauthorized escalations leave a trail.
+        if old_is_staff != new_is_staff:
+            log_action(
+                self.request.user,
+                'admin.user.is_staff_change',
+                request=self.request,
+                target_type='User',
+                target_id=target.pk,
+                details={'from': old_is_staff, 'to': new_is_staff},
+            )
 
 
 class AdminCounselorListView(generics.ListAPIView):

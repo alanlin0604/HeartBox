@@ -34,6 +34,7 @@ class AIChatSessionListCreateView(APIView):
                 _message_count=Count('messages'),
                 _last_message_preview=Substr(Subquery(last_msg_subquery), 1, 80),
             )
+            .order_by('-is_pinned', '-updated_at')
         )
         return Response(AIChatSessionSerializer(sessions, many=True).data)
 

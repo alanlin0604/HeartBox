@@ -633,7 +633,21 @@ class HabitViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Habit.objects.none()
-        return Habit.objects.filter(user=self.request.user)
+        # Prefetch the last 365 days of logs so the serializer can compute
+        # streak / completion_rate / checked_today in Python without firing
+        # ~62 queries per habit (see audit 2026-05-15).
+        from django.db.models import Prefetch
+        cutoff = timezone.now().date() - timedelta(days=365)
+        return (
+            Habit.objects.filter(user=self.request.user)
+            .prefetch_related(
+                Prefetch(
+                    'logs',
+                    queryset=HabitLog.objects.filter(date__gte=cutoff).only('id', 'habit_id', 'date'),
+                    to_attr='_recent_logs',
+                )
+            )
+        )
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

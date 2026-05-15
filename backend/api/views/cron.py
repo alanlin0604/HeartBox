@@ -13,6 +13,7 @@ Setup:
 Plain Django views (not DRF) so they don't show up in the OpenAPI schema —
 these are infrastructure plumbing, not part of the public API surface.
 """
+import hmac
 import logging
 import os
 
@@ -30,7 +31,7 @@ def _check_secret(request):
         logger.error('CRON_SECRET is not set; refusing cron request')
         return False
     provided = request.headers.get('X-Cron-Secret') or ''
-    return provided == expected
+    return hmac.compare_digest(provided, expected)
 
 
 @csrf_exempt

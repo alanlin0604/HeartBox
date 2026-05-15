@@ -44,7 +44,24 @@ class FriendListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Friendship.objects.filter(user=self.request.user).select_related('friend')
+        from django.db.models import Count, Q, Subquery, OuterRef, IntegerField
+        from django.db.models.functions import Coalesce
+        from .models import JournalStreak, MoodNote
+        # Annotate per-friend streak + total entries to kill the per-row
+        # queries in FriendshipSerializer (audit 2026-05-15 N+1 fix).
+        streak_subq = JournalStreak.objects.filter(user=OuterRef('friend')).values('current_streak')[:1]
+        return (
+            Friendship.objects.filter(user=self.request.user)
+            .select_related('friend')
+            .annotate(
+                _friend_streak=Coalesce(Subquery(streak_subq, output_field=IntegerField()), 0),
+                _friend_total_entries=Count(
+                    'friend__notes',
+                    filter=Q(friend__notes__is_deleted=False),
+                    distinct=True,
+                ),
+            )
+        )
 
 
 class UserSearchView(APIView):
@@ -233,10 +250,11 @@ class SharedWithMeView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        from django.db.models import Count
         return (
             SharedWithFriend.objects.filter(shared_with=self.request.user)
             .select_related('note', 'shared_by')
-            .prefetch_related('comments')
+            .annotate(_comment_count=Count('comments'))
         )
 
 
@@ -247,10 +265,11 @@ class SharedByMeView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        from django.db.models import Count
         return (
             SharedWithFriend.objects.filter(shared_by=self.request.user)
             .select_related('note', 'shared_with')
-            .prefetch_related('comments')
+            .annotate(_comment_count=Count('comments'))
         )
 
 
