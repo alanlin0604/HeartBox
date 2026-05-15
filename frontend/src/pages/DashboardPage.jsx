@@ -10,6 +10,7 @@ import SkeletonCard from '../components/SkeletonCard'
 import MoodCalendar from '../components/MoodCalendar'
 import YearInPixels from '../components/YearInPixels'
 import EmptyState from '../components/EmptyState'
+import MoodPrediction from '../components/MoodPrediction'
 import { Card } from '../components/ui'
 const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
 const LazyScatterChart = lazy(() => import('../components/charts/LazyScatterChart'))
@@ -111,6 +112,9 @@ export default function DashboardPage() {
 
       {/* Year in Pixels */}
       <YearInPixels />
+
+      {/* AI Mood Prediction — surfaces stress + trend warnings */}
+      <MoodPrediction />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

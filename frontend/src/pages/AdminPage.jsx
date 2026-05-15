@@ -6,6 +6,8 @@ import {
   getCounselors,
   counselorAction,
   getFeedback,
+  getCommunityReports,
+  moderateCommunityPost,
 } from '../api/admin'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
@@ -18,7 +20,13 @@ export default function AdminPage() {
 
   useEffect(() => { document.title = `${t('admin.title')} — ${t('app.name')}` }, [t])
 
-  const TABS = [t('admin.tabOverview'), t('admin.tabUsers'), t('admin.tabCounselors'), t('admin.tabFeedback')]
+  const TABS = [
+    t('admin.tabOverview'),
+    t('admin.tabUsers'),
+    t('admin.tabCounselors'),
+    t('admin.tabFeedback'),
+    t('admin.tabReports'),
+  ]
 
   return (
     <div className="space-y-6">
@@ -43,6 +51,144 @@ export default function AdminPage() {
       {tab === 1 && <UsersTab />}
       {tab === 2 && <CounselorsTab />}
       {tab === 3 && <FeedbackTab />}
+      {tab === 4 && <ReportsTab />}
+    </div>
+  )
+}
+
+/* ==================== Tab 5: Community Reports ==================== */
+
+function ReportsTab() {
+  const { t } = useLang()
+  const toast = useToast()
+  const [reports, setReports] = useState([])
+  const [statusFilter, setStatusFilter] = useState('open')
+  const [loading, setLoading] = useState(true)
+  const [acting, setActing] = useState(null)
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true)
+      const res = await getCommunityReports(statusFilter)
+      setReports(res.data || [])
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    } finally {
+      setLoading(false)
+    }
+  }, [statusFilter, toast, t])
+
+  useEffect(() => { load() }, [load])
+
+  const handleAction = async (postId, action) => {
+    try {
+      setActing(postId)
+      await moderateCommunityPost(postId, action)
+      toast?.success(t('admin.reports.actionDone'))
+      load()
+    } catch {
+      toast?.error(t('common.operationFailed'))
+    } finally {
+      setActing(null)
+    }
+  }
+
+  const STATUS_OPTIONS = [
+    { value: 'open', label: t('admin.reports.statusOpen') },
+    { value: 'reviewed_removed', label: t('admin.reports.statusRemoved') },
+    { value: 'reviewed_kept', label: t('admin.reports.statusKept') },
+    { value: 'dismissed', label: t('admin.reports.statusDismissed') },
+  ]
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 flex-wrap">
+        {STATUS_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setStatusFilter(opt.value)}
+            className={`px-3 py-1.5 rounded-full text-sm transition-colors duration-100 ${
+              statusFilter === opt.value
+                ? 'bg-orange-500/20 text-[var(--text-accent)] border border-orange-500/50'
+                : 'border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <p className="text-sm opacity-70">{t('common.loading')}</p>
+      ) : reports.length === 0 ? (
+        <p className="text-sm opacity-70">{t('admin.reports.empty')}</p>
+      ) : (
+        <div className="space-y-3">
+          {reports.map((r) => (
+            <div key={r.id} className="glass-card p-4 rounded-xl">
+              <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="px-2 py-0.5 rounded-full bg-red-500/15 text-red-500 font-medium">
+                    {t(`community.reportReason.${r.reason}`, { defaultValue: r.reason })}
+                  </span>
+                  <span className="text-[var(--text-tertiary)]">·</span>
+                  <span className="text-[var(--text-secondary)]">
+                    {t('admin.reports.reporter')}: {r.reporter}
+                  </span>
+                  <span className="text-[var(--text-tertiary)]">·</span>
+                  <span className="text-[var(--text-tertiary)]">
+                    {new Date(r.created_at).toLocaleString()}
+                  </span>
+                </div>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-[var(--text-accent)]">
+                  {r.post.open_report_count} {t('admin.reports.openCount')}
+                </span>
+              </div>
+              {r.note && (
+                <p className="text-sm text-[var(--text-secondary)] mb-3 italic">
+                  &ldquo;{r.note}&rdquo;
+                </p>
+              )}
+              <div className="border-t border-[var(--border-primary)] pt-3 mb-3">
+                <p className="text-xs text-[var(--text-tertiary)] mb-1">
+                  {t('admin.reports.postBy')} <strong>{r.post.author}</strong>
+                  {!r.post.is_active && (
+                    <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-500/15 text-[var(--text-tertiary)]">
+                      {t('admin.reports.autoHidden')}
+                    </span>
+                  )}
+                </p>
+                <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap">{r.post.content}</p>
+              </div>
+              {r.status === 'open' && (
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => handleAction(r.post.id, 'remove')}
+                    disabled={acting === r.post.id}
+                    className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500/30 transition-colors disabled:opacity-50 text-sm"
+                  >
+                    {t('admin.reports.remove')}
+                  </button>
+                  <button
+                    onClick={() => handleAction(r.post.id, 'keep')}
+                    disabled={acting === r.post.id}
+                    className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-600 hover:bg-green-500/30 transition-colors disabled:opacity-50 text-sm"
+                  >
+                    {t('admin.reports.keep')}
+                  </button>
+                  <button
+                    onClick={() => handleAction(r.post.id, 'dismiss')}
+                    disabled={acting === r.post.id}
+                    className="px-3 py-1.5 rounded-lg border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] transition-colors disabled:opacity-50 text-sm"
+                  >
+                    {t('admin.reports.dismiss')}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

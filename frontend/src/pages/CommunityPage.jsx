@@ -80,9 +80,13 @@ export default function CommunityPage() {
   }
 
   // Refetch when category changes. Reset to page 1 each time.
+  // Clear posts immediately so the user gets instant visual feedback that
+  // the filter took effect, instead of staring at the old list during the
+  // network roundtrip.
   useEffect(() => {
     let cancelled = false
     const fetchId = ++fetchIdRef.current
+    setPosts([])  // instant: pills feel responsive
     setLoading(true)
     getPosts(1, 20, categoryFilter)
       .then((res) => {
@@ -191,8 +195,17 @@ export default function CommunityPage() {
     }))
     try {
       const res = await toggleReaction(postId, reactionType)
+      // Only merge the server-authoritative counts (in case another user
+      // reacted concurrently) — keep the user's local user_reacted as
+      // the source of truth for *their* button state. Replacing the whole
+      // post object would unnecessarily re-render gradient buttons via
+      // `transition-all`, which feels like a delayed click.
       if (res.data?.post) {
-        setPosts(prev => prev.map(p => (p.id === postId ? res.data.post : p)))
+        setPosts(prev => prev.map(p =>
+          p.id === postId
+            ? { ...p, reaction_counts: res.data.post.reaction_counts ?? p.reaction_counts }
+            : p
+        ))
       }
     } catch (err) {
       console.error('Failed to toggle reaction:', err)
@@ -316,7 +329,7 @@ export default function CommunityPage() {
                     <button
                       key={type}
                       onClick={() => handleReaction(post.id, type)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors duration-100 active:scale-95 ${
                         hasReacted
                           ? 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-md'
                           : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)]'
@@ -399,7 +412,7 @@ export default function CommunityPage() {
             </Button>
             <Button
               onClick={handleCreatePost}
-              disabled={creating || newPostContent.trim().length < 10}
+              disabled={creating || newPostContent.trim().length < 4}
               className="bg-gradient-to-r from-rose-500 to-orange-500 text-white"
             >
               {creating ? t('common.saving') : t('community.publish')}

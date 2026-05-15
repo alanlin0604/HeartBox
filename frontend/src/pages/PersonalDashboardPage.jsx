@@ -215,7 +215,7 @@ export default function PersonalDashboardPage() {
         onToggleEdit={() => setIsEditMode(!isEditMode)}
         onReset={() => setShowResetConfirm(true)}
         onManageMetrics={() => setShowMetrics(true)}
-        onSave={() => saveLayout()}
+        onSave={() => saveLayout(widgets)}
         hasUnsavedChanges={hasUnsavedChanges}
       />
 

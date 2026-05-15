@@ -16,3 +16,10 @@ export const counselorAction = (id, action) =>
   api.post(`/admin/counselors/${id}/action/`, { action });
 
 export const getFeedback = () => api.get('/admin/feedback/');
+
+// Community moderation (staff-only)
+export const getCommunityReports = (status = 'open') =>
+  api.get('/community/reports/', { params: { status } });
+
+export const moderateCommunityPost = (postId, action) =>
+  api.post(`/community/posts/${postId}/moderate/`, { action });
