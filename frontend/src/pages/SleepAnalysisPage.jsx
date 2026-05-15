@@ -13,6 +13,7 @@ export default function SleepAnalysisPage() {
   const [analysisData, setAnalysisData] = useState(null)
   const [trendsData, setTrendsData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [errored, setErrored] = useState(false)
   const [days, setDays] = useState(30)
   const fetchIdRef = useRef(0)
 
@@ -23,6 +24,7 @@ export default function SleepAnalysisPage() {
   useEffect(() => {
     const fetchId = ++fetchIdRef.current
     setLoading(true)
+    setErrored(false)
 
     Promise.all([
       getSleepAnalysis(days),
@@ -32,12 +34,16 @@ export default function SleepAnalysisPage() {
         if (fetchId === fetchIdRef.current) {
           setAnalysisData(analysisRes.data)
           setTrendsData(trendsRes.data)
+          setErrored(false)
         }
       })
       .catch((err) => {
         if (fetchId === fetchIdRef.current) {
           console.error('Failed to load sleep analysis:', err)
-          toast?.error(t('common.operationFailed'))
+          setErrored(true)
+          setAnalysisData(null)
+          setTrendsData(null)
+          toast?.error(t('sleep.loadFailed'))
         }
       })
       .finally(() => {
@@ -46,6 +52,17 @@ export default function SleepAnalysisPage() {
         }
       })
   }, [days, t, toast])
+
+  const handleRetry = () => {
+    setDays((d) => d)
+    fetchIdRef.current++
+    setErrored(false)
+    setLoading(true)
+    Promise.all([getSleepAnalysis(days), getSleepTrends(90)])
+      .then(([a, tr]) => { setAnalysisData(a.data); setTrendsData(tr.data); setErrored(false) })
+      .catch(() => setErrored(true))
+      .finally(() => setLoading(false))
+  }
 
   if (loading && !analysisData) {
     return (
@@ -61,6 +78,19 @@ export default function SleepAnalysisPage() {
     )
   }
 
+  if (errored && !analysisData) {
+    return (
+      <div className="space-y-6 mt-4">
+        <Card className="p-8 text-center">
+          <div className="text-4xl mb-3">⚠️</div>
+          <h2 className="text-xl font-semibold mb-2">{t('sleep.loadFailed')}</h2>
+          <p className="text-[var(--text-secondary)] mb-4">{t('sleep.loadFailedHint')}</p>
+          <Button onClick={handleRetry} variant="primary">{t('common.retry')}</Button>
+        </Card>
+      </div>
+    )
+  }
+
   const stats = analysisData?.statistics || {}
   const patterns = analysisData?.patterns || {}
   const issues = analysisData?.issues || []
@@ -71,10 +101,10 @@ export default function SleepAnalysisPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text text-transparent">
             {t('sleep.analysisTitle')}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-[var(--text-secondary)] mt-2">
             {t('sleep.analysisSubtitle')}
           </p>
         </div>
@@ -97,10 +127,10 @@ export default function SleepAnalysisPage() {
         <Card className="p-6 bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+              <p className="text-sm text-[var(--text-secondary)] mb-1">
                 {t('sleep.avgDuration')}
               </p>
-              <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+              <p className="text-3xl font-bold text-[var(--text-accent)]">
                 {stats.avg_duration ? `${stats.avg_duration.toFixed(1)}h` : '--'}
               </p>
             </div>
@@ -113,13 +143,13 @@ export default function SleepAnalysisPage() {
           )}
         </Card>
 
-        <Card className="p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/20">
+        <Card className="p-6 bg-gradient-to-br from-rose-500/10 to-rose-600/10 border-rose-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+              <p className="text-sm text-[var(--text-secondary)] mb-1">
                 {t('sleep.avgQuality')}
               </p>
-              <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+              <p className="text-3xl font-bold text-rose-600 dark:text-rose-400">
                 {stats.avg_quality ? `${stats.avg_quality.toFixed(0)}%` : '--'}
               </p>
             </div>
@@ -132,20 +162,20 @@ export default function SleepAnalysisPage() {
           )}
         </Card>
 
-        <Card className="p-6 bg-gradient-to-br from-indigo-500/10 to-indigo-600/10 border-indigo-500/20">
+        <Card className="p-6 bg-gradient-to-br from-amber-500/10 to-amber-600/10 border-amber-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+              <p className="text-sm text-[var(--text-secondary)] mb-1">
                 {t('sleep.sleepPattern')}
               </p>
-              <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+              <p className="text-xl font-bold text-amber-700 dark:text-amber-400">
                 {patterns.chronotype ? t(`sleep.chronotype.${patterns.chronotype}`) : '--'}
               </p>
             </div>
             <div className="text-4xl">🌙</div>
           </div>
           {patterns.consistency && (
-            <p className="text-sm mt-2 text-gray-600 dark:text-gray-400">
+            <p className="text-sm mt-2 text-[var(--text-secondary)]">
               {t('sleep.consistency')}: {patterns.consistency.toFixed(0)}%
             </p>
           )}
@@ -171,12 +201,12 @@ export default function SleepAnalysisPage() {
               {issues.map((issue, idx) => (
                 <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
                   <span className="text-red-600 dark:text-red-400 mt-0.5">•</span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{issue}</span>
+                  <span className="text-sm text-[var(--text-primary)]">{issue}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-gray-500 text-center py-8">{t('sleep.noIssues')}</p>
+            <p className="text-[var(--text-secondary)] text-center py-8">{t('sleep.noIssues')}</p>
           )}
         </Card>
 
@@ -189,14 +219,14 @@ export default function SleepAnalysisPage() {
           {recommendations.length > 0 ? (
             <ul className="space-y-3">
               {recommendations.map((rec, idx) => (
-                <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                  <span className="text-blue-600 dark:text-blue-400 mt-0.5">✓</span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{rec}</span>
+                <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+                  <span className="text-[var(--text-accent)] mt-0.5">✓</span>
+                  <span className="text-sm text-[var(--text-primary)]">{rec}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-gray-500 text-center py-8">{t('sleep.noRecommendations')}</p>
+            <p className="text-[var(--text-secondary)] text-center py-8">{t('sleep.noRecommendations')}</p>
           )}
         </Card>
       </div>

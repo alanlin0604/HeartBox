@@ -79,8 +79,8 @@ export default function FriendsActivity() {
             className={`
               px-4 py-2 rounded-lg text-sm font-medium transition-all flex-shrink-0
               ${hours === h
-                ? 'bg-yellow-500/20 text-yellow-400'
-                : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                ? 'bg-orange-500/20 text-[var(--text-accent)]'
+                : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10'
               }
             `}
           >
@@ -108,14 +108,14 @@ export default function FriendsActivity() {
               className="flex gap-3 items-start glass p-4 rounded-xl hover:bg-white/10 transition-colors"
             >
               {/* Icon */}
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-[var(--text-accent)]">
                 {getActivityIcon(activity.activity_type)}
               </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-200">
-                  <span className="font-medium text-yellow-400">
+                <p className="text-sm text-[var(--text-primary)]">
+                  <span className="font-medium text-[var(--text-accent)]">
                     {activity.friend_username}
                   </span>
                   {' '}

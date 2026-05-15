@@ -56,7 +56,7 @@ export default function CommunityPage() {
     } catch (err) {
       if (fetchId === fetchIdRef.current) {
         console.error('Failed to load posts:', err)
-        toast?.error(t('common.operationFailed'))
+        toast?.error(t('community.loadFailed'))
       }
     } finally {
       if (fetchId === fetchIdRef.current) {
@@ -171,7 +171,7 @@ export default function CommunityPage() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text text-transparent">
             {t('community.title')}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="text-[var(--text-secondary)] mt-2">
             {t('community.subtitle')}
           </p>
         </div>
@@ -188,7 +188,7 @@ export default function CommunityPage() {
         <Card className="p-12 text-center">
           <div className="text-6xl mb-4">💬</div>
           <h3 className="text-xl font-semibold mb-2">{t('community.noPosts')}</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-[var(--text-secondary)] mb-6">
             {t('community.beFirst')}
           </p>
           <Button onClick={() => setShowCreateModal(true)}>
@@ -201,7 +201,7 @@ export default function CommunityPage() {
             <Card key={post.id} className="p-6 hover:shadow-lg transition-shadow">
               {/* Post Content */}
               <div className="mb-4">
-                <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                <p className="text-[var(--text-primary)] whitespace-pre-wrap">
                   {post.content}
                 </p>
               </div>
@@ -216,7 +216,7 @@ export default function CommunityPage() {
               )}
 
               {/* Reactions */}
-              <div className="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3 pt-4 border-t border-[var(--border-primary)]">
                 {['hug', 'support', 'heart'].map(type => {
                   const count = post.reaction_counts?.[type] || 0
                   const hasReacted = post.user_reacted?.includes(type)
@@ -229,7 +229,7 @@ export default function CommunityPage() {
                       className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
                         hasReacted
                           ? 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-md'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                          : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)]'
                       }`}
                     >
                       <span className="text-xl">{emoji}</span>
@@ -242,11 +242,11 @@ export default function CommunityPage() {
               </div>
 
               {/* Timestamp + report */}
-              <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <div className="mt-3 flex items-center justify-between text-xs text-[var(--text-tertiary)]">
                 <span>{new Date(post.created_at).toLocaleString()}</span>
                 <button
                   onClick={() => openReportDialog(post)}
-                  className="text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
+                  className="text-[var(--text-tertiary)] hover:text-red-500 transition-colors flex items-center gap-1"
                   title={t('community.report') || 'Report this post'}
                   aria-label={t('community.report') || 'Report'}
                 >
@@ -290,11 +290,11 @@ export default function CommunityPage() {
               value={newPostContent}
               onChange={(e) => setNewPostContent(e.target.value)}
               placeholder={t('community.postPlaceholder')}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+              className="glass-input w-full px-4 py-3 rounded-lg resize-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               rows={6}
               maxLength={5000}
             />
-            <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-right text-xs text-[var(--text-tertiary)] mt-1">
               {newPostContent.length} / 5000
             </div>
           </div>
@@ -325,7 +325,7 @@ export default function CommunityPage() {
         title={t('community.reportPost') || 'Report this post'}
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-[var(--text-secondary)]">
             {t('community.reportIntro') || 'Tell us what’s wrong with this post. We review every report.'}
           </p>
           <div>
@@ -341,7 +341,7 @@ export default function CommunityPage() {
                   className={`flex items-center gap-2 p-3 rounded-lg border text-sm transition ${
                     reportReason === value
                       ? 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                      : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      : 'border-[var(--border-primary)] hover:bg-[var(--surface-secondary)]'
                   }`}
                 >
                   <span className="text-lg">{icon}</span>
@@ -358,11 +358,11 @@ export default function CommunityPage() {
               value={reportNote}
               onChange={(e) => setReportNote(e.target.value.slice(0, 500))}
               placeholder={t('community.reportNotePlaceholder') || 'Any details a reviewer should know...'}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+              className="glass-input w-full px-4 py-3 rounded-lg resize-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               rows={3}
               maxLength={500}
             />
-            <div className="text-right text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-right text-xs text-[var(--text-tertiary)] mt-1">
               {reportNote.length} / 500
             </div>
           </div>

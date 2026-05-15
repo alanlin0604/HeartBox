@@ -67,7 +67,22 @@ export default function Dropdown({
   return (
     <div ref={dropdownRef} className={`relative inline-block ${className}`.trim()}>
       {/* Trigger */}
-      <div onClick={handleToggle} className="cursor-pointer">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={handleToggle}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+            e.preventDefault()
+            handleToggle()
+          } else if (e.key === 'Escape' && isOpen) {
+            setIsOpen(false)
+          }
+        }}
+        className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 rounded"
+      >
         {trigger}
       </div>
 

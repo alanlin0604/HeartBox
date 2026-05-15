@@ -97,15 +97,19 @@ export default function Layout() {
   const navLinks = [
     { to: '/', label: t('nav.journal'), icon: '/icons/日誌.webp', end: true },
     { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.webp' },
+    { to: '/personal-dashboard', label: t('nav.personalDashboard'), icon: '/icons/心情週報月報.webp' },
     { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.webp' },
     { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.webp' },
     { to: '/habits', label: t('nav.habits'), icon: '/icons/習慣追蹤.webp' },
+    { to: '/sleep-analysis', label: t('nav.sleepAnalysis'), icon: '/icons/呼吸與冥想.webp' },
     { to: '/friends', label: t('friends.title'), icon: '/icons/諮商師.webp' },
+    { to: '/community', label: t('nav.community'), icon: '/icons/諮商師.webp' },
     { to: '/breathe', label: t('nav.breathe'), icon: '/icons/呼吸與冥想.webp' },
     { to: '/learn', label: t('nav.learn'), icon: '/icons/學習.webp' },
     { to: '/counselors', label: t('nav.counselors'), icon: '/icons/諮商師.webp' },
     { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
     { to: '/achievements', label: t('nav.achievements'), icon: '/icons/成就.webp' },
+    { to: '/import', label: t('nav.dataImport'), icon: '/icons/功能指南.webp' },
     { to: '/guide', label: t('nav.guide'), icon: '/icons/功能指南.webp' },
   ]
 

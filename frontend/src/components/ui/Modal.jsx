@@ -30,12 +30,18 @@ export default function Modal({
   const modalRef = useRef(null)
   const previousFocusRef = useRef(null)
 
-  // Save previous focus and restore on close
+  // Save previous focus and restore on close.
+  // Guard against restoring to an element that's been removed from the DOM
+  // (e.g. the trigger lived inside a list item that re-rendered) — focusing
+  // a detached node throws in some browsers.
   useEffect(() => {
     if (open) {
       previousFocusRef.current = document.activeElement
     } else if (previousFocusRef.current) {
-      previousFocusRef.current.focus()
+      const target = previousFocusRef.current
+      if (target.isConnected && typeof target.focus === 'function') {
+        try { target.focus() } catch { /* element no longer focusable */ }
+      }
       previousFocusRef.current = null
     }
   }, [open])
@@ -165,6 +171,7 @@ export default function Modal({
           role="dialog"
           aria-modal="true"
           aria-labelledby={title ? "modal-title" : undefined}
+          aria-describedby="modal-body"
         >
           {/* Backdrop - improved contrast (70% instead of 60%) */}
           <motion.div
@@ -234,7 +241,7 @@ export default function Modal({
             )}
 
             {/* Content */}
-            <div className="p-6">
+            <div id="modal-body" className="p-6">
               {children}
             </div>
 
