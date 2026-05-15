@@ -16,7 +16,8 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function Modal({
-  open = false,
+  open: openProp,
+  isOpen,
   onClose,
   title,
   children,
@@ -27,6 +28,11 @@ export default function Modal({
   swipeToDismiss = true,
   className = ''
 }) {
+  // Accept either `open` or `isOpen` — the codebase has both styles
+  // (MetricsManager/WidgetSettings/CommunityPage/PersonalDashboardPage
+  // use isOpen; older callers use open). Without this alias, those
+  // modals silently never render.
+  const open = openProp ?? isOpen ?? false
   const modalRef = useRef(null)
   const previousFocusRef = useRef(null)
 

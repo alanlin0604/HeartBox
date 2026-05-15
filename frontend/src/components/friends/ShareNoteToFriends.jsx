@@ -29,7 +29,10 @@ export default function ShareNoteToFriends({ noteId, onClose, onShared }) {
       try {
         const res = await getSharedByMe()
         if (cancelled) return
-        const sharedWithForThisNote = res.data.results
+        // `res.data` may be a DRF paginated envelope OR a plain array
+        // depending on the route's pagination config — defensive fallback.
+        const rows = res.data?.results || res.data || []
+        const sharedWithForThisNote = rows
           .filter(share => share.note === noteId)
           .map(share => share.shared_with_id)
         setAlreadySharedWith(sharedWithForThisNote)
@@ -71,7 +74,7 @@ export default function ShareNoteToFriends({ noteId, onClose, onShared }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="popup-panel w-full max-w-md max-h-[80vh] flex flex-col">
+      <div className="popup-panel w-full max-w-md max-h-[80vh] flex flex-col p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-[var(--card-border)]">
           <h2 className="text-xl font-semibold">{t('friends.share.title')}</h2>

@@ -1,15 +1,26 @@
 import { useEffect, useRef } from 'react'
 
 export default function ConfirmModal({
-  open,
+  open: openProp,
+  isOpen,
   title,
   message,
   confirmText,
   cancelText,
   loading = false,
+  // `variant` prop is accepted (older callers pass "danger") but currently
+  // unused since the modal only renders the danger style. Swallow via rest
+  // so ESLint doesn't flag it.
   onConfirm,
   onCancel,
+  // eslint-disable-next-line no-unused-vars
+  ...rest
 }) {
+  // Some callers pass `open`, others `isOpen` (or rely on conditional
+  // rendering without passing either). Default to true if rendered at
+  // all — callers conditionally render the component itself, so being
+  // mounted = should display.
+  const open = openProp ?? isOpen ?? true
   const modalRef = useRef(null)
 
   useEffect(() => {

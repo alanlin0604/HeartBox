@@ -93,8 +93,9 @@ export default function SleepAnalysisPage() {
   }
 
   // No sleep data yet — every stat slot is "--". Guide the user to add the
-  // first entry instead of staring at an empty dashboard.
-  const hasAnyData = !!(analysisData?.statistics?.avg_duration || trendsData?.points?.length)
+  // first entry instead of staring at an empty dashboard. Note backend keys:
+  // `statistics.avg_sleep_hours` (NOT avg_duration) and `trends` (NOT points).
+  const hasAnyData = !!(analysisData?.statistics?.avg_sleep_hours || trendsData?.trends?.length)
   if (!hasAnyData) {
     return (
       <div className="space-y-6 mt-4">
@@ -124,7 +125,6 @@ export default function SleepAnalysisPage() {
   }
 
   const stats = analysisData?.statistics || {}
-  const patterns = analysisData?.patterns || {}
   const issues = analysisData?.issues || []
   const recommendations = analysisData?.recommendations || []
 
@@ -163,14 +163,14 @@ export default function SleepAnalysisPage() {
                 {t('sleep.avgDuration')}
               </p>
               <p className="text-3xl font-bold text-[var(--text-accent)]">
-                {stats.avg_duration ? `${stats.avg_duration.toFixed(1)}h` : '--'}
+                {stats.avg_sleep_hours != null ? `${stats.avg_sleep_hours.toFixed(1)}h` : '--'}
               </p>
             </div>
             <div className="text-4xl">😴</div>
           </div>
-          {stats.duration_trend && (
-            <p className={`text-sm mt-2 ${stats.duration_trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {stats.duration_trend > 0 ? '↑' : '↓'} {Math.abs(stats.duration_trend).toFixed(1)}h {t('sleep.vsLastPeriod')}
+          {stats.sleep_debt != null && (
+            <p className={`text-sm mt-2 ${stats.sleep_debt >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {stats.sleep_debt >= 0 ? '↑' : '↓'} {Math.abs(stats.sleep_debt).toFixed(1)}h {t('sleep.debtTotal')}
             </p>
           )}
         </Card>
@@ -182,14 +182,14 @@ export default function SleepAnalysisPage() {
                 {t('sleep.avgQuality')}
               </p>
               <p className="text-3xl font-bold text-rose-600 dark:text-rose-400">
-                {stats.avg_quality ? `${stats.avg_quality.toFixed(0)}%` : '--'}
+                {stats.avg_quality_score != null ? `${stats.avg_quality_score}%` : '--'}
               </p>
             </div>
             <div className="text-4xl">⭐</div>
           </div>
-          {stats.quality_trend && (
-            <p className={`text-sm mt-2 ${stats.quality_trend > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {stats.quality_trend > 0 ? '↑' : '↓'} {Math.abs(stats.quality_trend).toFixed(0)}% {t('sleep.vsLastPeriod')}
+          {stats.total_records != null && (
+            <p className="text-sm mt-2 text-[var(--text-secondary)]">
+              {stats.total_records} {t('sleep.daysRecorded')}
             </p>
           )}
         </Card>
@@ -201,16 +201,11 @@ export default function SleepAnalysisPage() {
                 {t('sleep.sleepPattern')}
               </p>
               <p className="text-xl font-bold text-amber-700 dark:text-amber-400">
-                {patterns.chronotype ? t(`sleep.chronotype.${patterns.chronotype}`) : '--'}
+                {stats.most_common_pattern ? t(`sleep.chronotype.${stats.most_common_pattern}`, { defaultValue: stats.most_common_pattern }) : '--'}
               </p>
             </div>
             <div className="text-4xl">🌙</div>
           </div>
-          {patterns.consistency && (
-            <p className="text-sm mt-2 text-[var(--text-secondary)]">
-              {t('sleep.consistency')}: {patterns.consistency.toFixed(0)}%
-            </p>
-          )}
         </Card>
       </div>
 

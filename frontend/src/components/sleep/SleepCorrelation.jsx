@@ -12,20 +12,31 @@ export default function SleepCorrelation({ data }) {
   const { theme } = useTheme()
   const { t } = useLang()
 
+  // Backend mood_correlation shape:
+  //   { sufficient_sleep_avg_mood, insufficient_sleep_avg_mood,
+  //     mood_difference, correlation, sample_size }
+  // Previously we ran Object.entries over this flat dict, which produced
+  // garbage bars including parseFloat('positive') = NaN.
   const moodData = useMemo(() => {
-    if (!data?.mood_correlation) return []
-    return Object.entries(data.mood_correlation).map(([mood, score]) => ({
-      name: t(`moods.${mood}`) || mood,
-      value: parseFloat(score)
-    }))
+    const mc = data?.mood_correlation
+    if (!mc || mc.sufficient_sleep_avg_mood == null || mc.insufficient_sleep_avg_mood == null) {
+      return []
+    }
+    return [
+      { name: t('sleep.sufficientSleep'), value: parseFloat(mc.sufficient_sleep_avg_mood) },
+      { name: t('sleep.insufficientSleep'), value: parseFloat(mc.insufficient_sleep_avg_mood) },
+    ]
   }, [data, t])
 
   const stressData = useMemo(() => {
-    if (!data?.stress_correlation) return []
-    return Object.entries(data.stress_correlation).map(([level, score]) => ({
-      name: t(`stress.${level}`) || level,
-      value: parseFloat(score)
-    }))
+    const sc = data?.stress_correlation
+    if (!sc || sc.sufficient_sleep_avg_stress == null || sc.insufficient_sleep_avg_stress == null) {
+      return []
+    }
+    return [
+      { name: t('sleep.sufficientSleep'), value: parseFloat(sc.sufficient_sleep_avg_stress) },
+      { name: t('sleep.insufficientSleep'), value: parseFloat(sc.insufficient_sleep_avg_stress) },
+    ]
   }, [data, t])
 
   const gridStroke = useMemo(() => theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', [theme])
@@ -38,13 +49,11 @@ export default function SleepCorrelation({ data }) {
     color: theme === 'dark' ? '#e2e8f0' : '#1e293b',
   }), [theme])
 
-  // Color based on correlation strength
-  const getBarColor = (value) => {
-    const absValue = Math.abs(value)
-    if (absValue >= 0.7) return '#10b981' // Strong - green
-    if (absValue >= 0.4) return '#3b82f6' // Moderate - blue
-    return '#9ca3af' // Weak - gray
-  }
+  // Color buckets — sufficient (>=7h sleep) shows orange (brand), insufficient
+  // shows rose-red. The 0-10 mood/stress scales make value-based shading
+  // less meaningful; keying by index is simpler and consistent.
+  const BAR_COLORS = ['#f97316', '#e11d48']
+  const getBarColor = (_value, index) => BAR_COLORS[index] || '#9ca3af'
 
   if (!moodData.length && !stressData.length) {
     return (
@@ -74,15 +83,15 @@ export default function SleepCorrelation({ data }) {
               <YAxis
                 stroke={axisStroke}
                 tick={{ fill: axisStroke }}
-                domain={[-1, 1]}
+                domain={[0, 10]}
               />
               <Tooltip
                 contentStyle={tooltipStyle}
-                formatter={(value) => [`${value.toFixed(2)}`, t('sleep.correlation')]}
+                formatter={(value) => [`${value.toFixed(1)} / 10`, t('sleep.avgScore')]}
               />
               <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                 {moodData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getBarColor(entry.value)} />
+                  <Cell key={`cell-${index}`} fill={getBarColor(entry.value, index)} />
                 ))}
               </Bar>
             </BarChart>
@@ -113,7 +122,7 @@ export default function SleepCorrelation({ data }) {
               />
               <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                 {stressData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getBarColor(entry.value)} />
+                  <Cell key={`cell-${index}`} fill={getBarColor(entry.value, index)} />
                 ))}
               </Bar>
             </BarChart>

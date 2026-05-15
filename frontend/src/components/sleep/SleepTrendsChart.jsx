@@ -14,11 +14,16 @@ export default function SleepTrendsChart({ data }) {
 
   const chartData = useMemo(() => {
     if (!data?.trends) return []
-    return data.trends.map(item => ({
-      date: new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      duration: parseFloat(item.duration || 0),
-      quality: parseFloat(item.quality_score || 0)
-    }))
+    // Backend emits {week_start, avg_sleep_hours, avg_quality_score, avg_mood}.
+    // Earlier this component read `item.date / .duration / .quality_score`,
+    // which silently produced NaN for every point and rendered an empty chart.
+    return data.trends
+      .filter(item => item.avg_sleep_hours != null || item.avg_quality_score != null)
+      .map(item => ({
+        date: new Date(item.week_start).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        duration: item.avg_sleep_hours != null ? parseFloat(item.avg_sleep_hours) : 0,
+        quality: item.avg_quality_score != null ? parseFloat(item.avg_quality_score) : 0,
+      }))
   }, [data])
 
   const gridStroke = useMemo(() => theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', [theme])
@@ -96,9 +101,9 @@ export default function SleepTrendsChart({ data }) {
             yAxisId="right"
             type="monotone"
             dataKey="quality"
-            stroke="#3b82f6"
+            stroke="#e11d48"
             strokeWidth={2}
-            dot={{ fill: '#3b82f6', r: 3 }}
+            dot={{ fill: '#e11d48', r: 3 }}
             activeDot={{ r: 5 }}
           />
         </LineChart>

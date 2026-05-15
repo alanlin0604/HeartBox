@@ -88,7 +88,7 @@ export default function FriendRequests({ onClose, onUpdate }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="popup-panel w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div className="popup-panel w-full max-w-2xl max-h-[80vh] flex flex-col p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-[var(--card-border)]">
           <h2 className="text-xl font-semibold truncate pr-2">{t('friends.requests')}</h2>

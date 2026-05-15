@@ -52,7 +52,7 @@ export default function SharedNoteDetail({ shareId, onClose, onUpdate }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-      <div className="popup-panel w-full max-w-3xl my-8">
+      <div className="popup-panel w-full max-w-3xl my-8 p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-[var(--card-border)]">
           <div className="flex items-center gap-3">

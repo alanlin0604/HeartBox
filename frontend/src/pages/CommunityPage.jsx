@@ -103,7 +103,9 @@ export default function CommunityPage() {
   }, [categoryFilter, toast, t])
 
   const handleCreatePost = async () => {
-    if (!newPostContent.trim() || newPostContent.length < 10) {
+    // Backend MIN_LEN is 4; we used to gate at 10 here, silently rejecting
+    // valid short posts with a 10-char error message. Align with backend.
+    if (!newPostContent.trim() || newPostContent.trim().length < 4) {
       toast?.error(t('community.contentTooShort'))
       return
     }
@@ -114,8 +116,11 @@ export default function CommunityPage() {
       toast?.success(t('community.postCreated'))
       setNewPostContent('')
       setShowCreateModal(false)
-      // Refresh posts
-      fetchPosts(1, false)
+      // Refresh: clear category filter so the new post (which may not
+      // match the current filter) is visible. The categoryFilter effect
+      // refetches automatically.
+      if (categoryFilter) setCategoryFilter('')
+      else fetchPosts(1, false, '')
     } catch (err) {
       // Surface the moderation reject reason if backend sent a `code`
       const code = err.response?.data?.code
@@ -166,16 +171,35 @@ export default function CommunityPage() {
     }
   }
 
+  // Optimistic toggle — flips the user's reaction + count immediately so
+  // the button feels responsive on slow networks, then reconciles with
+  // the server response (or rolls back the single post on error). We
+  // snapshot just the affected post so a category-switch mid-flight
+  // doesn't restore an out-of-date feed.
   const handleReaction = async (postId, reactionType) => {
+    let snapshotPost = null
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p
+      snapshotPost = p
+      const wasReacted = p.user_reacted?.includes(reactionType)
+      const nextReacted = wasReacted
+        ? (p.user_reacted || []).filter(r => r !== reactionType)
+        : [...(p.user_reacted || []), reactionType]
+      const counts = { ...(p.reaction_counts || {}) }
+      counts[reactionType] = Math.max(0, (counts[reactionType] || 0) + (wasReacted ? -1 : 1))
+      return { ...p, user_reacted: nextReacted, reaction_counts: counts }
+    }))
     try {
       const res = await toggleReaction(postId, reactionType)
-      // Update post in list
-      setPosts(prev => prev.map(p =>
-        p.id === postId ? res.data.post : p
-      ))
+      if (res.data?.post) {
+        setPosts(prev => prev.map(p => (p.id === postId ? res.data.post : p)))
+      }
     } catch (err) {
       console.error('Failed to toggle reaction:', err)
-      toast?.error(t('common.operationFailed'))
+      toast?.error(t('community.reactionFailed'))
+      if (snapshotPost) {
+        setPosts(prev => prev.map(p => (p.id === postId ? snapshotPost : p)))
+      }
     }
   }
 
