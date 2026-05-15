@@ -59,10 +59,10 @@ export default function HabitCorrelation() {
     );
   }
 
-  // Custom Tooltip
-  const CustomTooltip = ({ active, payload, label }) => {
+  // Pass as a render function so React Compiler doesn't see a fresh
+  // component being created on every render of HabitCorrelation.
+  const renderCustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
-
     return (
       <div className="glass-card p-4 shadow-lg">
         <p className="font-semibold text-[var(--text-primary)] mb-2">{label}</p>
@@ -118,7 +118,7 @@ export default function HabitCorrelation() {
               style: { fill: 'var(--text-secondary)', fontSize: 12 },
             }}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--card-bg)', opacity: 0.5 }} />
+          <Tooltip content={renderCustomTooltip} cursor={{ fill: 'var(--card-bg)', opacity: 0.5 }} />
           <Legend
             wrapperStyle={{ paddingTop: '20px' }}
             iconType="circle"

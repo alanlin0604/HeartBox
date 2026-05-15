@@ -40,33 +40,48 @@ export default function PersonalDashboardPage() {
   const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
-    loadLayout();
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await getDashboardLayout();
+        if (cancelled) return;
+        if (res.data.layout_config?.widgets) {
+          setWidgets(res.data.layout_config.widgets);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to load dashboard layout:', err);
+        setWidgets(DEFAULT_LAYOUT.widgets);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true };
   }, []);
 
   useEffect(() => {
     document.title = `${t('dashboard.title')} — HeartBox`;
   }, [t]);
 
-  const loadLayout = async () => {
+  const saveLayout = useCallback(async (widgetsToSave) => {
     try {
-      setLoading(true);
-      const res = await getDashboardLayout();
-      if (res.data.layout_config?.widgets) {
-        setWidgets(res.data.layout_config.widgets);
-      }
+      await updateDashboardLayout({ widgets: widgetsToSave });
+      setHasUnsavedChanges(false);
+      window.dispatchEvent(new CustomEvent('api-success', {
+        detail: { messageKey: 'dashboard.layoutSaved' },
+      }));
     } catch (err) {
-      console.error('Failed to load dashboard layout:', err);
-      // Use default layout on error
-      setWidgets(DEFAULT_LAYOUT.widgets);
-    } finally {
-      setLoading(false);
+      console.error('Failed to save layout:', err);
+      window.dispatchEvent(new CustomEvent('api-error', {
+        detail: { messageKey: 'dashboard.saveFailed' },
+      }));
     }
-  };
+  }, []);
 
   const handleLayoutChange = useCallback((newLayout) => {
     if (!isEditMode || loading) return;
 
-    // Update widgets with new positions
     const updatedWidgets = widgets.map(widget => {
       const layoutItem = newLayout.find(item => item.i === widget.id);
       if (layoutItem) {
@@ -84,35 +99,25 @@ export default function PersonalDashboardPage() {
     setWidgets(updatedWidgets);
     setHasUnsavedChanges(true);
 
-    // Debounce auto-save (1 second)
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     saveTimeoutRef.current = setTimeout(() => {
       saveLayout(updatedWidgets);
     }, 1000);
-  }, [isEditMode, loading, widgets]);
-
-  const saveLayout = async (widgetsToSave = widgets) => {
-    try {
-      await updateDashboardLayout({ widgets: widgetsToSave });
-      setHasUnsavedChanges(false);
-      window.dispatchEvent(new CustomEvent('api-success', {
-        detail: { messageKey: 'dashboard.layoutSaved' },
-      }));
-    } catch (err) {
-      console.error('Failed to save layout:', err);
-      window.dispatchEvent(new CustomEvent('api-error', {
-        detail: { messageKey: 'dashboard.saveFailed' },
-      }));
-    }
-  };
+  }, [isEditMode, loading, widgets, saveLayout]);
 
   const handleReset = async () => {
     setShowResetConfirm(false);
     try {
       await resetDashboardLayout();
-      await loadLayout();
+      // reload by re-running the effect via state reset
+      const res = await getDashboardLayout();
+      if (res.data.layout_config?.widgets) {
+        setWidgets(res.data.layout_config.widgets);
+      } else {
+        setWidgets(DEFAULT_LAYOUT.widgets);
+      }
       setHasUnsavedChanges(false);
       window.dispatchEvent(new CustomEvent('api-success', {
         detail: { messageKey: 'dashboard.layoutReset' },

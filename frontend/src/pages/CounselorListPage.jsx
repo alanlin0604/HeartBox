@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import {
   getCounselors,
@@ -113,36 +113,7 @@ export default function CounselorListPage() {
     }
   }, [contextMenu])
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  // Sync tab state with URL search params. setSearchParams is stable
-  // (react-router v6) but ESLint can't tell.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (location.state?.tab) {
-      const tabMap = { bookings: 'bookings', received: 'shared', assessments: 'assessments' }
-      const newTab = tabMap[location.state.tab] || location.state.tab
-      setTab(newTab)
-      setSearchParams({ tab: newTab }, { replace: true })
-    }
-  }, [location.state])
-
-  // Reflect tab → URL. Reverse direction (URL → tab on external nav) is
-  // handled by the location.state effect above; we don't depend on
-  // searchParams here to avoid a write-then-read loop.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const current = searchParams.get('tab')
-    if (tab !== 'list' && current !== tab) {
-      setSearchParams({ tab }, { replace: true })
-    } else if (tab === 'list' && current) {
-      setSearchParams({}, { replace: true })
-    }
-  }, [tab])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -183,7 +154,30 @@ export default function CounselorListPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast, t])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Sync tab state with URL search params.
+  useEffect(() => {
+    if (location.state?.tab) {
+      const tabMap = { bookings: 'bookings', received: 'shared', assessments: 'assessments' }
+      const newTab = tabMap[location.state.tab] || location.state.tab
+      setTab(newTab)
+      setSearchParams({ tab: newTab }, { replace: true })
+    }
+  }, [location.state, setSearchParams])
+
+  useEffect(() => {
+    const current = searchParams.get('tab')
+    if (tab !== 'list' && current !== tab) {
+      setSearchParams({ tab }, { replace: true })
+    } else if (tab === 'list' && current) {
+      setSearchParams({}, { replace: true })
+    }
+  }, [tab, searchParams, setSearchParams])
 
   const handleApply = async (e) => {
     e.preventDefault()

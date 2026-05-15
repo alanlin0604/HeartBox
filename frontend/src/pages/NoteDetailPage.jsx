@@ -37,23 +37,25 @@ export default function NoteDetailPage() {
   useEffect(() => { document.title = `${t('nav.journal')} — ${t('app.name')}` }, [t])
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
     getNote(id)
-      .then((res) => setNote(res.data))
+      .then((res) => { if (!cancelled) setNote(res.data) })
       .catch(() => {
+        if (cancelled) return
         toast?.error(t('common.operationFailed'))
         window.history.length > 1 ? navigate(-1) : navigate('/')
       })
-      .finally(() => setLoading(false))
-  }, [id, navigate])
-
-  const loadShares = () => {
-    getNoteShares(id)
-      .then((res) => setShares(res.data.results || res.data))
-      .catch(() => {})
-  }
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [id, navigate, toast, t])
 
   useEffect(() => {
-    loadShares()
+    let cancelled = false
+    getNoteShares(id)
+      .then((res) => { if (!cancelled) setShares(res.data.results || res.data) })
+      .catch(() => {})
+    return () => { cancelled = true }
   }, [id])
 
   // Warn before leaving if editing

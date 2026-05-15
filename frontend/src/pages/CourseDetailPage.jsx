@@ -18,12 +18,18 @@ export default function CourseDetailPage() {
   const langKey = LANG_FIELD_MAP[lang] || 'en'
 
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
     getCourseDetail(courseId)
-      .then((res) => setCourse(res.data))
-      .catch(() => { toast?.error(t('common.operationFailed')); setCourse(null) })
-      .finally(() => setLoading(false))
-  }, [courseId])
+      .then((res) => { if (!cancelled) setCourse(res.data) })
+      .catch(() => {
+        if (cancelled) return
+        toast?.error(t('common.operationFailed'))
+        setCourse(null)
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [courseId, toast, t])
 
   useEffect(() => {
     if (course) {

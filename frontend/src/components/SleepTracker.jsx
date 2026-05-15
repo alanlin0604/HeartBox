@@ -22,8 +22,10 @@ export default function SleepTracker() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     getSleep(today)
       .then((res) => {
+        if (cancelled) return
         if (res.data.sleep_hours != null) {
           setHours(String(res.data.sleep_hours))
           setQuality(res.data.sleep_quality || 0)
@@ -31,6 +33,7 @@ export default function SleepTracker() {
         }
       })
       .catch(() => {})
+    return () => { cancelled = true }
   }, [today])
 
   const handleSave = async () => {

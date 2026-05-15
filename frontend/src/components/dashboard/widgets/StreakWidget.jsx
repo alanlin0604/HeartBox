@@ -9,22 +9,23 @@ export default function StreakWidget({ widgetId, isEditMode, onSettings }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await getWidgetData(widgetId);
-      setData(res.data);
-    } catch (err) {
-      console.error('Failed to load streak data:', err);
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await getWidgetData(widgetId);
+        if (!cancelled) setData(res.data);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to load streak data:', err);
+        setError(err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true };
+  }, [widgetId]);
 
   if (loading) {
     return (

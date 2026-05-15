@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLang } from '../../../context/LanguageContext';
 import { getWidgetData } from '../../../api/dashboard';
 import { checkInHabit } from '../../../api/habits';
@@ -10,11 +10,7 @@ export default function HabitCheckInWidget({ widgetId, isEditMode, onSettings })
   const [error, setError] = useState(null);
   const [checking, setChecking] = useState({});
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -26,7 +22,11 @@ export default function HabitCheckInWidget({ widgetId, isEditMode, onSettings })
     } finally {
       setLoading(false);
     }
-  };
+  }, [widgetId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleCheckIn = async (habitId) => {
     if (checking[habitId]) return;

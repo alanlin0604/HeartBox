@@ -224,54 +224,61 @@ export default function BreathingPage() {
     } catch { /* AudioContext unavailable / autoplay blocked */ }
   }, [])
 
-  const stopAmbient = useCallback(() => {
-    try {
-      noiseNodeRef.current?.stop()
-      audioCtxRef.current?.close()
-    } catch { /* node already stopped */ }
-    audioCtxRef.current = null
-    noiseNodeRef.current = null
-    setAmbientOn(false)
+  // stopAmbient mutates refs after async cleanup. React Compiler can't
+  // preserve the useCallback memoization for that shape, so route through
+  // a ref instead — semantically identical for this usage.
+  const stopAmbientRef = useRef()
+  useEffect(() => {
+    stopAmbientRef.current = () => {
+      try {
+        noiseNodeRef.current?.stop()
+        audioCtxRef.current?.close()
+      } catch { /* node already stopped */ }
+      audioCtxRef.current = null
+      noiseNodeRef.current = null
+      setAmbientOn(false)
+    }
   }, [])
+  const stopAmbient = () => stopAmbientRef.current?.()
 
-  const playChime = useCallback(() => {
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)()
-      const now = ctx.currentTime
-
-      // Fundamental 528Hz sine wave
-      const osc1 = ctx.createOscillator()
-      osc1.type = 'sine'
-      osc1.frequency.value = 528
-      const gain1 = ctx.createGain()
-      gain1.gain.setValueAtTime(0.3, now)
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 3)
-      osc1.connect(gain1)
-      gain1.connect(ctx.destination)
-
-      // Harmonic 1056Hz
-      const osc2 = ctx.createOscillator()
-      osc2.type = 'sine'
-      osc2.frequency.value = 1056
-      const gain2 = ctx.createGain()
-      gain2.gain.setValueAtTime(0.15, now)
-      gain2.gain.exponentialRampToValueAtTime(0.001, now + 3)
-      osc2.connect(gain2)
-      gain2.connect(ctx.destination)
-
-      osc1.start(now)
-      osc2.start(now)
-      osc1.stop(now + 3)
-      osc2.stop(now + 3)
-
-      setTimeout(() => ctx.close(), 3500)
-    } catch { /* AudioContext unavailable */ }
+  // playChime is intentionally not memoised — React Compiler skips the
+  // component if it tries (Web Audio API + setTimeout closure prevents
+  // hoisting). Stash in a ref so the effect dep stays stable.
+  const playChimeRef = useRef()
+  useEffect(() => {
+    playChimeRef.current = () => {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)()
+        const now = ctx.currentTime
+        const osc1 = ctx.createOscillator()
+        osc1.type = 'sine'
+        osc1.frequency.value = 528
+        const gain1 = ctx.createGain()
+        gain1.gain.setValueAtTime(0.3, now)
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 3)
+        osc1.connect(gain1)
+        gain1.connect(ctx.destination)
+        const osc2 = ctx.createOscillator()
+        osc2.type = 'sine'
+        osc2.frequency.value = 1056
+        const gain2 = ctx.createGain()
+        gain2.gain.setValueAtTime(0.15, now)
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 3)
+        osc2.connect(gain2)
+        gain2.connect(ctx.destination)
+        osc1.start(now)
+        osc2.start(now)
+        osc1.stop(now + 3)
+        osc2.stop(now + 3)
+        setTimeout(() => ctx.close(), 3500)
+      } catch { /* AudioContext unavailable */ }
+    }
   }, [])
 
   // Play chime when breathing or meditation completes
   useEffect(() => {
-    if (breathComplete || medComplete) playChime()
-  }, [breathComplete, medComplete, playChime])
+    if (breathComplete || medComplete) playChimeRef.current?.()
+  }, [breathComplete, medComplete])
 
   const toggleAmbient = () => {
     if (ambientOn) stopAmbient()

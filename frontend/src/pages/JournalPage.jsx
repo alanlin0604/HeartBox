@@ -79,7 +79,7 @@ export default function JournalPage() {
       setNotes((prev) => prev.filter((n) => n.id !== noteId))
       toast?.success(t('journal.noteDeleted'))
     } catch {
-      toast?.error(t('common.operationFailed'))
+      toast?.error(t('journal.deleteFailed'))
     }
   }, [toast, t])
 
@@ -105,7 +105,7 @@ export default function JournalPage() {
       setPage(p)
     } catch {
       if (id !== fetchIdRef.current) return
-      toast?.error(t('common.operationFailed'))
+      toast?.error(t('journal.loadFailed'))
     } finally {
       if (id === fetchIdRef.current) setLoading(false)
     }
@@ -115,7 +115,7 @@ export default function JournalPage() {
     setTrashLoading(true)
     try {
       const { data } = await getTrashNotes()
-      setTrashNotes(data)
+      setTrashNotes(Array.isArray(data) ? data : (data?.results || []))
     } catch { setTrashNotes([]) }
     finally { setTrashLoading(false) }
   }
@@ -126,14 +126,14 @@ export default function JournalPage() {
       setTrashNotes((prev) => prev.filter((n) => n.id !== id))
       toast?.success(t('journal.restore'))
       fetchNotes(page, filters)
-    } catch { toast?.error(t('common.operationFailed')) }
+    } catch { toast?.error(t('journal.deleteFailed')) }
   }, [toast, t, fetchNotes, page, filters])
 
   const handlePermanentDelete = useCallback(async (id) => {
     try {
       await permanentDeleteNote(id)
       setTrashNotes((prev) => prev.filter((n) => n.id !== id))
-    } catch { toast?.error(t('common.operationFailed')) }
+    } catch { toast?.error(t('journal.deleteFailed')) }
     finally { setPermanentDeleteId(null) }
   }, [toast, t])
 

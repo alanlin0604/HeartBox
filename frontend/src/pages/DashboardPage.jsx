@@ -55,7 +55,7 @@ export default function DashboardPage() {
       .catch(() => {
         if (fetchId === fetchIdRef.current) {
           setError(true)
-          toast?.error(t('common.operationFailed'))
+          toast?.error(t('dashboard.loadFailed'))
         }
       })
       .finally(() => {
@@ -98,7 +98,7 @@ export default function DashboardPage() {
 
   if (error && !data) return (
     <div className="flex flex-col items-center justify-center py-20 opacity-60">
-      <p className="text-lg mb-4">{t('common.operationFailed')}</p>
+      <p className="text-lg mb-4">{t('dashboard.loadFailed')}</p>
       <button className="btn-primary" onClick={() => { setError(false); setLoading(true); getAnalytics(period, lookback).then((res) => setData(res.data)).catch(() => setError(true)).finally(() => setLoading(false)) }}>
         {t('common.retry')}
       </button>

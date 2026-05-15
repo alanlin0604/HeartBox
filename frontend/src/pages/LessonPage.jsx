@@ -43,22 +43,24 @@ export default function LessonPage() {
   const langKey = LANG_FIELD_MAP[lang] || 'en'
 
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
     Promise.all([
       getArticleDetail(lessonId),
       getCourseDetail(courseId),
     ])
       .then(([articleRes, courseRes]) => {
+        if (cancelled) return
         setArticle(articleRes.data)
         setCourse(courseRes.data)
-        // Check if this lesson is already completed
         const lessons = courseRes.data?.lessons || []
         const thisLesson = lessons.find(l => l.id === Number(lessonId))
         if (thisLesson?.is_completed) setCompleted(true)
       })
-      .catch(() => toast?.error(t('common.operationFailed')))
-      .finally(() => setLoading(false))
-  }, [courseId, lessonId])
+      .catch(() => { if (!cancelled) toast?.error(t('common.operationFailed')) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [courseId, lessonId, toast, t])
 
   useEffect(() => {
     if (article) {

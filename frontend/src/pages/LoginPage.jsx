@@ -25,18 +25,24 @@ export default function LoginPage() {
   const googleBtnRef = useRef(null)
   const googleCallbackRef = useRef()
 
-  googleCallbackRef.current = async (response) => {
-    try {
-      const { default: api } = await import('../api/axios')
-      const { data } = await api.post('/auth/google/', { credential: response.credential })
-      const { setAuthTokens } = await import('../utils/tokenStorage')
-      setAuthTokens(data.access, data.refresh, true)
-      window.location.href = '/'
-    } catch {
-      setError(t('oauth.failed'))
-      toast?.error(t('oauth.failed'))
+  // Refresh the ref each time `t` / `toast` change so the latest copy is
+  // available when Google's GSI library invokes the callback (which it
+  // does outside React's lifecycle). Writing to ref.current from inside
+  // an effect avoids the React 19 "cannot access refs during render" rule.
+  useEffect(() => {
+    googleCallbackRef.current = async (response) => {
+      try {
+        const { default: api } = await import('../api/axios')
+        const { data } = await api.post('/auth/google/', { credential: response.credential })
+        const { setAuthTokens } = await import('../utils/tokenStorage')
+        setAuthTokens(data.access, data.refresh, true)
+        window.location.href = '/'
+      } catch {
+        setError(t('oauth.failed'))
+        toast?.error(t('oauth.failed'))
+      }
     }
-  }
+  }, [t, toast])
 
   useEffect(() => { document.title = `${t('login.title')} — ${t('app.name')}` }, [t])
 

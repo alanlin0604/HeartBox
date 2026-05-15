@@ -8,20 +8,20 @@ export default function TagCloud({ onTagClick }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadTagCloud()
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoading(true)
+        const data = await tagAPI.cloud()
+        if (!cancelled) setTags(data)
+      } catch (err) {
+        if (!cancelled) console.error('Failed to load tag cloud:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
   }, [])
-
-  async function loadTagCloud() {
-    try {
-      setLoading(true)
-      const data = await tagAPI.cloud()
-      setTags(data)
-    } catch (err) {
-      console.error('Failed to load tag cloud:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (loading) {
     return (

@@ -128,6 +128,9 @@ export default function ChatPage() {
   const reconnectDelay = useRef(3000)
   const closedIntentionally = useRef(false)
 
+  // connectWs needs to reference itself (for reconnect). Routing self-reference
+  // through a ref avoids "Cannot access variable before it is declared".
+  const connectWsRef = useRef()
   const connectWs = useCallback(() => {
     const token = getAccessToken()
     if (!token) return
@@ -140,20 +143,17 @@ export default function ChatPage() {
     const ws = new WebSocket(wsUrl)
 
     ws.onopen = () => {
-      // Send JWT via first message instead of query string
       ws.send(JSON.stringify({ type: 'auth', token }))
     }
 
     ws.onmessage = (e) => {
       let data
       try { data = JSON.parse(e.data) } catch { return }
-      // Handle auth response
       if (data.type === 'auth_ok') {
         setWsConnected(true)
         reconnectDelay.current = 3000
         return
       }
-      // Respond to server heartbeat pings
       if (data.type === 'ping') {
         ws.send(JSON.stringify({ type: 'pong' }))
         return
@@ -162,7 +162,6 @@ export default function ChatPage() {
         return
       }
       setMessages((prev) => {
-        // Prevent duplicates
         if (prev.some((m) => m.id === data.id)) return prev
         return [...prev, data]
       })
@@ -172,7 +171,7 @@ export default function ChatPage() {
     ws.onclose = () => {
       setWsConnected(false)
       if (!closedIntentionally.current) {
-        reconnectTimer.current = setTimeout(connectWs, reconnectDelay.current)
+        reconnectTimer.current = setTimeout(() => connectWsRef.current?.(), reconnectDelay.current)
         reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30000)
       }
     }
@@ -182,45 +181,49 @@ export default function ChatPage() {
     wsRef.current = ws
   }, [id])
 
+  useEffect(() => {
+    connectWsRef.current = connectWs
+  }, [connectWs])
+
   useEffect(() => { document.title = `${t('chat.conversation')} — ${t('app.name')}` }, [t])
 
   useEffect(() => {
-    loadConversationInfo()
-    loadMessages()
+    let cancelled = false
+    setLoading(true)
+    // Guard against rapid conversation switching writing stale messages
+    // into the new conversation view.
+    ;(async () => {
+      try {
+        const res = await getConversations()
+        if (cancelled) return
+        const convList = res.data.results || res.data
+        const conv = convList.find((c) => c.id === parseInt(id))
+        if (conv) setOtherUser(conv.other_user)
+      } catch {
+        if (!cancelled) toast?.error(t('common.operationFailed'))
+      }
+      try {
+        const res = await getMessages(id)
+        if (!cancelled) setMessages(res.data)
+      } catch {
+        if (!cancelled) toast?.error(t('common.operationFailed'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
     connectWs()
 
     return () => {
+      cancelled = true
       closedIntentionally.current = true
       clearTimeout(reconnectTimer.current)
       if (wsRef.current) wsRef.current.close()
     }
-  }, [id, connectWs])
+  }, [id, connectWs, toast, t])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'auto' })
   }, [messages])
-
-  const loadConversationInfo = async () => {
-    try {
-      const res = await getConversations()
-      const convList = res.data.results || res.data
-      const conv = convList.find((c) => c.id === parseInt(id))
-      if (conv) setOtherUser(conv.other_user)
-    } catch {
-      toast?.error(t('common.operationFailed'))
-    }
-  }
-
-  const loadMessages = async () => {
-    try {
-      const res = await getMessages(id)
-      setMessages(res.data)
-    } catch {
-      toast?.error(t('common.operationFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleSend = (e) => {
     e.preventDefault()

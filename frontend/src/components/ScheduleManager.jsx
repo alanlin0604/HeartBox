@@ -21,19 +21,19 @@ export default function ScheduleManager() {
   const [deleteTarget, setDeleteTarget] = useState(null)
 
   useEffect(() => {
-    loadSlots()
-  }, [])
-
-  const loadSlots = async () => {
-    try {
-      const res = await getMySchedule()
-      setSlots(res.data)
-    } catch {
-      toast?.error(t('common.operationFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await getMySchedule()
+        if (!cancelled) setSlots(res.data)
+      } catch {
+        if (!cancelled) toast?.error(t('common.operationFailed'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [toast, t])
 
   const handleAdd = async (e) => {
     e.preventDefault()

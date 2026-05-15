@@ -9,22 +9,23 @@ export default function MoodPrediction() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    loadPredictions()
-  }, [])
-
-  async function loadPredictions() {
-    try {
-      setLoading(true)
-      setError(null)
-      const result = await aiAPI.getPredictions()
-      setData(result)
-    } catch (err) {
-      console.error('Failed to load predictions:', err)
-      setError(err.response?.data?.error || t('prediction.loadError'))
-    } finally {
-      setLoading(false)
-    }
-  }
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const result = await aiAPI.getPredictions()
+        if (!cancelled) setData(result)
+      } catch (err) {
+        if (cancelled) return
+        console.error('Failed to load predictions:', err)
+        setError(err.response?.data?.error || t('prediction.loadError'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [t])
 
   if (loading) {
     return (

@@ -75,12 +75,19 @@ export default function SettingsPage() {
   }, [location.state?.tab])
 
   useEffect(() => {
-    // Notification preferences
+    let cancelled = false
     import('../api/axios').then(({ default: api }) => {
-      api.get('/notifications/preferences/').then(r => setNotifPrefs(r.data)).catch(() => {})
-      api.get('/auth/2fa/setup/').then(r => setTwoFAEnabled(r.data.enabled)).catch(() => {})
-      api.get('/subscriptions/me/').then(r => setCurrentSub(r.data)).catch(() => {})
+      api.get('/notifications/preferences/')
+        .then(r => { if (!cancelled) setNotifPrefs(r.data) })
+        .catch(() => {})
+      api.get('/auth/2fa/setup/')
+        .then(r => { if (!cancelled) setTwoFAEnabled(r.data.enabled) })
+        .catch(() => {})
+      api.get('/subscriptions/me/')
+        .then(r => { if (!cancelled) setCurrentSub(r.data) })
+        .catch(() => {})
     })
+    return () => { cancelled = true }
   }, [user])
 
   const handleSaveProfile = async (e) => {

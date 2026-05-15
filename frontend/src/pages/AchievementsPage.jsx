@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { getAchievements, checkAchievements } from '../api/achievements'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -19,21 +19,21 @@ export default function AchievementsPage() {
     document.title = `${t('achievement.title')} — ${t('app.name')}`
   }, [t])
 
-  useEffect(() => {
-    loadAchievements()
-  }, [])
-
-  const loadAchievements = async () => {
+  const loadAchievements = useCallback(async () => {
     setLoading(true)
     try {
       const res = await getAchievements()
       setAchievements(res.data)
     } catch {
-      toast?.error(t('common.operationFailed'))
+      toast?.error(t('achievement.checkFailed'))
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast, t])
+
+  useEffect(() => {
+    loadAchievements()
+  }, [loadAchievements])
 
   const handleCheck = async () => {
     setChecking(true)
@@ -46,7 +46,7 @@ export default function AchievementsPage() {
       }
       await loadAchievements()
     } catch {
-      toast?.error(t('common.operationFailed'))
+      toast?.error(t('achievement.checkFailed'))
     } finally {
       setChecking(false)
     }

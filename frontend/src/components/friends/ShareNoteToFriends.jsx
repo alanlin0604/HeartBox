@@ -14,33 +14,31 @@ export default function ShareNoteToFriends({ noteId, onClose, onShared }) {
   const [alreadySharedWith, setAlreadySharedWith] = useState([])
 
   useEffect(() => {
-    loadFriends()
-    loadAlreadyShared()
-  }, [noteId])
-
-  const loadFriends = async () => {
-    try {
-      const res = await getFriends()
-      setFriends(res.data.results || [])
-    } catch (error) {
-      console.error('Failed to load friends:', error)
-      toast?.error(t('friends.loadFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadAlreadyShared = async () => {
-    try {
-      const res = await getSharedByMe()
-      const sharedWithForThisNote = res.data.results
-        .filter(share => share.note === noteId)
-        .map(share => share.shared_with_id)
-      setAlreadySharedWith(sharedWithForThisNote)
-    } catch (error) {
-      console.error('Failed to load shared notes:', error)
-    }
-  }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await getFriends()
+        if (!cancelled) setFriends(res.data.results || [])
+      } catch (error) {
+        if (cancelled) return
+        console.error('Failed to load friends:', error)
+        toast?.error(t('friends.loadFailed'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+      try {
+        const res = await getSharedByMe()
+        if (cancelled) return
+        const sharedWithForThisNote = res.data.results
+          .filter(share => share.note === noteId)
+          .map(share => share.shared_with_id)
+        setAlreadySharedWith(sharedWithForThisNote)
+      } catch (error) {
+        if (!cancelled) console.error('Failed to load shared notes:', error)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [noteId, toast, t])
 
   const toggleFriend = (friendId) => {
     if (selectedFriends.includes(friendId)) {

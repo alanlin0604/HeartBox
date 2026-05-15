@@ -62,12 +62,18 @@ export default function PsychoContentPage() {
   // Load articles when switching to articles tab or changing category
   useEffect(() => {
     if (tab !== 'articles') return
+    let cancelled = false
     setLoading(true)
     getArticles(category)
-      .then((res) => setArticles(res.data?.results || res.data || []))
-      .catch(() => { toast?.error(t('common.operationFailed')); setArticles([]) })
-      .finally(() => setLoading(false))
-  }, [tab, category])
+      .then((res) => { if (!cancelled) setArticles(res.data?.results || res.data || []) })
+      .catch(() => {
+        if (cancelled) return
+        toast?.error(t('common.operationFailed'))
+        setArticles([])
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [tab, category, toast, t])
 
   const langKey = LANG_FIELD_MAP[lang] || 'en'
 

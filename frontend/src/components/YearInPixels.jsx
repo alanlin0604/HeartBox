@@ -27,11 +27,13 @@ export default function YearInPixels() {
   const [hovered, setHovered] = useState(null)
 
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
     getYearPixels(year)
-      .then((res) => setPixels(res.data.pixels || {}))
-      .catch(() => setPixels({}))
-      .finally(() => setLoading(false))
+      .then((res) => { if (!cancelled) setPixels(res.data.pixels || {}) })
+      .catch(() => { if (!cancelled) setPixels({}) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [year])
 
   const grid = useMemo(() => {

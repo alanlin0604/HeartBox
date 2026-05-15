@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLang } from '../../context/LanguageContext';
 import { getMetrics, createMetric, deleteMetric, refreshMetrics } from '../../api/dashboard'
 import Modal from '../ui/Modal';
@@ -17,13 +17,7 @@ export default function MetricsManager({ isOpen, onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState({});
 
-  useEffect(() => {
-    if (isOpen) {
-      loadMetrics();
-    }
-  }, [isOpen]);
-
-  const loadMetrics = async () => {
+  const loadMetrics = useCallback(async () => {
     try {
       setLoading(true);
       const res = await getMetrics();
@@ -33,7 +27,13 @@ export default function MetricsManager({ isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadMetrics();
+    }
+  }, [isOpen, loadMetrics]);
 
   const handleRefresh = async () => {
     try {

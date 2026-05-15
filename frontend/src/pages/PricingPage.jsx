@@ -18,15 +18,18 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let cancelled = false
     document.title = `${t('subscription.pricingTitle')} — ${t('app.name')}`
     Promise.all([
       getPlans().catch(() => ({ data: { results: [] } })),
       user ? getMySubscription().catch(() => ({ data: {} })) : Promise.resolve({ data: {} }),
     ]).then(([plansRes, subRes]) => {
+      if (cancelled) return
       setPlans(plansRes.data.results || plansRes.data || [])
       setCurrentSub(subRes.data)
       setLoading(false)
     })
+    return () => { cancelled = true }
   }, [t, user])
 
   const handleSubscribe = async (planId) => {

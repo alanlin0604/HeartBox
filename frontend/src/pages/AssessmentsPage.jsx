@@ -70,12 +70,14 @@ export default function AssessmentsPage() {
   const questionCount = tab === 'phq9' ? 9 : 7
 
   useEffect(() => {
+    let cancelled = false
     setResponses(Array(questionCount).fill(-1))
     setResult(null)
     getAssessments(tab)
-      .then((res) => setHistory(res.data?.results || res.data || []))
-      .catch(() => setHistory([]))
-  }, [tab])
+      .then((res) => { if (!cancelled) setHistory(res.data?.results || res.data || []) })
+      .catch(() => { if (!cancelled) setHistory([]) })
+    return () => { cancelled = true }
+  }, [tab, questionCount])
 
   const handleAnswer = (qIndex, value) => {
     setResponses((prev) => {

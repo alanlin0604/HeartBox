@@ -1,8 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLang } from '../../context/LanguageContext'
 import { useToast } from '../../context/ToastContext'
 import { searchUsers, sendFriendRequest } from '../../api/friends'
-import { debounce } from '../../utils/debounce'
 
 export default function FriendSearch({ onClose, onRequestSent }) {
   const { t } = useLang()
@@ -18,34 +17,39 @@ export default function FriendSearch({ onClose, onRequestSent }) {
   // request land after the latest one.
   const fetchIdRef = useRef(0)
 
-  const performSearch = async (searchQuery) => {
-    if (!searchQuery.trim()) {
-      setResults([])
-      return
-    }
-
-    const fetchId = ++fetchIdRef.current
-    try {
-      setLoading(true)
-      const res = await searchUsers(searchQuery)
-      if (fetchId !== fetchIdRef.current) return
-      setResults(res.data.users || [])
-    } catch (error) {
-      if (fetchId !== fetchIdRef.current) return
-      console.error('Search failed:', error)
-      toast?.error(t('friends.search.failed'))
-    } finally {
-      if (fetchId === fetchIdRef.current) setLoading(false)
-    }
-  }
-
-  const debouncedSearch = useCallback(
-    debounce((q) => performSearch(q), 500),
-    []
-  )
-
+  // Stash latest performSearch in a ref so the memoised debouncer
+  // (which can't have unstable deps) always sees fresh state setters.
+  const performSearchRef = useRef()
   useEffect(() => {
-    debouncedSearch(query)
+    performSearchRef.current = async (searchQuery) => {
+      if (!searchQuery.trim()) {
+        setResults([])
+        return
+      }
+      const fetchId = ++fetchIdRef.current
+      try {
+        setLoading(true)
+        const res = await searchUsers(searchQuery)
+        if (fetchId !== fetchIdRef.current) return
+        setResults(res.data.users || [])
+      } catch (error) {
+        if (fetchId !== fetchIdRef.current) return
+        console.error('Search failed:', error)
+        toast?.error(t('friends.search.failed'))
+      } finally {
+        if (fetchId === fetchIdRef.current) setLoading(false)
+      }
+    }
+  }, [toast, t])
+
+  // Debounce the query inside an effect rather than carrying a memoised
+  // debouncer across renders — that pattern reads `performSearchRef.current`
+  // at render time, which React 19 forbids.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      performSearchRef.current?.(query)
+    }, 500)
+    return () => clearTimeout(handle)
   }, [query])
 
   const handleSendRequest = async (userId) => {

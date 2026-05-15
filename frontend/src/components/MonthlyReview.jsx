@@ -20,22 +20,23 @@ export default function MonthlyReview() {
   const [month, setMonth] = useState(now.getMonth() + 1)
 
   useEffect(() => {
-    loadReview()
-  }, [year, month])
-
-  async function loadReview() {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await reviewAPI.getMonthlyReview(year, month)
-      setReview(data)
-    } catch (err) {
-      console.error('Failed to load monthly review:', err)
-      setError(err.response?.data?.error || t('review.loadError'))
-    } finally {
-      setLoading(false)
-    }
-  }
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await reviewAPI.getMonthlyReview(year, month)
+        if (!cancelled) setReview(data)
+      } catch (err) {
+        if (cancelled) return
+        console.error('Failed to load monthly review:', err)
+        setError(err.response?.data?.error || t('review.loadError'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [year, month, t])
 
   if (loading) {
     return (

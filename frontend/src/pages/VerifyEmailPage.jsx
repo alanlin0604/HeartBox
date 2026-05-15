@@ -12,6 +12,7 @@ export default function VerifyEmailPage() {
   const [status, setStatus] = useState('loading')
 
   useEffect(() => {
+    let cancelled = false
     const uid = params.get('uid')
     const token = params.get('token')
     if (!uid || !token) {
@@ -20,13 +21,15 @@ export default function VerifyEmailPage() {
     }
     verifyEmail(uid, token)
       .then(async () => {
+        if (cancelled) return
         setStatus('success')
         if (getAccessToken()) {
           await refreshUser()
         }
       })
-      .catch(() => setStatus('error'))
-  }, [params])
+      .catch(() => { if (!cancelled) setStatus('error') })
+    return () => { cancelled = true }
+  }, [params, refreshUser])
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">

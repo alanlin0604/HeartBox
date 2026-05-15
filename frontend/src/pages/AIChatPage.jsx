@@ -78,8 +78,19 @@ export default function AIChatPage() {
 
   // Load sessions on mount
   useEffect(() => {
-    loadSessions()
-  }, [])
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await getAIChatSessions()
+        if (!cancelled) setSessions(res.data)
+      } catch {
+        if (!cancelled) toast?.error(t('common.operationFailed'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [toast, t])
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -93,17 +104,6 @@ export default function AIChatPage() {
     window.addEventListener('click', handler)
     return () => window.removeEventListener('click', handler)
   }, [contextMenu])
-
-  const loadSessions = async () => {
-    try {
-      const res = await getAIChatSessions()
-      setSessions(res.data)
-    } catch {
-      toast?.error(t('common.operationFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleSelectSession = async (sessionId) => {
     setActiveSessionId(sessionId)

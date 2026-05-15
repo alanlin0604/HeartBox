@@ -63,14 +63,14 @@ export default memo(function MoodCalendar() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
     getCalendarData(year, month)
-      .then((res) => setDays(res.data.days || []))
-      .catch(() => {
-        toast?.error(t('common.operationFailed'))
-      })
-      .finally(() => setLoading(false))
-  }, [year, month])
+      .then((res) => { if (!cancelled) setDays(res.data.days || []) })
+      .catch(() => { if (!cancelled) toast?.error(t('common.operationFailed')) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [year, month, toast, t])
 
   // Build calendar grid
   const firstDay = new Date(year, month - 1, 1).getDay()

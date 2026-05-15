@@ -24,15 +24,18 @@ export default function TherapistReportPublicPage() {
   const locale = LOCALE_MAP[lang] || lang
 
   useEffect(() => {
+    let cancelled = false
     document.title = `${t('publicReport.title')} — ${t('app.name')}`
     getPublicReport(token)
-      .then((res) => setReport(res.data))
+      .then((res) => { if (!cancelled) setReport(res.data) })
       .catch((err) => {
+        if (cancelled) return
         if (err.response?.status === 404) setError(t('publicReport.notFound'))
         else if (err.response?.status === 410) setError(t('publicReport.expired'))
         else setError(t('common.operationFailed'))
       })
-      .finally(() => setLoading(false))
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [token, t])
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner /></div>

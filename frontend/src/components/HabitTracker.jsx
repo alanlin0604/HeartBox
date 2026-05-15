@@ -122,7 +122,7 @@ export default function HabitTracker() {
         ),
       );
       console.error('Failed to check in:', error);
-      toast?.error(t('common.operationFailed'));
+      toast?.error(t('habit.checkInFailed'));
     }
   };
 
@@ -144,7 +144,7 @@ export default function HabitTracker() {
         ),
       );
       console.error('Failed to undo check-in:', error);
-      toast?.error(t('common.operationFailed'));
+      toast?.error(t('habit.checkInFailed'));
     }
   };
 

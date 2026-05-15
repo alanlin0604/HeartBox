@@ -14,22 +14,23 @@ export default function AISuggestions({ onUsePrompt }) {
   })
 
   useEffect(() => {
-    loadSuggestions()
-  }, [])
-
-  async function loadSuggestions() {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await aiAPI.getSuggestions()
-      setSuggestions(data)
-    } catch (err) {
-      console.error('Failed to load AI suggestions:', err)
-      setError(err.response?.data?.error || t('ai.loadError'))
-    } finally {
-      setLoading(false)
-    }
-  }
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await aiAPI.getSuggestions()
+        if (!cancelled) setSuggestions(data)
+      } catch (err) {
+        if (cancelled) return
+        console.error('Failed to load AI suggestions:', err)
+        setError(err.response?.data?.error || t('ai.loadError'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [t])
 
   function toggleSection(section) {
     setExpandedSections((prev) => ({

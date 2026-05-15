@@ -29,16 +29,20 @@ export default function RegisterPage() {
   const googleBtnRef = useRef(null)
   const googleCallbackRef = useRef()
 
-  googleCallbackRef.current = async (response) => {
-    try {
-      const { data } = await googleLogin(response.credential)
-      setAuthTokens(data.access, data.refresh, true)
-      window.location.href = '/'
-    } catch {
-      setError(t('oauth.failed'))
-      toast?.error(t('oauth.failed'))
+  // Keep the GSI callback in sync with the latest `t`/`toast` references
+  // by assigning inside an effect (cannot write refs during render).
+  useEffect(() => {
+    googleCallbackRef.current = async (response) => {
+      try {
+        const { data } = await googleLogin(response.credential)
+        setAuthTokens(data.access, data.refresh, true)
+        window.location.href = '/'
+      } catch {
+        setError(t('oauth.failed'))
+        toast?.error(t('oauth.failed'))
+      }
     }
-  }
+  }, [t, toast])
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
