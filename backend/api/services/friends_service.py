@@ -133,6 +133,17 @@ def reject_friend_request(request_id, user):
     return friend_request
 
 
+def cancel_friend_request(request_id, user):
+    """撤回自己發出的好友請求（只能取消自己發送、仍 pending 的）"""
+    try:
+        friend_request = FriendRequest.objects.get(id=request_id, from_user=user, status='pending')
+    except FriendRequest.DoesNotExist:
+        raise ValueError('Friend request not found or already processed')
+
+    friend_request.delete()
+    return True
+
+
 def share_note_with_friends(note, friend_ids):
     """分享日記給多個好友"""
     shares_created = []

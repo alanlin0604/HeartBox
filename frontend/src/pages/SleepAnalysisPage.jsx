@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { getSleepAnalysis, getSleepTrends } from '../api/sleep'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
@@ -86,6 +87,37 @@ export default function SleepAnalysisPage() {
           <h2 className="text-xl font-semibold mb-2">{t('sleep.loadFailed')}</h2>
           <p className="text-[var(--text-secondary)] mb-4">{t('sleep.loadFailedHint')}</p>
           <Button onClick={handleRetry} variant="primary">{t('common.retry')}</Button>
+        </Card>
+      </div>
+    )
+  }
+
+  // No sleep data yet — every stat slot is "--". Guide the user to add the
+  // first entry instead of staring at an empty dashboard.
+  const hasAnyData = !!(analysisData?.statistics?.avg_duration || trendsData?.points?.length)
+  if (!hasAnyData) {
+    return (
+      <div className="space-y-6 mt-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-orange-600 bg-clip-text text-transparent">
+              {t('sleep.analysisTitle')}
+            </h1>
+            <p className="text-[var(--text-secondary)] mt-2">{t('sleep.analysisSubtitle')}</p>
+          </div>
+        </div>
+        <Card className="p-10 text-center">
+          <div className="text-6xl mb-4">😴</div>
+          <h2 className="text-xl font-semibold mb-2">{t('sleep.noDataTitle')}</h2>
+          <p className="text-[var(--text-secondary)] mb-6 max-w-md mx-auto">{t('sleep.noDataHint')}</p>
+          <div className="flex gap-3 justify-center flex-wrap">
+            <Link to="/">
+              <Button variant="primary">{t('sleep.startTracking')}</Button>
+            </Link>
+            <Link to="/habits">
+              <Button variant="outline">{t('sleep.setSleepHabit')}</Button>
+            </Link>
+          </div>
         </Card>
       </div>
     )

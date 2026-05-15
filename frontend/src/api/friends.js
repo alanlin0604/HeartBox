@@ -67,10 +67,16 @@ export const rejectFriendRequest = (id) => {
   return api.post(`/friends/requests/${id}/reject/`);
 };
 
-/** Remove friend */
+/** Remove friend — `friend_id` must be the User id (not Friendship pk). */
 export const removeFriend = (friend_id) => {
   invalidateFriendsCaches();
   return api.delete(`/friends/${friend_id}/`);
+};
+
+/** Cancel a pending friend request you sent */
+export const cancelFriendRequest = (request_id) => {
+  invalidateFriendsCaches();
+  return api.delete(`/friends/requests/${request_id}/`);
 };
 
 // ============ Note Sharing APIs ============

@@ -16,6 +16,19 @@ const REPORT_REASONS = [
   { value: 'other', icon: '📝' },
 ]
 
+// AI-categorized emotion buckets used by sentiment analysis (`analyze_sentiment`
+// in backend). Each pill filters the feed by `?category=` query param.
+const CATEGORY_FILTERS = [
+  { value: '', icon: '🌐' },
+  { value: 'happiness', icon: '😊' },
+  { value: 'gratitude', icon: '🙏' },
+  { value: 'sadness', icon: '😢' },
+  { value: 'anxiety', icon: '😰' },
+  { value: 'stress', icon: '😣' },
+  { value: 'anger', icon: '😠' },
+  { value: 'fear', icon: '😨' },
+]
+
 export default function CommunityPage() {
   const { t } = useLang()
   const toast = useToast()
@@ -26,6 +39,7 @@ export default function CommunityPage() {
   const [creating, setCreating] = useState(false)
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(true)
+  const [categoryFilter, setCategoryFilter] = useState('')
   const fetchIdRef = useRef(0)
   // Report dialog state
   const [reportingPost, setReportingPost] = useState(null)
@@ -37,12 +51,12 @@ export default function CommunityPage() {
     document.title = `${t('community.title')} — ${t('app.name')}`
   }, [t])
 
-  const fetchPosts = async (pageNum = 1, append = false) => {
+  const fetchPosts = async (pageNum = 1, append = false, category = categoryFilter) => {
     const fetchId = ++fetchIdRef.current
     if (!append) setLoading(true)
 
     try {
-      const res = await getPosts(pageNum, 20)
+      const res = await getPosts(pageNum, 20, category)
       if (fetchId === fetchIdRef.current) {
         const newPosts = res.data.results || res.data
         if (append) {
@@ -65,9 +79,28 @@ export default function CommunityPage() {
     }
   }
 
+  // Refetch when category changes. Reset to page 1 each time.
   useEffect(() => {
-    fetchPosts()
-  }, [])
+    let cancelled = false
+    const fetchId = ++fetchIdRef.current
+    setLoading(true)
+    getPosts(1, 20, categoryFilter)
+      .then((res) => {
+        if (cancelled || fetchId !== fetchIdRef.current) return
+        setPosts(res.data.results || res.data)
+        setHasMore(!!res.data.next)
+        setPage(1)
+      })
+      .catch((err) => {
+        if (cancelled || fetchId !== fetchIdRef.current) return
+        console.error('Failed to load posts:', err)
+        toast?.error(t('community.loadFailed'))
+      })
+      .finally(() => {
+        if (!cancelled && fetchId === fetchIdRef.current) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [categoryFilter, toast, t])
 
   const handleCreatePost = async () => {
     if (!newPostContent.trim() || newPostContent.length < 10) {
@@ -183,17 +216,50 @@ export default function CommunityPage() {
         </Button>
       </div>
 
+      {/* Category filter pills */}
+      <div className="flex flex-wrap gap-2 mb-4" role="tablist" aria-label={t('community.filterByCategory')}>
+        {CATEGORY_FILTERS.map((cat) => {
+          const isActive = categoryFilter === cat.value
+          const label = cat.value === '' ? t('community.category.all') : t(`community.category.${cat.value}`)
+          return (
+            <button
+              key={cat.value || 'all'}
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setCategoryFilter(cat.value)}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-all flex items-center gap-1.5 ${
+                isActive
+                  ? 'bg-orange-500/20 border-orange-500/50 text-[var(--text-accent)] font-medium'
+                  : 'bg-transparent border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
+              }`}
+            >
+              <span aria-hidden="true">{cat.icon}</span>
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* Posts List */}
-      {posts.length === 0 ? (
+      {posts.length === 0 && !loading ? (
         <Card className="p-12 text-center">
           <div className="text-6xl mb-4">💬</div>
-          <h3 className="text-xl font-semibold mb-2">{t('community.noPosts')}</h3>
+          <h3 className="text-xl font-semibold mb-2">
+            {categoryFilter ? t('community.noPostsInCategory') : t('community.noPosts')}
+          </h3>
           <p className="text-[var(--text-secondary)] mb-6">
-            {t('community.beFirst')}
+            {categoryFilter ? t('community.tryDifferentCategory') : t('community.beFirst')}
           </p>
-          <Button onClick={() => setShowCreateModal(true)}>
-            {t('community.createPost')}
-          </Button>
+          <div className="flex gap-3 justify-center">
+            {categoryFilter && (
+              <Button variant="outline" onClick={() => setCategoryFilter('')}>
+                {t('community.clearFilter')}
+              </Button>
+            )}
+            <Button onClick={() => setShowCreateModal(true)}>
+              {t('community.createPost')}
+            </Button>
+          </div>
         </Card>
       ) : (
         <div className="space-y-4">

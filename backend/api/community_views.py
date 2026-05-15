@@ -47,12 +47,20 @@ class PublicPostViewSet(viewsets.ModelViewSet):
     pagination_class = CommunityPostPagination
 
     def get_queryset(self):
-        """Get active posts with optimized queries."""
-        return PublicPost.objects.filter(
+        """Get active posts with optimized queries.
+
+        Supports `?category=<slug>` filter — categories are AI-derived and
+        therefore free-form strings (anxiety / stress / happiness / ...).
+        """
+        qs = PublicPost.objects.filter(
             is_active=True
         ).select_related('user').prefetch_related(
             'reactions'
         ).order_by('-created_at')
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(category=category)
+        return qs
 
     def get_serializer_class(self):
         """Use different serializers for create vs read."""

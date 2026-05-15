@@ -19,29 +19,44 @@ export default function FriendsList() {
   const [removingId, setRemovingId] = useState(null)
   const [confirmRemove, setConfirmRemove] = useState(null)
 
-  const loadFriends = async () => {
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoading(true)
+        const res = await getFriends()
+        if (!cancelled) setFriends(res.data.results || [])
+      } catch (error) {
+        if (cancelled) return
+        console.error('Failed to load friends:', error)
+        toast?.error(t('friends.loadFailed'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [toast, t])
+
+  const reloadFriends = async () => {
     try {
-      setLoading(true)
       const res = await getFriends()
       setFriends(res.data.results || [])
-    } catch (error) {
-      console.error('Failed to load friends:', error)
-      toast?.error(t('friends.loadFailed'))
-    } finally {
-      setLoading(false)
+    } catch {
+      // silent — toast already fired on initial load if it failed
     }
   }
 
-  useEffect(() => {
-    loadFriends()
-  }, [])
-
-  const handleRemoveFriend = async (friendId) => {
+  // Critical: `friend.user_id` is the User pk; `friend.id` is the Friendship
+  // row pk. The backend's DELETE /friends/{friend_id}/ resolves the URL
+  // segment as a User id (`User.objects.get(id=friend_id)`), so passing
+  // friend.id removes the wrong account (or 404s when the friendship pk
+  // doesn't map to any user). Always send user_id.
+  const handleRemoveFriend = async (friend) => {
     try {
-      setRemovingId(friendId)
-      await removeFriend(friendId)
+      setRemovingId(friend.id)
+      await removeFriend(friend.user_id)
       toast?.success(t('friends.unfriendSuccess'))
-      setFriends(friends.filter(f => f.id !== friendId))
+      setFriends(prev => prev.filter(f => f.id !== friend.id))
       setConfirmRemove(null)
     } catch (error) {
       console.error('Failed to remove friend:', error)
@@ -99,29 +114,34 @@ export default function FriendsList() {
                         className="w-10 h-10 rounded-full object-cover border border-white/20"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-orange-500/25 flex items-center justify-center text-orange-400 font-semibold">
+                      <div className="w-10 h-10 rounded-full bg-orange-500/25 flex items-center justify-center text-[var(--text-accent)] font-semibold">
                         {friend.username.slice(0, 1).toUpperCase()}
                       </div>
                     )}
                     <h3 className="font-semibold text-lg">{friend.username}</h3>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-slate-400">
+                  <div className="flex items-center gap-4 text-sm text-[var(--text-secondary)]">
                     <span className="flex items-center gap-1">
                       <FireIcon />
                       {friend.streak_days} {t('streak.days')}
                     </span>
                     <span>{friend.total_entries} {t('friends.entries')}</span>
                   </div>
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-xs text-[var(--text-tertiary)] mt-2">
                     {t('friends.friendsSince')} {formatDistanceToNow(friend.friendship_since)}
                   </p>
                 </div>
                 <button
                   onClick={() => setConfirmRemove(friend)}
                   disabled={removingId === friend.id}
-                  className="text-red-400 hover:text-red-500 text-sm transition-colors disabled:opacity-50"
+                  aria-label={t('friends.unfriend')}
+                  title={t('friends.unfriend')}
+                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50 min-h-[36px]"
                 >
-                  {removingId === friend.id ? t('common.loading') : t('friends.unfriend')}
+                  <UnfriendIcon />
+                  <span className="hidden sm:inline">
+                    {removingId === friend.id ? t('common.loading') : t('friends.unfriend')}
+                  </span>
                 </button>
               </div>
             </div>
@@ -143,7 +163,7 @@ export default function FriendsList() {
       {showRequests && (
         <FriendRequests
           onClose={() => setShowRequests(false)}
-          onUpdate={loadFriends}
+          onUpdate={reloadFriends}
         />
       )}
 
@@ -153,7 +173,7 @@ export default function FriendsList() {
           message={t('friends.unfriendConfirmDesc', { username: confirmRemove.username })}
           confirmText={t('friends.unfriend')}
           cancelText={t('common.cancel')}
-          onConfirm={() => handleRemoveFriend(confirmRemove.id)}
+          onConfirm={() => handleRemoveFriend(confirmRemove)}
           onCancel={() => setConfirmRemove(null)}
           variant="danger"
         />
@@ -186,6 +206,17 @@ function FireIcon() {
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-orange-500">
       <path d="M8.5 18.5c0-1.5.5-3 2-4.5 0 0 .5 1.5 2 1.5s2-1.5 2-1.5c1.5 1.5 2 3 2 4.5a4.5 4.5 0 1 1-9 0z"/>
       <path d="M12 2s-4 4-4 8c0 0-2-1-2-4 0 0-2 4-2 7a8 8 0 0 0 16 0c0-3-2-7-2-7 0 3-2 4-2 4 0-4-4-8-4-8z"/>
+    </svg>
+  )
+}
+
+function UnfriendIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="8.5" cy="7" r="4"/>
+      <line x1="18" y1="8" x2="23" y2="13"/>
+      <line x1="23" y1="8" x2="18" y2="13"/>
     </svg>
   )
 }

@@ -6,6 +6,7 @@ import {
   getSentRequests,
   acceptFriendRequest,
   rejectFriendRequest,
+  cancelFriendRequest,
 } from '../../api/friends'
 import LoadingSpinner from '../LoadingSpinner'
 import { timeAgo } from '../../utils/dateUtils'
@@ -19,26 +20,28 @@ export default function FriendRequests({ onClose, onUpdate }) {
   const [sentRequests, setSentRequests] = useState([])
   const [processing, setProcessing] = useState(null)
 
-  const loadRequests = async () => {
-    try {
-      setLoading(true)
-      const [received, sent] = await Promise.all([
-        getReceivedRequests(),
-        getSentRequests(),
-      ])
-      setReceivedRequests(received.data.results || [])
-      setSentRequests(sent.data.results || [])
-    } catch (error) {
-      console.error('Failed to load requests:', error)
-      toast?.error(t('friends.requests.loadFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    loadRequests()
-  }, [])
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoading(true)
+        const [received, sent] = await Promise.all([
+          getReceivedRequests(),
+          getSentRequests(),
+        ])
+        if (cancelled) return
+        setReceivedRequests(received.data.results || [])
+        setSentRequests(sent.data.results || [])
+      } catch (error) {
+        if (cancelled) return
+        console.error('Failed to load requests:', error)
+        toast?.error(t('friends.requests.loadFailed'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [toast, t])
 
   const handleAccept = async (id) => {
     try {
@@ -64,6 +67,20 @@ export default function FriendRequests({ onClose, onUpdate }) {
     } catch (error) {
       console.error('Failed to reject request:', error)
       toast?.error(t('friends.requests.rejectFailed'))
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  const handleCancel = async (id) => {
+    try {
+      setProcessing(id)
+      await cancelFriendRequest(id)
+      toast?.success(t('friends.requests.cancelled'))
+      setSentRequests(prev => prev.filter(r => r.id !== id))
+    } catch (error) {
+      console.error('Failed to cancel request:', error)
+      toast?.error(t('friends.requests.cancelFailed'))
     } finally {
       setProcessing(null)
     }
@@ -137,7 +154,7 @@ export default function FriendRequests({ onClose, onUpdate }) {
                           className="w-12 h-12 rounded-full object-cover border border-white/20"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-blue-500/25 flex items-center justify-center text-blue-400 font-semibold text-lg">
+                        <div className="w-12 h-12 rounded-full bg-orange-500/25 flex items-center justify-center text-[var(--text-accent)] font-semibold text-lg">
                           {request.from_user_username.slice(0, 1).toUpperCase()}
                         </div>
                       )}
@@ -183,40 +200,51 @@ export default function FriendRequests({ onClose, onUpdate }) {
             ) : (
               sentRequests.map((request) => (
                 <div key={request.id} className="glass p-4 rounded-xl">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       {request.to_user_avatar ? (
                         <img
                           src={request.to_user_avatar}
                           alt={request.to_user_username}
-                          className="w-12 h-12 rounded-full object-cover border border-white/20"
+                          className="w-12 h-12 rounded-full object-cover border border-white/20 flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-blue-500/25 flex items-center justify-center text-blue-400 font-semibold text-lg">
+                        <div className="w-12 h-12 rounded-full bg-orange-500/25 flex items-center justify-center text-[var(--text-accent)] font-semibold text-lg flex-shrink-0">
                           {request.to_user_username.slice(0, 1).toUpperCase()}
                         </div>
                       )}
-                      <div>
-                        <h3 className="font-semibold">{request.to_user_username}</h3>
-                        <p className="text-xs text-slate-400">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold truncate">{request.to_user_username}</h3>
+                        <p className="text-xs text-[var(--text-tertiary)]">
                           {timeAgo(request.created_at, t)}
                         </p>
                       </div>
                     </div>
-                    <span
-                      className={`text-xs px-3 py-1 rounded-full ${
-                        request.status === 'pending'
-                          ? 'bg-yellow-500/10 text-yellow-400'
-                          : request.status === 'accepted'
-                          ? 'bg-green-500/10 text-green-400'
-                          : 'bg-red-500/10 text-red-400'
-                      }`}
-                    >
-                      {t(`friends.requests.status.${request.status}`)}
-                    </span>
+                    <div className="flex-shrink-0 flex flex-col items-end gap-2">
+                      <span
+                        className={`text-xs px-3 py-1 rounded-full ${
+                          request.status === 'pending'
+                            ? 'bg-orange-500/10 text-[var(--text-accent)]'
+                            : request.status === 'accepted'
+                            ? 'bg-green-500/10 text-green-500'
+                            : 'bg-red-500/10 text-red-500'
+                        }`}
+                      >
+                        {t(`friends.requests.status.${request.status}`)}
+                      </span>
+                      {request.status === 'pending' && (
+                        <button
+                          onClick={() => handleCancel(request.id)}
+                          disabled={processing === request.id}
+                          className="text-xs text-red-500 hover:text-red-400 transition-colors disabled:opacity-50"
+                        >
+                          {processing === request.id ? t('common.loading') : t('friends.requests.cancel')}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {request.message && (
-                    <p className="text-sm text-[var(--text-secondary)] mt-3 ml-[52px]">
+                    <p className="text-sm text-[var(--text-secondary)] mt-3 ml-[60px]">
                       {request.message}
                     </p>
                   )}

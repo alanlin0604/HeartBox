@@ -23,6 +23,7 @@ from .serializers import (
 )
 from .services.friends_service import (
     accept_friend_request,
+    cancel_friend_request,
     add_comment_to_share,
     get_friend_activity,
     reject_friend_request,
@@ -168,6 +169,19 @@ class RejectFriendRequestView(APIView):
             friend_request = reject_friend_request(pk, request.user)
             serializer = FriendRequestSerializer(friend_request)
             return Response(serializer.data)
+        except ValueError as e:
+            return error_response('friends.action_failed', str(e), 400)
+
+
+class CancelFriendRequestView(APIView):
+    """DELETE /api/friends/requests/{id}/ - 撤回自己發出的好友請求"""
+
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        try:
+            cancel_friend_request(pk, request.user)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         except ValueError as e:
             return error_response('friends.action_failed', str(e), 400)
 

@@ -9,10 +9,11 @@ import api from './axios'
  * @param {number} page - Page number (default: 1)
  * @param {number} pageSize - Posts per page (default: 20)
  */
-export const getPosts = async (page = 1, pageSize = 20) => {
+export const getPosts = async (page = 1, pageSize = 20, category = '') => {
   const params = new URLSearchParams()
   params.set('page', page)
   params.set('page_size', pageSize)
+  if (category) params.set('category', category)
   return api.get(`/community/posts/?${params}`)
 }
 
