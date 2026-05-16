@@ -112,11 +112,17 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          // Remove recharts from manualChunks to enable automatic code splitting per chart type
-          // Each chart component (Bar, Line, Scatter, Radar) will be split into separate chunks
+          // Recharts auto-splits per chart type (BarChart/LineChart/etc.)
           'vendor-axios': ['axios'],
-          'vendor-tiptap': ['@tiptap/react', '@tiptap/starter-kit', '@tiptap/extension-placeholder'],
-          'vendor-dompurify': ['dompurify'],
+          // DOMPurify lives in the same lazy chunks as Tiptap (RichTextEditor)
+          // and the dangerouslySetInnerHTML callers — merging avoids a second
+          // network round-trip when those pages first open.
+          'vendor-tiptap': [
+            '@tiptap/react',
+            '@tiptap/starter-kit',
+            '@tiptap/extension-placeholder',
+            'dompurify',
+          ],
           'vendor-framer': ['framer-motion'],
         },
       },

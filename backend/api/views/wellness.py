@@ -6,11 +6,25 @@ Extracted from views/__init__.py. Re-exported for backward compatibility.
 import rest_framework.pagination
 from django.db.models import Count, Q
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_control
+from django.views.decorators.vary import vary_on_headers
 
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
+
+
+# Edge-cache helper: 5 min browser, 15 min Cloudflare. Vary on Accept-Language
+# so zh-TW / en / ja get separate cache entries.
+public_cms_cache = method_decorator(
+    [
+        cache_control(public=True, max_age=300, s_maxage=900),
+        vary_on_headers('Accept-Language', 'Authorization'),
+    ],
+    name='dispatch',
+)
 
 from ..models import Course, PsychoArticle, UserLessonProgress, WellnessSession
 from ..serializers import (
@@ -39,8 +53,9 @@ class AchievementCheckView(APIView):
         return Response({'newly_unlocked': newly_unlocked})
 
 
+@public_cms_cache
 class PsychoArticleListView(generics.ListAPIView):
-    """Editorial articles list — public, but anon throttled to prevent abuse."""
+    """Editorial articles list — public, anon throttled, edge-cacheable."""
     permission_classes = [permissions.AllowAny]
     throttle_classes = [AnonRateThrottle]
     serializer_class = PsychoArticleSerializer
@@ -53,6 +68,7 @@ class PsychoArticleListView(generics.ListAPIView):
         return qs
 
 
+@public_cms_cache
 class PsychoArticleDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [AnonRateThrottle]
@@ -87,6 +103,7 @@ class WellnessSessionListCreateView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 
+@public_cms_cache
 class CourseListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [AnonRateThrottle]
@@ -111,6 +128,7 @@ class CourseListView(generics.ListAPIView):
         return ctx
 
 
+@public_cms_cache
 class CourseDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [AnonRateThrottle]

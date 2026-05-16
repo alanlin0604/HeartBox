@@ -4,7 +4,6 @@ import config from './config/env'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-import * as Sentry from '@sentry/react'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { LanguageProvider } from './context/LanguageContext'
@@ -13,23 +12,26 @@ import { initHealthService } from './services/healthKit'
 import './index.css'
 import App from './App.jsx'
 
-// Initialize Sentry (only in production if DSN is set)
+// Sentry is ~150 KB minified — only download + init when DSN is configured
+// and we're in prod. Dynamic import keeps it out of the critical bundle.
 const SENTRY_DSN = config.sentryDsn
 if (SENTRY_DSN && import.meta.env.PROD) {
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    environment: import.meta.env.MODE,
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration({
-        maskAllText: true,
-        blockAllMedia: true,
-      }),
-    ],
-    tracesSampleRate: 0.1,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-  })
+  import('@sentry/react').then((Sentry) => {
+    Sentry.init({
+      dsn: SENTRY_DSN,
+      environment: import.meta.env.MODE,
+      integrations: [
+        Sentry.browserTracingIntegration(),
+        Sentry.replayIntegration({
+          maskAllText: true,
+          blockAllMedia: true,
+        }),
+      ],
+      tracesSampleRate: 0.1,
+      replaysSessionSampleRate: 0.1,
+      replaysOnErrorSampleRate: 1.0,
+    })
+  }).catch(() => { /* Sentry load failure must not break the app */ })
 }
 
 // Initialize Capacitor health service (no-op on web)

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { NavLink, Outlet, useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -7,8 +7,11 @@ import { LANG_OPTIONS } from '../utils/locales'
 import NotificationBell from './NotificationBell'
 import useIdleTimer from '../hooks/useIdleTimer'
 import useGlobalHealthSync from '../hooks/useGlobalHealthSync'
-import OnboardingModal from './OnboardingModal'
 import { useToast } from '../context/ToastContext'
+
+// OnboardingModal only renders for users who haven't completed onboarding,
+// so it lives in its own chunk and only downloads when actually shown.
+const OnboardingModal = lazy(() => import('./OnboardingModal'))
 
 const ROUTE_PRELOADS = {
   '/': () => import('../pages/JournalPage'),
@@ -612,9 +615,11 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Onboarding Modal */}
+      {/* Onboarding Modal (lazy — only loaded for users who haven't seen it) */}
       {!onboardingDone && (
-        <OnboardingModal onComplete={() => setOnboardingDone(true)} />
+        <Suspense fallback={null}>
+          <OnboardingModal onComplete={() => setOnboardingDone(true)} />
+        </Suspense>
       )}
     </div>
   )

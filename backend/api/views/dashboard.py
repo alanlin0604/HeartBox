@@ -13,6 +13,9 @@ import os
 import rest_framework.pagination
 from django.conf import settings
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_control
+
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
@@ -268,6 +271,10 @@ class NotificationReadView(APIView):
         return Response({'status': 'ok'})
 
 
+@method_decorator(
+    cache_control(public=True, max_age=600, s_maxage=1800),  # 10min browser, 30min CF
+    name='dispatch',
+)
 class SubscriptionPlanListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [AnonRateThrottle]
