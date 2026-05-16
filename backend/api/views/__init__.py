@@ -219,6 +219,7 @@ from .wellness import (  # noqa: E402
     WellnessSessionPagination,
 )
 from .admin import (  # noqa: E402
+    AdminAuditLogView,
     AdminCounselorActionView,
     AdminCounselorListView,
     AdminFeedbackListView,

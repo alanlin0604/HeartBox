@@ -29,21 +29,62 @@ class AdminStatsView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
+        from datetime import timedelta
+        from ..models import PublicPost, PostReport
+
         today = timezone.now().date()
+        week_ago = today - timedelta(days=7)
+        thirty_days_ago = today - timedelta(days=30)
+
         user_stats = User.objects.aggregate(
             total_users=Count('id'),
             today_new_users=Count('id', filter=Q(date_joined__date=today)),
+            week_new_users=Count('id', filter=Q(date_joined__date__gte=week_ago)),
             active_users=Count('id', filter=Q(is_active=True)),
+            verified_users=Count('id', filter=Q(email_verified=True)),
         )
         note_stats = MoodNote.objects.aggregate(
             total_notes=Count('id', filter=Q(is_deleted=False)),
             today_new_notes=Count('id', filter=Q(created_at__date=today, is_deleted=False)),
+            week_new_notes=Count('id', filter=Q(created_at__date__gte=week_ago, is_deleted=False)),
         )
-        pending_counselors = CounselorProfile.objects.filter(status='pending').count()
+        counselor_stats = {
+            'total_counselors': CounselorProfile.objects.filter(status='approved').count(),
+            'pending_counselors': CounselorProfile.objects.filter(status='pending').count(),
+        }
+        community_stats = {
+            'total_posts': PublicPost.objects.filter(is_active=True).count(),
+            'open_reports': PostReport.objects.filter(status='open').count(),
+        }
+
+        # 30-day growth time-series (daily new users + new notes) for a sparkline.
+        from django.db.models.functions import TruncDate
+        daily_users = (
+            User.objects
+            .filter(date_joined__date__gte=thirty_days_ago)
+            .annotate(d=TruncDate('date_joined'))
+            .values('d')
+            .annotate(c=Count('id'))
+            .order_by('d')
+        )
+        daily_notes = (
+            MoodNote.objects
+            .filter(created_at__date__gte=thirty_days_ago, is_deleted=False)
+            .annotate(d=TruncDate('created_at'))
+            .values('d')
+            .annotate(c=Count('id'))
+            .order_by('d')
+        )
+
         return Response({
             **user_stats,
             **note_stats,
-            'pending_counselors': pending_counselors,
+            **counselor_stats,
+            **community_stats,
+            'growth': {
+                'daily_users': [{'date': str(r['d']), 'count': r['c']} for r in daily_users],
+                'daily_notes': [{'date': str(r['d']), 'count': r['c']} for r in daily_notes],
+            },
         })
 
 
@@ -137,3 +178,49 @@ class AdminFeedbackListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Feedback.objects.select_related('user').all()
+
+
+class AdminAuditLogView(APIView):
+    """GET /api/admin/audit-logs/ — recent admin + security-sensitive actions.
+
+    Query params:
+      - ?action=...   filter by action prefix (e.g. 'admin.', 'auth.', 'note')
+      - ?user=...     filter by username (substring match)
+      - ?limit=N      cap result count (default 200, max 500)
+
+    Returns newest first. Read-only by design — audit trail must be append-only
+    so don't expose a delete endpoint.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        from ..models import AuditLog
+
+        qs = AuditLog.objects.select_related('user').order_by('-created_at')
+
+        action_prefix = (request.query_params.get('action') or '').strip()
+        if action_prefix:
+            qs = qs.filter(action__startswith=action_prefix)
+
+        user_filter = (request.query_params.get('user') or '').strip()
+        if user_filter:
+            qs = qs.filter(user__username__icontains=user_filter)
+
+        try:
+            limit = int(request.query_params.get('limit', 200))
+        except ValueError:
+            limit = 200
+        limit = max(1, min(limit, 500))
+
+        rows = list(qs[:limit])
+        data = [{
+            'id': r.id,
+            'action': r.action,
+            'user': r.user.username if r.user else None,
+            'target_type': r.target_type,
+            'target_id': r.target_id,
+            'ip_address': r.ip_address,
+            'details': r.details or {},
+            'created_at': r.created_at,
+        } for r in rows]
+        return Response({'count': len(data), 'results': data})

@@ -23,3 +23,7 @@ export const getCommunityReports = (status = 'open') =>
 
 export const moderateCommunityPost = (postId, action) =>
   api.post(`/community/posts/${postId}/moderate/`, { action });
+
+// Audit log feed (staff-only)
+export const getAuditLogs = (params = {}) =>
+  api.get('/admin/audit-logs/', { params });

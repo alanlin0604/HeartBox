@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   getStats,
   getUsers,
@@ -8,6 +8,7 @@ import {
   getFeedback,
   getCommunityReports,
   moderateCommunityPost,
+  getAuditLogs,
 } from '../api/admin'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
@@ -26,6 +27,7 @@ export default function AdminPage() {
     t('admin.tabCounselors'),
     t('admin.tabFeedback'),
     t('admin.tabReports'),
+    t('admin.tabAuditLog'),
   ]
 
   return (
@@ -52,6 +54,124 @@ export default function AdminPage() {
       {tab === 2 && <CounselorsTab />}
       {tab === 3 && <FeedbackTab />}
       {tab === 4 && <ReportsTab />}
+      {tab === 5 && <AuditLogTab />}
+    </div>
+  )
+}
+
+/* ==================== Tab 6: Audit Log ==================== */
+
+function AuditLogTab() {
+  const { t, lang } = useLang()
+  const toast = useToast()
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [actionFilter, setActionFilter] = useState('')
+  const [userFilter, setUserFilter] = useState('')
+
+  const load = useCallback(() => {
+    setLoading(true)
+    const params = {}
+    if (actionFilter) params.action = actionFilter
+    if (userFilter) params.user = userFilter
+    getAuditLogs(params)
+      .then((r) => setLogs(r.data.results || []))
+      .catch(() => toast?.error(t('common.operationFailed')))
+      .finally(() => setLoading(false))
+  }, [actionFilter, userFilter, toast, t])
+
+  useEffect(() => {
+    const timer = setTimeout(load, 300)
+    return () => clearTimeout(timer)
+  }, [load])
+
+  const ACTION_GROUPS = [
+    { value: '', label: t('admin.audit.allActions') },
+    { value: 'admin.', label: t('admin.audit.adminActions') },
+    { value: 'auth.', label: t('admin.audit.authActions') },
+    { value: 'note', label: t('admin.audit.noteActions') },
+    { value: 'password', label: t('admin.audit.passwordActions') },
+  ]
+
+  // Color-code by action namespace for quick scanning
+  const actionBadge = (action) => {
+    let cls = 'bg-gray-500/20 text-[var(--text-secondary)]'
+    if (action.startsWith('admin.')) cls = 'bg-red-500/20 text-red-500'
+    else if (action.startsWith('auth.')) cls = 'bg-orange-500/20 text-[var(--text-accent)]'
+    else if (action.includes('password')) cls = 'bg-amber-500/20 text-amber-500'
+    else if (action.includes('account_delete')) cls = 'bg-red-500/20 text-red-500'
+    else if (action.startsWith('note')) cls = 'bg-blue-500/20 text-blue-500'
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{action}</span>
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 flex-wrap">
+        {ACTION_GROUPS.map((g) => (
+          <button
+            key={g.value || 'all'}
+            onClick={() => setActionFilter(g.value)}
+            className={`px-3 py-1.5 rounded-full text-sm transition-colors duration-100 ${
+              actionFilter === g.value
+                ? 'bg-orange-500/20 text-[var(--text-accent)] border border-orange-500/50'
+                : 'border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
+            }`}
+          >
+            {g.label}
+          </button>
+        ))}
+        <input
+          type="text"
+          placeholder={t('admin.audit.userPlaceholder')}
+          value={userFilter}
+          onChange={(e) => setUserFilter(e.target.value)}
+          className="glass-input px-3 py-1.5 rounded-full text-sm w-48"
+        />
+      </div>
+
+      {loading ? (
+        <p className="opacity-60">{t('common.loading')}</p>
+      ) : logs.length === 0 ? (
+        <p className="text-center py-8 opacity-50">{t('admin.audit.empty')}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border-primary)] text-left text-[var(--text-secondary)]">
+                <th className="pb-2 pr-4">{t('admin.audit.when')}</th>
+                <th className="pb-2 pr-4">{t('admin.audit.who')}</th>
+                <th className="pb-2 pr-4">{t('admin.audit.action')}</th>
+                <th className="pb-2 pr-4">{t('admin.audit.target')}</th>
+                <th className="pb-2 pr-4">{t('admin.audit.ip')}</th>
+                <th className="pb-2">{t('admin.audit.details')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((l) => (
+                <tr key={l.id} className="border-b border-white/5 hover:bg-white/5 align-top">
+                  <td className="py-2 pr-4 text-[var(--text-tertiary)] whitespace-nowrap">
+                    {new Date(l.created_at).toLocaleString(LOCALE_MAP[lang] || lang)}
+                  </td>
+                  <td className="py-2 pr-4 font-medium">{l.user || '—'}</td>
+                  <td className="py-2 pr-4">{actionBadge(l.action)}</td>
+                  <td className="py-2 pr-4 text-[var(--text-secondary)]">
+                    {l.target_type ? `${l.target_type}#${l.target_id ?? '?'}` : '—'}
+                  </td>
+                  <td className="py-2 pr-4 text-[var(--text-tertiary)] font-mono text-xs">{l.ip_address || '—'}</td>
+                  <td className="py-2 text-xs text-[var(--text-secondary)]">
+                    {l.details && Object.keys(l.details).length > 0 ? (
+                      <code className="text-[var(--text-tertiary)]">{JSON.stringify(l.details)}</code>
+                    ) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-xs text-[var(--text-tertiary)] mt-3">
+            {t('admin.audit.showingCount', { count: logs.length })}
+          </p>
+        </div>
+      )}
     </div>
   )
 }
@@ -195,6 +315,16 @@ function ReportsTab() {
 
 /* ==================== Tab 1: Stats ==================== */
 
+function StatCard({ label, value, hint, accent }) {
+  return (
+    <div className="glass-card p-5 rounded-xl">
+      <p className="text-sm text-[var(--text-secondary)] mb-1">{label}</p>
+      <p className={`text-3xl font-bold ${accent || 'text-[var(--text-primary)]'}`}>{value}</p>
+      {hint && <p className="text-xs text-[var(--text-tertiary)] mt-1">{hint}</p>}
+    </div>
+  )
+}
+
 function StatsTab() {
   const { t } = useLang()
   const toast = useToast()
@@ -204,30 +334,144 @@ function StatsTab() {
     getStats()
       .then((r) => setStats(r.data))
       .catch(() => toast?.error(t('common.operationFailed')))
-  }, [])
+  }, [toast, t])
+
+  // Build a 30-day series with zero-fill so the chart doesn't have gaps.
+  // Hooks must be called unconditionally — pass undefined when stats not loaded.
+  const series = useMemo(() => {
+    if (!stats?.growth) return []
+    const userByDate = new Map((stats.growth.daily_users || []).map((r) => [r.date, r.count]))
+    const noteByDate = new Map((stats.growth.daily_notes || []).map((r) => [r.date, r.count]))
+    const out = []
+    const today = new Date()
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const key = d.toISOString().slice(0, 10)
+      out.push({
+        date: key,
+        users: userByDate.get(key) || 0,
+        notes: noteByDate.get(key) || 0,
+      })
+    }
+    return out
+  }, [stats])
 
   if (!stats) return <p className="opacity-60">{t('common.loading')}</p>
 
-  const cards = [
-    { label: t('admin.totalUsers'), value: stats.total_users, color: 'from-orange-500 to-indigo-500' },
-    { label: t('admin.totalNotes'), value: stats.total_notes, color: 'from-rose-500 to-rose-500' },
-    { label: t('admin.pendingCounselors'), value: stats.pending_counselors, color: 'from-amber-500 to-orange-500' },
-    { label: t('admin.todayNewUsers'), value: stats.today_new_users, color: 'from-emerald-500 to-teal-500' },
-    { label: t('admin.todayNewNotes'), value: stats.today_new_notes, color: 'from-cyan-500 to-blue-500' },
-    { label: t('admin.activeUsers'), value: stats.active_users, color: 'from-violet-500 to-orange-500' },
-  ]
+  const userPct = stats.total_users
+    ? Math.round((stats.verified_users / stats.total_users) * 100)
+    : 0
+  const activePct = stats.total_users
+    ? Math.round((stats.active_users / stats.total_users) * 100)
+    : 0
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {cards.map((c) => (
-        <div key={c.label} className="glass p-5 rounded-xl">
-          <p className="text-sm text-slate-400 mb-1">{c.label}</p>
-          <p className={`text-3xl font-bold bg-gradient-to-r ${c.color} bg-clip-text text-transparent`}>
-            {c.value}
-          </p>
+    <div className="space-y-6">
+      {/* Top-level KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard
+          label={t('admin.totalUsers')}
+          value={stats.total_users}
+          hint={`+${stats.week_new_users || 0} ${t('admin.thisWeek')}`}
+          accent="text-[var(--text-accent)]"
+        />
+        <StatCard
+          label={t('admin.totalNotes')}
+          value={stats.total_notes}
+          hint={`+${stats.week_new_notes || 0} ${t('admin.thisWeek')}`}
+          accent="text-rose-600 dark:text-rose-400"
+        />
+        <StatCard
+          label={t('admin.activeUsers')}
+          value={stats.active_users}
+          hint={`${activePct}% ${t('admin.ofTotal')}`}
+          accent="text-green-600 dark:text-green-400"
+        />
+        <StatCard
+          label={t('admin.verifiedUsers')}
+          value={stats.verified_users}
+          hint={`${userPct}% ${t('admin.ofTotal')}`}
+          accent="text-amber-600 dark:text-amber-400"
+        />
+      </div>
+
+      {/* Action-required + community */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard
+          label={t('admin.pendingCounselors')}
+          value={stats.pending_counselors}
+          accent={stats.pending_counselors > 0 ? 'text-amber-600 dark:text-amber-400' : ''}
+        />
+        <StatCard
+          label={t('admin.totalCounselors')}
+          value={stats.total_counselors || 0}
+        />
+        <StatCard
+          label={t('admin.communityPosts')}
+          value={stats.total_posts || 0}
+        />
+        <StatCard
+          label={t('admin.openReports')}
+          value={stats.open_reports || 0}
+          accent={stats.open_reports > 0 ? 'text-red-600 dark:text-red-400' : ''}
+        />
+      </div>
+
+      {/* Today snapshot */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <StatCard label={t('admin.todayNewUsers')} value={stats.today_new_users} />
+        <StatCard label={t('admin.todayNewNotes')} value={stats.today_new_notes} />
+      </div>
+
+      {/* 30-day growth sparkline */}
+      <div className="glass-card p-5 rounded-xl">
+        <h3 className="text-sm font-semibold mb-3 text-[var(--text-secondary)]">
+          {t('admin.growth30d')}
+        </h3>
+        <Sparkline series={series} />
+        <div className="flex gap-4 mt-3 text-xs text-[var(--text-tertiary)]">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-0.5 bg-[var(--text-accent)]" />
+            {t('admin.newUsers')}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block w-3 h-0.5 bg-rose-500" />
+            {t('admin.newNotes')}
+          </span>
         </div>
-      ))}
+      </div>
     </div>
+  )
+}
+
+/* Lightweight inline SVG sparkline — avoids pulling in Recharts here. */
+function Sparkline({ series }) {
+  if (!series || series.length === 0) return null
+  const W = 600
+  const H = 80
+  const maxUsers = Math.max(1, ...series.map((s) => s.users))
+  const maxNotes = Math.max(1, ...series.map((s) => s.notes))
+  const xStep = W / Math.max(1, series.length - 1)
+  const usersPath = series
+    .map((s, i) => {
+      const x = i * xStep
+      const y = H - (s.users / maxUsers) * (H - 10) - 5
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
+    })
+    .join(' ')
+  const notesPath = series
+    .map((s, i) => {
+      const x = i * xStep
+      const y = H - (s.notes / maxNotes) * (H - 10) - 5
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
+    })
+    .join(' ')
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-20" aria-hidden="true">
+      <path d={notesPath} fill="none" stroke="#e11d48" strokeWidth="1.5" />
+      <path d={usersPath} fill="none" stroke="#fb923c" strokeWidth="1.5" />
+    </svg>
   )
 }
 
@@ -240,6 +484,8 @@ function UsersTab() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [confirmAction, setConfirmAction] = useState(null)
+  const [roleFilter, setRoleFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
 
   const fetchUsers = useCallback(() => {
     setLoading(true)
@@ -247,12 +493,25 @@ function UsersTab() {
       .then((r) => setUsers(r.data.results ?? r.data))
       .catch(() => toast?.error(t('common.operationFailed')))
       .finally(() => setLoading(false))
-  }, [search])
+  }, [search, toast, t])
 
   useEffect(() => {
     const timer = setTimeout(fetchUsers, 300)
     return () => clearTimeout(timer)
   }, [fetchUsers])
+
+  // Client-side filter on top of search-backed list. Cheap because the
+  // backend already caps the page size and search narrows the result.
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      if (statusFilter === 'active' && !u.is_active) return false
+      if (statusFilter === 'inactive' && u.is_active) return false
+      if (roleFilter === 'staff' && !u.is_staff && !u.is_superuser) return false
+      if (roleFilter === 'counselor' && !u.is_counselor) return false
+      if (roleFilter === 'user' && (u.is_staff || u.is_superuser || u.is_counselor)) return false
+      return true
+    })
+  }, [users, statusFilter, roleFilter])
 
   const requestToggle = (user, field) => {
     const label = field === 'is_active'
@@ -281,15 +540,62 @@ function UsersTab() {
     return <span className="px-2 py-0.5 rounded-full text-xs bg-gray-500/20 opacity-60">{t('admin.roleUser')}</span>
   }
 
+  const ROLE_OPTIONS = [
+    { value: 'all', label: t('admin.filterAll') },
+    { value: 'user', label: t('admin.roleUser') },
+    { value: 'counselor', label: t('admin.roleCounselor') },
+    { value: 'staff', label: t('admin.roleAdmin') },
+  ]
+  const STATUS_OPTIONS = [
+    { value: 'all', label: t('admin.filterAll') },
+    { value: 'active', label: t('admin.statusActive') },
+    { value: 'inactive', label: t('admin.statusInactive') },
+  ]
+
   return (
     <div className="space-y-4">
-      <input
-        type="text"
-        placeholder={t('admin.searchPlaceholder')}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="glass w-full md:w-80 px-4 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
-      />
+      <div className="flex gap-3 flex-wrap items-center">
+        <input
+          type="text"
+          placeholder={t('admin.searchPlaceholder')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="glass-input w-full md:w-80 px-4 py-2 rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
+        />
+        <div className="flex gap-1">
+          {ROLE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setRoleFilter(opt.value)}
+              className={`px-3 py-1.5 rounded-full text-xs transition-colors duration-100 ${
+                roleFilter === opt.value
+                  ? 'bg-orange-500/20 text-[var(--text-accent)] border border-orange-500/50'
+                  : 'border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1">
+          {STATUS_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setStatusFilter(opt.value)}
+              className={`px-3 py-1.5 rounded-full text-xs transition-colors duration-100 ${
+                statusFilter === opt.value
+                  ? 'bg-orange-500/20 text-[var(--text-accent)] border border-orange-500/50'
+                  : 'border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-[var(--text-tertiary)] ml-auto">
+          {t('admin.audit.showingCount', { count: filteredUsers.length })}
+        </span>
+      </div>
 
       {loading ? (
         <p className="opacity-60">{t('common.loading')}</p>
@@ -299,7 +605,7 @@ function UsersTab() {
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/10 text-left text-slate-400">
+              <tr className="border-b border-[var(--border-primary)] text-left text-[var(--text-secondary)]">
                 <th className="pb-2 pr-4">{t('admin.colId')}</th>
                 <th className="pb-2 pr-4">{t('admin.colUsername')}</th>
                 <th className="pb-2 pr-4">{t('admin.colEmail')}</th>
@@ -310,7 +616,7 @@ function UsersTab() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {filteredUsers.map((u) => (
                 <tr key={u.id} className="border-b border-white/5 hover:bg-white/5">
                   <td className="py-2 pr-4">{u.id}</td>
                   <td className="py-2 pr-4 font-medium">{u.username}</td>
@@ -344,12 +650,12 @@ function UsersTab() {
               ))}
             </tbody>
           </table>
-          {users.length === 0 && <p className="text-center py-8 opacity-50">{t('admin.noUsers')}</p>}
+          {filteredUsers.length === 0 && <p className="text-center py-8 opacity-50">{t('admin.noUsers')}</p>}
         </div>
 
         {/* Mobile cards */}
         <div className="md:hidden space-y-3">
-          {users.map((u) => (
+          {filteredUsers.map((u) => (
             <div key={u.id} className="glass-card p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium">{u.username}</span>
@@ -380,7 +686,7 @@ function UsersTab() {
               )}
             </div>
           ))}
-          {users.length === 0 && <p className="text-center py-8 opacity-50">{t('admin.noUsers')}</p>}
+          {filteredUsers.length === 0 && <p className="text-center py-8 opacity-50">{t('admin.noUsers')}</p>}
         </div>
         </>
       )}
@@ -513,13 +819,14 @@ function FeedbackTab() {
   const toast = useToast()
   const [feedbacks, setFeedbacks] = useState([])
   const [loading, setLoading] = useState(true)
+  const [ratingFilter, setRatingFilter] = useState(0)  // 0 = all
 
   useEffect(() => {
     getFeedback()
       .then((r) => setFeedbacks(r.data.results ?? r.data))
       .catch(() => toast?.error(t('common.operationFailed')))
       .finally(() => setLoading(false))
-  }, [])
+  }, [toast, t])
 
   if (loading) return <p className="opacity-60">{t('common.loading')}</p>
 
@@ -528,37 +835,90 @@ function FeedbackTab() {
   }
 
   const avg = (feedbacks.reduce((s, f) => s + f.rating, 0) / feedbacks.length).toFixed(1)
+  const filtered = ratingFilter === 0 ? feedbacks : feedbacks.filter((f) => f.rating === ratingFilter)
+  // Per-rating breakdown for histogram
+  const byRating = [5, 4, 3, 2, 1].map((r) => ({
+    rating: r,
+    count: feedbacks.filter((f) => f.rating === r).length,
+    pct: feedbacks.length ? Math.round((feedbacks.filter((f) => f.rating === r).length / feedbacks.length) * 100) : 0,
+  }))
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-4 flex-wrap">
-        <div className="glass p-5 rounded-xl">
-          <p className="text-sm text-slate-400 mb-1">{t('admin.feedbackAvg')}</p>
-          <p className="text-3xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-            {avg} <span className="text-lg">/ 5</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="glass-card p-5 rounded-xl">
+          <p className="text-sm text-[var(--text-secondary)] mb-1">{t('admin.feedbackAvg')}</p>
+          <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
+            {avg} <span className="text-lg text-[var(--text-tertiary)]">/ 5</span>
           </p>
         </div>
-        <div className="glass p-5 rounded-xl">
-          <p className="text-sm text-slate-400 mb-1">{t('admin.feedbackTotal', { count: feedbacks.length })}</p>
-          <p className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-indigo-500 bg-clip-text text-transparent">
-            {feedbacks.length}
-          </p>
+        <div className="glass-card p-5 rounded-xl">
+          <p className="text-sm text-[var(--text-secondary)] mb-1">{t('admin.feedbackTotal', { count: feedbacks.length })}</p>
+          <p className="text-3xl font-bold text-[var(--text-accent)]">{feedbacks.length}</p>
+        </div>
+        <div className="glass-card p-5 rounded-xl col-span-1 md:col-span-1">
+          <p className="text-sm text-[var(--text-secondary)] mb-2">{t('admin.feedbackBreakdown')}</p>
+          <div className="space-y-1">
+            {byRating.map((b) => (
+              <div key={b.rating} className="flex items-center gap-2 text-xs">
+                <span className="w-8 text-[var(--text-tertiary)]">{b.rating}★</span>
+                <div className="flex-1 h-1.5 bg-[var(--surface-secondary)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-amber-500/70 transition-all"
+                    style={{ width: `${b.pct}%` }}
+                  />
+                </div>
+                <span className="w-8 text-right text-[var(--text-tertiary)]">{b.count}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
+      {/* Rating filter pills */}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setRatingFilter(0)}
+          className={`px-3 py-1.5 rounded-full text-xs transition-colors duration-100 ${
+            ratingFilter === 0
+              ? 'bg-orange-500/20 text-[var(--text-accent)] border border-orange-500/50'
+              : 'border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
+          }`}
+        >
+          {t('admin.filterAll')} ({feedbacks.length})
+        </button>
+        {[5, 4, 3, 2, 1].map((r) => (
+          <button
+            key={r}
+            onClick={() => setRatingFilter(r)}
+            className={`px-3 py-1.5 rounded-full text-xs transition-colors duration-100 ${
+              ratingFilter === r
+                ? 'bg-orange-500/20 text-[var(--text-accent)] border border-orange-500/50'
+                : 'border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
+            }`}
+          >
+            {r}★ ({byRating.find((b) => b.rating === r)?.count || 0})
+          </button>
+        ))}
+      </div>
+
       <div className="space-y-3">
-        {feedbacks.map((f) => (
-          <div key={f.id} className="glass p-4 rounded-xl space-y-2">
+        {filtered.length === 0 ? (
+          <p className="text-center py-8 opacity-50">{t('admin.feedbackEmpty')}</p>
+        ) : filtered.map((f) => (
+          <div key={f.id} className="glass-card p-4 rounded-xl space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-medium">{f.username}</span>
-                <span className="text-amber-400">
-                  {'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}
+                <span className="text-amber-500">
+                  {'★'.repeat(f.rating)}<span className="opacity-30">{'★'.repeat(5 - f.rating)}</span>
                 </span>
               </div>
-              <span className="text-xs opacity-50">{new Date(f.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
+              <span className="text-xs text-[var(--text-tertiary)]">
+                {new Date(f.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}
+              </span>
             </div>
-            <p className="text-sm opacity-80">{f.content}</p>
+            <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap">{f.content}</p>
           </div>
         ))}
       </div>
