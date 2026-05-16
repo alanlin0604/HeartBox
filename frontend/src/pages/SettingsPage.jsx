@@ -65,6 +65,10 @@ export default function SettingsPage() {
   const [userTimezone, setUserTimezone] = useState(user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone)
   const health = useHealthSync()
   const [activeTab, setActiveTab] = useState('profile')
+  // Auto-expand the HC diagnostic panel after a failed connect attempt,
+  // so users can share the STAGE_ trail with support without flipping a
+  // hidden localStorage flag first.
+  const [showHealthDiagnostic, setShowHealthDiagnostic] = useState(false)
 
   // Handle tab navigation from other pages
   useEffect(() => {
@@ -516,6 +520,33 @@ export default function SettingsPage() {
             <h2 className="text-lg font-semibold">{t('health.connectionTitle')}</h2>
             <p className="text-sm text-slate-400">{t('health.connectionDesc')}</p>
 
+            {/* Step-by-step instruction card — shown when not yet connected.
+                On Android the actual UX takes the user out to the Health
+                Connect system app, so spelling out every screen they'll see
+                cuts confusion massively. */}
+            {health.available && !health.enabled && (
+              <div className="rounded-xl border border-orange-500/30 bg-orange-500/5 p-4 space-y-3">
+                <div className="font-semibold text-sm flex items-center gap-2">
+                  <span>📘</span>
+                  <span>{t('health.howToConnect')}</span>
+                </div>
+                <ol className="space-y-2 text-sm">
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold flex items-center justify-center">1</span>
+                    <span className="opacity-80 pt-0.5">{t('health.step1')}</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold flex items-center justify-center">2</span>
+                    <span className="opacity-80 pt-0.5">{t('health.step2')}</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold flex items-center justify-center">3</span>
+                    <span className="opacity-80 pt-0.5">{t('health.step3')}</span>
+                  </li>
+                </ol>
+              </div>
+            )}
+
             {health.available ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -539,17 +570,20 @@ export default function SettingsPage() {
                         try {
                           const ok = await health.connect()
                           crumb('btn:connect:returned', ok)
-                          if (ok) toast?.success(t('health.connected'))
-                          // Longer toast for the failure path so the user has
-                          // time to read the manual-HC instruction. The HC
-                          // permission IPC race usually resolves within ~4s
-                          // (plugin patch v4 retries 5×); if connect() still
-                          // returned false, ground truth is "no perms" and
-                          // the user needs to revisit the HC app directly.
-                          else toast?.error(t('health.connectFailedDetail'), { duration: 8000 })
+                          if (ok) {
+                            toast?.success(t('health.connected'))
+                            setShowHealthDiagnostic(false)
+                          } else {
+                            toast?.error(t('health.connectFailedDetail'), { duration: 8000 })
+                            // Auto-expand the diagnostic panel so the user
+                            // can see (and share) the STAGE_ breadcrumb
+                            // trail without needing to flip a hidden flag.
+                            setShowHealthDiagnostic(true)
+                          }
                         } catch (e) {
                           crumb('btn:connect:threw', String(e?.message || e))
                           toast?.error(t('health.connectFailedDetail'), { duration: 8000 })
+                          setShowHealthDiagnostic(true)
                         }
                       }}
                       className="btn-primary text-sm"
@@ -559,37 +593,58 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                {/* Diagnostic breadcrumbs — shows where the last connect attempt died.
-                    Survives the native crash via localStorage; helps debug Health
-                    Connect issues without needing adb logcat. */}
-                {/* HC diagnostic panel — only shown when the user explicitly
-                    sets `localStorage.heartbox_health_debug = '1'`. Breadcrumbs
-                    are still recorded silently on every connect attempt so the
-                    panel has data the moment it's enabled. See
-                    docs/health-connect-debug-progress.md. */}
+                {/* HC diagnostic panel — auto-expands after a failed connect()
+                    so users (and support) can immediately see the STAGE_
+                    breadcrumb trail. Hidden by default; flips on via either
+                    (a) connect failure or (b) localStorage flag for power users. */}
                 {(() => {
                   if (typeof window === 'undefined') return null
-                  if (window.localStorage?.getItem('heartbox_health_debug') !== '1') return null
+                  const flagEnabled = window.localStorage?.getItem('heartbox_health_debug') === '1'
+                  if (!showHealthDiagnostic && !flagEnabled) return null
                   const crumbs = getLastHealthBreadcrumbs()
+                  const formatted = crumbs.map(c => `${c.ts.split('T')[1]?.slice(0, 12)} ${c.stage}${c.payload !== undefined ? ' ' + JSON.stringify(c.payload) : ''}`).join('\n')
                   return (
                     <div className="text-xs bg-amber-500/10 rounded-lg p-3 border border-amber-500/30 space-y-2">
-                      <div className="font-bold text-amber-400">Health Connect diagnostic</div>
+                      <div className="flex items-center justify-between">
+                        <div className="font-bold text-amber-400">{t('health.diagnostic.title')}</div>
+                        <button
+                          onClick={() => setShowHealthDiagnostic(false)}
+                          className="text-amber-400 opacity-70 hover:opacity-100 text-base leading-none"
+                          aria-label={t('aria.close') || 'Close'}
+                        >&times;</button>
+                      </div>
+                      <p className="opacity-70 text-[11px]">{t('health.diagnostic.desc')}</p>
                       {crumbs.length === 0 ? (
-                        <div className="opacity-60">No breadcrumbs yet — try connecting once.</div>
+                        <div className="opacity-60">{t('health.diagnostic.empty')}</div>
                       ) : (
                         <details open>
                           <summary className="cursor-pointer text-slate-300">
-                            {crumbs.length} steps, last: {crumbs[crumbs.length - 1].stage}
+                            {crumbs.length} steps, last: <span className="font-mono">{crumbs[crumbs.length - 1].stage}</span>
                           </summary>
-                          <pre className="mt-2 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed">
-                            {crumbs.map(c => `${c.ts.split('T')[1]?.slice(0, 12)} ${c.stage}${c.payload !== undefined ? ' ' + JSON.stringify(c.payload) : ''}`).join('\n')}
+                          <pre className="mt-2 overflow-auto whitespace-pre-wrap text-[11px] leading-relaxed max-h-48">
+                            {formatted}
                           </pre>
-                          <button
-                            onClick={() => { clearHealthBreadcrumbs(); window.location.reload() }}
-                            className="mt-2 text-[11px] underline opacity-70"
-                          >
-                            Clear & reload
-                          </button>
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await navigator.clipboard.writeText(formatted)
+                                  toast?.success(t('health.diagnostic.copied'))
+                                } catch {
+                                  toast?.error(t('common.operationFailed'))
+                                }
+                              }}
+                              className="text-[11px] px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400"
+                            >
+                              📋 {t('health.diagnostic.copy')}
+                            </button>
+                            <button
+                              onClick={() => { clearHealthBreadcrumbs(); setShowHealthDiagnostic(false) }}
+                              className="text-[11px] px-2 py-1 underline opacity-70"
+                            >
+                              {t('health.diagnostic.clear')}
+                            </button>
+                          </div>
                         </details>
                       )}
                     </div>
