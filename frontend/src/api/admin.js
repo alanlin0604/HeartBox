@@ -27,3 +27,7 @@ export const moderateCommunityPost = (postId, action) =>
 // Audit log feed (staff-only)
 export const getAuditLogs = (params = {}) =>
   api.get('/admin/audit-logs/', { params });
+
+// ML model health snapshot
+export const getMLStatus = () =>
+  api.get('/admin/ml-status/');

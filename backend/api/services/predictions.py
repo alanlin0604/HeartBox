@@ -107,6 +107,43 @@ def get_mood_prediction(user):
         'recommendations': [],
     }
 
+    # --- Hybrid: layer Random Forest predictions on top of the trend baseline ---
+    # The RF model is trained against actual 3-day-ahead outcomes, so its
+    # numbers are usually more accurate than a linear extrapolation. We
+    # keep the trend output as `forecast_7d` (legacy contract) and add
+    # `rf_forecast_3d` so the frontend can compare both during shadow phase.
+    try:
+        from .ml_predictor import get_predictor
+        predictor = get_predictor()
+        rf_mood = predictor.predict_mood(user.id)
+        if rf_mood:
+            prediction['sentiment']['rf_forecast_3d'] = rf_mood['sentiment_in_3d']
+            prediction['stress']['rf_forecast_3d'] = rf_mood['stress_in_3d']
+            prediction['rf_model_version'] = rf_mood['model_version']
+        rf_spike = predictor.predict_stress_spike(user.id)
+        if rf_spike:
+            prediction['stress_spike_risk'] = {
+                'probability': rf_spike['spike_probability'],
+                'high_risk': rf_spike['high_risk'],
+                'threshold': rf_spike['threshold'],
+            }
+            # Surface a high-priority warning if the classifier thinks risk is high
+            if rf_spike['high_risk']:
+                prediction['warnings'].insert(0, {
+                    'level': 'high',
+                    'type': 'stress_spike_predicted',
+                    'message': (
+                        f'Based on your recent patterns, there is a '
+                        f'{int(rf_spike["spike_probability"] * 100)}% chance of a '
+                        f'high-stress day in the next 3 days. Consider preventive self-care.'
+                    ),
+                    'icon': '⚠️',
+                })
+    except Exception:
+        # ML is opt-in — never let a model failure break the existing endpoint.
+        import logging
+        logging.getLogger(__name__).debug('RF augmentation unavailable', exc_info=True)
+
     # Generate warnings and recommendations
     # Warning 1: Declining mood trend
     if sentiment_slope < -0.02 and sentiment_strength > 0.3:

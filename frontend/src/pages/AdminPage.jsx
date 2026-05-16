@@ -9,6 +9,7 @@ import {
   getCommunityReports,
   moderateCommunityPost,
   getAuditLogs,
+  getMLStatus,
 } from '../api/admin'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
@@ -28,6 +29,7 @@ export default function AdminPage() {
     t('admin.tabFeedback'),
     t('admin.tabReports'),
     t('admin.tabAuditLog'),
+    t('admin.tabMLStatus'),
   ]
 
   return (
@@ -55,6 +57,52 @@ export default function AdminPage() {
       {tab === 3 && <FeedbackTab />}
       {tab === 4 && <ReportsTab />}
       {tab === 5 && <AuditLogTab />}
+      {tab === 6 && <MLStatusTab />}
+    </div>
+  )
+}
+
+/* ==================== Tab 7: ML Status ==================== */
+
+function MLStatusTab() {
+  const { t } = useLang()
+  const toast = useToast()
+  const [status, setStatus] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getMLStatus()
+      .then((r) => setStatus(r.data))
+      .catch(() => toast?.error(t('common.operationFailed')))
+      .finally(() => setLoading(false))
+  }, [toast, t])
+
+  if (loading) return <p className="opacity-60">{t('common.loading')}</p>
+  if (!status) return null
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-[var(--text-secondary)]">{t('admin.ml.headerHint')}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <MLModelCard label={t('admin.ml.moodPrediction')} info={status.mood_prediction} t={t} />
+        <MLModelCard label={t('admin.ml.stressSpike')} info={status.stress_spike} t={t} />
+      </div>
+      <details className="glass-card p-4 rounded-xl">
+        <summary className="text-sm cursor-pointer text-[var(--text-secondary)]">
+          {t('admin.ml.howToRetrain')}
+        </summary>
+        <pre className="text-xs font-mono text-[var(--text-tertiary)] mt-3 overflow-x-auto whitespace-pre-wrap">
+{`# Export data from prod DB
+python manage.py export_ml_training_data --task=mood_prediction --days=180
+python manage.py export_ml_training_data --task=stress_spike   --days=180
+
+# Train models
+python -m ml.scripts.train_mood_prediction --input ml/datasets/mood_prediction_<date>.csv --output ml/models/mood_prediction_v2.joblib
+python -m ml.scripts.train_stress_spike   --input ml/datasets/stress_spike_<date>.csv   --output ml/models/stress_spike_v2.joblib
+
+# Predictor auto-picks the highest-versioned joblib on next process start.`}
+        </pre>
+      </details>
     </div>
   )
 }
@@ -321,6 +369,46 @@ function StatCard({ label, value, hint, accent }) {
       <p className="text-sm text-[var(--text-secondary)] mb-1">{label}</p>
       <p className={`text-3xl font-bold ${accent || 'text-[var(--text-primary)]'}`}>{value}</p>
       {hint && <p className="text-xs text-[var(--text-tertiary)] mt-1">{hint}</p>}
+    </div>
+  )
+}
+
+function MLModelCard({ label, info, t }) {
+  if (!info?.loaded) {
+    return (
+      <div className="glass-card p-5 rounded-xl">
+        <p className="text-sm text-[var(--text-secondary)] mb-1">{label}</p>
+        <p className="text-lg font-medium text-red-500">{t('admin.ml.notLoaded')}</p>
+        <p className="text-xs text-[var(--text-tertiary)] mt-2">{t('admin.ml.notLoadedHint')}</p>
+      </div>
+    )
+  }
+  return (
+    <div className="glass-card p-5 rounded-xl space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">{label}</p>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/15 text-green-600 dark:text-green-400">
+          {t('admin.ml.loaded')}
+        </span>
+      </div>
+      <div className="text-xs text-[var(--text-tertiary)] font-mono">{info.version}</div>
+      <div className="text-xs text-[var(--text-secondary)]">
+        {t('admin.ml.trainedAt')}: {info.trained_at ? new Date(info.trained_at).toLocaleString() : '—'}
+      </div>
+      <div className="text-xs text-[var(--text-secondary)]">
+        {t('admin.ml.trainSize')}: <strong>{info.n_train_rows}</strong> {t('admin.ml.rows')}
+      </div>
+      {info.cv_metrics && (
+        <div className="text-xs text-[var(--text-secondary)] border-t border-[var(--border-primary)] pt-2 space-y-0.5">
+          <p className="font-medium text-[var(--text-primary)] mb-1">{t('admin.ml.cvMetrics')}</p>
+          {Object.entries(info.cv_metrics).map(([k, v]) => (
+            <div key={k} className="flex justify-between font-mono">
+              <span>{k}</span>
+              <span>{v ?? '—'}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

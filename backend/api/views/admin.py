@@ -180,6 +180,20 @@ class AdminFeedbackListView(generics.ListAPIView):
         return Feedback.objects.select_related('user').all()
 
 
+class AdminMLStatusView(APIView):
+    """GET /api/admin/ml-status/ — read-only model health snapshot.
+
+    Surfaces version, trained_at, CV metrics for each ML bundle so the
+    admin can see at a glance whether models are loaded and how they
+    performed. Used by the Admin > ML Monitoring tab.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        from ..services.ml_predictor import get_predictor
+        return Response(get_predictor().model_status())
+
+
 class AdminAuditLogView(APIView):
     """GET /api/admin/audit-logs/ — recent admin + security-sensitive actions.
 

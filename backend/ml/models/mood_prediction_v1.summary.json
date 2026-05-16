@@ -1,0 +1,47 @@
+{
+  "task": "mood_prediction",
+  "trained_at": "2026-05-16T02:52:57.764613",
+  "n_train_rows": 16,
+  "cv_metrics": {
+    "sent_mae": 0.422,
+    "stress_mae": 1.751,
+    "sent_r2": -0.489,
+    "stress_r2": -0.828
+  },
+  "final_metrics": {
+    "sent_mae_train": 0.295,
+    "stress_mae_train": 1.144,
+    "sent_rmse_train": 0.33,
+    "stress_rmse_train": 1.32
+  },
+  "feature_columns": [
+    "sent_lag_1d_mean",
+    "stress_lag_1d_mean",
+    "stress_lag_1d_max",
+    "entries_lag_1d",
+    "sleep_lag_1d_mean",
+    "habit_lag_1d_mean",
+    "sent_lag_3d_mean",
+    "stress_lag_3d_mean",
+    "stress_lag_3d_max",
+    "entries_lag_3d",
+    "sleep_lag_3d_mean",
+    "habit_lag_3d_mean",
+    "sent_lag_7d_mean",
+    "stress_lag_7d_mean",
+    "stress_lag_7d_max",
+    "entries_lag_7d",
+    "sleep_lag_7d_mean",
+    "habit_lag_7d_mean",
+    "sent_lag_14d_mean",
+    "stress_lag_14d_mean",
+    "stress_lag_14d_max",
+    "entries_lag_14d",
+    "sleep_lag_14d_mean",
+    "habit_lag_14d_mean",
+    "day_of_week",
+    "is_weekend",
+    "day_of_month",
+    "current_streak"
+  ]
+}

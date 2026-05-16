@@ -12,6 +12,7 @@ from .views import (
     AdminCounselorListView,
     AdminAuditLogView,
     AdminFeedbackListView,
+    AdminMLStatusView,
     AdminStatsView,
     AdminUserDetailView,
     AdminUserListView,
@@ -210,6 +211,7 @@ urlpatterns = [
     path('feedback/', FeedbackCreateView.as_view(), name='feedback-create'),
     path('admin/feedback/', AdminFeedbackListView.as_view(), name='admin-feedback'),
     path('admin/audit-logs/', AdminAuditLogView.as_view(), name='admin-audit-logs'),
+    path('admin/ml-status/', AdminMLStatusView.as_view(), name='admin-ml-status'),
     # AI Chat
     path('ai-chat/sessions/', AIChatSessionListCreateView.as_view(), name='ai-chat-sessions'),
     path('ai-chat/sessions/<int:session_id>/', AIChatSessionDetailView.as_view(), name='ai-chat-session-detail'),

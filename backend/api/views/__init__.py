@@ -221,6 +221,7 @@ from .wellness import (  # noqa: E402
 from .admin import (  # noqa: E402
     AdminAuditLogView,
     AdminCounselorActionView,
+    AdminMLStatusView,
     AdminCounselorListView,
     AdminFeedbackListView,
     AdminStatsView,
