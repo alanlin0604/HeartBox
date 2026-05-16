@@ -1348,6 +1348,7 @@
   "health.disconnect": "中斷連結",
   "health.connected": "健康 APP 已連結！",
   "health.connectFailed": "連結失敗，請確認已授予權限",
+  "health.connectFailedDetail": "連結失敗。請打開「Health Connect」App → 應用程式權限 → HeartBox，確認 5 項權限都已開啟，再回來點一次連結。",
   "health.syncStatus": "同步狀態",
   "health.lastSync": "上次同步",
   "health.never": "尚未同步",

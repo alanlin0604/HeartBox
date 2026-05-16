@@ -76,6 +76,21 @@ jobs:
 
       - run: npm ci
 
+      # Verify the @capgo/capacitor-health patch actually applied. If
+      # npm cache + ci timing is wrong the postinstall patch-package step
+      # can be skipped and the Galaxy A52 SIGKILL / "permissions empty"
+      # symptoms come back. Failing here is much better than shipping a
+      # broken APK to the QA device.
+      - name: Verify HC patch applied
+        run: |
+          if ! grep -q "HeartBox patch v" node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt; then
+            echo "::error::patch-package did NOT apply the HC fix. Aborting build."
+            echo "::error::Check that frontend/patches/@capgo+capacitor-health+8.4.5.patch exists and that postinstall ran."
+            exit 1
+          fi
+          echo "::notice::HC patch successfully applied to HealthPlugin.kt."
+          grep -c "STAGE_" node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt | xargs -I{} echo "::notice::Found {} STAGE_ tags in plugin (expected ≥ 14)."
+
       # Add Android platform if not committed
       - run: npx cap sync android
 

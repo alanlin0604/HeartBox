@@ -129,7 +129,41 @@ export async function requestPermissions() {
       ),
     ])
     crumb('reqPerms:requestAuthorization-returned', result)
-    return result.readAuthorized.length > 0
+    if (result.readAuthorized.length > 0) return true
+
+    // Data-based fallback for the HC permission IPC race condition.
+    // The plugin's stage-tagged retry loop (4 back-offs, ~3.9s) should normally
+    // catch the propagation lag, but on slower Samsung firmware the HC service
+    // can still take longer than that to commit the grant set. Ground truth is
+    // "can we actually read data?" — try a 1-day Steps read with a tight
+    // timeout. If samples come back (even empty array), the permission IS
+    // granted, the plugin's getGrantedPermissions just hasn't synced yet, and
+    // we should not block the user with a misleading failure toast.
+    crumb('reqPerms:fallback-probe-readSamples')
+    try {
+      const probeEnd = new Date()
+      const probeStart = new Date(probeEnd.getTime() - 24 * 60 * 60 * 1000)
+      const probe = await Promise.race([
+        Health.readSamples({
+          dataType: 'steps',
+          startDate: probeStart.toISOString(),
+          endDate: probeEnd.toISOString(),
+          limit: 1,
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('TIMEOUT: probe readSamples > 5s')), 5_000),
+        ),
+      ])
+      // Reaching here means HC accepted the read — permission IS granted
+      // regardless of what readAuthorized said. samples may legitimately be
+      // empty (user just has no steps recorded), so don't gate on length.
+      crumb('reqPerms:fallback-probe-succeeded', { sampleCount: (probe?.samples || []).length })
+      return true
+    } catch (probeErr) {
+      crumb('reqPerms:fallback-probe-failed', String(probeErr?.message || probeErr))
+      // Permission really not granted — let the caller surface the failure.
+      return false
+    }
   } catch (error) {
     // The patch tags the stage in the message ("STAGE_xxx: ExceptionClass: detail").
     // We surface that via the breadcrumb so a future Settings → Health diagnostic

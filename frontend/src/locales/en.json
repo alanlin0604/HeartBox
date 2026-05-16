@@ -1348,6 +1348,7 @@
   "health.disconnect": "Disconnect",
   "health.connected": "Health app connected!",
   "health.connectFailed": "Connection failed. Please grant permissions.",
+  "health.connectFailedDetail": "Connection failed. Open the Health Connect app → App permissions → HeartBox, verify all 5 permissions are enabled, then tap Connect again.",
   "health.syncStatus": "Sync Status",
   "health.lastSync": "Last Synced",
   "health.never": "Never synced",

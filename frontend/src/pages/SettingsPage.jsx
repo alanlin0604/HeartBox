@@ -540,10 +540,16 @@ export default function SettingsPage() {
                           const ok = await health.connect()
                           crumb('btn:connect:returned', ok)
                           if (ok) toast?.success(t('health.connected'))
-                          else toast?.error(t('health.connectFailed'))
+                          // Longer toast for the failure path so the user has
+                          // time to read the manual-HC instruction. The HC
+                          // permission IPC race usually resolves within ~4s
+                          // (plugin patch v4 retries 5×); if connect() still
+                          // returned false, ground truth is "no perms" and
+                          // the user needs to revisit the HC app directly.
+                          else toast?.error(t('health.connectFailedDetail'), { duration: 8000 })
                         } catch (e) {
                           crumb('btn:connect:threw', String(e?.message || e))
-                          toast?.error(t('health.connectFailed'))
+                          toast?.error(t('health.connectFailedDetail'), { duration: 8000 })
                         }
                       }}
                       className="btn-primary text-sm"

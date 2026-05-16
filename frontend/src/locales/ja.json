@@ -1348,6 +1348,7 @@
   "health.disconnect": "連携解除",
   "health.connected": "ヘルスアプリと連携しました！",
   "health.connectFailed": "連携に失敗しました。権限を確認してください。",
+  "health.connectFailedDetail": "連携に失敗しました。Health Connect アプリ → アプリの権限 → HeartBox を開き、5 つの権限がすべて有効か確認してから、もう一度「連携」をタップしてください。",
   "health.syncStatus": "同期状態",
   "health.lastSync": "最終同期",
   "health.never": "未同期",
