@@ -778,6 +778,7 @@
   "notification.type.friendComment": "好友留言",
   "notification.type.postReaction": "社群貼文回應",
   "notification.type.habitReminder": "習慣打卡提醒",
+  "notification.type.achievement": "解鎖成就",
   "error.friends.user_not_found": "找不到該用戶",
   "error.friends.cannot_self_request": "無法傳送好友請求給自己",
   "error.friends.not_friends": "你們還不是好友",

@@ -778,6 +778,7 @@
   "notification.type.friendComment": "友達からのコメント",
   "notification.type.postReaction": "投稿への反応",
   "notification.type.habitReminder": "習慣リマインダー",
+  "notification.type.achievement": "実績解除",
   "error.friends.user_not_found": "ユーザーが見つかりません",
   "error.friends.cannot_self_request": "自分に友達リクエストは送れません",
   "error.friends.not_friends": "まだ友達ではありません",

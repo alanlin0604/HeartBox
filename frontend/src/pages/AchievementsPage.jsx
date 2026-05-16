@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { getAchievements, checkAchievements } from '../api/achievements'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -18,44 +18,40 @@ export default function AchievementsPage() {
   const [achievements, setAchievements] = useState([])
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState('all')
-  const [checking, setChecking] = useState(false)
 
   useEffect(() => {
     document.title = `${t('achievement.title')} — ${t('app.name')}`
   }, [t])
 
-  const loadAchievements = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await getAchievements()
-      setAchievements(res.data)
-    } catch {
-      toast?.error(t('achievement.checkFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }, [toast, t])
-
+  // Auto-run check on mount so the list always reflects newly-met conditions
+  // without forcing the user to click a button.
   useEffect(() => {
-    loadAchievements()
-  }, [loadAchievements])
-
-  const handleCheck = async () => {
-    setChecking(true)
-    try {
-      const res = await checkAchievements()
-      if (res.data.newly_unlocked?.length > 0) {
-        toast?.success(
-          `${t('achievement.newUnlock')} ${res.data.newly_unlocked.map((id) => t(`achievement.${id}`)).join(', ')}`
-        )
+    let cancelled = false
+    const run = async () => {
+      try {
+        const check = await checkAchievements()
+        if (cancelled) return
+        const unlocked = check.data?.newly_unlocked || []
+        if (unlocked.length > 0) {
+          toast?.success(
+            `${t('achievement.newUnlock')} ${unlocked.map((id) => t(`achievement.${id}`)).join(', ')}`
+          )
+        }
+      } catch {
+        // Silent — the page still loads even if /check fails (network blip).
       }
-      await loadAchievements()
-    } catch {
-      toast?.error(t('achievement.checkFailed'))
-    } finally {
-      setChecking(false)
+      try {
+        const res = await getAchievements()
+        if (!cancelled) setAchievements(res.data)
+      } catch {
+        if (!cancelled) toast?.error(t('achievement.checkFailed'))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-  }
+    run()
+    return () => { cancelled = true }
+  }, [toast, t])
 
   const filtered = category === 'all'
     ? achievements
@@ -71,18 +67,9 @@ export default function AchievementsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t('achievement.title')}</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-400">
-            {unlockedCount}/{totalCount}
-          </span>
-          <button
-            onClick={handleCheck}
-            disabled={checking}
-            className="btn-secondary text-sm"
-          >
-            {checking ? t('common.loading') : t('achievement.checkNow')}
-          </button>
-        </div>
+        <span className="text-sm text-slate-400">
+          {unlockedCount}/{totalCount}
+        </span>
       </div>
 
       {/* Category tabs */}

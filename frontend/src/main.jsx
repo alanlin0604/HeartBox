@@ -58,16 +58,36 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker
       .register('/sw.js', { updateViaCache: 'none' })
       .then((reg) => {
-        // Auto-update: when new SW is found, activate it and reload
+        // Defer reload until the user is between actions. Earlier impl
+        // reloaded the moment a new SW activated, which clobbered any
+        // in-flight click (most visibly: first login attempt after a
+        // deploy reloaded the page mid-submit and "ate" the click).
+        // Now: wait for the tab to lose then regain visibility, AND
+        // make sure no editable input is focused before reloading.
+        let activated = false
         reg.addEventListener('updatefound', () => {
           const newSW = reg.installing
-          if (newSW) {
-            newSW.addEventListener('statechange', () => {
-              if (newSW.state === 'activated' && navigator.serviceWorker.controller) {
-                window.location.reload()
-              }
-            })
+          if (!newSW) return
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state === 'activated' && navigator.serviceWorker.controller) {
+              activated = true
+            }
+          })
+        })
+        let wentHidden = false
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') {
+            wentHidden = true
+            return
           }
+          if (!activated || !wentHidden) return
+          const el = document.activeElement
+          if (el && el.matches && el.matches('input, textarea, select, [contenteditable="true"]')) {
+            return  // user is editing; try again next focus
+          }
+          activated = false
+          wentHidden = false
+          window.location.reload()
         })
       })
       .catch(() => {})

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 import { getNotifications, markNotificationsRead } from '../api/notifications'
 import {
   getAccessToken,
@@ -46,6 +47,7 @@ const NOTIF_TYPE_KEYS = {
   friend_comment: 'notification.type.friendComment',
   post_reaction: 'notification.type.postReaction',
   habit_reminder: 'notification.type.habitReminder',
+  achievement: 'notification.type.achievement',
 }
 
 function getLocalizedMessage(notif, t) {
@@ -83,12 +85,18 @@ function getLocalizedMessage(notif, t) {
   if (d.assessment_id && d.username) {
     return t('notification.assessmentShare.from', { name: d.username, type: (d.assessment_type || '').toUpperCase() })
   }
+  if (notif.type === 'achievement') {
+    // Backend stores achievement_id in data; message field is the same id as fallback.
+    const aid = d.achievement_id || notif.message
+    return t(`achievement.${aid}`)
+  }
   // Fallback for old notifications without enriched data
   return notif.message
 }
 
 export default memo(function NotificationBell() {
   const { t, lang } = useLang()
+  const toast = useToast()
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -137,6 +145,12 @@ export default memo(function NotificationBell() {
       }
       setNotifications((prev) => [data, ...prev])
       setUnreadCount((c) => c + 1)
+      // Surface achievement unlocks as a toast so the user sees them
+      // immediately, anywhere in the app — not only on the bell.
+      if (data.type === 'achievement') {
+        const aid = data.data?.achievement_id || data.message
+        toast?.success(`${t('achievement.newUnlock')} ${t(`achievement.${aid}`)}`)
+      }
     }
 
     ws.onclose = () => {

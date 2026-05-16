@@ -778,6 +778,7 @@
   "notification.type.friendComment": "New comment from a friend",
   "notification.type.postReaction": "Reaction to your post",
   "notification.type.habitReminder": "Habit reminder",
+  "notification.type.achievement": "Achievement unlocked",
   "error.friends.user_not_found": "User not found",
   "error.friends.cannot_self_request": "You can't send a friend request to yourself",
   "error.friends.not_friends": "You're not friends with this user",

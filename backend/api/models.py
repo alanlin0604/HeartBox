@@ -234,6 +234,7 @@ class Notification(models.Model):
         ('friend_comment', '好友留言'),
         ('post_reaction', '社群貼文有人回應'),
         ('habit_reminder', '習慣打卡提醒'),
+        ('achievement', '成就解鎖'),
     ]
 
     user = models.ForeignKey(

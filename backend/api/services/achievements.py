@@ -3,9 +3,9 @@ from django.utils import timezone
 from api.models import (
     AIChatSession, Booking, Conversation,
     DailySleep, DashboardLayout, Feedback, Friendship, FriendComment,
-    Habit, HabitLog, HealthMetric, Message, MoodNote, NoteAttachment,
-    PostReaction, PublicPost, SelfAssessment, SharedNote, SharedWithFriend,
-    UserAchievement, WellnessSession,
+    Habit, HabitLog, HealthMetric, Message, MoodNote, Notification,
+    NoteAttachment, PostReaction, PublicPost, SelfAssessment, SharedNote,
+    SharedWithFriend, UserAchievement, WellnessSession,
 )
 
 ACHIEVEMENT_DEFINITIONS = {
@@ -748,7 +748,61 @@ def check_achievements(user):
         if not unlocked_this_pass:
             break
         newly_unlocked.extend(unlocked_this_pass)
+    # Surface each unlock as a Notification so the WebSocket fan-out
+    # delivers a real-time toast wherever the user is in the app —
+    # the previous flow only showed a toast on the Achievements page.
+    if newly_unlocked:
+        _emit_unlock_notifications(user, newly_unlocked)
     return newly_unlocked
+
+
+def _emit_unlock_notifications(user, achievement_ids):
+    """Create + fan out a Notification for each newly unlocked achievement.
+
+    Translation of the title/body is done client-side via the achievement
+    id stored in ``data.achievement_id`` — the message field carries a
+    fallback string for clients that don't translate.
+    """
+    for aid in achievement_ids:
+        defn = ACHIEVEMENT_DEFINITIONS.get(aid, {})
+        notification = Notification.objects.create(
+            user=user,
+            type='achievement',
+            title='Achievement unlocked',
+            message=aid,
+            data={
+                'achievement_id': aid,
+                'category': defn.get('category', ''),
+                'icon': defn.get('icon', 'trophy'),
+            },
+        )
+        # Best-effort WS push — same pattern as save_message in consumers.py.
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            layer = get_channel_layer()
+            if layer is None:
+                continue
+            async_to_sync(layer.group_send)(
+                f'notifications_{user.id}',
+                {
+                    'type': 'notify',
+                    'data': {
+                        'id': notification.id,
+                        'type': notification.type,
+                        'title': notification.title,
+                        'message': notification.message,
+                        'data': notification.data,
+                        'is_read': False,
+                        'created_at': notification.created_at.isoformat(),
+                    },
+                },
+            )
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning(
+                'Achievement notification fan-out failed user=%s aid=%s', user.id, aid,
+            )
 
 
 def get_user_achievements_with_progress(user):
