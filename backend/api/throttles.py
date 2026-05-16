@@ -1,8 +1,30 @@
-from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+import hashlib
+
+from rest_framework.throttling import AnonRateThrottle, SimpleRateThrottle, UserRateThrottle
 
 
 class LoginRateThrottle(AnonRateThrottle):
     scope = 'login'
+
+
+class LoginPerUsernameThrottle(SimpleRateThrottle):
+    """Account-targeted login throttle.
+
+    AnonRateThrottle keys on IP, which a botnet can rotate. This throttle
+    keys on the *attempted* identifier so 50 failed logins against
+    alice@example.com block further attempts regardless of source IP.
+    Falls back to anon throttling if no identifier is present.
+    """
+    scope = 'login_per_username'
+
+    def get_cache_key(self, request, view):
+        attempted = request.data.get('email') or request.data.get('username') or ''
+        attempted = attempted.strip().lower()
+        if not attempted:
+            return None
+        # Hash to keep raw emails out of cache keys.
+        h = hashlib.sha256(attempted.encode()).hexdigest()[:24]
+        return self.cache_format % {'scope': self.scope, 'ident': h}
 
 
 class RegisterRateThrottle(AnonRateThrottle):

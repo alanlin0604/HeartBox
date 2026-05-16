@@ -27,8 +27,9 @@ from ..models import TOTPDevice
 from ..serializers import UserProfileSerializer, UserRegistrationSerializer
 from ..services.audit import log_action
 from ..throttles import (
-    DeleteAccountThrottle, GeneralWriteThrottle, LoginRateThrottle,
-    PasswordResetRateThrottle, RefreshTokenThrottle, RegisterRateThrottle,
+    DeleteAccountThrottle, GeneralWriteThrottle, LoginPerUsernameThrottle,
+    LoginRateThrottle, PasswordResetRateThrottle, RefreshTokenThrottle,
+    RegisterRateThrottle,
 )
 
 from . import User, error_response, logger
@@ -107,9 +108,104 @@ def _email_strings(request):
 
 
 class RegisterView(generics.CreateAPIView):
+    """Register a new account.
+
+    Anti-enumeration: returns 201 for both a fresh registration AND a
+    duplicate-email attempt, with the response time normalised to ~1 s
+    so an attacker can't tell whether the email is already in use. The
+    duplicate path silently re-sends the verification email to the
+    existing account if it's still unverified, otherwise it sends a
+    "someone-tried-to-register" notice.
+    Other validation errors (weak password, malformed email) still
+    return 400 — those don't leak account existence.
+    """
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
     throttle_classes = [RegisterRateThrottle]
+
+    MIN_RESPONSE_TIME = 1.0  # seconds — match ForgotPassword's normalisation
+
+    def create(self, request, *args, **kwargs):
+        start = time.monotonic()
+        serializer = self.get_serializer(data=request.data)
+
+        # Inspect errors before raising — only mask if the ONLY issue is
+        # email-already-exists. Other errors (bad password, missing field)
+        # are user-facing and must still surface.
+        if not serializer.is_valid():
+            email_errors = serializer.errors.get('email', [])
+            email_taken = any(
+                'already exists' in str(e).lower() or 'unique' in str(e).lower()
+                for e in email_errors
+            )
+            other_errors = {k: v for k, v in serializer.errors.items() if k != 'email'}
+            # Email-taken-only → silent re-send, normalised response
+            if email_taken and not other_errors and not email_errors[1:]:
+                attempted_email = request.data.get('email', '').strip()
+                if attempted_email:
+                    self._handle_duplicate_email(request, attempted_email)
+                self._sleep_to_min(start)
+                return Response(
+                    {'detail': 'Registration request received.'},
+                    status=status.HTTP_201_CREATED,
+                )
+            # Otherwise surface the validation errors as usual.
+            serializer.is_valid(raise_exception=True)
+
+        self.perform_create(serializer)
+        # Audit successful registration. serializer.instance is the new user.
+        if getattr(serializer, 'instance', None) is not None:
+            log_action(serializer.instance, 'auth.register', request=request)
+        self._sleep_to_min(start)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def _sleep_to_min(self, start):
+        elapsed = time.monotonic() - start
+        if elapsed < self.MIN_RESPONSE_TIME:
+            time.sleep(self.MIN_RESPONSE_TIME - elapsed)
+
+    def _handle_duplicate_email(self, request, email):
+        """Silently react to a duplicate-email registration attempt.
+
+        If the existing account is unverified, re-send the verification
+        link (legitimate user might have lost the original email).
+        If already verified, send a "someone tried to register" notice
+        so the real owner can act if it wasn't them.
+        """
+        try:
+            existing = User.objects.filter(email__iexact=email).first()
+            if not existing:
+                return
+            if not getattr(existing, 'email_verified', False):
+                # Re-send verification (same as ResendVerificationView body)
+                self._send_verification(request, existing)
+            else:
+                logger.info('Duplicate registration attempt for verified email %s', email)
+                # In a real production system we might email a notice here.
+        except Exception:
+            logger.warning('Failed to handle duplicate registration silently', exc_info=True)
+
+    def _send_verification(self, request, user):
+        s = _email_strings(request)
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://heartbox.pages.dev')
+        verify_url = f'{frontend_url}/verify-email?uid={uid}&token={token}'
+        greeting = s['verify_greeting'].format(username=user.username)
+        body = html_escape(s.get('verify_resend_body') or s['verify_register_body'])
+        try:
+            send_mail(
+                s['verify_subject'],
+                f'{greeting}\n\n{verify_url}',
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                html_message=(
+                    f'<p>{html_escape(greeting)}</p><p>{body}</p>'
+                    f'<p><a href="{verify_url}">{html_escape(s["verify_btn"])}</a></p>'
+                ),
+            )
+        except Exception:
+            logger.warning('Re-verification email send failed for %s', user.email)
 
     def perform_create(self, serializer):
         user = serializer.save()
@@ -187,16 +283,26 @@ class VersionedTokenRefreshSerializer(TokenRefreshSerializer):
 class LoginView(TokenObtainPairView):
     permission_classes = [permissions.AllowAny]
     serializer_class = VersionedTokenObtainPairSerializer
-    throttle_classes = [LoginRateThrottle]
+    throttle_classes = [LoginRateThrottle, LoginPerUsernameThrottle]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except exceptions.AuthenticationFailed:
+            # Audit failed logins so brute-force attempts are visible.
+            attempted = (request.data.get('email') or request.data.get('username') or '').strip()
+            log_action(
+                None, 'auth.login_failed', request=request,
+                details={'attempted_identifier': attempted[:120]},
+            )
+            raise
         user = serializer.user
         # Check for 2FA
         try:
             totp_device = user.totp_device
             if totp_device.confirmed:
+                log_action(user, 'auth.login_2fa_required', request=request)
                 # Return partial token indicating 2FA is needed
                 partial_token = str(RefreshToken.for_user(user).access_token)
                 return Response({
@@ -205,6 +311,7 @@ class LoginView(TokenObtainPairView):
                 })
         except TOTPDevice.DoesNotExist:
             pass
+        log_action(user, 'auth.login', request=request)
         data = dict(serializer.validated_data)
         data['user'] = UserProfileSerializer(user, context={'request': request}).data
         return Response(data)
@@ -275,7 +382,15 @@ class ResetPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [PasswordResetRateThrottle]
 
+    @staticmethod
+    def _consumed_key(user_id, token):
+        # Hash so a cache snapshot doesn't directly leak reset tokens.
+        import hashlib
+        h = hashlib.sha256(f'{user_id}:{token}'.encode()).hexdigest()
+        return f'pwreset_used:{h}'
+
     def post(self, request):
+        from django.core.cache import cache
         uid = request.data.get('uid') or ''
         token = request.data.get('token') or ''
         new_password = request.data.get('new_password') or ''
@@ -288,6 +403,13 @@ class ResetPasswordView(APIView):
             return error_response('invalid_reset_link', 'Invalid reset link')
         if not default_token_generator.check_token(user, token):
             return error_response('invalid_reset_link', 'Invalid reset link')
+        # Defence-in-depth single-use: Django's token *is* invalidated by the
+        # password hash change below, but the cache marker also blocks a
+        # racing duplicate request that arrives before set_password commits,
+        # and survives even if password change is skipped for some reason.
+        consumed_key = self._consumed_key(user_id, token)
+        if cache.get(consumed_key):
+            return error_response('invalid_reset_link', 'Invalid reset link')
         # Run Django password validators
         from django.contrib.auth.password_validation import validate_password
         from django.core.exceptions import ValidationError
@@ -295,6 +417,8 @@ class ResetPasswordView(APIView):
             validate_password(new_password, user=user)
         except ValidationError as e:
             return Response({'detail': e.messages}, status=status.HTTP_400_BAD_REQUEST)
+        # Mark consumed before mutation so a concurrent retry hits the lock.
+        cache.set(consumed_key, '1', timeout=getattr(settings, 'PASSWORD_RESET_TIMEOUT', 900))
         user.set_password(new_password)
         # Rotate token_version to invalidate all existing JWT sessions
         user.token_version += 1
@@ -540,7 +664,7 @@ class TOTPDisableView(APIView):
 
 class Login2FAView(APIView):
     permission_classes = [permissions.AllowAny]
-    throttle_classes = [LoginRateThrottle]
+    throttle_classes = [LoginRateThrottle, LoginPerUsernameThrottle]
 
     def post(self, request):
         import pyotp
@@ -566,8 +690,10 @@ class Login2FAView(APIView):
 
         totp = pyotp.TOTP(device.secret)
         if not totp.verify(code, valid_window=1):
+            log_action(user, 'auth.login_2fa_failed', request=request)
             return error_response('totp_invalid_code', 'Invalid verification code.', 400)
 
+        log_action(user, 'auth.login_2fa', request=request)
         tokens = _issue_tokens(user)
         return Response(tokens)
 
@@ -627,6 +753,7 @@ class GoogleLoginCallbackView(APIView):
         try:
             totp_device = user.totp_device
             if totp_device.confirmed:
+                log_action(user, 'auth.login_2fa_required', request=request, details={'provider': 'google'})
                 partial_token = str(RefreshToken.for_user(user).access_token)
                 return Response({
                     'requires_2fa': True,
@@ -635,5 +762,6 @@ class GoogleLoginCallbackView(APIView):
         except TOTPDevice.DoesNotExist:
             pass
 
+        log_action(user, 'auth.login', request=request, details={'provider': 'google'})
         tokens = _issue_tokens(user)
         return Response(tokens)

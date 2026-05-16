@@ -218,12 +218,15 @@ class AdminUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
+        # is_superuser intentionally omitted: never set via this API
+        # (Django admin /admin/ handles superuser elevation). Excluding it
+        # avoids leaking which staff members are superusers to other staff.
         fields = (
             'id', 'username', 'email', 'bio',
-            'is_staff', 'is_superuser', 'is_active', 'is_counselor',
+            'is_staff', 'is_active', 'is_counselor',
             'date_joined', 'created_at',
         )
-        read_only_fields = ('id', 'username', 'email', 'is_superuser', 'date_joined', 'created_at')
+        read_only_fields = ('id', 'username', 'email', 'date_joined', 'created_at')
 
     def get_is_counselor(self, obj) -> bool:
         return hasattr(obj, 'counselor_profile') and obj.counselor_profile.is_approved

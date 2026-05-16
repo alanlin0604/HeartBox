@@ -100,16 +100,31 @@ class AdminUserListView(generics.ListAPIView):
     search_fields = ['username', 'email']
 
     def get_queryset(self):
-        return User.objects.all().order_by('-date_joined')
+        qs = User.objects.all().order_by('-date_joined')
+        # Hide superuser accounts from non-superuser staff so they can't
+        # see or attempt to modify them via the API.
+        if not self.request.user.is_superuser:
+            qs = qs.filter(is_superuser=False)
+        return qs
 
 
 class AdminUserDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAdminUser]
     serializer_class = AdminUserSerializer
-    queryset = User.objects.all()
+
+    def get_queryset(self):
+        qs = User.objects.all()
+        if not self.request.user.is_superuser:
+            qs = qs.filter(is_superuser=False)
+        return qs
 
     def perform_update(self, serializer):
         target = serializer.instance
+        # Defence in depth: even though the queryset filters superusers out
+        # for non-superuser staff, also block writes to superuser targets
+        # unless the actor is a superuser themselves.
+        if target.is_superuser and not self.request.user.is_superuser:
+            raise exceptions.PermissionDenied('Cannot modify superuser accounts.')
         old_is_staff = target.is_staff
         new_is_staff = serializer.validated_data.get('is_staff', old_is_staff)
         # Prevent admin from demoting themselves

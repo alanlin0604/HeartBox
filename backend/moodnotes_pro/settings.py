@@ -185,6 +185,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'user': os.getenv('THROTTLE_USER', '200/hour'),
         'login': os.getenv('THROTTLE_LOGIN', '30/hour'),
+        'login_per_username': os.getenv('THROTTLE_LOGIN_PER_USERNAME', '10/hour'),
         'register': os.getenv('THROTTLE_REGISTER', '5/hour'),
         'password_reset': os.getenv('THROTTLE_PASSWORD_RESET', '5/hour'),
         'note_create': '30/hour',
@@ -238,6 +239,10 @@ EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() in ('true', '1', 'yes')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@heartbox.local')
 PASSWORD_RESET_TIMEOUT = 900  # 15 minutes
+
+# WebSocket auth — first-message JWT is the only supported path.
+# QS tokens leak into access logs / history; keep disabled in prod.
+WS_ALLOW_QUERY_STRING_TOKEN = os.getenv('WS_ALLOW_QUERY_STRING_TOKEN', 'False').lower() in ('true', '1', 'yes')
 
 # Celery
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', REDIS_URL or 'redis://localhost:6379/0')

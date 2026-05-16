@@ -25,22 +25,27 @@ def get_user_from_token(token_str):
 
 
 class JWTAuthMiddleware(BaseMiddleware):
-    """Authenticate WebSocket connections.
+    """Authenticate WebSocket connections via first-message JWT.
 
-    Supports two methods (in priority order):
-    1. First-message auth: client sends {"type": "auth", "token": "<JWT>"}
-       as the first message after connecting (recommended — avoids token in URL).
-    2. Query-string fallback: ?token=<JWT> (kept for backward compatibility).
+    Frontend always sends ``{"type": "auth", "token": "<JWT>"}`` after the
+    socket opens; consumers wait for that message before accepting any
+    other input. QS tokens (``?token=...``) are rejected by default because
+    they leak into proxy access logs, browser history, and Referer
+    headers. Set ``WS_ALLOW_QUERY_STRING_TOKEN=1`` only for transitional
+    debugging — never in prod.
     """
 
     async def __call__(self, scope, receive, send):
-        qs = parse_qs(scope.get('query_string', b'').decode())
-        token_list = qs.get('token', [])
-        if token_list:
-            scope['user'] = await get_user_from_token(token_list[0])
-        else:
-            # Allow anonymous connection; consumer will wait for auth message
-            scope['user'] = AnonymousUser()
+        scope['user'] = AnonymousUser()
+        if getattr(settings, 'WS_ALLOW_QUERY_STRING_TOKEN', False):
+            qs = parse_qs(scope.get('query_string', b'').decode())
+            token_list = qs.get('token', [])
+            if token_list:
+                logger.warning(
+                    'WS connection used query-string token — deprecated path; '
+                    'switch client to first-message auth.'
+                )
+                scope['user'] = await get_user_from_token(token_list[0])
         return await super().__call__(scope, receive, send)
 
 
