@@ -90,6 +90,7 @@ from .views import (
     UnshareNoteView,
     SubscriptionPlanListView,
     TagViewSet,
+    LogoutView,
     TOTPDisableView,
     TOTPSetupView,
     TOTPVerifyView,
@@ -252,6 +253,7 @@ urlpatterns = [
     path('auth/2fa/setup/', TOTPSetupView.as_view(), name='2fa-setup'),
     path('auth/2fa/verify/', TOTPVerifyView.as_view(), name='2fa-verify'),
     path('auth/2fa/disable/', TOTPDisableView.as_view(), name='2fa-disable'),
+    path('auth/logout/', LogoutView.as_view(), name='auth-logout'),
     path('auth/2fa/login/', Login2FAView.as_view(), name='2fa-login'),
     # Google OAuth
     path('auth/google/', GoogleLoginCallbackView.as_view(), name='google-login'),

@@ -1,0 +1,37 @@
+# Cloudflare Pages edge-cache headers
+# https://developers.cloudflare.com/pages/configuration/headers/
+
+# Hashed asset bundles — content-addressed, safe to cache forever
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+  X-Content-Type-Options: nosniff
+
+# Manifest + icons rarely change, but PWA updates rely on a non-immutable manifest
+/manifest.json
+  Cache-Control: public, max-age=300
+  X-Content-Type-Options: nosniff
+
+/icons/*
+  Cache-Control: public, max-age=86400, immutable
+
+# Service worker — must revalidate every load so a new VERSION roll triggers
+# cache turnover. Otherwise users stay on the stale SW for days.
+/sw.js
+  Cache-Control: no-cache, must-revalidate
+  X-Content-Type-Options: nosniff
+
+# Offline shell
+/offline.html
+  Cache-Control: public, max-age=86400
+
+# Locale JSON files — bumped only when shipping a new build
+/locales/*.json
+  Cache-Control: public, max-age=600
+
+# Default — index.html and SPA shell should always revalidate so deploys take effect
+/*
+  Cache-Control: public, max-age=0, must-revalidate
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(), interest-cohort=()
+  X-Frame-Options: DENY

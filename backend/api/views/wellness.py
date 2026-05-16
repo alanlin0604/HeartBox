@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from rest_framework import generics, permissions
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from ..models import Course, PsychoArticle, UserLessonProgress, WellnessSession
@@ -39,7 +40,9 @@ class AchievementCheckView(APIView):
 
 
 class PsychoArticleListView(generics.ListAPIView):
+    """Editorial articles list — public, but anon throttled to prevent abuse."""
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
     serializer_class = PsychoArticleSerializer
 
     def get_queryset(self):
@@ -52,6 +55,7 @@ class PsychoArticleListView(generics.ListAPIView):
 
 class PsychoArticleDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
     serializer_class = PsychoArticleSerializer
 
     def get_queryset(self):
@@ -85,6 +89,7 @@ class WellnessSessionListCreateView(generics.ListCreateAPIView):
 
 class CourseListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
     serializer_class = CourseListSerializer
 
     def get_queryset(self):
@@ -108,6 +113,7 @@ class CourseListView(generics.ListAPIView):
 
 class CourseDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
     serializer_class = CourseDetailSerializer
 
     def get_queryset(self):

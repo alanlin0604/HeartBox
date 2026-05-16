@@ -1,13 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useLang } from '../../context/LanguageContext'
 import { useToast } from '../../context/ToastContext'
 import { getFriends, removeFriend } from '../../api/friends'
 import LoadingSpinner from '../LoadingSpinner'
 import EmptyState from '../EmptyState'
-import ConfirmModal from '../ConfirmModal'
-import FriendSearch from './FriendSearch'
-import FriendRequests from './FriendRequests'
 import { formatDistanceToNow } from '../../utils/dateUtils'
+
+// Modals are only mounted on user action — keep them out of the FriendsPage
+// chunk so the page itself stays small.
+const ConfirmModal = lazy(() => import('../ConfirmModal'))
+const FriendSearch = lazy(() => import('./FriendSearch'))
+const FriendRequests = lazy(() => import('./FriendRequests'))
 
 export default function FriendsList() {
   const { t } = useLang()
@@ -149,35 +152,37 @@ export default function FriendsList() {
         </div>
       )}
 
-      {/* Modals */}
-      {showSearch && (
-        <FriendSearch
-          onClose={() => setShowSearch(false)}
-          onRequestSent={() => {
-            setShowSearch(false)
-            toast?.success(t('friends.requestSent'))
-          }}
-        />
-      )}
+      {/* Modals (lazy — only loaded when first opened) */}
+      <Suspense fallback={null}>
+        {showSearch && (
+          <FriendSearch
+            onClose={() => setShowSearch(false)}
+            onRequestSent={() => {
+              setShowSearch(false)
+              toast?.success(t('friends.requestSent'))
+            }}
+          />
+        )}
 
-      {showRequests && (
-        <FriendRequests
-          onClose={() => setShowRequests(false)}
-          onUpdate={reloadFriends}
-        />
-      )}
+        {showRequests && (
+          <FriendRequests
+            onClose={() => setShowRequests(false)}
+            onUpdate={reloadFriends}
+          />
+        )}
 
-      {confirmRemove && (
-        <ConfirmModal
-          title={t('friends.unfriendConfirm')}
-          message={t('friends.unfriendConfirmDesc', { username: confirmRemove.username })}
-          confirmText={t('friends.unfriend')}
-          cancelText={t('common.cancel')}
-          onConfirm={() => handleRemoveFriend(confirmRemove)}
-          onCancel={() => setConfirmRemove(null)}
-          variant="danger"
-        />
-      )}
+        {confirmRemove && (
+          <ConfirmModal
+            title={t('friends.unfriendConfirm')}
+            message={t('friends.unfriendConfirmDesc', { username: confirmRemove.username })}
+            confirmText={t('friends.unfriend')}
+            cancelText={t('common.cancel')}
+            onConfirm={() => handleRemoveFriend(confirmRemove)}
+            onCancel={() => setConfirmRemove(null)}
+            variant="danger"
+          />
+        )}
+      </Suspense>
     </>
   )
 }

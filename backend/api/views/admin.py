@@ -120,6 +120,14 @@ class AdminCounselorActionView(APIView):
             'Admin %s %sd counselor profile %s (user: %s)',
             request.user.username, action, profile.pk, profile.user.username,
         )
+        log_action(
+            request.user,
+            f'admin.counselor.{action}',
+            request=request,
+            target_type='CounselorProfile',
+            target_id=profile.pk,
+            details={'target_user': profile.user.username, 'new_status': profile.status},
+        )
         return Response(AdminCounselorSerializer(profile).data)
 
 

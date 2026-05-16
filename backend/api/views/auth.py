@@ -498,7 +498,33 @@ class TOTPVerifyView(APIView):
 
         device.confirmed = True
         device.save(update_fields=['confirmed'])
+        log_action(user, 'auth.2fa_enabled', request=request)
         return Response({'detail': '2FA enabled successfully'})
+
+
+class LogoutView(APIView):
+    """POST /api/auth/logout/ — blacklist the refresh token.
+
+    Frontend should call this before clearing local storage. Even on
+    network failure the local clear still runs (best-effort revoke).
+    Without this, a stolen refresh token from a "logged-out" device
+    stays valid for 7 days.
+    """
+    permission_classes = [permissions.AllowAny]  # let it succeed even mid-token-expiry
+
+    def post(self, request):
+        refresh = request.data.get('refresh')
+        if not refresh:
+            return Response(status=status.HTTP_205_RESET_CONTENT)
+        try:
+            token = RefreshToken(refresh)
+            token.blacklist()
+        except Exception:
+            # Token already blacklisted / malformed — treat as idempotent
+            pass
+        if request.user.is_authenticated:
+            log_action(request.user, 'auth.logout', request=request)
+        return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
 class TOTPDisableView(APIView):
@@ -508,6 +534,7 @@ class TOTPDisableView(APIView):
             return error_response('error.incorrect_password', 'Incorrect password.', 400)
 
         TOTPDevice.objects.filter(user=request.user).delete()
+        log_action(request.user, 'auth.2fa_disabled', request=request)
         return Response({'detail': '2FA disabled successfully'})
 
 

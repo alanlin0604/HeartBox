@@ -8,7 +8,16 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 
 def health_check(request):
-    """Liveness/readiness probe for Cloud Run / Docker."""
+    """Liveness probe — must be ultra-cheap. The frontend pings this on
+    every login-page mount to pre-warm Cloud Run, so a DB round-trip
+    here adds 50-150 ms to every cold start. Use /readyz/ for DB checks.
+    """
+    return JsonResponse({'status': 'ok'})
+
+
+def readiness_check(request):
+    """Readiness probe — confirms DB connectivity. Suitable for k8s/Cloud
+    Run readiness probes that want to gate traffic on DB availability."""
     try:
         connection.ensure_connection()
         return JsonResponse({'status': 'ok'})
@@ -18,6 +27,7 @@ def health_check(request):
 
 urlpatterns = [
     path('healthz/', health_check, name='health-check'),
+    path('readyz/', readiness_check, name='readiness-check'),
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

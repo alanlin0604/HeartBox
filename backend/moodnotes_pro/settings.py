@@ -324,23 +324,75 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+    X_FRAME_OPTIONS = 'DENY'
+    # Lock the cookie to first-party context only
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Upload limits — Django defaults are 2.5 MB; tighten the JSON / form body
+# accepted by APIs and rely on per-endpoint magic-byte validation for files.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB total request body
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024   # 5 MB per file (avatar/attachment further capped per-serializer)
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000            # default 1000, keep explicit
 
 # Content Security Policy (via SecurityMiddleware headers)
+# `wss:` + `https:` wildcards in connect-src are still here because the
+# frontend is cross-origin (Cloudflare Pages → Cloud Run) and the websocket
+# host is env-driven. Narrow this to explicit hosts once CSP_ALLOWED_API_HOST
+# is set in env.
+_csp_api_host = os.getenv('CSP_API_HOST', '').strip()
+_csp_ws_host = os.getenv('CSP_WS_HOST', '').strip()
 CSP_DEFAULT_SRC = ("'self'",)
 CSP_SCRIPT_SRC = ("'self'",)
-CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'")  # Tailwind utility classes / inline runtime
 CSP_IMG_SRC = ("'self'", "data:", "blob:", "https://storage.googleapis.com")
-CSP_CONNECT_SRC = ("'self'", "wss:", "https:")
-CSP_FONT_SRC = ("'self'",)
+CSP_CONNECT_SRC = (
+    "'self'",
+    _csp_api_host or "https:",
+    _csp_ws_host or "wss:",
+)
+CSP_FONT_SRC = ("'self'", "data:")
 CSP_FRAME_ANCESTORS = ("'none'",)
+CSP_BASE_URI = ("'self'",)
+CSP_FORM_ACTION = ("'self'",)
+CSP_OBJECT_SRC = ("'none'",)
 
 # Sentry error tracking (set SENTRY_DSN in .env to activate)
 SENTRY_DSN = os.getenv('SENTRY_DSN', '')
 if SENTRY_DSN:
     import sentry_sdk
+
+    _SENSITIVE_PATH_PARTS = ('/notes/', '/ai-chat/', '/messages/', '/community/posts')
+    _SENSITIVE_HEADERS = {'authorization', 'cookie', 'x-cron-secret'}
+
+    def _sentry_scrub(event, hint):
+        """Strip plaintext journal/chat content + auth headers before send.
+
+        send_default_pii=False already drops user PII, but request bodies on
+        mood-note / AI chat / community POSTs can carry the journal text
+        BEFORE it's encrypted. Hide them at the source.
+        """
+        try:
+            req = event.get('request') or {}
+            url = req.get('url') or ''
+            if any(part in url for part in _SENSITIVE_PATH_PARTS):
+                if 'data' in req:
+                    req['data'] = '<redacted: sensitive endpoint>'
+            # Always scrub auth-bearing headers
+            headers = req.get('headers') or {}
+            for k in list(headers.keys()):
+                if k.lower() in _SENSITIVE_HEADERS:
+                    headers[k] = '<redacted>'
+        except Exception:
+            pass
+        return event
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         traces_sample_rate=0.1,
         profiles_sample_rate=0.1,
         send_default_pii=False,
+        before_send=_sentry_scrub,
     )

@@ -8,7 +8,12 @@ const STATIC_CACHE = `heartbox-static-${VERSION}`
 const IMAGE_CACHE = `heartbox-images-${VERSION}`
 const FONT_CACHE = `heartbox-fonts-${VERSION}`
 
-const APP_SHELL = ['/', '/index.html', '/manifest.json', '/offline.html', '/logo.png']
+const APP_SHELL = [
+  '/', '/index.html', '/manifest.json', '/offline.html', '/logo.png',
+  // Pre-cache the launcher icon + sample nav icons so cold-cache nav is instant.
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+]
 const MAX_IMAGE_CACHE_SIZE = 50
 const MAX_STATIC_CACHE_SIZE = 100
 

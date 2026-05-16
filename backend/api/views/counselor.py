@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from rest_framework import exceptions, generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from ..models import (
@@ -168,6 +169,7 @@ class AvailableSlotsView(APIView):
     reference User.pk, so we resolve the profile first.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [AnonRateThrottle]
 
     def get(self, request, counselor_id):
         date_str = request.query_params.get('date')

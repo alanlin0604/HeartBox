@@ -142,12 +142,15 @@ class CounselorProfile(models.Model):
     introduction = models.TextField(help_text='自我介紹')
     hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=3, default='TWD')
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at'], name='counselor_status_created'),
+        ]
 
     def __str__(self):
         return f'{self.user.username} ({self.get_status_display()})'
@@ -658,10 +661,10 @@ class PsychoArticle(models.Model):
     content_zh = models.TextField()
     content_en = models.TextField()
     content_ja = models.TextField()
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, db_index=True)
     reading_time = models.IntegerField(default=5)
     source = models.CharField(max_length=500, blank=True, default='')
-    is_published = models.BooleanField(default=True)
+    is_published = models.BooleanField(default=True, db_index=True)
     order = models.IntegerField(default=0)
     course = models.ForeignKey(
         'Course', null=True, blank=True,
@@ -673,6 +676,10 @@ class PsychoArticle(models.Model):
 
     class Meta:
         ordering = ['order', '-created_at']
+        indexes = [
+            # Hot query: PsychoArticleListView filters published + category + orders by order.
+            models.Index(fields=['is_published', 'category', 'order'], name='article_pub_cat_order'),
+        ]
 
     def __str__(self):
         return self.title_en

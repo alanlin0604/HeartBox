@@ -122,6 +122,7 @@ from .auth import (  # noqa: E402
     Login2FAView,
     LoginView,
     LogoutOtherDevicesView,
+    LogoutView,
     ProfileView,
     RefreshView,
     RegisterView,

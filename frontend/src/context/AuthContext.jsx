@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { login as apiLogin, register as apiRegister, getProfile } from '../api/auth';
 import { clearAll as clearCache } from '../api/cache';
-import { clearAuthTokens, getAccessToken, setAuthTokens } from '../utils/tokenStorage';
+import { clearAuthTokens, getAccessToken, getRefreshToken, setAuthTokens } from '../utils/tokenStorage';
 
 const AuthContext = createContext(null);
 
@@ -75,7 +75,18 @@ export function AuthProvider({ children }) {
     await login(username, password, true);
   }, [login]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Best-effort: tell the backend to blacklist this refresh token so a
+    // stolen token from a "logged-out" device can't be used for 7 days.
+    // Don't await — slow logout would feel broken; fire-and-forget is fine
+    // because clearAuthTokens runs unconditionally below.
+    try {
+      const refresh = getRefreshToken();
+      if (refresh) {
+        const { default: api } = await import('../api/axios');
+        api.post('/auth/logout/', { refresh }).catch(() => {});
+      }
+    } catch { /* network or import error — local clear still runs */ }
     clearAuthTokens();
     clearCache();
     setCachedUser(null);
