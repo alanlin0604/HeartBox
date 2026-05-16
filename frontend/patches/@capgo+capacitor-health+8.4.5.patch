@@ -1,5 +1,5 @@
 diff --git a/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt b/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt
-index 8767de8..d2033fe 100644
+index 8767de8..c7ab943 100644
 --- a/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt
 +++ b/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt
 @@ -61,37 +61,62 @@ class HealthPlugin : Plugin() {
@@ -89,3 +89,56 @@ index 8767de8..d2033fe 100644
              }
          }
      }
+@@ -109,10 +134,24 @@ class HealthPlugin : Plugin() {
+         pendingWriteTypes = emptyList()
+         pendingIncludeWorkouts = false
+ 
++        // [HeartBox patch v2, 2026-05-16] — same coroutine-exception guard
++        // pattern as requestAuthorization above. Without this, the IPC call
++        // to manager.authorizationStatus() (which talks to the HC service
++        // again right after the system permission UI returns) can throw
++        // uncaught and SIGKILL the process. Symptom: HC permission dialog
++        // appears, user taps "Allow", app dies returning to home screen.
+         pluginScope.launch {
+-            val client = getClientOrReject(call) ?: return@launch
+-            val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
+-            call.resolve(status)
++            var stage = "STAGE_callback_init"
++            try {
++                stage = "STAGE_callback_getClient"
++                val client = getClientOrReject(call) ?: return@launch
++                stage = "STAGE_callback_authorizationStatus"
++                val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
++                call.resolve(status)
++            } catch (t: Throwable) {
++                val msg = "${stage}: ${t.javaClass.simpleName}: ${t.message ?: "(no message)"}"
++                call.reject(msg, null, if (t is Exception) t else null)
++            }
+         }
+     }
+ 
+@@ -132,10 +171,21 @@ class HealthPlugin : Plugin() {
+             return
+         }
+ 
++        // [HeartBox patch v2, 2026-05-16] — same guard as the other two
++        // entry points. checkAuthorization is called by JS-side
++        // `checkPermissions()` and goes through the same HC IPC path.
+         pluginScope.launch {
+-            val client = getClientOrReject(call) ?: return@launch
+-            val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
+-            call.resolve(status)
++            var stage = "STAGE_check_init"
++            try {
++                stage = "STAGE_check_getClient"
++                val client = getClientOrReject(call) ?: return@launch
++                stage = "STAGE_check_authorizationStatus"
++                val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
++                call.resolve(status)
++            } catch (t: Throwable) {
++                val msg = "${stage}: ${t.javaClass.simpleName}: ${t.message ?: "(no message)"}"
++                call.reject(msg, null, if (t is Exception) t else null)
++            }
+         }
+     }
+ 
