@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { clearAuthTokens, getAccessToken, getRefreshToken, setAccessToken, setRefreshToken } from '../utils/tokenStorage';
+import { dispatchCrisisShow } from '../context/CrisisBannerContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -45,6 +46,15 @@ api.interceptors.response.use(
       const key = `${res.config.method}:${res.config.baseURL}${res.config.url}${resParams}`;
       pendingGets.delete(key);
     }
+    // Crisis-keyword overlay: backend sets crisis_detected on note/community
+    // POST responses when self-harm phrases are detected. Surface the hotline
+    // banner globally so the user sees help regardless of which page they
+    // were on. Detection is best-effort; never throw from this interceptor.
+    try {
+      if (res.data && res.data.crisis_detected) {
+        dispatchCrisisShow(res.data.hotlines || {});
+      }
+    } catch { /* noop */ }
     return res;
   },
   async (error) => {

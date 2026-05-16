@@ -14,6 +14,17 @@ class CustomUser(AbstractUser):
     timezone = models.CharField(max_length=50, default='Asia/Taipei')
     onboarding_completed = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
+    # Captured at signup so we can prove (per GDPR Art. 7 / 台灣 PDPA §7)
+    # exactly when this user agreed to which version of ToS / Privacy.
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
+    # Self-declared "I am at least 13". Store as a boolean rather than DOB
+    # both to minimise PII and to mirror what we actually need (age-gate
+    # only — we do not personalise on date of birth).
+    age_confirmed_13_plus = models.BooleanField(default=False)
+    # 30-day grace period when the user requests account deletion. Filled
+    # by DeleteAccountView; a Celery beat task hard-deletes the row after
+    # this date. Null means "active account, no pending deletion".
+    deletion_scheduled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -929,7 +940,15 @@ class JournalStreak(models.Model):
     longest_streak = models.IntegerField(default=0, help_text='All-time best streak')
     last_entry_date = models.DateField(null=True, blank=True)
     total_entries = models.IntegerField(default=0)
+    # Grace tokens — using one bridges a single missed day so the streak
+    # survives. Topped up by a Celery beat at the start of each calendar
+    # month (capped at FREEZE_TOKEN_CAP). Refunded if the user back-fills
+    # the missed day via NoteDetailPage edit. See services/streaks.py.
+    freeze_tokens = models.IntegerField(default=1, help_text='Streak-freeze tokens available')
+    freeze_tokens_refilled_at = models.DateField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    FREEZE_TOKEN_CAP = 2  # max accumulation across months
 
     def __str__(self):
         return f'{self.user.username} — {self.current_streak} days (best: {self.longest_streak})'

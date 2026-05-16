@@ -70,8 +70,8 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
-  const registerUser = useCallback(async (username, email, password) => {
-    await apiRegister(username, email, password);
+  const registerUser = useCallback(async (username, email, password, consent = {}) => {
+    await apiRegister(username, email, password, consent);
     await login(username, password, true);
   }, [login]);
 

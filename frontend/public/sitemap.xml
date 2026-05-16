@@ -1,23 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://heartbox.tw/</loc>
-    <xhtml:link rel="alternate" hreflang="zh-Hant" href="https://heartbox.tw/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://heartbox.tw/" />
-    <xhtml:link rel="alternate" hreflang="ja" href="https://heartbox.tw/" />
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://heartbox.tw/login</loc>
+    <loc>https://heartbox.tw/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://heartbox.tw/register</loc>
+    <loc>https://heartbox.tw/faq</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://heartbox.tw/login</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://heartbox.tw/register</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://heartbox.tw/privacy</loc>
@@ -28,10 +34,5 @@
     <loc>https://heartbox.tw/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://heartbox.tw/pricing</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
   </url>
 </urlset>

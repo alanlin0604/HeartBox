@@ -794,16 +794,70 @@ export default function SettingsPage() {
 
           <div className="border-t border-[var(--card-border)]" />
 
+          {/* Data rights — required by GDPR / PDPA. Lets users grab everything
+              we hold on them before they decide to delete the account. */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">{t('settings.dataRights')}</h2>
+            <p className="text-sm text-slate-400">{t('settings.dataRightsDesc')}</p>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={`${import.meta.env.VITE_API_URL || '/api'}/auth/export/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary text-sm"
+              >
+                {t('settings.exportJson')}
+              </a>
+              <a
+                href={`${import.meta.env.VITE_API_URL || '/api'}/auth/export/csv/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary text-sm"
+              >
+                {t('settings.exportCsv')}
+              </a>
+            </div>
+          </div>
+
+          <div className="border-t border-[var(--card-border)]" />
+
           {/* Danger Zone - Delete Account */}
           <div className="space-y-3">
             <h2 className="text-lg font-semibold text-red-500">{t('settings.dangerZone')}</h2>
-            <p className="text-sm text-slate-400">{t('settings.deleteAccountDesc')}</p>
-            <button
-              onClick={() => setDeleteModalOpen(true)}
-              className="btn-danger"
-            >
-              {t('settings.deleteAccount')}
-            </button>
+            {user?.deletion_scheduled_at ? (
+              <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 space-y-2">
+                <p className="text-sm">
+                  {t('settings.deletionScheduled', {
+                    date: new Date(user.deletion_scheduled_at).toLocaleDateString(LOCALE_MAP[lang] || lang),
+                  })}
+                </p>
+                <button
+                  onClick={async () => {
+                    try {
+                      const { default: api } = await import('../api/axios')
+                      await api.post('/auth/delete-account/cancel/')
+                      toast?.success(t('settings.deletionCancelled'))
+                      window.location.reload()
+                    } catch {
+                      toast?.error(t('common.operationFailed'))
+                    }
+                  }}
+                  className="btn-secondary text-sm"
+                >
+                  {t('settings.cancelDeletion')}
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-slate-400">{t('settings.deleteAccountDesc')}</p>
+                <button
+                  onClick={() => setDeleteModalOpen(true)}
+                  className="btn-danger"
+                >
+                  {t('settings.deleteAccount')}
+                </button>
+              </>
+            )}
           </div>
         </Card>
       )}

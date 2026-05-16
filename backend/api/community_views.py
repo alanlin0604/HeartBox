@@ -111,10 +111,21 @@ class PublicPostViewSet(viewsets.ModelViewSet):
         except Exception:
             pass
 
-        return Response(
-            PublicPostSerializer(post, context={'request': request}).data,
-            status=status.HTTP_201_CREATED
-        )
+        body = PublicPostSerializer(post, context={'request': request}).data
+        # Crisis-keyword overlay on community posts. We don't block the
+        # post (forcing it underground harms more than helps) but we do
+        # surface hotline numbers in the same response so the author sees
+        # them immediately, and audit-log it for staff follow-up.
+        try:
+            from .services.crisis_detector import detect_crisis, crisis_response_payload
+            if detect_crisis(post.content):
+                body.update(crisis_response_payload())
+                from .services.audit import log_action
+                log_action(request.user, 'crisis_keyword_detected_community', request=request)
+        except Exception:
+            logger.exception('Crisis detector failure on community post create')
+
+        return Response(body, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
         """Delete own post (soft delete by setting is_active=False)."""

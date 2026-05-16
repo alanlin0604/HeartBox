@@ -8,6 +8,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { LanguageProvider } from './context/LanguageContext'
 import { ToastProvider } from './context/ToastContext'
+import { CrisisBannerProvider } from './context/CrisisBannerContext'
 import { initHealthService } from './services/healthKit'
 import './index.css'
 import App from './App.jsx'
@@ -44,7 +45,9 @@ createRoot(document.getElementById('root')).render(
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
-              <App />
+              <CrisisBannerProvider>
+                <App />
+              </CrisisBannerProvider>
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>

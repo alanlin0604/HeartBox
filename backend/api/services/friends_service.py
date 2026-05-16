@@ -89,6 +89,16 @@ def send_friend_request(from_user, to_user, message=''):
         message=f'{from_user.username} 想要加你為好友',
         data={'friend_request_id': request.id, 'from_user_id': from_user.id},
     )
+    try:
+        from api.views import send_push_notification
+        send_push_notification(
+            to_user,
+            'New friend request',
+            f'{from_user.username} wants to be friends.',
+            url='/friends',
+        )
+    except Exception:
+        pass
 
     return request
 
@@ -115,6 +125,16 @@ def accept_friend_request(request_id, user):
         message=f'{user.username} 接受了你的好友請求',
         data={'friend_id': user.id},
     )
+    try:
+        from api.views import send_push_notification
+        send_push_notification(
+            friend_request.from_user,
+            'Friend request accepted',
+            f'{user.username} accepted your friend request.',
+            url='/friends',
+        )
+    except Exception:
+        pass
 
     return friend_request
 

@@ -818,27 +818,42 @@ def _emit_unlock_notifications(user, achievement_ids):
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
             layer = get_channel_layer()
-            if layer is None:
-                continue
-            async_to_sync(layer.group_send)(
-                f'notifications_{user.id}',
-                {
-                    'type': 'notify',
-                    'data': {
-                        'id': notification.id,
-                        'type': notification.type,
-                        'title': notification.title,
-                        'message': notification.message,
-                        'data': notification.data,
-                        'is_read': False,
-                        'created_at': notification.created_at.isoformat(),
+            if layer is not None:
+                async_to_sync(layer.group_send)(
+                    f'notifications_{user.id}',
+                    {
+                        'type': 'notify',
+                        'data': {
+                            'id': notification.id,
+                            'type': notification.type,
+                            'title': notification.title,
+                            'message': notification.message,
+                            'data': notification.data,
+                            'is_read': False,
+                            'created_at': notification.created_at.isoformat(),
+                        },
                     },
-                },
-            )
+                )
         except Exception:
             import logging
             logging.getLogger(__name__).warning(
                 'Achievement notification fan-out failed user=%s aid=%s', user.id, aid,
+            )
+        # Also fire a web-push so users see the unlock when they're not
+        # actively in the tab. Wrapped in try so a missing VAPID key or a
+        # 410 from a stale subscription never blocks the achievement save.
+        try:
+            from api.views import send_push_notification
+            send_push_notification(
+                user,
+                'Achievement unlocked',
+                aid,
+                url='/achievements',
+            )
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning(
+                'Achievement push failed user=%s aid=%s', user.id, aid,
             )
 
 

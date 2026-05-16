@@ -25,6 +25,8 @@ export default function RegisterPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [emailTouched, setEmailTouched] = useState(false)
+  const [acceptsTerms, setAcceptsTerms] = useState(false)
+  const [age13Plus, setAge13Plus] = useState(false)
   const emailValid = !email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const googleBtnRef = useRef(null)
   const googleCallbackRef = useRef()
@@ -74,9 +76,15 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    if (!acceptsTerms || !age13Plus) {
+      // Browser would already have blocked via `required`, but guard
+      // here too so misconfigured browsers / a11y tools don't bypass.
+      setError(t('register.consentRequired'))
+      return
+    }
     setLoading(true)
     try {
-      await register(username, email, password)
+      await register(username, email, password, { acceptsTerms, age13Plus })
       toast?.success(t('register.success'))
     } catch (err) {
       const data = err.response?.data
@@ -184,7 +192,32 @@ export default function RegisterPage() {
             minLength={8}
             showStrength
           />
-          <Button type="submit" disabled={loading} loading={loading} fullWidth>
+          <label className="flex items-start gap-2 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptsTerms}
+              onChange={(e) => setAcceptsTerms(e.target.checked)}
+              required
+              className="mt-0.5"
+            />
+            <span className="opacity-80">
+              {t('register.acceptTermsPrefix')}{' '}
+              <Link to="/terms" target="_blank" className="text-orange-500 underline">{t('legal.terms')}</Link>
+              {' '}{t('register.acceptTermsAnd')}{' '}
+              <Link to="/privacy" target="_blank" className="text-orange-500 underline">{t('legal.privacy')}</Link>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={age13Plus}
+              onChange={(e) => setAge13Plus(e.target.checked)}
+              required
+              className="mt-0.5"
+            />
+            <span className="opacity-80">{t('register.age13Confirm')}</span>
+          </label>
+          <Button type="submit" disabled={loading || !acceptsTerms || !age13Plus} loading={loading} fullWidth>
             {loading ? t('register.loading') : t('register.submit')}
           </Button>
         </form>

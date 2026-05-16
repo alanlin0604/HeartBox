@@ -115,6 +115,7 @@ from .ai_chat import (  # noqa: E402
     AIChatSessionListCreateView,
 )
 from .auth import (  # noqa: E402
+    CancelAccountDeletionView,
     DeleteAccountView,
     ForgotPasswordView,
     GoogleLoginCallbackView,
@@ -272,7 +273,7 @@ _UNDOCUMENTED_VIEWS = [
     'BookingUserCancelView', 'CalendarView', 'ConversationCreateView',
     'ConversationDeleteView', 'CounselorReviewCreateView', 'DailyPromptView',
     'DailySleepView', 'DashboardLayoutResetView', 'DashboardLayoutView',
-    'DashboardWidgetDataView', 'DeleteAccountView', 'DeleteCommentView',
+    'CancelAccountDeletionView', 'DashboardWidgetDataView', 'DeleteAccountView', 'DeleteCommentView',
     'ExportCSVView', 'ExportDataView', 'ExportPDFView',
     'ForgotPasswordView', 'FriendActivityView', 'FriendRequestCreateView',
     'GoogleLoginCallbackView', 'HabitAnalyticsView', 'HealthSummaryView',

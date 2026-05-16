@@ -169,11 +169,25 @@ class AccountManagementTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_delete_account_success(self):
+        """Delete now schedules a 30-day grace period rather than hard-deleting."""
         resp = self.client.post('/api/auth/delete-account/', {
             'password': 'DelPass123!'
         }, format='json')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertFalse(CustomUser.objects.filter(username='deluser').exists())
+        # User row remains during the grace period.
+        user = CustomUser.objects.filter(username='deluser').first()
+        self.assertIsNotNone(user)
+        self.assertIsNotNone(user.deletion_scheduled_at)
+
+    def test_cancel_account_deletion(self):
+        """POST /auth/delete-account/cancel/ undoes a pending deletion."""
+        # Schedule a deletion first.
+        self.client.post('/api/auth/delete-account/', {'password': 'DelPass123!'}, format='json')
+        # Then cancel it.
+        resp = self.client.post('/api/auth/delete-account/cancel/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        user = CustomUser.objects.get(username='deluser')
+        self.assertIsNone(user.deletion_scheduled_at)
 
     def test_export_data(self):
         # Create a note first
@@ -350,9 +364,31 @@ class ThrottleTests(APITestCase):
     def test_register_throttle(self):
         """Verify register endpoint has throttle."""
         resp = self.client.post('/api/auth/register/', {
-            'username': 'throttle_test', 'email': 'throttle@test.com', 'password': 'TestPass123!'
+            'username': 'throttle_test', 'email': 'throttle@test.com', 'password': 'TestPass123!',
+            'accepts_terms': True, 'age_confirmed_13_plus': True,
         }, format='json')
         self.assertIn(resp.status_code, [status.HTTP_201_CREATED, status.HTTP_429_TOO_MANY_REQUESTS])
+
+    def test_register_requires_terms_and_age(self):
+        """Both consent gates must be true."""
+        # Missing terms
+        resp = self.client.post('/api/auth/register/', {
+            'username': 'no_terms', 'email': 'nt@test.com', 'password': 'TestPass123!',
+            'age_confirmed_13_plus': True,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        # Missing age
+        resp = self.client.post('/api/auth/register/', {
+            'username': 'no_age', 'email': 'na@test.com', 'password': 'TestPass123!',
+            'accepts_terms': True,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        # Explicitly false (e.g. user under 13)
+        resp = self.client.post('/api/auth/register/', {
+            'username': 'under_13', 'email': 'u13@test.com', 'password': 'TestPass123!',
+            'accepts_terms': True, 'age_confirmed_13_plus': False,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
 
 class CounselorFlowTests(APITestCase):

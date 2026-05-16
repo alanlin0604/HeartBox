@@ -42,6 +42,7 @@ from .views import (
     HealthSyncView,
     JournalStreakView,
     QuoteActionView,
+    CancelAccountDeletionView,
     CounselorApplyView,
     CounselorListView,
     CounselorMyProfileView,
@@ -154,6 +155,7 @@ urlpatterns = [
     path('auth/password/reset/', ResetPasswordView.as_view(), name='password-reset'),
     path('auth/logout-other-devices/', LogoutOtherDevicesView.as_view(), name='logout-other-devices'),
     path('auth/delete-account/', DeleteAccountView.as_view(), name='delete-account'),
+    path('auth/delete-account/cancel/', CancelAccountDeletionView.as_view(), name='delete-account-cancel'),
     path('auth/export/', ExportDataView.as_view(), name='export-data'),
     path('auth/export/csv/', ExportCSVView.as_view(), name='export-csv'),
     # Analytics

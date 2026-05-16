@@ -102,6 +102,17 @@ def generate_weekly_summaries(self):
                     title='Weekly Summary Ready',
                     message=f'Your weekly summary for {prev_week_start} is ready.',
                 )
+                # Also send a web-push so the user knows even outside the app.
+                try:
+                    from api.views import send_push_notification
+                    send_push_notification(
+                        user,
+                        'Weekly summary ready',
+                        f'Your week of {prev_week_start} is ready.',
+                        url='/weekly-summary',
+                    )
+                except Exception:
+                    logger.warning('Weekly summary push failed for user=%s', user.id)
 
             created_count += 1
     except Exception as exc:
@@ -198,6 +209,47 @@ def send_due_habit_reminders(self):
     if fired:
         logger.info('send_due_habit_reminders fired %d reminders', fired)
     return fired
+
+
+@shared_task
+def refill_streak_freeze_tokens():
+    """Monthly Celery beat — give every user one freeze token, capped.
+
+    Schedule (in celery beat config): 0 0 1 * * (1st of each month UTC).
+    Iterates with ``.iterator()`` so a large user table doesn't OOM the
+    worker; refill_freeze_tokens() is idempotent within the same month so
+    accidental re-runs are safe.
+    """
+    from django.contrib.auth import get_user_model
+    from api.services.streaks import refill_freeze_tokens
+    User = get_user_model()
+    refilled = 0
+    for user in User.objects.filter(is_active=True).iterator(chunk_size=200):
+        try:
+            refill_freeze_tokens(user)
+            refilled += 1
+        except Exception:
+            logger.exception('refill_freeze_tokens failed for user=%s', user.id)
+    logger.info('refill_streak_freeze_tokens processed %d users', refilled)
+    return refilled
+
+
+@shared_task
+def hard_delete_scheduled_accounts():
+    """Daily Celery beat — permanently delete users whose 30-day grace
+    period has expired (see DeleteAccountView). Fires at 03:00 UTC by
+    convention so it runs during low-traffic hours.
+    """
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone as tz
+    User = get_user_model()
+    cutoff = tz.now()
+    qs = User.objects.filter(deletion_scheduled_at__lte=cutoff, deletion_scheduled_at__isnull=False)
+    n = qs.count()
+    qs.delete()
+    if n:
+        logger.info('hard_delete_scheduled_accounts removed %d users', n)
+    return n
 
 
 @shared_task(bind=True)

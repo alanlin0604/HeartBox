@@ -124,6 +124,12 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="text-center py-8 mt-auto border-t border-[var(--border-primary)]">
         <div className="flex flex-wrap justify-center gap-6 mb-4 text-sm text-[var(--text-tertiary)]">
+          <Link to="/about" className="hover:text-[var(--color-primary-400)] transition-colors">
+            {t('about.title')}
+          </Link>
+          <Link to="/faq" className="hover:text-[var(--color-primary-400)] transition-colors">
+            {t('faq.title')}
+          </Link>
           <Link to="/privacy" className="hover:text-[var(--color-primary-400)] transition-colors">
             {t('legal.privacy')}
           </Link>

@@ -3,8 +3,14 @@ import api from './axios';
 export const login = (username, password) =>
   api.post('/auth/login/', { username, password });
 
-export const register = (username, email, password) =>
-  api.post('/auth/register/', { username, email, password });
+export const register = (username, email, password, consent = {}) =>
+  api.post('/auth/register/', {
+    username,
+    email,
+    password,
+    accepts_terms: !!consent.acceptsTerms,
+    age_confirmed_13_plus: !!consent.age13Plus,
+  });
 
 export const getProfile = () => api.get('/auth/profile/');
 

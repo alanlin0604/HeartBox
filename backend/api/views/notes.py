@@ -170,6 +170,19 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
             response['X-New-Achievements'] = ','.join(self._new_achievements)
         if self._streak_milestone:
             response['X-Streak-Milestone'] = self._streak_milestone['id']
+        # Crisis-keyword detection. We do NOT block the save — note stays
+        # written exactly as the user wrote it, but the response carries a
+        # flag the frontend uses to overlay a hotline banner. A staff-only
+        # audit log entry also lands so we can follow up if needed.
+        try:
+            from api.services.crisis_detector import detect_crisis, crisis_response_payload
+            text = str(request.data.get('content', '') or '')
+            if detect_crisis(text) and response.data:
+                response.data.update(crisis_response_payload())
+                from api.services.audit import log_action
+                log_action(request.user, 'crisis_keyword_detected_note', request=request)
+        except Exception:
+            logger.exception('Crisis detector failure on note create')
         return response
 
     @action(detail=True, methods=['post'])

@@ -23,13 +23,38 @@ User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    # Required at signup time so we can prove consent under GDPR/PDPA and
+    # satisfy Play Console age-gate for a 13+ rated mental-health app.
+    # Neither field is exposed on read.
+    accepts_terms = serializers.BooleanField(write_only=True, required=True)
+    age_confirmed_13_plus = serializers.BooleanField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'password')
+        fields = (
+            'id', 'username', 'email', 'password',
+            'accepts_terms', 'age_confirmed_13_plus',
+        )
+
+    def validate_accepts_terms(self, value):
+        if not value:
+            raise serializers.ValidationError('terms_required')
+        return value
+
+    def validate_age_confirmed_13_plus(self, value):
+        if not value:
+            raise serializers.ValidationError('age_gate_required')
+        return value
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        from django.utils import timezone
+        validated_data.pop('accepts_terms', None)
+        age_ok = validated_data.pop('age_confirmed_13_plus', False)
+        user = User.objects.create_user(**validated_data)
+        user.terms_accepted_at = timezone.now()
+        user.age_confirmed_13_plus = age_ok
+        user.save(update_fields=['terms_accepted_at', 'age_confirmed_13_plus'])
+        return user
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -41,8 +66,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'bio', 'avatar', 'is_counselor', 'is_staff', 'timezone', 'onboarding_completed', 'email_verified', 'created_at', 'updated_at')
-        read_only_fields = ('id', 'username', 'is_staff', 'email_verified', 'created_at', 'updated_at')
+        fields = (
+            'id', 'username', 'email', 'bio', 'avatar', 'is_counselor', 'is_staff',
+            'timezone', 'onboarding_completed', 'email_verified',
+            'deletion_scheduled_at', 'created_at', 'updated_at',
+        )
+        read_only_fields = (
+            'id', 'username', 'is_staff', 'email_verified',
+            'deletion_scheduled_at', 'created_at', 'updated_at',
+        )
 
     def get_is_counselor(self, obj) -> bool:
         return hasattr(obj, 'counselor_profile') and obj.counselor_profile.is_approved

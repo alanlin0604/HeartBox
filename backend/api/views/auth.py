@@ -298,6 +298,12 @@ class LoginView(TokenObtainPairView):
             )
             raise
         user = serializer.user
+        # Auto-cancel a pending account deletion the moment the user logs
+        # back in. The user has clearly changed their mind — they're back.
+        if user.deletion_scheduled_at:
+            user.deletion_scheduled_at = None
+            user.save(update_fields=['deletion_scheduled_at'])
+            log_action(user, 'account_delete_cancel_on_login', request=request)
         # Check for 2FA
         try:
             totp_device = user.totp_device
@@ -467,19 +473,53 @@ class LogoutOtherDevicesView(APIView):
 
 
 class DeleteAccountView(APIView):
-    """Permanently delete user account and all related data."""
+    """Schedule account deletion 30 days in the future.
+
+    The grace period gives users a safety net against impulsive clicks
+    and matches the "cooling-off" pattern Play Store / GDPR auditors
+    look for. A Celery beat (api.tasks.hard_delete_scheduled_accounts)
+    permanently removes scheduled users once their deletion_scheduled_at
+    has passed. Logging back in any time before then implicitly cancels
+    the deletion via LoginView (see below) — the user keeps everything.
+    """
+    DELETION_GRACE_DAYS = 30
     throttle_classes = [DeleteAccountThrottle]
 
     @transaction.atomic
     def post(self, request):
+        from datetime import timedelta
+        from django.utils import timezone as tz
+
         password = request.data.get('password', '')
         if not password:
             return error_response('password_required', 'Password is required.')
         if not request.user.check_password(password):
             return error_response('incorrect_password', 'Incorrect password.')
+        scheduled = tz.now() + timedelta(days=self.DELETION_GRACE_DAYS)
+        request.user.deletion_scheduled_at = scheduled
+        request.user.save(update_fields=['deletion_scheduled_at'])
         log_action(request.user, 'account_delete', request)
-        request.user.delete()
-        return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+        return Response(
+            {'status': 'scheduled', 'deletion_scheduled_at': scheduled.isoformat()},
+            status=status.HTTP_200_OK,
+        )
+
+
+class CancelAccountDeletionView(APIView):
+    """POST /api/auth/delete-account/cancel/ — undo a scheduled deletion.
+
+    Available only while ``deletion_scheduled_at`` is still in the future.
+    Clears the field and audits the cancellation.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if not request.user.deletion_scheduled_at:
+            return Response({'status': 'no_pending_deletion'})
+        request.user.deletion_scheduled_at = None
+        request.user.save(update_fields=['deletion_scheduled_at'])
+        log_action(request.user, 'account_delete_cancel', request=request)
+        return Response({'status': 'ok'})
 
 
 class VerifyEmailView(APIView):

@@ -8,6 +8,7 @@ import LoadingSpinner from './components/LoadingSpinner'
 import PageTransition from './components/PageTransition'
 import OfflineIndicator from './components/OfflineIndicator'
 import VersionBadge from './components/VersionBadge'
+import CrisisBanner from './components/CrisisBanner'
 
 // All page modules are code-split. Logged-in users land on JournalPage (or whatever
 // authed route they hit) and never download the auth/legal pages; first-time visitors
@@ -18,6 +19,8 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const TermsPage = lazy(() => import('./pages/TermsPage'))
+const AboutPage = lazy(() => import('./pages/AboutPage'))
+const FaqPage = lazy(() => import('./pages/FaqPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const JournalPage = lazy(() => import('./pages/JournalPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
@@ -83,6 +86,7 @@ export default function App() {
     <>
       <OfflineIndicator />
       <VersionBadge />
+      <CrisisBanner />
       <ErrorBoundary key={location.pathname}>
       <AnimatePresence mode="wait" initial={false}>
         <Routes location={location} key={location.pathname}>
@@ -92,6 +96,8 @@ export default function App() {
           <Route path="/reset-password" element={<LazyRoute><PageTransition><ResetPasswordPage /></PageTransition></LazyRoute>} />
           <Route path="/privacy" element={<LazyRoute><PageTransition><PrivacyPage /></PageTransition></LazyRoute>} />
           <Route path="/terms" element={<LazyRoute><PageTransition><TermsPage /></PageTransition></LazyRoute>} />
+          <Route path="/about" element={<LazyRoute><PageTransition><AboutPage /></PageTransition></LazyRoute>} />
+          <Route path="/faq" element={<LazyRoute><PageTransition><FaqPage /></PageTransition></LazyRoute>} />
           {/* Public therapist report (no auth required) */}
           <Route path="/report/:token" element={<LazyRoute><PageTransition><TherapistReportPublicPage /></PageTransition></LazyRoute>} />
           <Route path="/verify-email" element={<LazyRoute><PageTransition><VerifyEmailPage /></PageTransition></LazyRoute>} />
