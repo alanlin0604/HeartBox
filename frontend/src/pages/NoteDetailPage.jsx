@@ -156,8 +156,9 @@ export default function NoteDetailPage() {
             <MoodBadge score={note.sentiment_score} />
             <button
               onClick={handleTogglePin}
-              className={`text-xs px-2 py-1 rounded-lg border cursor-pointer transition-colors ${note.is_pinned ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-500' : 'border-white/10 opacity-60 hover:opacity-100'}`}
+              className={`text-sm px-3 py-2 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border cursor-pointer transition-colors ${note.is_pinned ? 'bg-yellow-500/20 border-yellow-500/40 text-yellow-500' : 'border-white/10 opacity-60 hover:opacity-100'}`}
               title={note.is_pinned ? t('noteDetail.unpin') : t('noteDetail.pin')}
+              aria-label={note.is_pinned ? t('noteDetail.unpin') : t('noteDetail.pin')}
             >
               📌
             </button>

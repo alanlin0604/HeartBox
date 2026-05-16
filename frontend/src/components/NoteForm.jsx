@@ -404,18 +404,18 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
               + {t('noteForm.saveTemplate')}
             </button>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <input
                 type="text"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 placeholder={t('noteForm.templateNamePlaceholder')}
-                className="glass-input text-xs py-1 px-2 w-36"
+                className="glass-input text-sm py-2 px-3 w-40 sm:w-48"
                 autoFocus
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveTemplate() } }}
               />
-              <button type="button" onClick={saveTemplate} className="text-xs text-orange-400 hover:text-orange-300 cursor-pointer">{t('common.save')}</button>
-              <button type="button" onClick={() => { setShowSaveTemplate(false); setTemplateName('') }} className="text-xs opacity-50 hover:opacity-100 cursor-pointer">{t('common.cancel')}</button>
+              <button type="button" onClick={saveTemplate} className="text-sm text-orange-400 hover:text-orange-300 cursor-pointer px-2 py-1.5">{t('common.save')}</button>
+              <button type="button" onClick={() => { setShowSaveTemplate(false); setTemplateName('') }} className="text-sm opacity-50 hover:opacity-100 cursor-pointer px-2 py-1.5">{t('common.cancel')}</button>
             </div>
           )}
         </div>
@@ -534,7 +534,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); removeFile(idx) }}
-                className="text-red-500 hover:text-red-400 cursor-pointer"
+                className="text-red-500 hover:text-red-400 cursor-pointer p-1 -m-1 leading-none text-lg"
                 aria-label={t('aria.removeFile') || 'Remove file'}
               >
                 &times;

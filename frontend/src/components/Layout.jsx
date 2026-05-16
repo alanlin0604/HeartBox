@@ -256,7 +256,7 @@ export default function Layout() {
           <NotificationBell />
           <button
             onClick={() => setMobileNavOpen(!mobileNavOpen)}
-            className="opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+            className="opacity-70 hover:opacity-100 transition-opacity cursor-pointer p-2 -mr-2"
             aria-label={t('aria.toggleMenu')}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -533,7 +533,7 @@ export default function Layout() {
         </div>
       )}
 
-      <main id="main-content" className={`flex-1 flex flex-col p-4 pb-20 md:pb-4 max-w-6xl mx-auto w-full ${isChatRoute ? 'min-h-0' : ''}`}>
+      <main id="main-content" className={`flex-1 flex flex-col p-4 max-w-6xl mx-auto w-full ${isChatRoute ? 'min-h-0' : 'main-pb-safe-bottom'}`}>
         <Outlet />
       </main>
 
@@ -564,7 +564,7 @@ export default function Layout() {
               <span>{t('nav.more')}</span>
             </button>
             {moreOpen && (
-              <div className="absolute bottom-full right-0 mb-2 w-48 rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)] py-2">
+              <div className="absolute bottom-full right-0 mb-2 w-48 rounded-xl shadow-xl z-50 border border-[var(--card-border)] bg-[var(--tooltip-bg)] py-2 max-h-[60vh] overflow-y-auto">
                 {moreNavLinks.map((link) => (
                   <NavLink
                     key={link.to}

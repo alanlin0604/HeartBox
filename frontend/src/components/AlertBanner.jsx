@@ -63,7 +63,7 @@ export default memo(function AlertBanner() {
             </div>
             <button
               onClick={() => setDismissed([...dismissed, i])}
-              className="text-sm opacity-50 hover:opacity-100"
+              className="text-sm opacity-50 hover:opacity-100 p-2 -m-2"
               aria-label={t('aria.dismiss')}
             >
               ✕

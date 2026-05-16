@@ -397,7 +397,8 @@ export default function JournalPage() {
                         type="checkbox"
                         checked={selected.has(note.id)}
                         onChange={() => toggleSelect(note.id)}
-                        className="mt-4 w-4 h-4 accent-orange-500 cursor-pointer flex-shrink-0"
+                        className="mt-4 w-5 h-5 accent-orange-500 cursor-pointer flex-shrink-0"
+                        aria-label="Select note"
                       />
                     )}
                     <div className="flex-1 min-w-0 relative" onContextMenu={(e) => handleContextMenu(e, note.id)}>

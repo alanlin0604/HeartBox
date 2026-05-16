@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
@@ -15,6 +15,7 @@ import { getLastHealthBreadcrumbs, clearHealthBreadcrumbs, _crumb as crumb } fro
 import { Card, Button, Input } from '../components/ui'
 export default function SettingsPage() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { user, refreshUser } = useAuth()
   const { t, lang } = useLang()
   const { theme } = useTheme()
@@ -484,6 +485,32 @@ export default function SettingsPage() {
                 </label>
               )
             })}
+          </div>
+
+          <div className="border-t border-[var(--card-border)]" />
+
+          {/* App tour / onboarding replay */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">{t('settings.appTour')}</h2>
+            <p className="text-sm text-slate-400">{t('settings.appTourDesc')}</p>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await updateProfile({ onboarding_completed: false })
+                  await refreshUser()
+                  toast?.success(t('settings.appTourStarted'))
+                  // Navigate home — Layout watches user.onboarding_completed
+                  // and renders OnboardingModal automatically when it's false.
+                  navigate('/')
+                } catch {
+                  toast?.error(t('common.operationFailed'))
+                }
+              }}
+              className="btn-secondary text-sm"
+            >
+              👋 {t('settings.replayTour')}
+            </button>
           </div>
 
           <div className="border-t border-[var(--card-border)]" />

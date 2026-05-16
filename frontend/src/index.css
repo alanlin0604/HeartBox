@@ -241,7 +241,11 @@ h4, h5, h6 {
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   padding: var(--space-3) var(--space-4);
-  font-size: var(--text-base);
+  /* Floor at 16px so iOS Safari doesn't auto-zoom when an input is focused
+     — applies even when the user picks the "Small" font scale (which sets
+     html font-size to 14px and would otherwise drop var(--text-base) below
+     the trigger threshold). Honours Large font scale via the max(). */
+  font-size: max(16px, var(--text-base));
   font-family: var(--font-primary);
   width: 100%;
   outline: none;
@@ -491,6 +495,19 @@ textarea:focus-visible {
 
 .safe-area-top {
   padding-top: max(env(safe-area-inset-top), 0.5rem);
+}
+
+/* Bottom padding for <main> on mobile when the fixed bottom nav is shown.
+   Previously hard-coded as Tailwind `pb-20` (80px) which is fine for stock
+   Android but cuts off the last card by ~30px on iPhone (safe-area-inset-bottom
+   adds another 34px under the home indicator). Calc handles both cases. */
+.main-pb-safe-bottom {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .main-pb-safe-bottom {
+    padding-bottom: 1rem; /* desktop has no bottom nav */
+  }
 }
 
 .safe-area-left {
