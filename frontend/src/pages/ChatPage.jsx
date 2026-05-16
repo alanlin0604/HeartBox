@@ -278,7 +278,8 @@ export default function ChatPage() {
     try {
       await deleteConversation(id)
       toast?.success(t('chat.deleted'))
-      navigate('/counselors?tab=chats')
+      // /counselors hidden pre-launch — go home instead.
+      navigate('/')
     } catch {
       toast?.error(t('common.operationFailed'))
     } finally {
@@ -294,7 +295,7 @@ export default function ChatPage() {
       {/* Header */}
       <div className="glass p-4 flex items-center gap-3 mb-4 shrink-0">
         <button
-          onClick={() => navigate('/counselors')}
+          onClick={() => navigate('/')}
           className="opacity-60 hover:opacity-100 transition-opacity cursor-pointer text-lg"
         >
           &larr; {t('chat.back')}

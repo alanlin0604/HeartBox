@@ -1,3 +1,8 @@
+// =============================================================================
+// HIDDEN PRE-LAUNCH — Not imported anywhere. /counselors route redirects to /.
+// Kept on disk for fast restoration when the counselor feature ships.
+// Re-enable steps: see TODO.md section "諮商師功能反向恢復計畫".
+// =============================================================================
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import {

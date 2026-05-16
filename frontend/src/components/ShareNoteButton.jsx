@@ -1,3 +1,5 @@
+// HIDDEN PRE-LAUNCH — Was rendered by NoteDetailPage (now commented out). Kept
+// for fast restoration; see TODO.md "諮商師功能反向恢復計畫".
 import { useEffect, useState } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { shareNote } from '../api/notes'

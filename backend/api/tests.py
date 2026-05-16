@@ -934,11 +934,19 @@ class AchievementTests(APITestCase):
         )
 
     def test_get_achievements_returns_progress(self):
-        """GET /achievements/ should return all defined achievements with progress."""
+        """GET /achievements/ should return all visible achievements with progress.
+
+        Achievements marked hidden=True (counselor-coupled pre-launch) are
+        filtered out for users who haven't unlocked them — re-add them to
+        the count when /counselors ships and the hidden flag is removed.
+        """
         from api.services.achievements import ACHIEVEMENT_DEFINITIONS
+        visible_count = sum(
+            1 for defn in ACHIEVEMENT_DEFINITIONS.values() if not defn.get('hidden')
+        )
         resp = self.client.get('/api/achievements/')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(resp.data), len(ACHIEVEMENT_DEFINITIONS))
+        self.assertEqual(len(resp.data), visible_count)
         # Check structure of first item
         item = resp.data[0]
         self.assertIn('id', item)

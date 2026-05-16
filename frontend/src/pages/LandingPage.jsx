@@ -14,7 +14,8 @@ export default function LandingPage() {
     { icon: '/icons/AI 聊天.webp', titleKey: 'landing.featureAI', descKey: 'landing.featureAIDesc' },
     { icon: '/icons/心情週報月報.webp', titleKey: 'landing.featureAnalytics', descKey: 'landing.featureAnalyticsDesc' },
     { icon: '/icons/呼吸與冥想.webp', titleKey: 'landing.featureBreathe', descKey: 'landing.featureBreatheDesc' },
-    { icon: '/icons/諮商師.webp', titleKey: 'landing.featureCounselor', descKey: 'landing.featureCounselorDesc' },
+    // Counselor feature hidden pre-launch — re-enable with /counselors.
+    // { icon: '/icons/諮商師.webp', titleKey: 'landing.featureCounselor', descKey: 'landing.featureCounselorDesc' },
     { icon: '/icons/問卷評估.webp', titleKey: 'landing.featureAssessment', descKey: 'landing.featureAssessmentDesc' },
   ]
 

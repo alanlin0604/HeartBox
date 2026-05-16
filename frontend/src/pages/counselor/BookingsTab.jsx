@@ -1,3 +1,5 @@
+// HIDDEN PRE-LAUNCH — Sub-tab of CounselorListPage (also hidden). Re-enable
+// via TODO.md "諮商師功能反向恢復計畫".
 import EmptyState from '../../components/EmptyState'
 
 export default function BookingsTab({

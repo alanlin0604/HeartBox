@@ -65,7 +65,8 @@ Set in frontend host (if not using proxy):
 ## 5. Post-deploy Smoke Checks
 - Login/register works with remember-me on/off.
 - Password reset email arrives and reset link works.
-- Avatar upload displays in top nav/chat/counselor list.
+- Avatar upload displays in top nav and chat header/messages.
+  <!-- Counselor list avatar check hidden pre-launch — re-enable with /counselors. -->
 - Logout other devices invalidates previous sessions.
 - Notifications and chat WebSocket connect over `wss://`.
 - PWA install prompt appears on supported browsers.

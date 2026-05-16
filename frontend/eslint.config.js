@@ -11,7 +11,14 @@ export default defineConfig([
     'android',
     'ios',
     '*.config.js',
+    // One-off Node CLI utilities for icon prep — not part of the app bundle,
+    // run with `node <file>.js`. Don't lint with browser globals.
     'add-padding.js',
+    'center-icon.js',
+    'crop-heart-only.js',
+    'fix-icon.js',
+    'recenter-icon.js',
+    'resize-icon.js',
     'scripts/**',
   ]),
   {

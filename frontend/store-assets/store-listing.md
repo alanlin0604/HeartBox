@@ -52,10 +52,6 @@ HeartBox 心事盒——一款專為現代人設計的私密 AI 心情日記。
 - 內建呼吸練習計時器
 - 多種冥想技巧引導
 
-👨‍⚕️ 諮商師媒合
-- 瀏覽合格諮商師
-- 線上預約、行事曆整合
-
 🔐 隱私至上
 - 端對端加密
 - 兩步驟驗證（2FA）
@@ -117,10 +113,6 @@ Every journal entry is end-to-end encrypted with AES-CBC + HMAC-SHA256 (Fernet).
 - Built-in breathing exercise timer
 - Multiple guided meditation techniques
 
-👨‍⚕️ Counselor Matching
-- Browse certified counselors
-- Online booking with calendar integration
-
 🔐 Privacy First
 - End-to-end encryption
 - Two-factor authentication (2FA)
@@ -181,10 +173,6 @@ HeartBox（ハートボックス）— 現代を生きるあなたのための�
 🧘 呼吸・瞑想
 - 呼吸エクササイズタイマー内蔵
 - 複数のガイド付き瞑想テクニック
-
-👨‍⚕️ カウンセラーマッチング
-- 認定カウンセラーを検索
-- オンライン予約・カレンダー連携
 
 🔐 プライバシー第一
 - 端末間暗号化

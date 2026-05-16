@@ -1,6 +1,10 @@
 # HeartBox 系統開發元件總覽
 
-*Last updated: 2026-02-20*
+*Last updated: 2026-05-16*
+
+> **Pre-launch 狀態（2026-05-16）：** 標示為「[HIDDEN]」的元件已被路由/UI 隱藏，
+> 檔案保留在 codebase 內以便日後快速恢復。重啟步驟見
+> [TODO.md](../TODO.md) 「諮商師功能反向恢復計畫」。
 
 ---
 
@@ -20,8 +24,8 @@
 | 筆記詳情 | `NoteDetailPage.jsx` | 單篇筆記檢視/編輯、情緒分析、分享、釘選 |
 | 儀表板 | `DashboardPage.jsx` | 情緒趨勢、壓力雷達、日曆熱圖、年度像素、課程推薦 |
 | 週報 | `WeeklySummaryPage.jsx` | AI 生成的每週情緒摘要 |
-| 諮商師列表 | `CounselorListPage.jsx` | 瀏覽諮商師、申請成為諮商師、排程管理 |
-| 即時聊天 | `ChatPage.jsx` | 與諮商師即時通訊、報價功能 |
+| 諮商師列表 `[HIDDEN]` | `CounselorListPage.jsx` | 瀏覽諮商師、申請成為諮商師、排程管理 — pre-launch 已隱藏 |
+| 即時聊天 | `ChatPage.jsx` | 即時通訊、報價功能（諮商師流程上線前路由可達但無入口） |
 | AI 聊天 | `AIChatPage.jsx` | 多會話 AI 助手、歷史對話管理 |
 | 心理文章 | `PsychoContentPage.jsx` | 教育文章瀏覽（Markdown 渲染） |
 | 課程詳情 | `CourseDetailPage.jsx` | 線上課程內容與進度 |
@@ -30,7 +34,7 @@
 | 自我評估 | `AssessmentsPage.jsx` | PHQ-9、GAD-7 量表 + 分數圖表 |
 | 設定 | `SettingsPage.jsx` | 個人資料、主題/語言、密碼、匯出、刪除帳號 |
 | 成就 | `AchievementsPage.jsx` | 成就徽章系統（6 大類 30 項） |
-| 管理後台 | `AdminPage.jsx` | 用戶統計、用戶管理、諮商師審核、回饋檢視 |
+| 管理後台 | `AdminPage.jsx` | 用戶統計、用戶管理、回饋檢視（諮商師審核 Tab pre-launch 已隱藏） |
 | 功能導覽 | `GuidePage.jsx` | 功能介紹頁面 |
 | 隱私政策 | `PrivacyPage.jsx` | 隱私權條款 |
 | 服務條款 | `TermsPage.jsx` | 使用條款 |
@@ -57,10 +61,10 @@
 | | `EmptyState.jsx` | 空狀態 UI |
 | | `ErrorBoundary.jsx` | 錯誤邊界 + 回報後端 |
 | **功能** | `ExportPDFButton.jsx` | 匯出 PDF/CSV（日期範圍選擇） |
-| | `ShareNoteButton.jsx` | 分享筆記給諮商師 |
+| | `ShareNoteButton.jsx` `[HIDDEN]` | 分享筆記給諮商師 — pre-launch 已隱藏 |
 | | `FeedbackWidget.jsx` | 星級評分 + 文字回饋 |
-| | `BookingPanel.jsx` | 諮商預約 UI（日期/時段/價格） |
-| | `ScheduleManager.jsx` | 諮商師排班管理 |
+| | `BookingPanel.jsx` `[HIDDEN]` | 諮商預約 UI — pre-launch 已隱藏 |
+| | `ScheduleManager.jsx` `[HIDDEN]` | 諮商師排班管理 — pre-launch 已隱藏 |
 | | `PasswordField.jsx` | 密碼輸入（強度指示器） |
 | **載入** | `LoadingSpinner.jsx` | 載入指示器 |
 | | `SkeletonCard.jsx` / `Skeleton.jsx` | 骨架屏載入動畫 |
@@ -85,8 +89,8 @@
 | `cache.js` | 客戶端 TTL 快取、前綴清除 |
 | `notifications.js` | 通知查詢、已讀標記 |
 | `aiChat.js` | AI 聊天 Session/Message CRUD |
-| `counselors.js` | 諮商師列表、申請、對話、訊息 |
-| `schedule.js` | 時段管理、可用時段查詢、預約 |
+| `counselors.js` `[PARTIAL HIDDEN]` | Chat 相關 6 個 export 仍被 ChatPage 用；其他 counselor-only 已無 caller |
+| `schedule.js` `[HIDDEN]` | 時段管理、可用時段查詢、預約 — pre-launch 已隱藏 |
 | `wellness.js` | 年度像素、每日提示、自評量表、週報、課程、文章 |
 | `breathe.js` | 呼吸練習紀錄 |
 | `achievements.js` | 成就查詢 + 快取 |

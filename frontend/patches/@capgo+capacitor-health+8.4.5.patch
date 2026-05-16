@@ -1,0 +1,91 @@
+diff --git a/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt b/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt
+index 8767de8..d2033fe 100644
+--- a/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt
++++ b/node_modules/@capgo/capacitor-health/android/src/main/java/app/capgo/plugin/health/HealthPlugin.kt
+@@ -61,37 +61,62 @@ class HealthPlugin : Plugin() {
+             return
+         }
+ 
++        // [HeartBox patch v1, 2026-05-16] — wrap the coroutine body in a
++        // stage-tagged try/catch. Without this, any IPC failure with the
++        // Health Connect service (provider not ready, version skew, Samsung
++        // S Health conflict, missing permission UI on the device) throws
++        // uncaught inside pluginScope.launch and the coroutine silently dies
++        // — the JS side never sees a resolve/reject, the UI hangs, and
++        // some Samsung firmwares escalate the uncaught coroutine exception
++        // to SIGKILL on the app process. Tagging the stage in the reject
++        // message lets us identify the root cause from the JS catch handler.
+         pluginScope.launch {
+-            val client = getClientOrReject(call) ?: return@launch
+-            val permissions = manager.permissionsFor(readTypes, writeTypes, includeWorkouts)
+-
+-            if (permissions.isEmpty()) {
+-                val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
+-                call.resolve(status)
+-                return@launch
+-            }
++            var stage = "STAGE_init"
++            try {
++                stage = "STAGE_getClient"
++                val client = getClientOrReject(call) ?: return@launch
+ 
+-            val granted = client.permissionController.getGrantedPermissions()
+-            if (granted.containsAll(permissions)) {
+-                val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
+-                call.resolve(status)
+-                return@launch
+-            }
++                stage = "STAGE_permissionsFor"
++                val permissions = manager.permissionsFor(readTypes, writeTypes, includeWorkouts)
+ 
+-            // Store types for callback
+-            pendingReadTypes = readTypes
+-            pendingWriteTypes = writeTypes
+-            pendingIncludeWorkouts = includeWorkouts
++                if (permissions.isEmpty()) {
++                    stage = "STAGE_authorizationStatus_empty"
++                    val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
++                    call.resolve(status)
++                    return@launch
++                }
+ 
+-            // Create intent using the Health Connect permission contract
+-            val intent = permissionContract.createIntent(context, permissions)
++                stage = "STAGE_getGrantedPermissions"
++                val granted = client.permissionController.getGrantedPermissions()
++                if (granted.containsAll(permissions)) {
++                    stage = "STAGE_authorizationStatus_granted"
++                    val status = manager.authorizationStatus(client, readTypes, writeTypes, includeWorkouts)
++                    call.resolve(status)
++                    return@launch
++                }
+ 
+-            try {
+-                startActivityForResult(call, intent, "handlePermissionResult")
+-            } catch (e: Exception) {
++                // Store types for callback
++                pendingReadTypes = readTypes
++                pendingWriteTypes = writeTypes
++                pendingIncludeWorkouts = includeWorkouts
++
++                stage = "STAGE_createIntent"
++                val intent = permissionContract.createIntent(context, permissions)
++
++                stage = "STAGE_startActivityForResult"
++                try {
++                    startActivityForResult(call, intent, "handlePermissionResult")
++                } catch (e: Exception) {
++                    pendingReadTypes = emptyList()
++                    pendingWriteTypes = emptyList()
++                    call.reject("Failed to launch Health Connect permission request.", null, e)
++                }
++            } catch (t: Throwable) {
+                 pendingReadTypes = emptyList()
+                 pendingWriteTypes = emptyList()
+-                call.reject("Failed to launch Health Connect permission request.", null, e)
++                pendingIncludeWorkouts = false
++                val msg = "${stage}: ${t.javaClass.simpleName}: ${t.message ?: "(no message)"}"
++                call.reject(msg, null, if (t is Exception) t else null)
+             }
+         }
+     }

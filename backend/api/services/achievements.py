@@ -97,12 +97,17 @@ ACHIEVEMENT_DEFINITIONS = {
         'desc_key': 'achievement.self_aware_desc',
     },
     # ===== Social =====
+    # Counselor-coupled achievements are marked hidden=True pre-launch — the
+    # /counselors UI is hidden so users can't unlock them, and we don't want
+    # un-unlockable cards cluttering the Achievements page. Flip hidden off
+    # (or remove the flag) when /counselors ships.
     'first_share': {
         'category': 'social',
         'icon': 'share',
         'threshold': 1,
         'name_key': 'achievement.first_share',
         'desc_key': 'achievement.first_share_desc',
+        'hidden': True,
     },
     'first_booking': {
         'category': 'social',
@@ -110,6 +115,7 @@ ACHIEVEMENT_DEFINITIONS = {
         'threshold': 1,
         'name_key': 'achievement.first_booking',
         'desc_key': 'achievement.first_booking_desc',
+        'hidden': True,
     },
     'first_ai_chat': {
         'category': 'social',
@@ -196,6 +202,7 @@ ACHIEVEMENT_DEFINITIONS = {
         'threshold': 1,
         'name_key': 'achievement.conversation_starter',
         'desc_key': 'achievement.conversation_starter_desc',
+        'hidden': True,
     },
     'messages_50': {
         'category': 'social',
@@ -203,6 +210,7 @@ ACHIEVEMENT_DEFINITIONS = {
         'threshold': 50,
         'name_key': 'achievement.messages_50',
         'desc_key': 'achievement.messages_50_desc',
+        'hidden': True,
     },
     'tag_collector': {
         'category': 'explore',
@@ -776,6 +784,11 @@ def check_achievements(user):
         for aid, defn in ACHIEVEMENT_DEFINITIONS.items():
             if aid in existing:
                 continue
+            # hidden=True means the feature backing this achievement is
+            # currently disabled (e.g. counselor flows pre-launch). Don't
+            # auto-unlock or notify — the achievement would feel out-of-place.
+            if defn.get('hidden'):
+                continue
             current = progress.get(aid, 0)
             if current >= defn['threshold']:
                 UserAchievement.objects.create(user=user, achievement_id=aid)
@@ -867,6 +880,12 @@ def get_user_achievements_with_progress(user):
 
     result = []
     for aid, defn in ACHIEVEMENT_DEFINITIONS.items():
+        # Hidden achievements (counselor-coupled, pre-launch) are excluded
+        # from the listing entirely — but if a user already has one unlocked
+        # from before the flag was added, surface it so we don't appear to
+        # silently strip a trophy from their profile.
+        if defn.get('hidden') and aid not in unlocked:
+            continue
         current = progress.get(aid, 0)
         threshold = defn['threshold']
         result.append({

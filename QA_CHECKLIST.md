@@ -20,8 +20,8 @@
 
 5. Empty states
 - Dashboard empty sections show CTA.
-- Counselor list empty state shows CTA.
 - Notification panel empty state shows CTA.
+<!-- Counselor list QA item hidden pre-launch — re-enable with /counselors. -->
 
 6. Skeleton loading
 - Navigate between heavy pages and verify skeletons show.
@@ -38,7 +38,8 @@
 
 9. Avatar upload
 - Upload avatar in settings.
-- Verify avatar in navbar, chat header/messages, counselor list.
+- Verify avatar in navbar and chat header/messages.
+<!-- Counselor list avatar check hidden pre-launch — re-enable with /counselors. -->
 
 10. Search highlight
 - Search keyword in journal list.

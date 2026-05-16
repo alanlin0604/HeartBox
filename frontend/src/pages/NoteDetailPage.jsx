@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
-import { getNote, deleteNote, updateNote, togglePin, getNoteShares, unshareNote } from '../api/notes'
+import { getNote, deleteNote, updateNote, togglePin } from '../api/notes'
 import { useLang } from '../context/LanguageContext'
 import MoodBadge from '../components/MoodBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ConfirmModal from '../components/ConfirmModal'
-import ShareNoteButton from '../components/ShareNoteButton'
+// Counselor share UI hidden pre-launch — re-enable along with /counselors.
+// import ShareNoteButton from '../components/ShareNoteButton'
+// import { getNoteShares, unshareNote } from '../api/notes'
 import { useToast } from '../context/ToastContext'
 import { Card, Button, Input } from '../components/ui'
 
@@ -30,7 +32,6 @@ export default function NoteDetailPage() {
   const [editTemp, setEditTemp] = useState('')
   const [editTags, setEditTags] = useState('')
   const [saving, setSaving] = useState(false)
-  const [shares, setShares] = useState([])
   const editorRef = useRef(null)
   const [editorContent, setEditorContent] = useState('')
 
@@ -50,13 +51,8 @@ export default function NoteDetailPage() {
     return () => { cancelled = true }
   }, [id, navigate, toast, t])
 
-  useEffect(() => {
-    let cancelled = false
-    getNoteShares(id)
-      .then((res) => { if (!cancelled) setShares(res.data.results || res.data) })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [id])
+  // Counselor share UI hidden pre-launch — `getNoteShares` / `unshareNote`
+  // calls removed along with the share button. Re-enable when /counselors ships.
 
   // Warn before leaving if editing
   useEffect(() => {
@@ -121,16 +117,6 @@ export default function NoteDetailPage() {
     }
   }
 
-  const handleUnshare = async (shareId) => {
-    try {
-      await unshareNote(id, shareId)
-      setShares((prev) => prev.filter((s) => s.id !== shareId))
-      toast?.success(t('share.unshareSuccess'))
-    } catch {
-      toast?.error(t('common.operationFailed'))
-    }
-  }
-
   const sanitizedContent = useMemo(
     () => note ? DOMPurify.sanitize(note.decrypted_content || '') : '',
     [note?.decrypted_content]
@@ -179,7 +165,7 @@ export default function NoteDetailPage() {
             <Button onClick={handleStartEdit} variant="secondary" size="sm">
               {t('noteDetail.edit')}
             </Button>
-            <ShareNoteButton noteId={note.id} />
+            {/* Counselor share button hidden pre-launch — re-enable with /counselors. */}
             <Button onClick={() => setConfirmOpen(true)} disabled={deleting} variant="danger" size="sm">
               {deleting ? t('noteDetail.deleting') : t('noteDetail.delete')}
             </Button>
@@ -307,27 +293,7 @@ export default function NoteDetailPage() {
           </div>
         )}
 
-        {/* Shared With */}
-        {shares.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-slate-400">{t('share.sharedWith')}</h3>
-            <div className="flex flex-wrap gap-2">
-              {shares.map((s) => (
-                <span key={s.id} className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/20">
-                  {s.shared_with_username}
-                  <button
-                    onClick={() => handleUnshare(s.id)}
-                    className="hover:text-red-400 transition-colors cursor-pointer"
-                    title={t('share.unshare')}
-                    aria-label={t('share.unshare')}
-                  >
-                    &times;
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Shared With (counselor list) hidden pre-launch — re-enable with /counselors. */}
       </Card>
       <ConfirmModal
         open={confirmOpen}

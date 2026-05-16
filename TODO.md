@@ -1,244 +1,146 @@
-# HeartBox 待辦事項清單
+# HeartBox 待辦清單
 
-**最後更新**: 2026-04-11  
-**當前版本**: UI/UX v2.0  
-**狀態**: 🟢 生產環境運行中
-
----
-
-## ✅ 已完成項目 (最近)
-
-### UI/UX 現代化 v2.0 (2026-04-11)
-- [x] 建立完整設計系統 (design-tokens.css)
-- [x] 創建現代 UI 組件庫 (Button, Card, Input, Modal)
-- [x] 重新設計首頁/登入頁
-- [x] 優化 Dashboard 頁面
-- [x] 安裝 framer-motion
-- [x] 效能優化維持 (Recharts/Tiptap 懶載入)
-- [x] **修正淺色模式配色** - 使用純白色系
-- [x] **降低淺色模式透明度** - 提高文字可讀性
-
-### 效能優化 (2026-04-11)
-- [x] Recharts 懶載入 (-406 KB)
-- [x] Tiptap 懶載入 (-368 KB)
-- [x] Service Worker Stale-While-Revalidate
-- [x] WebP 圖片格式
-- [x] Inter Variable Font + Latin subset
-- [x] Bundle 大小減少 37%
+**最後更新：** 2026-05-16
+**當前階段：** Pre-launch（Play Store 上架準備）
+**生產環境：** https://heartbox.pages.dev （Cloudflare Pages）+ Cloud Run asia-east1
+**功能完成度：** 91%（10 / 11，詳見 [PENDING_FEATURES.md](PENDING_FEATURES.md)）
 
 ---
 
-## 🔥 高優先級 (立即執行)
+## 🚀 上架阻擋（必須先解）
 
-### 1. UI/UX 持續改進
-- [ ] **測試淺色模式** - 確認文字在所有情況下都清晰
-- [ ] **深色模式微調** - 確保深色模式也有良好的對比度
-- [ ] **響應式測試** - 手機、平板、桌面各螢幕尺寸
-- [ ] **跨瀏覽器測試** - Chrome, Firefox, Safari, Edge
+### 1. Health Connect 自動同步 — 唯一未完功能（D2）
+- 現況：`SleepAnalysisPage` / 報告全綠，但依賴使用者手動輸入睡眠資料
+- Blocker：Galaxy A52 上 capgo Health Connect plugin native crash
+- 追蹤：[docs/health-connect-debug-progress.md](docs/health-connect-debug-progress.md)
+- 不阻擋 web 上架，但會被 Play Store reviewer 質問 health data section
 
-### 2. 無障礙性檢查
-- [ ] 運行 Lighthouse 無障礙性審查 (目標 >95 分)
-- [ ] 鍵盤導航測試 (Tab, Enter, Esc)
-- [ ] 螢幕閱讀器測試 (NVDA/JAWS)
-- [ ] 顏色對比度驗證 (所有文字 ≥4.5:1)
+### 2. Play Store 商店資產最後確認
+- [x] 三語商店描述（諮商師段落已 2026-05-16 移除）
+- [ ] 截圖 06-09 重新拍：移除諮商師移除後的最新 UI 截圖
+- [ ] Feature graphic（1024×500）三語版本
+- [ ] AAB build：GitHub Actions → Mobile Build → release artifact
+- 流程：[frontend/store-assets/store-listing.md](frontend/store-assets/store-listing.md)
 
-### 3. 效能監控
-- [ ] Lighthouse 效能測試 (目標維持 70+)
-- [ ] Core Web Vitals 監控
-- [ ] Bundle 分析 (檢查是否有多餘依賴)
-
----
-
-## 🎯 中優先級 (本週完成)
-
-### 4. UI 組件完善
-- [ ] **整合 framer-motion** - 添加微互動動畫
-  - 按鈕點擊動畫
-  - 卡片進場動畫
-  - 頁面切換過渡
-- [ ] **創建更多 UI 組件**
-  - Badge (徽章)
-  - Tooltip (提示框)
-  - Dropdown (下拉選單)
-  - Tabs (標籤頁)
-  - Alert (警告框)
-- [ ] **組件文檔** - 為 UI 組件庫建立使用說明
-
-### 5. 頁面現代化 (剩餘頁面)
-- [ ] 註冊頁 (RegisterPage.jsx)
-- [ ] 設定頁 (SettingsPage.jsx)
-- [ ] 日記詳情頁 (NoteDetailPage.jsx) - 使用新 Card
-- [ ] 其他輔助頁面 (PrivacyPage, TermsPage 等)
-
-### 6. 動畫與互動
-- [ ] 實作頁面切換動畫
-- [ ] 添加載入動畫 (skeleton screens)
-- [ ] 優化按鈕 hover/active 狀態
-- [ ] 添加成功/錯誤反饋動畫
+### 3. 諮商師功能反向恢復計畫（功能準備好時）
+- 全 codebase 已用 `// hidden pre-launch — re-enable with /counselors` 標記
+- 反向開啟步驟：
+  1. [frontend/src/App.jsx](frontend/src/App.jsx) `/counselors` Navigate → 改回 LazyRoute
+  2. [frontend/src/components/Layout.jsx](frontend/src/components/Layout.jsx) 社群 dropdown + flat list 加回 counselor link
+  3. [frontend/src/pages/NoteDetailPage.jsx](frontend/src/pages/NoteDetailPage.jsx) 還原 ShareNoteButton
+  4. [frontend/src/pages/AssessmentsPage.jsx](frontend/src/pages/AssessmentsPage.jsx) 還原 share-to-counselor
+  5. [frontend/src/pages/LandingPage.jsx](frontend/src/pages/LandingPage.jsx) 加回 featureCounselor
+  6. [frontend/src/pages/ChatPage.jsx](frontend/src/pages/ChatPage.jsx) navigate('/') → '/counselors'
+  7. [frontend/src/pages/AdminPage.jsx](frontend/src/pages/AdminPage.jsx) Counselors tab `hidden: true` → `false`
+  8. [backend/api/services/achievements.py](backend/api/services/achievements.py) 4 個成就的 `hidden: True` 移除
+  9. [frontend/store-assets/store-listing.md](frontend/store-assets/store-listing.md) 諮商師段落還原
 
 ---
 
-## 📋 低優先級 (有空再做)
+## 🟡 上架後馬上處理（不阻擋發版但 P1）
 
-### 7. 效能進一步優化
-- [ ] **Critical CSS 提取** - 內聯首屏 CSS (-300-500ms FCP)
-- [ ] **圖片懶載入** - 非關鍵圖片 lazy loading
-- [ ] **字型預載入** - 減少字型載入閃爍
-- [ ] **Tree Shaking** - 進一步移除未使用代碼 (-1.7s)
-- [ ] **Code Splitting** - 更細粒度的代碼分割
+### 4. 失效成就 + 文案清理
+- [ ] 後端 `Message.objects.filter(sender=user)` 計算範圍 — 現在只算 Conversation message，但若未來改用同一張表給朋友聊天，achievement counter 會錯
+- [ ] Locale `counselor.*` keys（三語 70+ keys）若決定永久移除，現在開始下檔
 
-### 8. 設計系統文檔
-- [ ] 建立 Storybook 展示組件
-- [ ] 撰寫設計指南文檔
-- [ ] 創建顏色/字型使用規範
-- [ ] 製作 UI 組件使用範例
+### 5. 文件對齊現況
+- [ ] [QA_CHECKLIST.md](QA_CHECKLIST.md) — 諮商師相關項已 2026-05-16 註解
+- [ ] [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) — smoke check 已 2026-05-16 更新
+- [ ] `HeartBox_全面檢查報告.md`（2026-02-19）— 舊資訊
+- [ ] `重灌前最終確認報告.md`（2026-05-02）— 已過時，建議歸檔
+- [ ] [docs/system-components.md](docs/system-components.md) — 仍列 `ShareNoteButton.jsx` 為 active
 
-### 9. 其他改善
-- [ ] 添加骨架屏 (Skeleton) 載入狀態
-- [ ] 實作無限滾動 (如適用)
-- [ ] 添加鍵盤快捷鍵
-- [ ] 實作離線模式改善
-
----
-
-## 🐛 已知問題
-
-### 需要修正
-- [ ] Node.js 20 deprecation 警告 (GitHub Actions)
-  - 更新 actions/checkout 到支援 Node 24 的版本
-  - 更新 actions/setup-node
-  - 更新 cloudflare/wrangler-action
-
-### 需要驗證
-- [ ] Service Worker 快取策略是否最佳
-- [ ] 懶載入組件的 fallback 是否足夠好
-- [ ] 淺色/深色模式切換是否流暢
+### 6. Lint warning 清掉
+- 現況：5 errors（icon 腳本 `process` 未定義，獨立檔不影響 app）+ 93 warnings
+- 主要 warnings 類型：
+  - `react-hooks/set-state-in-effect`（~60 處）
+  - `react-hooks/exhaustive-deps`（~25 處）
+- 都是 hint，不影響功能；但有些可能是真實 race condition
 
 ---
 
-## 💡 未來功能想法
+## 🟢 後續發展（無時間壓力）
 
-### UI/UX 增強
-- [ ] 實作主題自訂功能 (讓用戶選擇主色調)
-- [ ] 添加更多動畫選項
-- [ ] 實作圖示系統 (統一使用 Lucide/Heroicons)
-- [ ] 添加更多顏色主題 (藍色、綠色等)
+### 7. 諮商師功能正式上線準備（等業務面）
+- [ ] 至少 1 位真實諮商師簽約並通過審核（pending → approved）
+- [ ] Stripe / 綠界等金流串接（PricingTab 後端已有 SubscriptionPlan model）
+- [ ] 諮商師訓練文件 / 規範 / 服務協議
+- [ ] 隱私政策更新（諮商師可看到日記分享、評估資料）
 
-### 技術債務
-- [ ] 遷移到 TypeScript (可選)
-- [ ] 實作 E2E 測試 (Playwright/Cypress)
-- [ ] 設定 Prettier + ESLint 規則
-- [ ] 代碼審查與重構
+### 8. 技術債
+- [ ] backend `views.py` 已拆 9 模組，但 [backend/api/views.py](backend/api/views.py) 仍有遺留
+- [ ] [frontend/src/pages/CounselorListPage.jsx](frontend/src/pages/CounselorListPage.jsx)（1240 行）+ `pages/counselor/*` 9 個 tab — 已斷 routing，dead code 可刪可留
+- [ ] 評估是否需要 TypeScript migration（現為 JSX）
+- [ ] E2E 測試（Playwright）— 目前只有 78 個 unit test
 
----
+### 9. 效能進階優化
+- 現況：Bundle 已大幅優化（Recharts/Tiptap lazy）；Cloud Run 已 min-instances=1
+- 可動：
+  - [ ] Critical CSS 提取（-300-500ms FCP）
+  - [ ] 圖片 LCP candidate 加 `fetchpriority="high"`
+  - [ ] Web Vitals 監控接入 Sentry
 
-## 📊 效能目標
-
-### 當前狀態 (2026-04-11)
-- Performance: 70/100
-- FCP: 3.3s
-- LCP: 6.9s
-- TBT: 0ms ✅
-- CLS: 0 ✅
-- Bundle: 919 KB
-
-### 目標
-- Performance: **90+/100**
-- FCP: **< 1.8s** (目前 +1.5s)
-- LCP: **< 2.5s** (目前 +4.4s)
-- TBT: **< 200ms** (已達標 ✅)
-- CLS: **< 0.1** (已達標 ✅)
-- Bundle: **< 800 KB**
+### 10. 內容 / UX
+- [ ] 心理教育文章 8 → 20+ 篇（目前是 seed data）
+- [ ] 引導式冥想腳本擴充
+- [ ] 感恩日記模板（已有，可補更多變體）
 
 ---
 
-## 🚀 快速指令參考
+## ✅ 最近完成（2026-05）
+
+- **2026-05-16** 諮商師 UI 全面隱藏（route + nav + share + landing + admin + achievement）
+- **2026-05-16** Play Store 商店描述移除諮商師段落（三語）
+- **2026-05-16** QA + Deployment checklist 對齊
+- **2026-05-15** launch-prep: compliance / crisis safety / retention / data rights / marketing（commit `ae5c6b1`）
+- **2026-05-14** i18n hard fixes：ConfirmDialog / Alert / FeedbackToast 漏中文
+- **2026-05-13** perf：achievements + counselors 頁面 cache
+- **2026-05-12** security：first-message-only WS auth + audit logging
+
+---
+
+## 📁 重要檔案速查
+
+| 用途 | 檔案 |
+|---|---|
+| 功能完成度 | [PENDING_FEATURES.md](PENDING_FEATURES.md) |
+| 上架流程 | [frontend/store-assets/store-listing.md](frontend/store-assets/store-listing.md) |
+| Deploy checklist | [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) |
+| QA checklist | [QA_CHECKLIST.md](QA_CHECKLIST.md) |
+| 系統架構 | [docs/system-architecture.md](docs/system-architecture.md) |
+| 元件清單 | [docs/system-components.md](docs/system-components.md) |
+| 功能模組 | [docs/feature-modules.md](docs/feature-modules.md) |
+| API 速查 | [docs/api/好友系統API速查表.md](docs/api/好友系統API速查表.md) |
+| CLAUDE 指南 | [CLAUDE.md](CLAUDE.md) |
+
+---
+
+## 🛠 常用指令
 
 ### 開發
-```bash
+```powershell
 cd frontend
-npm run dev          # 啟動開發伺服器
-npm run build        # 建置生產版本
-npm run preview      # 預覽建置結果
-```
+npm run dev                              # vite dev server
+npm run build                            # production build
+npm run lint                             # eslint check
+npm run test                             # vitest
 
-### 測試
-```bash
-npx lighthouse https://heartbox.pages.dev --view
-npx lighthouse https://heartbox.pages.dev --only-categories=accessibility
+cd ../backend
+python manage.py runserver
+python manage.py test api.tests
 ```
 
 ### 部署
-```bash
-git add .
-git commit -m "feat: 描述"
-git push origin main  # 自動觸發 Cloudflare Pages 部署
+```powershell
+# 後端（Cloud Run, asia-east1）
+./deploy-backend.ps1
+
+# 前端（Cloudflare Pages 自動部署）
+git push origin main
 ```
 
-### 檢查部署
-```bash
+### 環境檢查
+```powershell
 gh run list --repo alanlin0604/HeartBox --limit 5
-gh run view [RUN_ID] --repo alanlin0604/HeartBox
+gh run view <RUN_ID>
 ```
-
----
-
-## 📝 下次對話可用的指令
-
-### 繼續開發
-- "繼續實作剩餘的 UI 組件"
-- "整合 framer-motion 添加動畫"
-- "測試並修正無障礙性問題"
-- "優化剩餘頁面的設計"
-
-### 效能優化
-- "實作 Critical CSS 提取"
-- "添加圖片懶載入"
-- "進行 Bundle 分析並優化"
-- "運行 Lighthouse 測試並改善"
-
-### 測試與部署
-- "測試淺色/深色模式"
-- "檢查部署狀態"
-- "修正已知問題"
-- "部署到生產環境"
-
----
-
-## 🎯 本週重點 (建議)
-
-**Week 1 (當前週)**:
-1. ✅ 完成 UI/UX v2.0 基礎 (已完成)
-2. ⏳ 測試並修正淺色模式問題
-3. ⏳ 響應式與跨瀏覽器測試
-4. ⏳ 無障礙性審查
-
-**Week 2**:
-1. 整合 framer-motion 動畫
-2. 完善剩餘 UI 組件
-3. 現代化剩餘頁面
-
-**Week 3**:
-1. 效能進一步優化
-2. 建立組件文檔
-3. 使用者測試與反饋
-
----
-
-## 📞 相關文件
-
-- **設計系統**: `frontend/src/styles/design-tokens.css`
-- **UI 組件**: `frontend/src/components/ui/`
-- **實施總結**: `frontend/UI-UX-MODERNIZATION-SUMMARY.md`
-- **部署指南**: `DEPLOYMENT-GUIDE-UI-UX-V2.md`
-- **效能報告**: `frontend/PERFORMANCE-REPORT.md`
-
----
-
-**最後提醒**: 
-- 每次修改後記得運行 `npm run build` 測試
-- 重要更新前先在本地測試
-- 部署前檢查 git status 確認要提交的檔案
-- 善用 GitHub Actions 查看建置日誌
-
-**準備好了！下次直接告訴我要做什麼，我會參考這份清單繼續工作。** 🚀

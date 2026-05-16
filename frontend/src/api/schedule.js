@@ -1,3 +1,6 @@
+// HIDDEN PRE-LAUNCH — All exports here serve the counselor booking flow only
+// (BookingPanel + ScheduleManager, both hidden). Kept for fast restoration;
+// see TODO.md "諮商師功能反向恢復計畫".
 import api from './axios'
 import { getCached, setCache, invalidate } from './cache'
 

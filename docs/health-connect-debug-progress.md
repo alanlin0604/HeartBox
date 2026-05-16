@@ -1,5 +1,10 @@
 # Health Connect 連結 — 進行中的 crash 調查
 
+> **更新（2026-05-16）：** 採用「不依賴診斷的直接修復」策略。
+> Patch 已永久化（[patches/@capgo+capacitor-health+8.4.5.patch](../frontend/patches/@capgo+capacitor-health+8.4.5.patch)）
+> 透過 `patch-package` + `postinstall` hook 自動套用，不再被 `npm install` 覆蓋。
+> JS 端加 60s timeout 保險。下次 build Android 即生效。
+>
 > 狀態：暫停（2026-05-09）。卡在 `Health.requestAuthorization()` native crash，已備好 v7 APK 帶診斷 patch、等使用者執行測試讀取 CATCH alert 訊息確診 root cause。
 
 ## 症狀
@@ -61,8 +66,21 @@ Galaxy A52 (SM-A5260) 上跑 HeartBox debug build，按設定 → 健康 → 「
 
 ## 收尾要做的（等找到 root cause 後）
 
-1. 把 alert 探針從 healthKit.js / useHealthSync.js / SettingsPage.jsx 拿掉
-2. breadcrumb 機制決定保留還是拿掉（可能做成 dev 模式 only 的隱藏診斷頁）
-3. plugin patch 用 [patch-package](https://www.npmjs.com/package/patch-package) 持久化（把 try/catch fix 變成 git-tracked patch）— 或者開 capgo issue 反映
-4. 真正的 fix 上 commit + push
-5. 寫個測試覆蓋 graceful HC-not-installed UX（之前說要加但沒做）
+- [x] **2026-05-09** 把 alert 探針從 healthKit.js / useHealthSync.js / SettingsPage.jsx 拿掉
+- [x] **2026-05-09** breadcrumb 機制保留在 hot path（可由 `localStorage.heartbox_health_debug='1'` 重啟診斷面板）
+- [x] **2026-05-16** plugin patch 用 [patch-package](https://www.npmjs.com/package/patch-package) 持久化
+      → [patches/@capgo+capacitor-health+8.4.5.patch](../frontend/patches/@capgo+capacitor-health+8.4.5.patch)，
+      `postinstall` script 自動套用，npm install 不再覆蓋
+- [x] **2026-05-16** JS 端 60s timeout 包覆 `requestAuthorization`，避免 bridge 永不 resolve 時 UI hang
+- [ ] 寫個測試覆蓋 graceful HC-not-installed UX（之前說要加但沒做）
+
+## 為什麼這算「修復」而非「diagnostic 持久化」
+
+Plugin patch 對每個 stage 加 `var stage = "STAGE_xxx"` 標記後再用外層 `try { ... } catch (t: Throwable) { call.reject("${stage}: ...", ...) }` 接住——這把
+**uncaught native exception → silent coroutine death → SIGKILL** 的鏈條打斷
+成 **catchable JS rejection**。所以即使我們不知道 root cause stage 是哪個，
+app 也不會再閃退；最壞情況是使用者看到「Health Connect 連結失敗」+ 一段
+stage tag，按取消後 app 還在。
+
+未來真的要找 root cause，breadcrumb 機制 + Sentry 已能直接讀到
+`reqPerms:requestAuthorization-error` 的 STAGE_xxx 訊息，不需要 v7 debug APK 流程。

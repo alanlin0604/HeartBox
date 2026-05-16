@@ -22,23 +22,25 @@ export default function AdminPage() {
 
   useEffect(() => { document.title = `${t('admin.title')} — ${t('app.name')}` }, [t])
 
+  // Counselors admin tab hidden pre-launch — the array slot is kept so tab
+  // indices below do not shift; the button itself is skipped while hidden=true.
   const TABS = [
-    t('admin.tabOverview'),
-    t('admin.tabUsers'),
-    t('admin.tabCounselors'),
-    t('admin.tabFeedback'),
-    t('admin.tabReports'),
-    t('admin.tabAuditLog'),
-    t('admin.tabMLStatus'),
+    { label: t('admin.tabOverview') },
+    { label: t('admin.tabUsers') },
+    { label: t('admin.tabCounselors'), hidden: true },
+    { label: t('admin.tabFeedback') },
+    { label: t('admin.tabReports') },
+    { label: t('admin.tabAuditLog') },
+    { label: t('admin.tabMLStatus') },
   ]
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">{t('admin.title')}</h2>
       <div className="flex gap-2 flex-wrap">
-        {TABS.map((label, i) => (
+        {TABS.map((entry, i) => entry.hidden ? null : (
           <button
-            key={label}
+            key={entry.label}
             onClick={() => setTab(i)}
             className={`px-4 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
               tab === i
@@ -46,14 +48,14 @@ export default function AdminPage() {
                 : 'glass opacity-70 hover:opacity-100'
             }`}
           >
-            {label}
+            {entry.label}
           </button>
         ))}
       </div>
 
       {tab === 0 && <StatsTab />}
       {tab === 1 && <UsersTab />}
-      {tab === 2 && <CounselorsTab />}
+      {/* tab === 2 (CounselorsTab) hidden pre-launch */}
       {tab === 3 && <FeedbackTab />}
       {tab === 4 && <ReportsTab />}
       {tab === 5 && <AuditLogTab />}
@@ -484,17 +486,9 @@ function StatsTab() {
         />
       </div>
 
-      {/* Action-required + community */}
+      {/* Action-required + community
+          Counselor stat cards hidden pre-launch — re-enable with /counselors. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard
-          label={t('admin.pendingCounselors')}
-          value={stats.pending_counselors}
-          accent={stats.pending_counselors > 0 ? 'text-amber-600 dark:text-amber-400' : ''}
-        />
-        <StatCard
-          label={t('admin.totalCounselors')}
-          value={stats.total_counselors || 0}
-        />
         <StatCard
           label={t('admin.communityPosts')}
           value={stats.total_posts || 0}

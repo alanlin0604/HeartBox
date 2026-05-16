@@ -105,20 +105,35 @@ export async function requestPermissions() {
     return false
   }
 
+  // Timeout-wrap the native call. Even with the HealthPlugin.kt patch (see
+  // patches/@capgo+capacitor-health+8.4.5.patch) catching coroutine
+  // exceptions, some firmware quirks can still leave the bridge in a state
+  // where the call never resolves at all (e.g. the permission UI is
+  // dismissed by a system overlay). Without a timeout the UI hangs forever.
+  const REQ_AUTH_TIMEOUT_MS = 60_000
+
   try {
     crumb('reqPerms:before-requestAuthorization')
-    const result = await Health.requestAuthorization({
-      read: [
-        'steps',
-        'heartRate',
-        'heartRateVariability',
-        'calories',
-        'sleep',
-      ],
-    })
+    const result = await Promise.race([
+      Health.requestAuthorization({
+        read: [
+          'steps',
+          'heartRate',
+          'heartRateVariability',
+          'calories',
+          'sleep',
+        ],
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT: requestAuthorization did not return within 60s')), REQ_AUTH_TIMEOUT_MS),
+      ),
+    ])
     crumb('reqPerms:requestAuthorization-returned', result)
     return result.readAuthorized.length > 0
   } catch (error) {
+    // The patch tags the stage in the message ("STAGE_xxx: ExceptionClass: detail").
+    // We surface that via the breadcrumb so a future Settings → Health diagnostic
+    // page (or Sentry) can read it without needing a debug build.
     crumb('reqPerms:requestAuthorization-error', String(error?.message || error))
     return false
   }

@@ -1,3 +1,5 @@
+// HIDDEN PRE-LAUNCH — Used only by CounselorListPage (also hidden). Kept for
+// fast restoration; see TODO.md "諮商師功能反向恢復計畫".
 import { useState } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { getAvailableSlots, createBooking } from '../api/schedule'

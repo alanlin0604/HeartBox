@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react'
-import { getAssessments, createAssessment, shareAssessment } from '../api/wellness'
-import { getCounselors } from '../api/counselors'
+import { getAssessments, createAssessment } from '../api/wellness'
+// Counselor share UI hidden pre-launch — re-enable with /counselors.
+// import { shareAssessment } from '../api/wellness'
+// import { getCounselors } from '../api/counselors'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
@@ -61,9 +63,7 @@ export default function AssessmentsPage() {
   const [responses, setResponses] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
-  const [shareModal, setShareModal] = useState(null) // assessment id to share
-  const [counselors, setCounselors] = useState([])
-  const [sharingId, setSharingId] = useState(null)
+  // Counselor share state hidden pre-launch — re-enable with /counselors.
 
   useEffect(() => { document.title = `${t('nav.assessments')} — ${t('app.name')}` }, [t])
 
@@ -108,30 +108,7 @@ export default function AssessmentsPage() {
     }
   }
 
-  const openShareModal = async (assessmentId) => {
-    setShareModal(assessmentId)
-    if (counselors.length === 0) {
-      try {
-        const res = await getCounselors()
-        setCounselors(res.data?.results || res.data || [])
-      } catch {
-        // ignore
-      }
-    }
-  }
-
-  const handleShare = async (assessmentId, counselorId) => {
-    setSharingId(counselorId)
-    try {
-      await shareAssessment(assessmentId, counselorId)
-      toast?.success(t('assessment.shared'))
-      setShareModal(null)
-    } catch {
-      toast?.error(t('common.operationFailed'))
-    } finally {
-      setSharingId(null)
-    }
-  }
+  // Counselor share helpers hidden pre-launch — re-enable with /counselors.
 
   const gridStroke = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
   const axisStroke = theme === 'dark' ? '#9ca3af' : '#475569'
@@ -169,21 +146,14 @@ export default function AssessmentsPage() {
       {/* Result banner */}
       {result && (
         <div className="glass p-4 border-l-4 border-orange-500/50 mb-6">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold">
-              {t('assessment.yourScore')}: <span className={getScoreColor(tab, result.total_score)}>{result.total_score}</span>
-              {' — '}
-              <span className={getScoreColor(tab, result.total_score)}>
-                {getScoreLabel(tab, result.total_score, t)}
-              </span>
-            </p>
-            <button
-              onClick={() => openShareModal(result.id)}
-              className="btn-secondary text-xs"
-            >
-              {t('assessment.shareToCounselor')}
-            </button>
-          </div>
+          <p className="font-semibold">
+            {t('assessment.yourScore')}: <span className={getScoreColor(tab, result.total_score)}>{result.total_score}</span>
+            {' — '}
+            <span className={getScoreColor(tab, result.total_score)}>
+              {getScoreLabel(tab, result.total_score, t)}
+            </span>
+          </p>
+          {/* Share-to-counselor button hidden pre-launch — re-enable with /counselors. */}
           <p className="text-xs text-slate-400 mt-2">{t('assessment.disclaimer')}</p>
         </div>
       )}
@@ -251,12 +221,7 @@ export default function AssessmentsPage() {
                           {new Date(item.created_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}
                         </span>
                       </div>
-                      <button
-                        onClick={() => openShareModal(item.id)}
-                        className="text-xs px-2 py-1 rounded-lg bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 transition-colors cursor-pointer"
-                      >
-                        {t('assessment.shareToCounselor')}
-                      </button>
+                      {/* Share-to-counselor button hidden pre-launch — re-enable with /counselors. */}
                     </div>
                   ))}
                 </div>
@@ -286,37 +251,7 @@ export default function AssessmentsPage() {
         )}
       </div>
 
-      {/* Share Modal */}
-      {shareModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="p-6 max-w-sm w-full space-y-4 rounded-2xl border border-[var(--card-border)] shadow-xl" style={{ background: 'var(--popup-bg)' }}>
-            <h3 className="text-lg font-semibold">{t('assessment.selectCounselor')}</h3>
-            {counselors.length === 0 ? (
-              <p className="text-sm text-slate-400">{t('counselor.noApproved')}</p>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {counselors.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => handleShare(shareModal, c.id)}
-                    disabled={sharingId === c.id}
-                    className="w-full glass-card p-3 flex items-center justify-between text-sm hover:bg-orange-500/10 transition-colors cursor-pointer"
-                  >
-                    <span className="font-medium">{c.display_name || c.username}</span>
-                    <span className="text-xs text-slate-400">{c.specialty}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            <button
-              onClick={() => setShareModal(null)}
-              className="btn-secondary text-sm w-full"
-            >
-              {t('common.cancel')}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Share-to-counselor modal hidden pre-launch — re-enable with /counselors. */}
     </div>
   )
 }

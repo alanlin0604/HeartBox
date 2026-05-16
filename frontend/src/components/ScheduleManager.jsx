@@ -1,3 +1,5 @@
+// HIDDEN PRE-LAUNCH — Used only by counselor/ScheduleTab (also hidden). Kept
+// for fast restoration; see TODO.md "諮商師功能反向恢復計畫".
 import { useEffect, useState } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
