@@ -1,3 +1,8 @@
+# Training datasets stay local — large, regenerable from prod export or
+# synthetic generator. Never version them.
 datasets/
-*.joblib
 *.csv
+
+# Trained model files DO get committed so containers ship with predictions
+# ready out-of-the-box. To retrain: produce a new v{N+1}.joblib and commit.
+# (Predictor auto-picks the highest-versioned bundle.)
