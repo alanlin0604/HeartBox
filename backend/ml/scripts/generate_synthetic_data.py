@@ -46,16 +46,25 @@ from ml.features import LAG_WINDOWS, feature_columns  # noqa: E402
 
 def _sample_user_traits(rng: random.Random) -> dict:
     """Trait constants for one synthetic user."""
+    fitness = rng.uniform(0.3, 1.0)  # 0=sedentary, 1=athlete — drives HRV/steps/RHR
     return {
         'baseline_mood': max(-0.6, min(0.7, rng.gauss(0.15, 0.3))),
         'baseline_stress': max(0.5, min(8.0, rng.gauss(3.5, 1.8))),
         'baseline_sleep': max(4.5, min(10.0, rng.gauss(7.0, 1.2))),
         'habit_propensity': max(0.1, min(0.95, rng.gauss(0.5, 0.2))),
-        # How reactive this user is to sleep deficit, in mood units per hour
         'sleep_sensitivity': rng.uniform(0.04, 0.12),
-        # AR(1) coefficient — how much yesterday carries forward
         'mood_persistence': rng.uniform(0.45, 0.75),
         'stress_persistence': rng.uniform(0.5, 0.8),
+        # Health traits — fitter users have higher HRV, lower RHR, more steps
+        'fitness': fitness,
+        'baseline_steps': max(2000, rng.gauss(6000 + fitness * 4000, 1500)),
+        'baseline_hrv': max(20, rng.gauss(40 + fitness * 25, 8)),  # ms
+        'baseline_rhr': max(45, rng.gauss(75 - fitness * 15, 6)),  # bpm
+        'baseline_exercise_min': max(0, rng.gauss(20 + fitness * 30, 12)),
+        # Bedtime regularity 0-1 — chaotic users vs. consistent sleepers
+        'bedtime_regularity': rng.uniform(0.3, 1.0),
+        # Only ~55% of users actually wear a watch
+        'has_wearable': rng.random() < 0.55,
     }
 
 
@@ -75,56 +84,101 @@ def _simulate_user(traits: dict, n_days: int, start: date, rng: random.Random) -
         today = start + timedelta(days=i)
         # Sleep
         sleep_hours = max(3.0, min(12.0, rng.gauss(traits['baseline_sleep'], 1.0)))
-        sleep_delta = sleep_hours - 7.0  # negative when under-slept
+        sleep_delta = sleep_hours - 7.0
+        # User-rated sleep quality (1-5) correlates with hours but adds noise
+        sleep_quality = max(1, min(5, round(rng.gauss(3 + sleep_delta * 0.4, 0.7))))
+        # Sleep stages — deep:light:rem ≈ 1.3:4:1.7 in a typical night
+        total_min = sleep_hours * 60
+        deep_min = int(total_min * 0.18 + rng.gauss(0, 5))
+        rem_min = int(total_min * 0.22 + rng.gauss(0, 5))
+        light_min = max(0, int(total_min - deep_min - rem_min))
+        deep_min = max(0, deep_min)
+        rem_min = max(0, rem_min)
+        # Bedtime hour — regular users cluster around their baseline (~23h)
+        bedtime_hour = (22 + 2 * (1 - traits['bedtime_regularity']) * rng.gauss(0, 1)) % 24
 
         # Weekend effect
         is_weekend = today.weekday() >= 5
         weekend_bonus = 0.05 if is_weekend else 0.0
 
-        # Habit completion (Bernoulli per day based on propensity, slightly worse on Mon)
+        # Habit completion
         monday_penalty = 0.1 if today.weekday() == 0 else 0
         habit_rate = max(0.0, min(1.0,
             rng.gauss(traits['habit_propensity'] - monday_penalty, 0.15)
         ))
 
-        # Random shock event (~5% chance per day, only if not already in one)
+        # Random shock event
         if shock_remaining == 0 and rng.random() < 0.05:
             shock_remaining = rng.randint(2, 4)
             shock_strength = rng.uniform(1.5, 3.5)
         shock_today = shock_strength if shock_remaining > 0 else 0
         if shock_remaining > 0:
             shock_remaining -= 1
-            shock_strength *= 0.7  # decay
+            shock_strength *= 0.7
 
-        # Mood = AR(1) + sleep effect + weekend + habit effect + noise - shock
+        # --- Wearable health metrics ---
+        # Active days have more steps; rest days less. Weekend bonus too.
+        steps_today = None
+        exercise_today = None
+        hrv_today = None
+        rhr_today = None
+        if traits['has_wearable']:
+            activity_factor = rng.gauss(1.0, 0.3)
+            steps_today = max(500, round(
+                traits['baseline_steps'] * activity_factor * (1.1 if is_weekend else 1.0)
+            ))
+            exercise_today = max(0, round(
+                rng.gauss(traits['baseline_exercise_min'], 12)
+            ))
+            # HRV drops with poor sleep + stress; recovers with exercise
+            hrv_today = round(max(15,
+                traits['baseline_hrv']
+                - 0.6 * max(0, -sleep_delta)
+                - 0.4 * yesterday_stress
+                + 0.05 * exercise_today
+                + rng.gauss(0, 4)
+            ), 1)
+            # Resting HR rises with stress + poor sleep
+            rhr_today = round(max(40,
+                traits['baseline_rhr']
+                + 0.5 * yesterday_stress
+                + 0.3 * max(0, -sleep_delta)
+                + rng.gauss(0, 2)
+            ), 1)
+
+        # --- Mood = AR(1) + sleep effect + weekend + habit + exercise - shock ---
+        exercise_bonus = 0.04 * (exercise_today or 0) / 30  # small mood boost from exercise
+        hrv_bonus = 0.02 * ((hrv_today or 45) - 45) / 10  # higher HRV → better mood
         mood_today = (
             traits['mood_persistence'] * yesterday_mood
             + (1 - traits['mood_persistence']) * traits['baseline_mood']
             + traits['sleep_sensitivity'] * sleep_delta
+            + 0.04 * (sleep_quality - 3)  # quality matters too
             + weekend_bonus
             + 0.08 * (habit_rate - 0.5)
+            + exercise_bonus
+            + hrv_bonus
             - 0.12 * shock_today
             + rng.gauss(0, 0.18)
         )
         mood_today = max(-1.0, min(1.0, mood_today))
 
-        # Stress = AR(1) - mood + shock + noise
+        # Stress = AR(1) - mood + shock - exercise + noise
         stress_today = (
             traits['stress_persistence'] * yesterday_stress
             + (1 - traits['stress_persistence']) * traits['baseline_stress']
             - 1.2 * mood_today
             + 0.9 * shock_today
-            - 0.3 * (sleep_delta if sleep_delta > 0 else 0)  # extra sleep helps
+            - 0.3 * (sleep_delta if sleep_delta > 0 else 0)
+            - 0.02 * (exercise_today or 0)
             + rng.gauss(0, 0.8)
         )
         stress_today = max(0.0, min(10.0, stress_today))
 
-        # Entry frequency — happy users write more often, anxious users sometimes binge-write
-        if rng.random() < 0.7:  # 70% of days have at least one entry
+        if rng.random() < 0.7:
             entries = 1 if rng.random() < 0.85 else rng.randint(2, 3)
         else:
             entries = 0
-            # If no entry, that day still has sleep + habit data but no sentiment.
             mood_today = None
             stress_today = None
 
@@ -134,7 +188,16 @@ def _simulate_user(traits: dict, n_days: int, start: date, rng: random.Random) -
             'stress': round(stress_today, 2) if stress_today is not None else None,
             'entries': entries,
             'sleep_hours': round(sleep_hours, 2),
+            'sleep_quality': sleep_quality,
+            'deep_min': deep_min,
+            'light_min': light_min,
+            'rem_min': rem_min,
+            'bedtime_hour': round(bedtime_hour, 2),
             'habit_rate': round(habit_rate, 3),
+            'steps': steps_today,
+            'exercise_min': exercise_today,
+            'hrv': hrv_today,
+            'rhr': rhr_today,
         })
 
         # Roll forward (None handling: keep last known if today has no entry)
@@ -148,7 +211,12 @@ def _simulate_user(traits: dict, n_days: int, start: date, rng: random.Random) -
 
 # -------- Lag-window feature builder (mirrors features.py) ---------------
 
+def _mean(xs, ndigits=3):
+    return round(sum(xs) / len(xs), ndigits) if xs else 0.0
+
+
 def _build_row(ref_idx: int, user_days: list[dict], current_streak: int) -> dict:
+    import statistics as _stats
     ref_day = user_days[ref_idx]['date']
     feats = {}
     for w in LAG_WINDOWS:
@@ -158,18 +226,42 @@ def _build_row(ref_idx: int, user_days: list[dict], current_streak: int) -> dict
         entries = sum(d['entries'] for d in window)
         sleeps = [d['sleep_hours'] for d in window if d['sleep_hours'] is not None]
         habits = [d['habit_rate'] for d in window if d['habit_rate'] is not None]
+        # Health lags
+        steps = [d['steps'] for d in window if d.get('steps') is not None]
+        exercise = [d['exercise_min'] for d in window if d.get('exercise_min') is not None]
+        hrvs = [d['hrv'] for d in window if d.get('hrv') is not None]
+        rhrs = [d['rhr'] for d in window if d.get('rhr') is not None]
+        qualities = [d['sleep_quality'] for d in window if d.get('sleep_quality') is not None]
+        deep_pcts = []
+        for d in window:
+            deep = d.get('deep_min') or 0
+            light = d.get('light_min') or 0
+            rem = d.get('rem_min') or 0
+            tot = deep + light + rem
+            if tot > 0:
+                deep_pcts.append(deep / tot)
 
-        feats[f'sent_lag_{w}d_mean'] = round(sum(sents) / len(sents), 3) if sents else 0.0
-        feats[f'stress_lag_{w}d_mean'] = round(sum(stresses) / len(stresses), 2) if stresses else 0.0
+        feats[f'sent_lag_{w}d_mean'] = _mean(sents)
+        feats[f'stress_lag_{w}d_mean'] = _mean(stresses, 2)
         feats[f'stress_lag_{w}d_max'] = round(max(stresses), 2) if stresses else 0.0
         feats[f'entries_lag_{w}d'] = entries
-        feats[f'sleep_lag_{w}d_mean'] = round(sum(sleeps) / len(sleeps), 2) if sleeps else 0.0
-        feats[f'habit_lag_{w}d_mean'] = round(sum(habits) / len(habits), 3) if habits else 0.0
+        feats[f'sleep_lag_{w}d_mean'] = _mean(sleeps, 2)
+        feats[f'habit_lag_{w}d_mean'] = _mean(habits)
+        feats[f'steps_lag_{w}d_mean'] = _mean(steps, 0)
+        feats[f'exercise_lag_{w}d_mean'] = _mean(exercise, 1)
+        feats[f'hrv_lag_{w}d_mean'] = _mean(hrvs, 1)
+        feats[f'rhr_lag_{w}d_mean'] = _mean(rhrs, 1)
+        feats[f'sleep_quality_lag_{w}d_mean'] = _mean(qualities, 2)
+        feats[f'deep_sleep_pct_lag_{w}d_mean'] = _mean(deep_pcts)
 
     feats['day_of_week'] = ref_day.weekday()
     feats['is_weekend'] = int(ref_day.weekday() >= 5)
     feats['day_of_month'] = ref_day.day
     feats['current_streak'] = current_streak
+    # Bedtime variability over last 14 days
+    bedtime_window = user_days[max(0, ref_idx - 14):ref_idx]
+    bedtimes = [d['bedtime_hour'] for d in bedtime_window if d.get('bedtime_hour') is not None]
+    feats['bedtime_std_14d'] = round(_stats.stdev(bedtimes), 2) if len(bedtimes) >= 2 else 0.0
     return feats
 
 

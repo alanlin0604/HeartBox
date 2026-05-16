@@ -112,16 +112,19 @@ class MLPredictor:
     # ------------------------------------------------------------------
 
     def _assemble_user_history(self, user_id: int, ref_day):
-        """Build the per-day rollups feature.build_inference_features expects."""
-        from ..models import DailySleep, HabitLog, JournalStreak, MoodNote
+        """Build per-day rollups for notes, sleep, habits, and health.
+
+        Returns (notes, sleep, habits, health, streak) where each is a
+        date-keyed dict matching the shape build_inference_features_dict expects.
+        """
+        from ..models import DailySleep, Habit, HabitLog, HealthMetric, JournalStreak, MoodNote
         from ml.features import LAG_WINDOWS
 
-        # Pull 1 lag window further back than the longest, defensively.
         history_start = ref_day - timedelta(days=max(LAG_WINDOWS) + 1)
 
-        # Notes per day
+        # --- Notes ---
         notes = defaultdict(lambda: {'avg_sentiment': None, 'avg_stress': None, 'count': 0})
-        note_rows = (
+        for r in (
             MoodNote.objects
             .filter(user_id=user_id, is_deleted=False, created_at__date__gte=history_start,
                     sentiment_score__isnull=False)
@@ -132,21 +135,30 @@ class MLPredictor:
                 avg_stress=Avg('stress_index'),
                 count=Count('id'),
             )
-        )
-        for r in note_rows:
+        ):
             notes[r['day']] = {
                 'avg_sentiment': r['avg_sentiment'],
                 'avg_stress': r['avg_stress'],
                 'count': r['count'],
             }
 
-        # Sleep per day
+        # --- Sleep (with stages + quality + bedtime hour) ---
         sleep = {}
-        for s in DailySleep.objects.filter(user_id=user_id, date__gte=history_start).values('date', 'sleep_hours'):
-            sleep[s['date']] = {'hours': s['sleep_hours']}
+        for s in DailySleep.objects.filter(user_id=user_id, date__gte=history_start).values(
+            'date', 'sleep_hours', 'sleep_quality',
+            'deep_sleep_minutes', 'light_sleep_minutes', 'rem_sleep_minutes',
+            'bedtime',
+        ):
+            sleep[s['date']] = {
+                'hours': s['sleep_hours'],
+                'quality': s['sleep_quality'],
+                'deep_min': s['deep_sleep_minutes'],
+                'light_min': s['light_sleep_minutes'],
+                'rem_min': s['rem_sleep_minutes'],
+                'bedtime_hour': s['bedtime'].hour + s['bedtime'].minute / 60 if s['bedtime'] else None,
+            }
 
-        # Habit completion rate per day — same logic as the export command
-        from ..models import Habit
+        # --- Habits ---
         active_count = Habit.objects.filter(user_id=user_id, is_active=True).count() or 1
         habits = {}
         for r in (
@@ -157,30 +169,51 @@ class MLPredictor:
         ):
             habits[r['date']] = round(r['checked'] / active_count, 3)
 
-        # Current streak
-        streak = JournalStreak.objects.filter(user_id=user_id).values_list('current_streak', flat=True).first() or 0
+        # --- Wearable health metrics (pivot long-form into per-day dict) ---
+        health = defaultdict(dict)
+        # Map model metric_type → feature key used in features.build_inference_features_dict
+        type_map = {
+            'steps': 'steps',
+            'exercise_minutes': 'exercise_min',
+            'hrv': 'hrv',
+            'heart_rate': 'rhr',  # treating heart_rate as resting HR proxy
+        }
+        for r in (
+            HealthMetric.objects
+            .filter(user_id=user_id, date__gte=history_start,
+                    metric_type__in=list(type_map.keys()))
+            .values('date', 'metric_type', 'value')
+        ):
+            key = type_map.get(r['metric_type'])
+            if key:
+                health[r['date']][key] = r['value']
 
-        return notes, sleep, habits, streak
+        streak = JournalStreak.objects.filter(user_id=user_id).values_list('current_streak', flat=True).first() or 0
+        return notes, sleep, habits, dict(health), streak
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
-    def predict_mood(self, user_id: int) -> Optional[dict]:
-        """Returns dict with predicted sentiment + stress 3 days out, or None.
+    def _features_for_bundle(self, user_id: int, bundle: dict) -> Optional[list[float]]:
+        """Assemble the per-user feature vector matching exactly the columns
+        the given bundle was trained on (v2 vs v3 may differ)."""
+        from ml.features import build_inference_features_dict, select_features_for_bundle
 
-        None means we have no usable model — callers should fall back to
-        the existing trend-based predictor in services/predictions.py.
-        """
+        ref_day = timezone.now().date()
+        notes, sleep, habits, health, streak = self._assemble_user_history(user_id, ref_day)
+        feats_dict = build_inference_features_dict(
+            ref_day, notes, sleep, habits, health, streak
+        )
+        return select_features_for_bundle(feats_dict, bundle['feature_columns'])
+
+    def predict_mood(self, user_id: int) -> Optional[dict]:
+        """Predicted sentiment + stress 3 days out, or None if no model loaded."""
         self._ensure_loaded()
         if self._mood_bundle is None:
             return None
-
         try:
-            from ml.features import build_inference_features
-            ref_day = timezone.now().date()
-            notes, sleep, habits, streak = self._assemble_user_history(user_id, ref_day)
-            feats = build_inference_features(ref_day, notes, sleep, habits, streak)
+            feats = self._features_for_bundle(user_id, self._mood_bundle)
             preds = self._mood_bundle['model'].predict([feats])[0]
             return {
                 'sentiment_in_3d': round(float(preds[0]), 3),
@@ -192,18 +225,13 @@ class MLPredictor:
             return None
 
     def predict_stress_spike(self, user_id: int) -> Optional[dict]:
-        """Probability of a stress >= 7 day in the next 3 days, or None."""
+        """Probability of stress >= 7 day in the next 3 days, or None."""
         self._ensure_loaded()
         if self._spike_bundle is None:
             return None
-
         try:
-            from ml.features import build_inference_features
-            ref_day = timezone.now().date()
-            notes, sleep, habits, streak = self._assemble_user_history(user_id, ref_day)
-            feats = build_inference_features(ref_day, notes, sleep, habits, streak)
+            feats = self._features_for_bundle(user_id, self._spike_bundle)
             proba = self._spike_bundle['model'].predict_proba([feats])[0]
-            # proba is [P(no spike), P(spike)] — index 1 is the positive class
             spike_prob = float(proba[1]) if len(proba) > 1 else 0.0
             threshold = float(self._spike_bundle.get('threshold', 0.5))
             return {

@@ -24,7 +24,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Avg, Count, Max
 from django.utils import timezone
 
-from api.models import DailySleep, Habit, HabitLog, JournalStreak, MoodNote
+from api.models import DailySleep, Habit, HabitLog, HealthMetric, JournalStreak, MoodNote
 
 User = get_user_model()
 
@@ -87,6 +87,7 @@ class Command(BaseCommand):
         notes_by_user_day = self._aggregate_notes(start_date)
         sleep_by_user_day = self._aggregate_sleep(start_date)
         habits_by_user_day = self._aggregate_habits(start_date)
+        health_by_user_day = self._aggregate_health(start_date)
         streak_by_user = self._latest_streak()
 
         # Eligible users — at least N entries in the window
@@ -116,7 +117,8 @@ class Command(BaseCommand):
                     continue
 
                 feats = self._build_features(
-                    ref_day, user_notes, user_sleep, user_habits, streak_by_user.get(uid)
+                    ref_day, user_notes, user_sleep, user_habits,
+                    health_by_user_day.get(uid, {}), streak_by_user.get(uid),
                 )
 
                 # Targets
@@ -204,19 +206,44 @@ class Command(BaseCommand):
         return out
 
     def _aggregate_sleep(self, start_date):
-        """{ user_id: { date: {hours, quality} } }"""
+        """{ user_id: { date: {hours, quality, deep_min, light_min, rem_min, bedtime_hour} } }"""
         out = defaultdict(dict)
-        rows = (
-            DailySleep.objects
-            .filter(date__gte=start_date)
-            .values('user_id', 'date', 'sleep_hours')
+        rows = DailySleep.objects.filter(date__gte=start_date).values(
+            'user_id', 'date', 'sleep_hours', 'sleep_quality',
+            'deep_sleep_minutes', 'light_sleep_minutes', 'rem_sleep_minutes',
+            'bedtime',
         )
         for r in rows:
             out[r['user_id']][r['date']] = {
                 'hours': r['sleep_hours'],
-                # DailySleep.sleep_quality not always set; placeholder for future
+                'quality': r['sleep_quality'],
+                'deep_min': r['deep_sleep_minutes'],
+                'light_min': r['light_sleep_minutes'],
+                'rem_min': r['rem_sleep_minutes'],
+                'bedtime_hour': (
+                    r['bedtime'].hour + r['bedtime'].minute / 60 if r['bedtime'] else None
+                ),
             }
         return out
+
+    def _aggregate_health(self, start_date):
+        """{ user_id: { date: {steps, hrv, rhr, exercise_min} } }
+
+        HealthMetric stores one row per (user, date, metric_type) — we
+        pivot to one row per (user, date) with each metric as a column.
+        """
+        type_map = {
+            'steps': 'steps',
+            'exercise_minutes': 'exercise_min',
+            'hrv': 'hrv',
+            'heart_rate': 'rhr',
+        }
+        out = defaultdict(lambda: defaultdict(dict))
+        for r in HealthMetric.objects.filter(
+            date__gte=start_date, metric_type__in=list(type_map.keys()),
+        ).values('user_id', 'date', 'metric_type', 'value'):
+            out[r['user_id']][r['date']][type_map[r['metric_type']]] = r['value']
+        return {uid: dict(days) for uid, days in out.items()}
 
     def _aggregate_habits(self, start_date):
         """{ user_id: { date: completion_rate } } — fraction of active habits checked in."""
@@ -248,21 +275,14 @@ class Command(BaseCommand):
     # Per-row feature engineering
     # ----------------------------------------------------------------------
 
-    def _build_features(self, ref_day, user_notes, user_sleep, user_habits, current_streak):
-        """Build the lag features that go into the model.
+    def _build_features(self, ref_day, user_notes, user_sleep, user_habits, user_health, current_streak):
+        """Build the full v3 lag-feature dict for one (user, ref_day) row."""
+        import statistics as _stats
 
-        Convention:
-          sent_lag_{N}d_mean  — average sentiment over previous N days
-          stress_lag_{N}d_max — peak stress over previous N days
-          ... (other rollups)
-        Missing values are encoded as 0 (sentiment), 0 (stress), or NaN-like sentinels —
-        documented in features.py.
-        """
         feats = {}
-
         for w in LAG_WINDOWS:
             window_days = [ref_day - timedelta(days=i) for i in range(1, w + 1)]
-            # Notes-derived
+            # Notes
             sents, stresses, counts = [], [], 0
             for d in window_days:
                 n = user_notes.get(d)
@@ -278,21 +298,52 @@ class Command(BaseCommand):
             feats[f'entries_lag_{w}d'] = counts
 
             # Sleep
-            sleep_hours = []
+            sleeps = [user_sleep[d]['hours'] for d in window_days
+                      if d in user_sleep and user_sleep[d].get('hours') is not None]
+            feats[f'sleep_lag_{w}d_mean'] = round(sum(sleeps) / len(sleeps), 2) if sleeps else 0.0
+            qualities = [user_sleep[d]['quality'] for d in window_days
+                         if d in user_sleep and user_sleep[d].get('quality') is not None]
+            feats[f'sleep_quality_lag_{w}d_mean'] = round(sum(qualities) / len(qualities), 2) if qualities else 0.0
+            deep_pcts = []
             for d in window_days:
-                s = user_sleep.get(d)
-                if s and s['hours'] is not None:
-                    sleep_hours.append(s['hours'])
-            feats[f'sleep_lag_{w}d_mean'] = round(sum(sleep_hours) / len(sleep_hours), 2) if sleep_hours else 0.0
+                s = user_sleep.get(d) or {}
+                deep = s.get('deep_min') or 0
+                light = s.get('light_min') or 0
+                rem = s.get('rem_min') or 0
+                tot = deep + light + rem
+                if tot > 0:
+                    deep_pcts.append(deep / tot)
+            feats[f'deep_sleep_pct_lag_{w}d_mean'] = round(sum(deep_pcts) / len(deep_pcts), 3) if deep_pcts else 0.0
 
             # Habits
             habit_rates = [user_habits[d] for d in window_days if d in user_habits]
             feats[f'habit_lag_{w}d_mean'] = round(sum(habit_rates) / len(habit_rates), 3) if habit_rates else 0.0
 
-        # Categorical/time features
-        feats['day_of_week'] = ref_day.weekday()              # 0=Mon
+            # Health metrics
+            def health_field(key):
+                return [user_health[d][key] for d in window_days
+                        if d in user_health and user_health[d].get(key) is not None]
+            steps = health_field('steps')
+            exercise = health_field('exercise_min')
+            hrv = health_field('hrv')
+            rhr = health_field('rhr')
+            feats[f'steps_lag_{w}d_mean'] = round(sum(steps) / len(steps), 0) if steps else 0.0
+            feats[f'exercise_lag_{w}d_mean'] = round(sum(exercise) / len(exercise), 1) if exercise else 0.0
+            feats[f'hrv_lag_{w}d_mean'] = round(sum(hrv) / len(hrv), 1) if hrv else 0.0
+            feats[f'rhr_lag_{w}d_mean'] = round(sum(rhr) / len(rhr), 1) if rhr else 0.0
+
+        # Categorical/time
+        feats['day_of_week'] = ref_day.weekday()
         feats['is_weekend'] = int(ref_day.weekday() >= 5)
         feats['day_of_month'] = ref_day.day
         feats['current_streak'] = current_streak or 0
+
+        # Bedtime consistency
+        bedtime_hours = []
+        for d in [ref_day - timedelta(days=i) for i in range(1, 15)]:
+            s = user_sleep.get(d) or {}
+            if s.get('bedtime_hour') is not None:
+                bedtime_hours.append(s['bedtime_hour'])
+        feats['bedtime_std_14d'] = round(_stats.stdev(bedtime_hours), 2) if len(bedtime_hours) >= 2 else 0.0
 
         return feats
