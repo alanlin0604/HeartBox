@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLang } from '../context/LanguageContext'
-import { getAchievements, checkAchievements } from '../api/achievements'
+import { getAchievements } from '../api/achievements'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { useToast } from '../context/ToastContext'
 import { LOCALE_MAP } from '../utils/locales'
@@ -23,33 +23,16 @@ export default function AchievementsPage() {
     document.title = `${t('achievement.title')} — ${t('app.name')}`
   }, [t])
 
-  // Auto-run check on mount so the list always reflects newly-met conditions
-  // without forcing the user to click a button.
+  // Show current state on mount. New unlocks are surfaced as real-time
+  // toasts via the notifications WebSocket (see NotificationBell), so we
+  // don't need to also run /check on mount — that path runs _get_progress
+  // again (~15 queries / 400 ms) and the data is already up to date here.
   useEffect(() => {
     let cancelled = false
-    const run = async () => {
-      try {
-        const check = await checkAchievements()
-        if (cancelled) return
-        const unlocked = check.data?.newly_unlocked || []
-        if (unlocked.length > 0) {
-          toast?.success(
-            `${t('achievement.newUnlock')} ${unlocked.map((id) => t(`achievement.${id}`)).join(', ')}`
-          )
-        }
-      } catch {
-        // Silent — the page still loads even if /check fails (network blip).
-      }
-      try {
-        const res = await getAchievements()
-        if (!cancelled) setAchievements(res.data)
-      } catch {
-        if (!cancelled) toast?.error(t('achievement.checkFailed'))
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    run()
+    getAchievements()
+      .then((res) => { if (!cancelled) setAchievements(res.data) })
+      .catch(() => { if (!cancelled) toast?.error(t('achievement.checkFailed')) })
+      .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [toast, t])
 

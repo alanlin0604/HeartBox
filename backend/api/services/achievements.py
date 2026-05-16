@@ -587,9 +587,39 @@ def _get_longest_habit_streak(user):
     return best
 
 
+_PROGRESS_CACHE_TTL = 30  # seconds — short enough to feel "live", long enough to dedupe a page load
+
+
+def _progress_cache_key(user):
+    return f'ach_progress:{user.id}'
+
+
+def invalidate_progress_cache(user):
+    """Call after any state change that could affect achievement progress.
+
+    Most progress changes flow through ``check_achievements`` (which
+    invalidates internally), but external mutation paths can call this
+    directly to avoid the user seeing stale numbers.
+    """
+    from django.core.cache import cache
+    cache.delete(_progress_cache_key(user))
+
+
 def _get_progress(user):
-    """Calculate progress for all achievements. Returns dict of achievement_id -> current value."""
+    """Calculate progress for all achievements. Returns dict of achievement_id -> current value.
+
+    Result is cached for ~30 s per user. Multiple endpoints on the same
+    page load (``/achievements/`` + ``/achievements/check/`` historically)
+    re-aggregated 15+ tables on every hit; the cache collapses repeat
+    work to a single DB pass within the cache window.
+    """
+    from django.core.cache import cache
     from django.db.models import Count, Q
+
+    cache_key = _progress_cache_key(user)
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
 
     # --- Batch 1: Aggregate MoodNote counts in a single query ---
     note_agg = MoodNote.objects.filter(user=user).aggregate(
@@ -658,7 +688,7 @@ def _get_progress(user):
     # will re-run if any meta achievements just crossed their threshold.)
     unlocked_count = UserAchievement.objects.filter(user=user).count()
 
-    return {
+    result = {
         'first_note': note_count,
         'notes_10': note_count,
         'notes_50': note_count,
@@ -720,6 +750,8 @@ def _get_progress(user):
         'achievement_hunter': unlocked_count,
         'achievement_legend': unlocked_count,
     }
+    cache.set(cache_key, result, _PROGRESS_CACHE_TTL)
+    return result
 
 
 def check_achievements(user):
@@ -731,6 +763,9 @@ def check_achievements(user):
     total. We loop until no new unlocks happen (capped at 5 iterations
     to defend against bugs causing an unlock loop).
     """
+    # Mutations may have happened since the last cache snapshot — start
+    # fresh so we don't miss a threshold the caller's action just crossed.
+    invalidate_progress_cache(user)
     newly_unlocked = []
     for _iteration in range(5):
         existing = set(
@@ -747,6 +782,8 @@ def check_achievements(user):
                 unlocked_this_pass.append(aid)
         if not unlocked_this_pass:
             break
+        # Meta achievements count unlocks — invalidate before the next pass.
+        invalidate_progress_cache(user)
         newly_unlocked.extend(unlocked_this_pass)
     # Surface each unlock as a Notification so the WebSocket fan-out
     # delivers a real-time toast wherever the user is in the app —

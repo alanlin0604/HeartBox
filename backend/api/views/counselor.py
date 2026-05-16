@@ -59,9 +59,35 @@ class CounselorListView(generics.ListAPIView):
     """List all approved counselors (public for authenticated users), excluding self.
 
     Supports ``?recommended=true`` to sort counselors by relevance to the
-    current user's most frequently used mood-note tags.
+    current user's most frequently used mood-note tags. The user's top
+    tags are derived from up to 100 of their notes; computing this on
+    every page load was the dominant cost of the counselor page load,
+    so we cache the resolved top-5 tags per user for 5 minutes.
     """
     serializer_class = CounselorListSerializer
+
+    def _user_top_tags(self):
+        """Return up to 5 most-used tags from the user's recent notes.
+
+        Cached per user for 5 minutes — tag preferences shift slowly and
+        a stale result just means the order in the recommended list lags
+        slightly behind the user's latest mood entries, which is fine.
+        """
+        from django.core.cache import cache
+        cache_key = f'counselor_rec_tags:{self.request.user.id}'
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+        tag_counts = {}
+        notes_md = MoodNote.objects.filter(
+            user=self.request.user, is_deleted=False,
+        ).values_list('metadata', flat=True)[:100]
+        for metadata in notes_md:
+            for tag in (metadata or {}).get('tags', []):
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        top_tags = sorted(tag_counts, key=tag_counts.get, reverse=True)[:5]
+        cache.set(cache_key, top_tags, 300)
+        return top_tags
 
     def get_queryset(self):
         qs = CounselorProfile.objects.filter(status='approved').exclude(user=self.request.user).select_related('user').annotate(
@@ -70,14 +96,7 @@ class CounselorListView(generics.ListAPIView):
         )
 
         if self.request.query_params.get('recommended') == 'true' and self.request.user.is_authenticated:
-            # Get user's frequently used tags
-            user_notes = MoodNote.objects.filter(user=self.request.user, is_deleted=False)
-            tag_counts = {}
-            for metadata in user_notes.values_list('metadata', flat=True)[:100]:
-                for tag in (metadata or {}).get('tags', []):
-                    tag_counts[tag] = tag_counts.get(tag, 0) + 1
-            top_tags = sorted(tag_counts, key=tag_counts.get, reverse=True)[:5]
-
+            top_tags = self._user_top_tags()
             if top_tags:
                 q = Q()
                 for tag in top_tags:
