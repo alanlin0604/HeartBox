@@ -16,7 +16,7 @@ const OnboardingModal = lazy(() => import('./OnboardingModal'))
 const ROUTE_PRELOADS = {
   '/': () => import('../pages/JournalPage'),
   '/dashboard': () => import('../pages/DashboardPage'),
-  '/counselors': () => import('../pages/CounselorListPage'),
+  // '/counselors': () => import('../pages/CounselorListPage'), // hidden pre-launch
   '/ai-chat': () => import('../pages/AIChatPage'),
   '/achievements': () => import('../pages/AchievementsPage'),
   '/assessments': () => import('../pages/AssessmentsPage'),
@@ -138,7 +138,7 @@ export default function Layout() {
         { to: '/friends', label: t('friends.title'), icon: '/icons/諮商師.webp' },
         { to: '/community', label: t('nav.community'), icon: '/icons/諮商師.webp' },
         { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
-        { to: '/counselors', label: t('nav.counselors'), icon: '/icons/諮商師.webp' },
+        // /counselors hidden pre-launch — no approved counselors yet.
       ],
     },
     {
@@ -161,7 +161,7 @@ export default function Layout() {
     { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
     { to: '/personal-dashboard', label: t('nav.personalDashboard'), icon: '/icons/心情週報月報.webp' },
     { to: '/friends', label: t('friends.title'), icon: '/icons/諮商師.webp' },
-    { to: '/counselors', label: t('nav.counselors'), icon: '/icons/諮商師.webp' },
+    // /counselors hidden pre-launch
     { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.webp' },
     { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.webp' },
     { to: '/sleep-analysis', label: t('nav.sleepAnalysis'), icon: '/icons/呼吸與冥想.webp' },

@@ -8,7 +8,6 @@ const FEATURES = [
   { icon: '/icons/每週報告.webp', titleKey: 'nav.weeklySummary', descKey: 'guide.weeklySummaryDesc' },
   { icon: '/icons/呼吸與冥想.webp', titleKey: 'nav.breathe', descKey: 'guide.breatheDesc' },
   { icon: '/icons/學習.webp', titleKey: 'nav.learn', descKey: 'guide.learnDesc' },
-  { icon: '/icons/諮商師.webp', titleKey: 'nav.counselors', descKey: 'guide.counselorsDesc' },
   { icon: '/icons/AI 聊天.webp', titleKey: 'nav.aiChat', descKey: 'guide.aiChatDesc' },
   { icon: '/icons/成就.webp', titleKey: 'nav.achievements', descKey: 'guide.achievementsDesc' },
   { icon: '\u2699\uFE0F', titleKey: 'settings.title', descKey: 'guide.settingsDesc', isEmoji: true },

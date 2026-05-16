@@ -7,6 +7,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect } from 'react'
+import { useLang } from '../../context/LanguageContext'
 
 /**
  * @param {string} type - 類型：'success', 'error', 'info', 'warning'
@@ -24,6 +25,7 @@ export default function FeedbackToast({
   duration = 3000,
   position = 'top',
 }) {
+  const { t } = useLang()
   useEffect(() => {
     if (isVisible && duration > 0) {
       const timer = setTimeout(() => {
@@ -196,7 +198,7 @@ export default function FeedbackToast({
           {onClose && (
             <motion.button
               onClick={onClose}
-              aria-label="關閉通知"
+              aria-label={t('common.close')}
               className="flex-shrink-0 p-1 hover:bg-white/20 rounded-lg transition-colors"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}

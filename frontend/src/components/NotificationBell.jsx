@@ -216,17 +216,17 @@ export default memo(function NotificationBell() {
       setUnreadCount((c) => Math.max(0, c - 1))
     }
 
-    // Navigate based on type
+    // Navigate based on type — counselor-related deep links removed
+    // pre-launch (no counselor UI). Booking/share/assessment notifications
+    // will still appear in the bell but won't deep-link anywhere.
     if (notif.type === 'message' && notif.data?.conversation_id) {
       navigate(`/chat/${notif.data.conversation_id}`)
-    } else if (notif.type === 'booking') {
-      navigate('/counselors', { state: { tab: 'bookings' } })
-    } else if (notif.type === 'share') {
-      navigate('/counselors', { state: { tab: 'received' } })
-    } else if (notif.type === 'assessment_share' || notif.data?.assessment_id) {
-      navigate('/counselors', { state: { tab: 'assessments' } })
     } else if (notif.type === 'note' && notif.data?.note_id) {
       navigate(`/notes/${notif.data.note_id}`)
+    } else if (notif.type === 'achievement') {
+      navigate('/achievements')
+    } else if (notif.type === 'friend_request' || notif.type === 'friend_accepted') {
+      navigate('/friends')
     }
 
     setOpen(false)

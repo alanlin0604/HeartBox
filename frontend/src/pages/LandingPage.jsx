@@ -119,22 +119,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Preview Section */}
-      <section className="max-w-4xl mx-auto px-4 py-16 sm:py-20">
-        <Card padding="lg" className="text-center">
-          <h2 className="text-3xl font-bold mb-4 text-[var(--text-primary)]">
-            {t('landing.pricingTitle')}
-          </h2>
-          <p className="text-lg text-[var(--text-secondary)] mb-8 max-w-2xl mx-auto">
-            {t('landing.pricingDesc')}
-          </p>
-          <Link to="/pricing">
-            <Button variant="outline" size="lg">
-              {t('landing.viewPricing')} →
-            </Button>
-          </Link>
-        </Card>
-      </section>
+      {/* Pricing section hidden pre-launch — payment provider not integrated. */}
 
       {/* Footer */}
       <footer className="text-center py-8 mt-auto border-t border-[var(--border-primary)]">

@@ -1,18 +1,6 @@
 import { useState } from 'react'
+import { useLang } from '../../context/LanguageContext'
 
-/**
- * Alert Component
- *
- * 警告/提示框組件
- *
- * @param {string} variant - 變體：'info', 'success', 'warning', 'danger'
- * @param {string} title - 標題
- * @param {React.ReactNode} children - 內容
- * @param {boolean} dismissible - 是否可關閉
- * @param {Function} onClose - 關閉回調
- * @param {React.ReactNode} icon - 自訂圖示
- * @param {string} className - 額外的 CSS 類別
- */
 export default function Alert({
   variant = 'info',
   title,
@@ -22,6 +10,7 @@ export default function Alert({
   icon,
   className = '',
 }) {
+  const { t } = useLang()
   const [isVisible, setIsVisible] = useState(true)
 
   const handleClose = () => {
@@ -104,7 +93,7 @@ export default function Alert({
         {dismissible && (
           <button
             onClick={handleClose}
-            aria-label="關閉警告"
+            aria-label={t('common.close')}
             className="flex-shrink-0 p-1 hover:opacity-70 transition-opacity cursor-pointer"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

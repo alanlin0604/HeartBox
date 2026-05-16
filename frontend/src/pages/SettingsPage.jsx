@@ -62,7 +62,6 @@ export default function SettingsPage() {
   const [setupQR, setSetupQR] = useState(null)
   const [totpCode, setTotpCode] = useState('')
   const [disablePassword, setDisablePassword] = useState('')
-  const [currentSub, setCurrentSub] = useState(null)
   const [userTimezone, setUserTimezone] = useState(user?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone)
   const health = useHealthSync()
   const [activeTab, setActiveTab] = useState('profile')
@@ -82,9 +81,6 @@ export default function SettingsPage() {
         .catch(() => {})
       api.get('/auth/2fa/setup/')
         .then(r => { if (!cancelled) setTwoFAEnabled(r.data.enabled) })
-        .catch(() => {})
-      api.get('/subscriptions/me/')
-        .then(r => { if (!cancelled) setCurrentSub(r.data) })
         .catch(() => {})
     })
     return () => { cancelled = true }
@@ -688,21 +684,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="border-t border-[var(--card-border)]" />
-
-          {/* Subscription */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">{t('subscription.title')}</h2>
-            {currentSub?.plan ? (
-              <div className="text-sm space-y-1">
-                <p>{t('subscription.currentPlan')}: <span className="font-semibold">{currentSub.plan_name}</span></p>
-                <p>{t('subscription.status')}: {currentSub.status}</p>
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400">{t('subscription.noPlan')}</p>
-            )}
-            <Link to="/pricing" className="btn-secondary inline-block">{t('subscription.viewPlans')}</Link>
-          </div>
+          {/* Subscription section hidden pre-launch — payment provider not integrated. */}
         </Card>
       )}
 

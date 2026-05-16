@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Modal from './Modal'
 import Button from './Button'
+import { useLang } from '../../context/LanguageContext'
 
 // Warning Icon (for danger variant)
 const WarningIcon = () => (
@@ -54,14 +55,21 @@ export default function ConfirmDialog({
   open = false,
   onClose,
   onConfirm,
-  title = '確認操作',
-  message = '您確定要執行此操作嗎？',
-  confirmText = '確認',
-  cancelText = '取消',
+  title,
+  message,
+  confirmText,
+  cancelText,
   variant = 'normal', // 'normal' | 'danger'
   showIcon = true,
   loading = false,
 }) {
+  const { t } = useLang()
+  // Fall back to localized defaults so callers can omit any of these props
+  // without leaking Chinese into en/ja sessions.
+  title = title ?? t('confirmDialog.title')
+  message = message ?? t('confirmDialog.message')
+  confirmText = confirmText ?? t('common.confirm')
+  cancelText = cancelText ?? t('common.cancel')
   const [isProcessing, setIsProcessing] = useState(false)
   const confirmButtonRef = useRef(null)
 
@@ -174,7 +182,7 @@ export default function ConfirmDialog({
       {isDanger && (
         <div className="bg-red-500/10 border-t border-red-500/20 px-6 py-3">
           <p className="text-xs text-red-400 text-center">
-            ⚠️ 此操作無法撤銷，請謹慎確認
+            {t('confirmDialog.dangerWarning')}
           </p>
         </div>
       )}
@@ -197,7 +205,8 @@ export function useConfirmDialog() {
     return new Promise((resolve, reject) => {
       setDialog({
         open: true,
-        title: options.title || '確認操作',
+        // title undefined → ConfirmDialog falls back to its localized default
+        title: options.title,
         message: options.message || '',
         variant: options.variant || 'normal',
         confirmText: options.confirmText,

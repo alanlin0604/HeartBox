@@ -32,9 +32,14 @@ $ImageByDigest = "$Image@$Digest"
 Write-Host "Image: $ImageByDigest" -ForegroundColor Green
 
 Write-Host "=== Deploy revision (no traffic shift yet) ===" -ForegroundColor Cyan
+# --min-instances=1 keeps one container warm so the first API call after an
+# idle period doesn't pay the ~3 s cold-start tax. At our scale this costs
+# about $5/month and removes the most visible UX regression for new users.
+# --cpu-boost gives the cold container 2x CPU during startup so Django boots
+# faster on the rare second cold start (scale-up beyond 1 instance).
 gcloud run deploy $Service `
     --image $ImageByDigest --region $Region --project $Project `
-    --no-traffic --memory 1Gi --quiet
+    --no-traffic --memory 1Gi --min-instances 1 --cpu-boost --quiet
 if ($LASTEXITCODE -ne 0) { throw "gcloud run deploy failed" }
 
 $NewRevision = (gcloud run services describe $Service --region $Region `

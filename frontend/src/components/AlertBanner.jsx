@@ -54,10 +54,10 @@ export default memo(function AlertBanner() {
               <div className="flex items-center gap-3 mt-2">
                 <p className="text-sm font-medium opacity-80">{t('alert.recommendation')}</p>
                 <Link
-                  to="/counselors"
+                  to="/learn"
                   className="text-sm font-medium underline opacity-90 hover:opacity-100"
                 >
-                  {t('alert.findCounselor')}
+                  {t('alert.exploreResources')}
                 </Link>
               </div>
             </div>

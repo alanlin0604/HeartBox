@@ -23,7 +23,9 @@ const JournalPage = lazy(() => import('./pages/JournalPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const PersonalDashboardPage = lazy(() => import('./pages/PersonalDashboardPage'))
 const NoteDetailPage = lazy(() => import('./pages/NoteDetailPage'))
-const CounselorListPage = lazy(() => import('./pages/CounselorListPage'))
+// Counselor & Pricing UI temporarily hidden — backend models/endpoints kept
+// because Conversation/Message and achievement counters are coupled to them.
+// const CounselorListPage = lazy(() => import('./pages/CounselorListPage'))
 const ChatPage = lazy(() => import('./pages/ChatPage'))
 const AIChatPage = lazy(() => import('./pages/AIChatPage'))
 const AchievementsPage = lazy(() => import('./pages/AchievementsPage'))
@@ -39,7 +41,7 @@ const GuidePage = lazy(() => import('./pages/GuidePage'))
 const TherapistReportPublicPage = lazy(() => import('./pages/TherapistReportPublicPage'))
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'))
-const PricingPage = lazy(() => import('./pages/PricingPage'))
+// const PricingPage = lazy(() => import('./pages/PricingPage'))
 const DataImportPage = lazy(() => import('./pages/DataImportPage'))
 const HabitsPage = lazy(() => import('./pages/HabitsPage'))
 const FriendsPage = lazy(() => import('./pages/FriendsPage'))
@@ -93,7 +95,8 @@ export default function App() {
           {/* Public therapist report (no auth required) */}
           <Route path="/report/:token" element={<LazyRoute><PageTransition><TherapistReportPublicPage /></PageTransition></LazyRoute>} />
           <Route path="/verify-email" element={<LazyRoute><PageTransition><VerifyEmailPage /></PageTransition></LazyRoute>} />
-          <Route path="/pricing" element={<LazyRoute><PageTransition><PricingPage /></PageTransition></LazyRoute>} />
+          {/* /pricing route hidden pre-launch — payment provider not yet integrated */}
+          <Route path="/pricing" element={<Navigate to="/" replace />} />
           <Route
             path="/"
             element={
@@ -106,7 +109,10 @@ export default function App() {
             <Route path="dashboard" element={<LazyRoute><PageTransition><DashboardPage /></PageTransition></LazyRoute>} />
             <Route path="personal-dashboard" element={<LazyRoute><PageTransition><PersonalDashboardPage /></PageTransition></LazyRoute>} />
             <Route path="notes/:id" element={<LazyRoute><PageTransition><NoteDetailPage /></PageTransition></LazyRoute>} />
-            <Route path="counselors" element={<LazyRoute><PageTransition><CounselorListPage /></PageTransition></LazyRoute>} />
+            {/* /counselors hidden pre-launch — no approved counselors yet. Backend
+                conversation/message infrastructure stays so achievements that count
+                messages/conversations still work. */}
+            <Route path="counselors" element={<Navigate to="/" replace />} />
             <Route path="ai-chat" element={<LazyRoute><PageTransition><AIChatPage /></PageTransition></LazyRoute>} />
             <Route path="achievements" element={<LazyRoute><PageTransition><AchievementsPage /></PageTransition></LazyRoute>} />
             <Route path="chat/:id" element={<LazyRoute><PageTransition><ChatPage /></PageTransition></LazyRoute>} />
