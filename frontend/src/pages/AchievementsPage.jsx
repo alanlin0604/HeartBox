@@ -5,7 +5,12 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { useToast } from '../context/ToastContext'
 import { LOCALE_MAP } from '../utils/locales'
 
-const CATEGORIES = ['all', 'writing', 'consistency', 'mood', 'social', 'explore', 'wellness']
+const CATEGORIES = [
+  'all',
+  'writing', 'consistency', 'mood',
+  'social', 'friends', 'community',
+  'wellness', 'health', 'explore', 'meta',
+]
 
 export default function AchievementsPage() {
   const { t, lang } = useLang()

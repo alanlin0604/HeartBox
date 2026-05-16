@@ -898,10 +898,11 @@ class AchievementTests(APITestCase):
         )
 
     def test_get_achievements_returns_progress(self):
-        """GET /achievements/ should return all 30 achievements with progress."""
+        """GET /achievements/ should return all defined achievements with progress."""
+        from api.services.achievements import ACHIEVEMENT_DEFINITIONS
         resp = self.client.get('/api/achievements/')
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(resp.data), 30)
+        self.assertEqual(len(resp.data), len(ACHIEVEMENT_DEFINITIONS))
         # Check structure of first item
         item = resp.data[0]
         self.assertIn('id', item)

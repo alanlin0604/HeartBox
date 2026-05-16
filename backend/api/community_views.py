@@ -104,7 +104,13 @@ class PublicPostViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.warning(f'Failed to analyze post sentiment: {e}')
 
-        # Return created post with full serializer
+        # Trigger achievement check (first_community_post threshold = 1)
+        try:
+            from .services.achievements import check_achievements
+            check_achievements(request.user)
+        except Exception:
+            pass
+
         return Response(
             PublicPostSerializer(post, context={'request': request}).data,
             status=status.HTTP_201_CREATED

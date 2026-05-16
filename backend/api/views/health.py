@@ -190,6 +190,12 @@ class DailySleepView(APIView):
                 'sleep_quality': request.data.get('sleep_quality'),
             },
         )
+        # Trigger achievement check (first_sleep_log / sleep_streak_7 / quality_sleeper)
+        try:
+            from ..services.achievements import check_achievements
+            check_achievements(request.user)
+        except Exception:
+            pass
         return Response(DailySleepSerializer(record).data, status=status.HTTP_200_OK)
 
 
@@ -678,6 +684,12 @@ class HabitViewSet(viewsets.ModelViewSet):
             date=today,
             note=request.data.get('note', '') or '',
         )
+        # Trigger achievement check (habit_streak_7 / habit_streak_30 / first_habit)
+        try:
+            from ..services.achievements import check_achievements
+            check_achievements(request.user)
+        except Exception:
+            pass
         return Response(HabitLogSerializer(log).data, status=201)
 
     @action(detail=True, methods=['get'])

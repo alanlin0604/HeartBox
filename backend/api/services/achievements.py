@@ -1,8 +1,11 @@
 from django.utils import timezone
 
 from api.models import (
-    AIChatSession, Booking, Conversation, Feedback, Message, MoodNote,
-    NoteAttachment, SharedNote, UserAchievement,
+    AIChatSession, Booking, Conversation,
+    DailySleep, DashboardLayout, Feedback, Friendship, FriendComment,
+    Habit, HabitLog, HealthMetric, Message, MoodNote, NoteAttachment,
+    PostReaction, PublicPost, SelfAssessment, SharedNote, SharedWithFriend,
+    UserAchievement, WellnessSession,
 )
 
 ACHIEVEMENT_DEFINITIONS = {
@@ -222,6 +225,179 @@ ACHIEVEMENT_DEFINITIONS = {
         'name_key': 'achievement.feedback_giver',
         'desc_key': 'achievement.feedback_giver_desc',
     },
+
+    # ===== NEW: Friends Category =====
+    'first_friend': {
+        'category': 'friends',
+        'icon': 'user_plus',
+        'threshold': 1,
+        'name_key': 'achievement.first_friend',
+        'desc_key': 'achievement.first_friend_desc',
+    },
+    'friends_5': {
+        'category': 'friends',
+        'icon': 'users',
+        'threshold': 5,
+        'name_key': 'achievement.friends_5',
+        'desc_key': 'achievement.friends_5_desc',
+    },
+    'first_friend_share': {
+        'category': 'friends',
+        'icon': 'gift',
+        'threshold': 1,
+        'name_key': 'achievement.first_friend_share',
+        'desc_key': 'achievement.first_friend_share_desc',
+    },
+    'friend_supporter': {
+        'category': 'friends',
+        'icon': 'message_heart',
+        'threshold': 5,
+        'name_key': 'achievement.friend_supporter',
+        'desc_key': 'achievement.friend_supporter_desc',
+    },
+
+    # ===== NEW: Community Category =====
+    'first_community_post': {
+        'category': 'community',
+        'icon': 'megaphone',
+        'threshold': 1,
+        'name_key': 'achievement.first_community_post',
+        'desc_key': 'achievement.first_community_post_desc',
+    },
+    'community_supporter': {
+        'category': 'community',
+        'icon': 'hands_helping',
+        'threshold': 10,
+        'name_key': 'achievement.community_supporter',
+        'desc_key': 'achievement.community_supporter_desc',
+    },
+    'community_voice': {
+        'category': 'community',
+        'icon': 'sparkle_heart',
+        'threshold': 5,
+        'name_key': 'achievement.community_voice',
+        'desc_key': 'achievement.community_voice_desc',
+    },
+
+    # ===== NEW: Health Category =====
+    'first_sleep_log': {
+        'category': 'health',
+        'icon': 'bed',
+        'threshold': 1,
+        'name_key': 'achievement.first_sleep_log',
+        'desc_key': 'achievement.first_sleep_log_desc',
+    },
+    'sleep_streak_7': {
+        'category': 'health',
+        'icon': 'moon_stars',
+        'threshold': 7,
+        'name_key': 'achievement.sleep_streak_7',
+        'desc_key': 'achievement.sleep_streak_7_desc',
+    },
+    'quality_sleeper': {
+        'category': 'health',
+        'icon': 'star_filled',
+        'threshold': 1,
+        'name_key': 'achievement.quality_sleeper',
+        'desc_key': 'achievement.quality_sleeper_desc',
+    },
+    'first_health_sync': {
+        'category': 'health',
+        'icon': 'watch',
+        'threshold': 1,
+        'name_key': 'achievement.first_health_sync',
+        'desc_key': 'achievement.first_health_sync_desc',
+    },
+    'step_goal_10k': {
+        'category': 'health',
+        'icon': 'footprints',
+        'threshold': 1,
+        'name_key': 'achievement.step_goal_10k',
+        'desc_key': 'achievement.step_goal_10k_desc',
+    },
+
+    # ===== NEW: Wellness expanded (habits + breathing) =====
+    'first_habit': {
+        'category': 'wellness',
+        'icon': 'target',
+        'threshold': 1,
+        'name_key': 'achievement.first_habit',
+        'desc_key': 'achievement.first_habit_desc',
+    },
+    'habit_streak_7': {
+        'category': 'wellness',
+        'icon': 'flame_small',
+        'threshold': 7,
+        'name_key': 'achievement.habit_streak_7',
+        'desc_key': 'achievement.habit_streak_7_desc',
+    },
+    'habit_streak_30': {
+        'category': 'wellness',
+        'icon': 'crown',
+        'threshold': 30,
+        'name_key': 'achievement.habit_streak_30',
+        'desc_key': 'achievement.habit_streak_30_desc',
+    },
+    'first_breathing': {
+        'category': 'wellness',
+        'icon': 'lungs',
+        'threshold': 1,
+        'name_key': 'achievement.first_breathing',
+        'desc_key': 'achievement.first_breathing_desc',
+    },
+    'wellness_sessions_10': {
+        'category': 'wellness',
+        'icon': 'lotus',
+        'threshold': 10,
+        'name_key': 'achievement.wellness_sessions_10',
+        'desc_key': 'achievement.wellness_sessions_10_desc',
+    },
+
+    # ===== NEW: Explore expanded =====
+    'first_assessment': {
+        'category': 'explore',
+        'icon': 'clipboard_check',
+        'threshold': 1,
+        'name_key': 'achievement.first_assessment',
+        'desc_key': 'achievement.first_assessment_desc',
+    },
+    'assessment_regular': {
+        'category': 'explore',
+        'icon': 'graph_up',
+        'threshold': 5,
+        'name_key': 'achievement.assessment_regular',
+        'desc_key': 'achievement.assessment_regular_desc',
+    },
+    'dashboard_customized': {
+        'category': 'explore',
+        'icon': 'layout',
+        'threshold': 1,
+        'name_key': 'achievement.dashboard_customized',
+        'desc_key': 'achievement.dashboard_customized_desc',
+    },
+    'ai_chat_50': {
+        'category': 'social',
+        'icon': 'robot_star',
+        'threshold': 50,
+        'name_key': 'achievement.ai_chat_50',
+        'desc_key': 'achievement.ai_chat_50_desc',
+    },
+
+    # ===== NEW: Meta achievements =====
+    'achievement_hunter': {
+        'category': 'meta',
+        'icon': 'medal_bronze',
+        'threshold': 10,
+        'name_key': 'achievement.achievement_hunter',
+        'desc_key': 'achievement.achievement_hunter_desc',
+    },
+    'achievement_legend': {
+        'category': 'meta',
+        'icon': 'medal_gold',
+        'threshold': 25,
+        'name_key': 'achievement.achievement_legend',
+        'desc_key': 'achievement.achievement_legend_desc',
+    },
 }
 
 
@@ -349,6 +525,68 @@ def _get_weather_note_count(user):
     return count
 
 
+def _get_longest_sleep_streak(user):
+    """Longest consecutive-day streak of DailySleep records."""
+    dates = list(
+        DailySleep.objects.filter(user=user).values_list('date', flat=True).order_by('date')[:366]
+    )
+    if not dates:
+        return 0
+    best = 1
+    run = 1
+    for i in range(1, len(dates)):
+        if (dates[i] - dates[i - 1]).days == 1:
+            run += 1
+            best = max(best, run)
+        else:
+            run = 1
+    return best
+
+
+def _get_quality_sleep_week(user):
+    """1 if any 7-day window has avg sleep_quality >= 4, else 0."""
+    from datetime import timedelta
+    qualities = list(
+        DailySleep.objects.filter(user=user, sleep_quality__isnull=False)
+        .order_by('-date').values_list('date', 'sleep_quality')[:60]
+    )
+    if len(qualities) < 7:
+        return 0
+    # Group by date for rolling window
+    date_to_q = {d: q for d, q in qualities}
+    sorted_dates = sorted(date_to_q.keys())
+    for i in range(len(sorted_dates) - 6):
+        window = [
+            date_to_q[d] for d in sorted_dates[i:i + 7]
+            if (sorted_dates[i + 6] - sorted_dates[i]).days == 6
+        ]
+        if len(window) == 7 and sum(window) / 7 >= 4.0:
+            return 1
+    return 0
+
+
+def _get_longest_habit_streak(user):
+    """Across all of the user's habits, the longest single-habit consecutive-day streak."""
+    habits = Habit.objects.filter(user=user, is_active=True).values_list('id', flat=True)
+    best = 0
+    for habit_id in habits:
+        dates = list(
+            HabitLog.objects.filter(habit_id=habit_id).values_list('date', flat=True).order_by('date')[:400]
+        )
+        if not dates:
+            continue
+        run = 1
+        local_best = 1
+        for i in range(1, len(dates)):
+            if (dates[i] - dates[i - 1]).days == 1:
+                run += 1
+                local_best = max(local_best, run)
+            else:
+                run = 1
+        best = max(best, local_best)
+    return best
+
+
 def _get_progress(user):
     """Calculate progress for all achievements. Returns dict of achievement_id -> current value."""
     from django.db.models import Count, Q
@@ -390,6 +628,36 @@ def _get_progress(user):
 
     emotional_range = (1 if note_agg['has_high_sentiment'] > 0 else 0) + (1 if note_agg['has_low_sentiment'] > 0 else 0)
 
+    # --- Batch 3: New feature counters ---
+    new_counts = {
+        'friend_count': Friendship.objects.filter(user=user).count(),
+        'friend_share_count': SharedWithFriend.objects.filter(shared_by=user).count(),
+        'friend_comment_count': FriendComment.objects.filter(commenter=user).count(),
+        'community_posts': PublicPost.objects.filter(user=user, is_active=True).count(),
+        'community_reactions_given': PostReaction.objects.filter(user=user).count(),
+        'community_reactions_received': PostReaction.objects.filter(post__user=user).count(),
+        'sleep_logs': DailySleep.objects.filter(user=user).count(),
+        # Non-manual = synced from Health Connect / Apple Health
+        'health_synced': HealthMetric.objects.filter(user=user).exclude(source='manual').count(),
+        'habits_count': Habit.objects.filter(user=user, is_active=True).count(),
+        'assessments_count': SelfAssessment.objects.filter(user=user).count(),
+        'wellness_sessions': WellnessSession.objects.filter(user=user).count(),
+        # DashboardLayout exists ⇒ user customized at least once
+        'dashboard_customized': 1 if DashboardLayout.objects.filter(user=user).exists() else 0,
+    }
+    # Single-day step goal 10k
+    step_10k_hit = HealthMetric.objects.filter(
+        user=user, metric_type='steps', value__gte=10000,
+    ).exists()
+    longest_sleep_streak = _get_longest_sleep_streak(user)
+    longest_habit_streak = _get_longest_habit_streak(user)
+    quality_sleep_hit = _get_quality_sleep_week(user)
+
+    # Meta: count of currently-unlocked achievements
+    # (computed BEFORE this run's unlocks — the check_achievements caller
+    # will re-run if any meta achievements just crossed their threshold.)
+    unlocked_count = UserAchievement.objects.filter(user=user).count()
+
     return {
         'first_note': note_count,
         'notes_10': note_count,
@@ -422,25 +690,64 @@ def _get_progress(user):
         'tag_collector': tag_count,
         'weather_logger': weather_count,
         'feedback_giver': other_counts['feedback_count'],
+        # NEW: friends
+        'first_friend': new_counts['friend_count'],
+        'friends_5': new_counts['friend_count'],
+        'first_friend_share': new_counts['friend_share_count'],
+        'friend_supporter': new_counts['friend_comment_count'],
+        # NEW: community
+        'first_community_post': new_counts['community_posts'],
+        'community_supporter': new_counts['community_reactions_given'],
+        'community_voice': new_counts['community_reactions_received'],
+        # NEW: health
+        'first_sleep_log': new_counts['sleep_logs'],
+        'sleep_streak_7': longest_sleep_streak,
+        'quality_sleeper': quality_sleep_hit,
+        'first_health_sync': new_counts['health_synced'],
+        'step_goal_10k': 1 if step_10k_hit else 0,
+        # NEW: wellness expanded
+        'first_habit': new_counts['habits_count'],
+        'habit_streak_7': longest_habit_streak,
+        'habit_streak_30': longest_habit_streak,
+        'first_breathing': new_counts['wellness_sessions'],
+        'wellness_sessions_10': new_counts['wellness_sessions'],
+        # NEW: explore expanded
+        'first_assessment': new_counts['assessments_count'],
+        'assessment_regular': new_counts['assessments_count'],
+        'dashboard_customized': new_counts['dashboard_customized'],
+        'ai_chat_50': other_counts['ai_session_count'],
+        # NEW: meta (compares against the OTHER achievements unlocked)
+        'achievement_hunter': unlocked_count,
+        'achievement_legend': unlocked_count,
     }
 
 
 def check_achievements(user):
-    """Check all achievement conditions and unlock any new ones. Returns list of newly unlocked IDs."""
-    existing = set(
-        UserAchievement.objects.filter(user=user).values_list('achievement_id', flat=True)
-    )
-    progress = _get_progress(user)
+    """Check all achievement conditions and unlock any new ones.
+
+    Two-pass: meta achievements (achievement_hunter, achievement_legend)
+    count *currently-unlocked* achievements. When a single call unlocks
+    several normal achievements, the meta count needs to reflect the new
+    total. We loop until no new unlocks happen (capped at 5 iterations
+    to defend against bugs causing an unlock loop).
+    """
     newly_unlocked = []
-
-    for aid, defn in ACHIEVEMENT_DEFINITIONS.items():
-        if aid in existing:
-            continue
-        current = progress.get(aid, 0)
-        if current >= defn['threshold']:
-            UserAchievement.objects.create(user=user, achievement_id=aid)
-            newly_unlocked.append(aid)
-
+    for _iteration in range(5):
+        existing = set(
+            UserAchievement.objects.filter(user=user).values_list('achievement_id', flat=True)
+        )
+        progress = _get_progress(user)
+        unlocked_this_pass = []
+        for aid, defn in ACHIEVEMENT_DEFINITIONS.items():
+            if aid in existing:
+                continue
+            current = progress.get(aid, 0)
+            if current >= defn['threshold']:
+                UserAchievement.objects.create(user=user, achievement_id=aid)
+                unlocked_this_pass.append(aid)
+        if not unlocked_this_pass:
+            break
+        newly_unlocked.extend(unlocked_this_pass)
     return newly_unlocked
 
 

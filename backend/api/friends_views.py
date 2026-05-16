@@ -154,6 +154,14 @@ class AcceptFriendRequestView(APIView):
         try:
             friend_request = accept_friend_request(pk, request.user)
             serializer = FriendRequestSerializer(friend_request)
+            # Trigger achievement check for both sides — friend_count just
+            # incremented for accepter AND requester (Friendship is bidirectional)
+            try:
+                from .services.achievements import check_achievements
+                check_achievements(request.user)
+                check_achievements(friend_request.from_user)
+            except Exception:
+                pass  # never block accept on achievement-check failure
             return Response(serializer.data)
         except ValueError as e:
             return error_response('friends.action_failed', str(e), 400)
