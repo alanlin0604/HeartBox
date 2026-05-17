@@ -1,14 +1,23 @@
-# Health Connect 連結 — Root cause 找到（2026-05-17）
+# Health Connect 連結 — Root cause 找到（2026-05-17，第二輪修法）
 
-> **狀態：已修復（2026-05-17 commit pending）**。Real root cause 是
-> Android Kotlin runtime mismatch — APK 內 kotlin-stdlib < 1.9，缺
-> `kotlin.coroutines.jvm.internal.SpillingKt`，plugin 的 coroutine state
-> machine 在第一個 `await` 就 throw `NoClassDefFoundError`。所有「IPC race」、
-> 「需要 retry」、「需要 fallback probe」的假設都是 symptom 而非 cause。
+> **狀態：fix 修正中**。Real root cause 是 Android Kotlin runtime
+> version mismatch — APK 內 kotlin-stdlib 版本不對，缺
+> `kotlin.coroutines.jvm.internal.SpillingKt` 這個 class。Plugin/app 的
+> coroutine state machine 在第一個 `await` 就 throw `NoClassDefFoundError`。
 >
-> 修法：[android/app/build.gradle](../frontend/android/app/build.gradle)
-> 加 `resolutionStrategy.force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.25'`
-> + explicit `implementation` 宣告。下次 build 即可。
+> **第一輪修法 (d8bbfcb) 用錯方向**：force 把 kotlin-stdlib **降**到 1.9.25，
+> 以為 SpillingKt 是 1.9 才有的 class。實際上 SpillingKt 是 **Kotlin 2.1.0+
+> 才加入**（aws-sdk-kotlin#1654 + kotlinlang Slack 證實）。Capacitor 8.0 預設
+> 用 Kotlin 2.2.20 編譯，所以 plugin 與 app bytecode 都期待 2.1+ stdlib，
+> 我降到 1.9.25 反而把 SpillingKt 從 APK 拔掉。
+>
+> **第二輪修法**：force **升**到 2.2.20，對齊 Capacitor 8 預設。
+> + 改放在 root `build.gradle` 的 `allprojects.configurations.all` 而非
+> 只 app module — 子 project 可能在 app force 生效前就 resolve 完。
+> + 加 `enforcedPlatform("org.jetbrains.kotlin:kotlin-bom:2.2.20")` 對
+> 整個 Kotlin stdlib 家族（jdk7/jdk8/common/reflect）統一版本。
+> + CI workflow 加 `:app:dependencies` 驗證 step：build 前先確認 final
+> kotlin-stdlib resolved version ≥ 2.1.0，不到就 abort build。
 
 ## 真相揭曉（從 user 提供的 STAGE_ 診斷）
 

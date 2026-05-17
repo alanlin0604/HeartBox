@@ -22,6 +22,21 @@ allprojects {
         google()
         mavenCentral()
     }
+    // Defence-in-depth Kotlin stdlib pin across every subproject (Capacitor
+    // core, every Capacitor plugin module, app, cordova bridge). The app-
+    // module-only pin in app/build.gradle was insufficient — Gradle may
+    // resolve transitive Kotlin deps inside a plugin subproject before the
+    // app's resolutionStrategy gets a chance to run, baking the wrong
+    // stdlib into the plugin AAR. Applying at allprojects level closes that
+    // window. See docs/health-connect-debug-progress.md for the full story.
+    configurations.all {
+        resolutionStrategy {
+            force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+            force "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion"
+        }
+    }
 }
 
 task clean(type: Delete) {

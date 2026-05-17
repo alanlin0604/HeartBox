@@ -32,21 +32,27 @@ repositories {
 
 // Force a single Kotlin runtime version across the whole dependency graph.
 //
-// Root cause this fixes: @capgo/capacitor-health 8.4.5 ships .class files
-// compiled with Kotlin 1.9.25, whose generated coroutine state machines
-// reference `kotlin.coroutines.jvm.internal.SpillingKt` (an optimization
-// class introduced in Kotlin 1.9). Without an explicit constraint here,
-// Gradle's conflict resolution picks the older kotlin-stdlib pulled in by
-// some other transitive dep (Capacitor core / Cordova plugins), and the
-// final APK ships kotlin-stdlib < 1.9 — so SpillingKt is absent and the
-// plugin crashes at first `await` with NoClassDefFoundError. Forcing 1.9.25
-// puts the matching stdlib in the APK and the Health Connect flow can run.
+// Root cause this fixes (REAL, second attempt — first one had the version
+// wrong): the plugin/app bytecode references
+// `kotlin.coroutines.jvm.internal.SpillingKt`, an internal optimization
+// class added in Kotlin 2.1.0. Capacitor 8.0 ships defaulting to
+// kotlin_version 2.2.20, so without a pin the resolved kotlin-stdlib
+// usually contains SpillingKt — BUT @capgo/capacitor-health 8.4.5 declares
+// `implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.25'` in its
+// build.gradle, which Gradle conflict resolution can latch onto and ship
+// kotlin-stdlib 1.9 to the final APK (no SpillingKt) while the bytecode
+// still expects 2.1+. Force everything to 2.2.20 so plug-in's declared
+// stdlib is overridden and the runtime class is present.
+//
+// Verified Kotlin compatibility note: SpillingKt was introduced in 2.1.
+// Anything ≥ 2.1.0 here works; matching Capacitor's default (2.2.20)
+// minimizes surprise.
 configurations.all {
     resolutionStrategy {
-        force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.25'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.25'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.25'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-common:1.9.25'
+        force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+        force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+        force "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion"
     }
 }
 
@@ -56,9 +62,12 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
-    // Explicit kotlin-stdlib so the app module declares its own runtime
-    // requirement — defence-in-depth alongside the resolutionStrategy above.
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.25'
+    // Pin to Kotlin BOM so the whole stdlib family (jdk7, jdk8, common,
+    // reflect, …) stays at the same version even if a transitive bump
+    // changes one of them. enforcedPlatform overrides any version any
+    // other module declares — strictly stronger than a regular `platform`.
+    implementation enforcedPlatform("org.jetbrains.kotlin:kotlin-bom:$kotlinVersion")
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

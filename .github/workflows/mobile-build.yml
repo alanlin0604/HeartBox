@@ -94,6 +94,31 @@ jobs:
       # Add Android platform if not committed
       - run: npx cap sync android
 
+      # Sanity check: print the kotlin-stdlib version actually resolved by
+      # Gradle for the app module's runtimeClasspath. This is the version
+      # that lands in the APK. If it's < 2.1, SpillingKt will be missing
+      # at runtime and Health Connect will fail at first suspend. See
+      # docs/health-connect-debug-progress.md.
+      - name: Verify Kotlin stdlib version in APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath 2>&1 \
+            | grep -E "org\.jetbrains\.kotlin:kotlin-stdlib(:|-jdk|-common)" \
+            | head -20 \
+            || echo "::warning::Could not list kotlin-stdlib dependencies."
+          STDLIB_VER=$(./gradlew :app:dependencies --configuration releaseRuntimeClasspath 2>&1 \
+            | grep -oE "org\.jetbrains\.kotlin:kotlin-stdlib:[0-9.]+" \
+            | head -1 | cut -d: -f3)
+          echo "::notice::Resolved kotlin-stdlib version: ${STDLIB_VER:-UNKNOWN}"
+          MAJOR=$(echo "$STDLIB_VER" | cut -d. -f1)
+          MINOR=$(echo "$STDLIB_VER" | cut -d. -f2)
+          if [ -z "$STDLIB_VER" ] || [ "$MAJOR" -lt 2 ] || { [ "$MAJOR" -eq 2 ] && [ "$MINOR" -lt 1 ]; }; then
+            echo "::error::kotlin-stdlib resolved to ${STDLIB_VER:-NONE} — need ≥ 2.1.0 for SpillingKt. APK will crash at Health Connect."
+            exit 1
+          fi
+        working-directory: frontend
+
       # Decode keystore for release builds
       - name: Decode keystore
         if: inputs.build_type == 'release'
