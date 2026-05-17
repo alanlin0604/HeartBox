@@ -1,23 +1,75 @@
-# Health Connect 連結 — Root cause 找到（2026-05-17，第二輪修法）
+# Health Connect 連結 — RESOLVED (2026-05-17, commit 695e010)
 
-> **狀態：fix 修正中**。Real root cause 是 Android Kotlin runtime
-> version mismatch — APK 內 kotlin-stdlib 版本不對，缺
-> `kotlin.coroutines.jvm.internal.SpillingKt` 這個 class。Plugin/app 的
-> coroutine state machine 在第一個 `await` 就 throw `NoClassDefFoundError`。
->
-> **第一輪修法 (d8bbfcb) 用錯方向**：force 把 kotlin-stdlib **降**到 1.9.25，
-> 以為 SpillingKt 是 1.9 才有的 class。實際上 SpillingKt 是 **Kotlin 2.1.0+
-> 才加入**（aws-sdk-kotlin#1654 + kotlinlang Slack 證實）。Capacitor 8.0 預設
-> 用 Kotlin 2.2.20 編譯，所以 plugin 與 app bytecode 都期待 2.1+ stdlib，
-> 我降到 1.9.25 反而把 SpillingKt 從 APK 拔掉。
->
-> **第二輪修法**：force **升**到 2.2.20，對齊 Capacitor 8 預設。
-> + 改放在 root `build.gradle` 的 `allprojects.configurations.all` 而非
-> 只 app module — 子 project 可能在 app force 生效前就 resolve 完。
-> + 加 `enforcedPlatform("org.jetbrains.kotlin:kotlin-bom:2.2.20")` 對
-> 整個 Kotlin stdlib 家族（jdk7/jdk8/common/reflect）統一版本。
-> + CI workflow 加 `:app:dependencies` 驗證 step：build 前先確認 final
-> kotlin-stdlib resolved version ≥ 2.1.0，不到就 abort build。
+> **狀態：✅ 已修復、Galaxy A52 上實機驗證通過**。HC 整合完整 work：
+> 連結成功、6 種資料類型同步到 backend、`/api/health/sync/` 收到正確 payload、
+> SettingsPage 顯示「上次同步」時間戳更新。
+
+## Root cause（最終確定）
+
+Android APK 內的 `kotlin-stdlib` runtime 版本與 plugin/app bytecode 期待的不
+對齊：
+
+- Capacitor 8.0 預設用 **Kotlin 2.2.20** 編譯
+- 編出的 bytecode 內呼叫 `kotlin.coroutines.jvm.internal.SpillingKt`
+- 但這個 class 是 **Kotlin 2.1.0** 才加入的 internal coroutine state machine 優化
+- HeartBox 之前的 build 內 `kotlin-stdlib` 被 transitive 解析到 **1.7.10**
+  （由 `androidx.health.connect:connect-client:1.1.0` 帶入），class 不存在
+- Plugin coroutine 第一個 `await` 觸發 state machine → call SpillingKt →
+  `NoClassDefFoundError` → 部分 Samsung 韌體升級成 SIGKILL
+
+最終 fix：[android/build.gradle](../frontend/android/build.gradle) `allprojects`
+區塊內加 `resolutionStrategy.eachDependency` hook，把每個 `kotlin-stdlib*` 強制
+override 成 `rootProject.ext.kotlinVersion`（2.2.20）。
+
+## 為什麼花 7 輪修
+
+每一輪揭露下一輪要解的問題：
+
+1. **v1** (515f84a) — 包覆 `requestAuthorization` coroutine。**結果**：不再
+   SIGKILL，但點允許後仍崩。揭露：`handlePermissionResult` 同樣未 guard。
+2. **v2** (de8d061) — 包覆 `handlePermissionResult` + `checkAuthorization`。
+   **結果**：不再崩潰，但顯示「連結失敗」誤報。揭露：plugin 認為 readAuthorized=[]。
+3. **v3** (3fe1e76) — 加 500ms retry。**結果**：仍空。揭露：不是 IPC race。
+4. **v4** (b5cdcb4) — 5 次 exponential retry + JS data-probe + 自動展開診斷面板
+   + 一鍵複製 + CI patch verification。**結果**：仍空，但**診斷面板讓 user 貼出
+   `STAGE_callback_getClient: NoClassDefFoundError: SpillingKt`**。揭露：是
+   Kotlin runtime class missing，不是 HC 邏輯問題。
+5. **v5** (d8bbfcb) — Force kotlin-stdlib **降**到 1.9.25。**完全錯反**：以為
+   SpillingKt 是 1.9 加入的。揭露：用 Web research（aws-sdk-kotlin#1654）發現
+   SpillingKt 是 2.1+。
+6. **v6** (580eee4) — Force **升**到 2.2.20 + 加 CI guard 檢查 final resolved
+   stdlib 版本。**結果**：CI 紅燈，guard 報「resolved to 1.7.10」。揭露：force
+   宣告**沒生效**。
+7. **v7** (695e010) — 改用 `resolutionStrategy.eachDependency` hook +
+   explicit `rootProject.ext.kotlinVersion`。**根本原因**：v6 的 force 字串
+   `"...:$kotlinVersion"` 在 allprojects scope 內 subproject evaluation
+   找不到 binding，Groovy GString interpolation 變成 `"...:" `（空版本）→ Gradle
+   silently 忽略無效宣告。eachDependency 每個 dep 解析時都 call hook，無視
+   source declaration 強制 override。**結果**：✅ stdlib 正確 resolve 2.2.20、
+   SpillingKt 在 APK 內、HC 連結成功、資料同步動起來。
+
+## 留在 codebase 內的「副產品」
+
+每輪做的東西都不是白工：
+
+| Layer | 檔案 | 為何留著 |
+|---|---|---|
+| Plugin try/catch | [patches/@capgo+capacitor-health+8.4.5.patch](../frontend/patches/@capgo+capacitor-health+8.4.5.patch) | 未來任何新 native exception 都會轉 JS rejection 而不是 SIGKILL |
+| 5 次 retry + data-probe | [healthKit.js](../frontend/src/services/healthKit.js) | 真實 IPC race（不同機型）的保險 |
+| 自動展開診斷面板 + 一鍵複製 | [SettingsPage.jsx](../frontend/src/pages/SettingsPage.jsx) | 沒這個 user 貼不出 STAGE_，我們現在還在猜 |
+| CI dependency-version guard | [.github/workflows/mobile-build.yml](../.github/workflows/mobile-build.yml) | build 階段抓 stdlib < 2.1，不再讓壞 APK 進 user 手機 |
+
+## 給後人的 lessons
+
+1. **看到 `NoClassDefFoundError` 時先 verify class 屬於哪個 artifact、哪個版本
+   開始有**，再決定 force up 還是 down。Web search class FQN +「added in」。
+2. **Gradle `force` 與 GString interpolation 是地雷**：在 `allprojects {}` 內
+   subproject evaluation 看不到 root ext。Always 用 `rootProject.ext.X` 顯式
+   reference。最安全直接用 `eachDependency`。
+3. **CI verification step > 反覆 build APK 手測**：一個 `:app:dependencies`
+   grep 比 5 次 phone 安裝測試節省半天。投資 CI guard 永遠值得。
+4. **診斷面板的 ROI 不是 debug 工具，是 user 反饋頻寬**：把「STAGE_」標記轉成
+   user 一鍵複製貼回的訊息，把猜謎變成靠證據對話。
 
 ## 真相揭曉（從 user 提供的 STAGE_ 診斷）
 

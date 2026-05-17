@@ -2,8 +2,8 @@
 
 > 紀錄所有功能的實際完成狀態。每次完成新東西就更新一次。
 
-**最後更新：** 2026-05-09
-**完成度：** 10 / 11 (91%)
+**最後更新：** 2026-05-17
+**完成度：** 11 / 11 (100%)
 
 ---
 
@@ -52,20 +52,18 @@
 
 ---
 
-## 🔴 還未做 (1)
+## ✅ 補完 (D2 — 2026-05-17)
 
-### D2. 睡眠深度分析
+### D2. 睡眠深度分析 + Apple Health / Health Connect 自動同步
 
-**現況：** Backend 95% 完整 — `SleepAnalysisView` / `SleepCalendarView` / `SleepTrendsView` /
-`SleepInsightsView` 都有真實計算邏輯（`backend/api/services/sleep_analysis.py`，
-品質分數、模式辨識、改善建議），前端 `SleepAnalysisPage` 渲染圖表都正常。
+**現況：** Backend 計算邏輯（`backend/api/services/sleep_analysis.py`，品質分數、
+模式辨識、改善建議）+ 前端 `SleepAnalysisPage` 渲染都早已 ready。
+卡很久的 Health Connect crash 在 2026-05-17 解掉（Kotlin stdlib 版本不對，導致
+plugin coroutine 缺 `SpillingKt` runtime class，詳見
+[`docs/health-connect-debug-progress.md`](docs/health-connect-debug-progress.md)）。
 
-**缺：** Apple Health / Health Connect 自動同步 — `HealthSyncView` 是 stub，
-依賴使用者手動輸入睡眠資料。
-
-**Blocker：** 整合工作卡在 paused 的 Health Connect crash 調查
-（[`docs/health-connect-debug-progress.md`](docs/health-connect-debug-progress.md)）。
-等 capgo plugin 在 Galaxy A52 上的 native crash 解了再動。
+Galaxy A52 實機驗證：連結 HC、6 種資料類型（步數 / 心率 / HRV / 活動卡路里 /
+運動時長 / 睡眠）成功同步，「上次同步」時間戳正確更新。
 
 ---
 
