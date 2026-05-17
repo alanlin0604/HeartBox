@@ -22,19 +22,29 @@ allprojects {
         google()
         mavenCentral()
     }
-    // Defence-in-depth Kotlin stdlib pin across every subproject (Capacitor
-    // core, every Capacitor plugin module, app, cordova bridge). The app-
-    // module-only pin in app/build.gradle was insufficient — Gradle may
-    // resolve transitive Kotlin deps inside a plugin subproject before the
-    // app's resolutionStrategy gets a chance to run, baking the wrong
-    // stdlib into the plugin AAR. Applying at allprojects level closes that
-    // window. See docs/health-connect-debug-progress.md for the full story.
+    // Kotlin stdlib version pin — every transitive dep that ships
+    // `org.jetbrains.kotlin:kotlin-stdlib*` gets rewritten to our pinned
+    // version. eachDependency is strictly stronger than `force` for this:
+    // - `force` is a *resolution rule* and can be lost when a subproject
+    //   redeclares a `strictly` constraint or when Groovy GString
+    //   interpolation fails silently (`$kotlinVersion` reads as empty in
+    //   subproject scope, leaving the force string as
+    //   "kotlin-stdlib:" which is silently ignored — this is what the CI
+    //   guard caught after my v6 attempt, with stdlib still resolving to
+    //   1.7.10 transitively).
+    // - eachDependency runs on *every* dependency right as it resolves,
+    //   independent of where it was declared, so it covers Capacitor's
+    //   plugins, the cordova bridge, and androidx.health.connect's
+    //   transitive Kotlin pull.
+    // rootProject.ext.kotlinVersion is read explicitly to avoid the
+    // subproject scope binding problem.
     configurations.all {
-        resolutionStrategy {
-            force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
-            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
-            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
-            force "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion"
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'org.jetbrains.kotlin' &&
+                details.requested.name.startsWith('kotlin-stdlib')) {
+                details.useVersion(rootProject.ext.kotlinVersion)
+                details.because("SpillingKt is in stdlib ≥ 2.1; @capgo/capacitor-health bytecode needs it")
+            }
         }
     }
 }

@@ -103,20 +103,28 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew :app:dependencies --configuration releaseRuntimeClasspath 2>&1 \
-            | grep -E "org\.jetbrains\.kotlin:kotlin-stdlib(:|-jdk|-common)" \
-            | head -20 \
-            || echo "::warning::Could not list kotlin-stdlib dependencies."
-          STDLIB_VER=$(./gradlew :app:dependencies --configuration releaseRuntimeClasspath 2>&1 \
-            | grep -oE "org\.jetbrains\.kotlin:kotlin-stdlib:[0-9.]+" \
-            | head -1 | cut -d: -f3)
-          echo "::notice::Resolved kotlin-stdlib version: ${STDLIB_VER:-UNKNOWN}"
-          MAJOR=$(echo "$STDLIB_VER" | cut -d. -f1)
-          MINOR=$(echo "$STDLIB_VER" | cut -d. -f2)
-          if [ -z "$STDLIB_VER" ] || [ "$MAJOR" -lt 2 ] || { [ "$MAJOR" -eq 2 ] && [ "$MINOR" -lt 1 ]; }; then
-            echo "::error::kotlin-stdlib resolved to ${STDLIB_VER:-NONE} — need ≥ 2.1.0 for SpillingKt. APK will crash at Health Connect."
-            exit 1
-          fi
+          # Check BOTH debug and release runtime classpaths since the
+          # mobile-build matrix produces either depending on build_type.
+          for CFG in debugRuntimeClasspath releaseRuntimeClasspath; do
+            echo "::group::Resolved kotlin-stdlib in $CFG"
+            ./gradlew :app:dependencies --configuration "$CFG" 2>&1 \
+              | grep -E "org\.jetbrains\.kotlin:kotlin-stdlib" \
+              | head -20 \
+              || echo "(no kotlin-stdlib in $CFG?)"
+            echo "::endgroup::"
+            # Extract the FINAL resolved version (the one after any "->")
+            STDLIB_VER=$(./gradlew :app:dependencies --configuration "$CFG" 2>&1 \
+              | grep -E "org\.jetbrains\.kotlin:kotlin-stdlib:" \
+              | grep -oE "[0-9]+\.[0-9]+\.[0-9]+" \
+              | sort -V | tail -1)
+            echo "::notice::$CFG resolved kotlin-stdlib: ${STDLIB_VER:-UNKNOWN}"
+            MAJOR=$(echo "$STDLIB_VER" | cut -d. -f1)
+            MINOR=$(echo "$STDLIB_VER" | cut -d. -f2)
+            if [ -z "$STDLIB_VER" ] || [ "$MAJOR" -lt 2 ] || { [ "$MAJOR" -eq 2 ] && [ "$MINOR" -lt 1 ]; }; then
+              echo "::error::kotlin-stdlib resolved to ${STDLIB_VER:-NONE} in $CFG — need ≥ 2.1.0 for SpillingKt. APK will crash at Health Connect."
+              exit 1
+            fi
+          done
         working-directory: frontend
 
       # Decode keystore for release builds
