@@ -1,11 +1,43 @@
-# Health Connect 連結 — 進行中的 crash 調查
+# Health Connect 連結 — Root cause 找到（2026-05-17）
 
-> **更新（2026-05-16）：** 採用「不依賴診斷的直接修復」策略。
-> Patch 已永久化（[patches/@capgo+capacitor-health+8.4.5.patch](../frontend/patches/@capgo+capacitor-health+8.4.5.patch)）
-> 透過 `patch-package` + `postinstall` hook 自動套用，不再被 `npm install` 覆蓋。
-> JS 端加 60s timeout 保險。下次 build Android 即生效。
+> **狀態：已修復（2026-05-17 commit pending）**。Real root cause 是
+> Android Kotlin runtime mismatch — APK 內 kotlin-stdlib < 1.9，缺
+> `kotlin.coroutines.jvm.internal.SpillingKt`，plugin 的 coroutine state
+> machine 在第一個 `await` 就 throw `NoClassDefFoundError`。所有「IPC race」、
+> 「需要 retry」、「需要 fallback probe」的假設都是 symptom 而非 cause。
 >
-> 狀態：暫停（2026-05-09）。卡在 `Health.requestAuthorization()` native crash，已備好 v7 APK 帶診斷 patch、等使用者執行測試讀取 CATCH alert 訊息確診 root cause。
+> 修法：[android/app/build.gradle](../frontend/android/app/build.gradle)
+> 加 `resolutionStrategy.force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.25'`
+> + explicit `implementation` 宣告。下次 build 即可。
+
+## 真相揭曉（從 user 提供的 STAGE_ 診斷）
+
+User 在第 5 輪測試時用我加的「自動展開診斷面板」 + 「複製診斷」按鈕，貼上：
+
+```
+03:47:07.078 reqPerms:before-requestAuthorization
+03:47:11.537 reqPerms:requestAuthorization-error
+   "STAGE_callback_getClient: NoClassDefFoundError:
+    Failed resolution of: Lkotlin/coroutines/jvm/internal/SpillingKt;"
+```
+
+短短一行 stack 解釋了所有前面 4 輪 patch 為何徒勞 — plugin
+`requestAuthorization` 跳出 HC 權限頁是因為 HC 系統 Intent 啟動不需要 coroutine
+spilling，但 `handlePermissionResult` 回呼路徑的 `getClientOrReject(call) ?:
+return@launch` 就會 trigger coroutine state machine spill 程式碼，class 找不到，
+SIGKILL→ JS 看到 reject。 patch v2 用外層 try/catch 把 SIGKILL 變成 catchable
+reject 完全 OK，但 actual root cause 是 runtime missing class。
+
+## 為什麼這個 Bug 這麼難找
+
+- `getGrantedPermissions()` 從未真正執行 — error 發生在更早的 `getClientOrReject`
+  內。Plugin 永遠回 0 個 granted permission 不是因為 HC 沒授權，而是 plugin coroutine 死了
+- HC App 的「應用程式存取權」UI 顯示 5 個 toggle ON 是正確的 — HC service 真的授了
+- 我們的 stage tag 一開始放在 `STAGE_callback_authorizationStatus`，沒看到
+  `STAGE_callback_getClient` 才是死亡點。Patch v2 增加更細粒度 stage tag 才讓
+  user 拿到 actual class name
+
+## 收尾要做的
 
 ## 症狀
 
