@@ -2,6 +2,41 @@ import { useEffect, useState } from 'react'
 import { aiAPI } from '../api/ai'
 import { useLang } from '../context/LanguageContext'
 
+// Reverse map from the legacy English sentences the backend used to
+// hard-code, back to the canonical IDs we now use as i18n key suffixes.
+// Lets localization work even when the frontend has shipped the new
+// schema but Cloud Run still serves the old prediction payload — which
+// is the failure mode user reported on 2026-05-22 after the previous
+// rollout (zh UI shell, en recommendations + tips body).
+const LEGACY_REC_TO_ID = {
+  'Consider reaching out to friends, family, or a counselor for support.': 'reach_out',
+  'Engage in activities that previously brought you joy.': 'joy_activities',
+  'Practice stress-reduction techniques like deep breathing or meditation.': 'deep_breathing',
+  'Review your current commitments and consider what you might delegate or postpone.': 'review_commitments',
+  'Prioritize rest and self-care activities.': 'rest_self_care',
+  'Consider professional help if stress persists.': 'professional_help',
+  'Reach out to a mental health professional.': 'mental_health_pro',
+  'Talk to trusted friends or family members.': 'talk_friends',
+  'Reflect on what changes or habits have helped you feel better.': 'reflect_habits',
+  'Continue the practices that are working well for you.': 'continue_practices',
+  'Maintain your current stress management strategies.': 'maintain_strategies',
+  'Continue journaling regularly to track your emotional patterns.': 'continue_journaling',
+  'Maintain a balanced routine with sleep, exercise, and social connection.': 'balanced_routine',
+  'Be mindful of early warning signs and seek support when needed.': 'mindful_warning_signs',
+}
+
+// Same idea for health tips. Old backend shipped only `tip.tip` (full
+// English string); the new backend adds `tip.tip_key`. Map the legacy
+// English back to the canonical key so we can still translate.
+const LEGACY_TIP_TO_KEY = {
+  'High stress detected. Try the 4-7-8 breathing technique: breathe in for 4 counts, hold for 7, exhale for 8.': 'breathing_4_7_8',
+  'Physical activity can boost mood. Try a 10-minute walk or light stretching.': 'physical_activity',
+  'Maintain a consistent sleep schedule. Aim for 7-9 hours per night.': 'consistent_sleep',
+  'Stay hydrated. Aim for 8 glasses of water daily. Dehydration can affect mood.': 'hydration',
+  'Connect with others. Social support is crucial for mental well-being.': 'social_connection',
+  "Practice gratitude. Write down 3 things you're grateful for each day.": 'gratitude',
+}
+
 /**
  * Mood Prediction widget — unified into one Card with internal section
  * dividers per user request 2026-05-22 (was 5 separate glass panels which
@@ -106,20 +141,39 @@ export default function MoodPrediction() {
   }
 
   const localizeRecommendation = (rec) => {
-    // Backend now sends string IDs (e.g. "reach_out"); pre-refactor builds
-    // sent the full English sentence — accept both transparently.
+    // Backend may send: (a) a string ID like "reach_out" (new schema), or
+    // (b) the full English sentence (legacy schema — Cloud Run hasn't been
+    // redeployed yet). Try ID first, then reverse-lookup the English to
+    // its canonical ID and try again. Final fallback shows whatever the
+    // backend sent so the user never sees a blank bullet.
     if (typeof rec !== 'string') return ''
-    const key = `prediction.rec.${rec}`
-    const translated = t(key)
+    let key = `prediction.rec.${rec}`
+    let translated = t(key)
     if (translated && translated !== key) return translated
-    return rec  // legacy: backend still sent the English sentence
+    const mappedId = LEGACY_REC_TO_ID[rec]
+    if (mappedId) {
+      key = `prediction.rec.${mappedId}`
+      translated = t(key)
+      if (translated && translated !== key) return translated
+    }
+    return rec
   }
 
   const localizeTip = (tip) => {
+    // Prefer the new `tip_key` field. If the backend is on the old schema
+    // that only sent `tip` (full English), reverse-map and try again.
     if (tip.tip_key) {
       const key = `prediction.tip.${tip.tip_key}`
       const translated = t(key)
       if (translated && translated !== key) return translated
+    }
+    if (tip.tip) {
+      const mappedKey = LEGACY_TIP_TO_KEY[tip.tip]
+      if (mappedKey) {
+        const key = `prediction.tip.${mappedKey}`
+        const translated = t(key)
+        if (translated && translated !== key) return translated
+      }
     }
     return tip.tip || ''
   }
