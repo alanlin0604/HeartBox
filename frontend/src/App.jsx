@@ -24,7 +24,10 @@ const FaqPage = lazy(() => import('./pages/FaqPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 const JournalPage = lazy(() => import('./pages/JournalPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
-const PersonalDashboardPage = lazy(() => import('./pages/PersonalDashboardPage'))
+// PersonalDashboardPage removed 2026-05-19 — content was redundant with
+// DashboardPage and the drag-and-drop widget UI was a power-user feature
+// that confused most users. Backend DashboardLayout model kept in case we
+// want to bring it back as an opt-in customization mode.
 const NoteDetailPage = lazy(() => import('./pages/NoteDetailPage'))
 // Counselor & Pricing UI temporarily hidden — backend models/endpoints kept
 // because Conversation/Message and achievement counters are coupled to them.
@@ -113,7 +116,8 @@ export default function App() {
           >
             <Route index element={<LazyRoute><PageTransition><JournalPage /></PageTransition></LazyRoute>} />
             <Route path="dashboard" element={<LazyRoute><PageTransition><DashboardPage /></PageTransition></LazyRoute>} />
-            <Route path="personal-dashboard" element={<LazyRoute><PageTransition><PersonalDashboardPage /></PageTransition></LazyRoute>} />
+            {/* /personal-dashboard removed 2026-05-19 — redirects to /dashboard so any old bookmarks still work */}
+            <Route path="personal-dashboard" element={<Navigate to="/dashboard" replace />} />
             <Route path="notes/:id" element={<LazyRoute><PageTransition><NoteDetailPage /></PageTransition></LazyRoute>} />
             {/* /counselors hidden pre-launch — no approved counselors yet. Backend
                 conversation/message infrastructure stays so achievements that count

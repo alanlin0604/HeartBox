@@ -40,6 +40,115 @@ from . import (
 )
 
 
+def _ai_analysis_worker(note_id, user_id):
+    """Background worker that runs the AI analysis pipeline and pushes
+    the resulting sentiment/stress/feedback to the user over WebSocket.
+
+    Module-level (not bound to a class) so threading.Thread can call it
+    without keeping a reference to a ViewSet instance — that instance is
+    request-scoped and may be discarded by the time the thread runs.
+
+    Wraps the entire pipeline in a try/except: under no circumstance do
+    we want a background thread to crash the worker process. The AI
+    engine itself has three tiers of fallback (OpenAI+RAG → OpenAI plain
+    → local keyword), so an analysis failure here is a last-resort.
+    """
+    try:
+        from api.models import MoodNote
+        from api.services.ai_engine import ai_engine
+
+        try:
+            note = MoodNote.objects.get(id=note_id, is_deleted=False)
+        except MoodNote.DoesNotExist:
+            return
+        if not note.content:
+            return
+
+        result = ai_engine.analyze(note.content)
+        note.sentiment_score = result['sentiment_score']
+        note.stress_index = result['stress_index']
+        note.ai_feedback = result['ai_feedback']
+        note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
+
+        # Push the result to the user's notification WebSocket channel so
+        # the active client can refresh the note in-place. Wrapped in try
+        # because: layer may be None when channels isn't configured (dev
+        # SQLite-only path), the user might be offline, or the group key
+        # may not exist yet. Either way the DB row is already updated, so
+        # the next time the user opens the note they'll see the analysis.
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            layer = get_channel_layer()
+            if layer is not None:
+                async_to_sync(layer.group_send)(
+                    f'notifications_{user_id}',
+                    {
+                        'type': 'notify',
+                        'data': {
+                            'type': 'note_analyzed',
+                            'data': {
+                                'note_id': note.id,
+                                'sentiment_score': note.sentiment_score,
+                                'stress_index': note.stress_index,
+                                'ai_feedback': note.ai_feedback,
+                            },
+                        },
+                    },
+                )
+        except Exception:
+            logger.exception('WebSocket fan-out failed after AI analysis')
+    except Exception:
+        logger.exception('Background AI analysis worker crashed for note %s', note_id)
+
+
+def _vision_analysis_worker(note_id, user_id, image_urls):
+    """Background worker for image-aware re-analysis. Same shape as the
+    text-only worker but calls analyze_with_images (GPT-4o vision)."""
+    try:
+        from api.models import MoodNote
+        from api.services.ai_engine import ai_engine
+
+        try:
+            note = MoodNote.objects.get(id=note_id, is_deleted=False)
+        except MoodNote.DoesNotExist:
+            return
+        if not note.content or not image_urls:
+            return
+
+        result = ai_engine.analyze_with_images(note.content, image_urls)
+        note.sentiment_score = result['sentiment_score']
+        note.stress_index = result['stress_index']
+        note.ai_feedback = result['ai_feedback']
+        note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
+
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            layer = get_channel_layer()
+            if layer is not None:
+                async_to_sync(layer.group_send)(
+                    f'notifications_{user_id}',
+                    {
+                        'type': 'notify',
+                        'data': {
+                            'type': 'note_analyzed',
+                            'data': {
+                                'note_id': note.id,
+                                'sentiment_score': note.sentiment_score,
+                                'stress_index': note.stress_index,
+                                'ai_feedback': note.ai_feedback,
+                                'with_images': True,
+                            },
+                        },
+                    },
+                )
+        except Exception:
+            logger.exception('WebSocket fan-out failed after vision analysis')
+    except Exception:
+        logger.exception('Background vision analysis worker crashed for note %s', note_id)
+
+
 class TagViewSet(viewsets.ModelViewSet):
     """CRUD operations for user tags."""
     serializer_class = TagSerializer
@@ -111,18 +220,28 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         return qs
 
     def _run_ai_analysis(self, note):
-        """Run AI sentiment analysis on a note (graceful degradation)."""
-        try:
-            from api.services.ai_engine import ai_engine
-            plaintext = note.content
-            if plaintext:
-                result = ai_engine.analyze(plaintext)
-                note.sentiment_score = result['sentiment_score']
-                note.stress_index = result['stress_index']
-                note.ai_feedback = result['ai_feedback']
-                note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
-        except Exception as e:
-            logger.warning('AI analysis failed for note %s: %s', note.pk, e)
+        """Schedule AI sentiment analysis to run in a background thread.
+
+        Returns immediately so the HTTP response isn't blocked by the
+        5-15 s OpenAI roundtrip (sentiment + RAG retrieval + feedback gen).
+        The note row is updated when the analysis finishes; the frontend
+        listens for the `note_analyzed` WebSocket event to refresh its
+        view, or falls back to a one-shot GET /notes/{id}/ poll a few
+        seconds later. AI engine has its own three-tier fallback so a
+        failed OpenAI call still produces some feedback.
+        """
+        import threading
+        from django.db import transaction
+        # Defer the thread spawn until the outer DB transaction commits,
+        # otherwise the thread can race against the SELECT and see a
+        # row that doesn't exist yet (PostgreSQL read-committed default).
+        transaction.on_commit(
+            lambda: threading.Thread(
+                target=_ai_analysis_worker,
+                args=(note.id, note.user_id),
+                daemon=True,
+            ).start()
+        )
 
     def _invalidate_user_cache(self):
         """Invalidate analytics and calendar caches for the current user."""
@@ -194,22 +313,23 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reanalyze(self, request, pk=None):
-        """Re-analyze note with attached images using GPT vision."""
+        """Re-analyze note with attached images using GPT vision.
+
+        Scheduled to run in the background — same async pattern as
+        perform_create. Frontend polls or listens for the
+        `note_analyzed` WebSocket event to refresh.
+        """
         note = self.get_object()
         image_urls = [
             att.file.url for att in note.attachments.filter(file_type='image')[:3]
         ]
-        plaintext = note.content
-        if image_urls and plaintext:
-            try:
-                from api.services.ai_engine import ai_engine
-                result = ai_engine.analyze_with_images(plaintext, image_urls)
-                note.sentiment_score = result['sentiment_score']
-                note.stress_index = result['stress_index']
-                note.ai_feedback = result['ai_feedback']
-                note.save(update_fields=['sentiment_score', 'stress_index', 'ai_feedback'])
-            except Exception as e:
-                logger.warning('Reanalyze failed for note %s: %s', note.pk, e)
+        if image_urls and note.content:
+            import threading
+            threading.Thread(
+                target=_vision_analysis_worker,
+                args=(note.id, note.user_id, image_urls),
+                daemon=True,
+            ).start()
         return Response(MoodNoteSerializer(note, context={'request': request}).data)
 
     def perform_destroy(self, instance):

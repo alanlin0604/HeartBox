@@ -4,7 +4,7 @@ public. The moderation policy itself lives in
 ``api/services/content_moderation.py``."""
 import logging
 
-from django.db.models import Count, Q
+from django.db.models import Case, Count, IntegerField, Q, When
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import action
@@ -47,16 +47,40 @@ class PublicPostViewSet(viewsets.ModelViewSet):
     pagination_class = CommunityPostPagination
 
     def get_queryset(self):
-        """Get active posts with optimized queries.
+        """Get active posts with friends-first ordering + optional category filter.
+
+        IG/FB-style feed: posts from accepted friends rise to the top,
+        everything else falls back to chronological order. The serializer
+        exposes `is_from_friend` so the frontend can drop a visual divider
+        at the boundary instead of leaving the user wondering why the
+        ordering looks weird.
 
         Supports `?category=<slug>` filter — categories are AI-derived and
         therefore free-form strings (anxiety / stress / happiness / ...).
+
+        The Friendship table is directed (one row per direction), so a
+        simple `user=current_user` filter is sufficient — we only surface
+        posts from people the current user has accepted as a friend.
         """
+        from .models import Friendship
+
+        user = self.request.user
+        friend_ids = list(
+            Friendship.objects.filter(user=user).values_list('friend_id', flat=True)
+        )
+
         qs = PublicPost.objects.filter(
-            is_active=True
+            is_active=True,
         ).select_related('user').prefetch_related(
-            'reactions'
-        ).order_by('-created_at')
+            'reactions',
+        ).annotate(
+            is_from_friend=Case(
+                When(user_id__in=friend_ids, then=1),
+                default=0,
+                output_field=IntegerField(),
+            ),
+        ).order_by('-is_from_friend', '-created_at')
+
         category = self.request.query_params.get('category')
         if category:
             qs = qs.filter(category=category)

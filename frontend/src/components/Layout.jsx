@@ -16,6 +16,7 @@ const OnboardingModal = lazy(() => import('./OnboardingModal'))
 const ROUTE_PRELOADS = {
   '/': () => import('../pages/JournalPage'),
   '/dashboard': () => import('../pages/DashboardPage'),
+  // /personal-dashboard removed 2026-05-19; no preload needed.
   // '/counselors': () => import('../pages/CounselorListPage'), // hidden pre-launch
   '/ai-chat': () => import('../pages/AIChatPage'),
   '/achievements': () => import('../pages/AchievementsPage'),
@@ -117,7 +118,7 @@ export default function Layout() {
       label: t('nav.group.analytics'),
       routes: [
         { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.webp' },
-        { to: '/personal-dashboard', label: t('nav.personalDashboard'), icon: '/icons/心情週報月報.webp' },
+        // /personal-dashboard removed 2026-05-19 — redundant with /dashboard.
         { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.webp' },
         { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.webp' },
       ],
@@ -159,7 +160,7 @@ export default function Layout() {
     { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.webp' },
     { to: '/habits', label: t('nav.habits'), icon: '/icons/習慣追蹤.webp' },
     { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
-    { to: '/personal-dashboard', label: t('nav.personalDashboard'), icon: '/icons/心情週報月報.webp' },
+    // /personal-dashboard removed 2026-05-19 — redundant with /dashboard.
     { to: '/friends', label: t('friends.title'), icon: '/icons/諮商師.webp' },
     // /counselors hidden pre-launch
     { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.webp' },

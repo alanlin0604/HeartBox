@@ -54,6 +54,26 @@ export default function NoteDetailPage() {
   // Counselor share UI hidden pre-launch — `getNoteShares` / `unshareNote`
   // calls removed along with the share button. Re-enable when /counselors ships.
 
+  // Listen for the background AI analysis finishing — pushed via
+  // NotificationBell's WebSocket after perform_create scheduled it. When
+  // a `note_analyzed` event for THIS note fires, merge the new sentiment /
+  // stress / feedback values into the displayed note so the user doesn't
+  // need to refresh. Avoids the previous 5-15 s blocking save.
+  useEffect(() => {
+    const handler = (e) => {
+      const payload = e.detail
+      if (!payload || String(payload.note_id) !== String(id)) return
+      setNote((prev) => prev ? {
+        ...prev,
+        sentiment_score: payload.sentiment_score,
+        stress_index: payload.stress_index,
+        ai_feedback: payload.ai_feedback,
+      } : prev)
+    }
+    window.addEventListener('heartbox:note_analyzed', handler)
+    return () => window.removeEventListener('heartbox:note_analyzed', handler)
+  }, [id])
+
   // Warn before leaving if editing
   useEffect(() => {
     const handler = (e) => {
@@ -282,7 +302,7 @@ export default function NoteDetailPage() {
         )}
 
         {/* AI Feedback */}
-        {note.ai_feedback && (
+        {note.ai_feedback ? (
           <div className="glass-card p-4 border-l-4 border-orange-500/50">
             <h3 className="text-sm font-semibold text-orange-500 mb-2">{t('noteDetail.aiFeedback')}</h3>
             <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-80">
@@ -292,6 +312,23 @@ export default function NoteDetailPage() {
               {t('noteDetail.aiDisclaimer')}
             </p>
           </div>
+        ) : (
+          // sentiment_score === null is the signal that the background AI
+          // analysis worker hasn't finished yet (perform_create returned
+          // immediately and threading.Thread is still running on the
+          // backend). Show a placeholder so the user knows analysis is
+          // coming, instead of leaving the section blank or stale.
+          note.sentiment_score == null && (
+            <div className="glass-card p-4 border-l-4 border-orange-500/30">
+              <h3 className="text-sm font-semibold text-orange-500/70 mb-2 flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                {t('noteDetail.aiAnalyzing')}
+              </h3>
+              <p className="text-sm leading-relaxed opacity-50">
+                {t('noteDetail.aiAnalyzingDesc')}
+              </p>
+            </div>
+          )
         )}
 
         {/* Shared With (counselor list) hidden pre-launch — re-enable with /counselors. */}

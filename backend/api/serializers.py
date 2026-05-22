@@ -1098,12 +1098,19 @@ class PublicPostSerializer(serializers.ModelSerializer):
     reaction_counts = serializers.SerializerMethodField()
     user_reacted = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
+    # Populated from the queryset's `is_from_friend` annotation (see
+    # PublicPostViewSet.get_queryset). Lets the frontend render an IG /
+    # Facebook-style divider between friends-section and public-section.
+    # Coerced to bool by IntegerField on the queryset; default False here
+    # protects single-post retrieves (not list) that bypass the annotation.
+    is_from_friend = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = PublicPost
         fields = [
             'id', 'content', 'sentiment_score', 'category',
-            'created_at', 'reaction_counts', 'user_reacted', 'is_owner'
+            'created_at', 'reaction_counts', 'user_reacted', 'is_owner',
+            'is_from_friend',
         ]
         read_only_fields = ['id', 'sentiment_score', 'category', 'created_at']
 

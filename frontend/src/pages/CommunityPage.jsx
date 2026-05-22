@@ -16,6 +16,25 @@ const REPORT_REASONS = [
   { value: 'other', icon: '📝' },
 ]
 
+// Visual section divider that splits the feed into "friends" (top) and
+// "public" (rest) — modelled after IG/FB's "Friends ↔ Discover" feed
+// structure. Renders only at the boundary between the two groups, so
+// users with no friends see no divider (entire feed is "public"), and
+// users with no public posts left see only the friends header.
+function FeedSectionHeader({ title, subtitle, icon, spacedTop = false }) {
+  return (
+    <div className={`flex items-center gap-3 ${spacedTop ? 'mt-6 pt-4 border-t border-[var(--border-primary)]' : 'mb-3'}`}>
+      <span className="text-2xl">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
+        {subtitle && (
+          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{subtitle}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // AI-categorized emotion buckets used by sentiment analysis (`analyze_sentiment`
 // in backend). Each pill filters the feed by `?category=` query param.
 const CATEGORY_FILTERS = [
@@ -300,8 +319,33 @@ export default function CommunityPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {posts.map(post => (
-            <Card key={post.id} className="p-6 hover:shadow-lg transition-shadow">
+          {posts.map((post, idx) => {
+            // IG/FB-style divider: between the last friend post and the
+            // first public post. The backend sorts friend posts to the top
+            // (PublicPostViewSet.get_queryset annotates is_from_friend and
+            // orders by it desc). We just detect the transition.
+            const isFirst = idx === 0
+            const prevWasFriend = !isFirst && posts[idx - 1].is_from_friend
+            const showFriendHeader = isFirst && post.is_from_friend
+            const showPublicHeader = (!post.is_from_friend) && (isFirst || prevWasFriend)
+            return (
+              <div key={post.id}>
+                {showFriendHeader && (
+                  <FeedSectionHeader
+                    title={t('community.feedFriends')}
+                    subtitle={t('community.feedFriendsDesc')}
+                    icon="👥"
+                  />
+                )}
+                {showPublicHeader && (
+                  <FeedSectionHeader
+                    title={t('community.feedPublic')}
+                    subtitle={t('community.feedPublicDesc')}
+                    icon="🌐"
+                    spacedTop={!isFirst}
+                  />
+                )}
+                <Card className="p-6 hover:shadow-lg transition-shadow">
               {/* Post Content */}
               <div className="mb-4">
                 <p className="text-[var(--text-primary)] whitespace-pre-wrap">
@@ -360,8 +404,10 @@ export default function CommunityPage() {
                   <span className="hidden sm:inline">{t('community.report') || 'Report'}</span>
                 </button>
               </div>
-            </Card>
-          ))}
+                </Card>
+              </div>
+            )
+          })}
 
           {/* Load More */}
           {hasMore && (

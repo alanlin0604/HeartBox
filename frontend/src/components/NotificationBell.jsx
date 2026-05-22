@@ -143,6 +143,16 @@ export default memo(function NotificationBell() {
       if (data.error) {
         return
       }
+      // `note_analyzed` is a transient event for any open journal / detail
+      // page to refresh in place — NOT a user-facing notification. Skip the
+      // bell entirely and broadcast via a window CustomEvent so the listener
+      // pattern is decoupled (no need for a global store).
+      if (data.type === 'note_analyzed') {
+        try {
+          window.dispatchEvent(new CustomEvent('heartbox:note_analyzed', { detail: data.data }))
+        } catch { /* IE/legacy fallback unused */ }
+        return
+      }
       setNotifications((prev) => [data, ...prev])
       setUnreadCount((c) => c + 1)
       // Surface achievement unlocks as a toast so the user sees them

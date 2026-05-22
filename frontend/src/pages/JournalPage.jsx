@@ -93,6 +93,24 @@ export default function JournalPage() {
     return initial
   })
 
+  // Background AI analysis (perform_create) finishes asynchronously now;
+  // listen for the WebSocket-relayed event and merge new sentiment_score
+  // / stress_index / ai_feedback into the matching list item so the badge
+  // updates without a refresh.
+  useEffect(() => {
+    const handler = (e) => {
+      const payload = e.detail
+      if (!payload) return
+      setNotes((prev) => prev.map((n) =>
+        n.id === payload.note_id
+          ? { ...n, sentiment_score: payload.sentiment_score, stress_index: payload.stress_index, ai_feedback: payload.ai_feedback }
+          : n,
+      ))
+    }
+    window.addEventListener('heartbox:note_analyzed', handler)
+    return () => window.removeEventListener('heartbox:note_analyzed', handler)
+  }, [])
+
   const fetchNotes = useCallback(async (p = 1, f = filters) => {
     const id = ++fetchIdRef.current
     setLoading(true)
