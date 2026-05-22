@@ -127,15 +127,21 @@ def get_mood_prediction(user):
                 'high_risk': rf_spike['high_risk'],
                 'threshold': rf_spike['threshold'],
             }
-            # Surface a high-priority warning if the classifier thinks risk is high
+            # Surface a high-priority warning if the classifier thinks risk is high.
+            # `type` doubles as the i18n key suffix on the frontend
+            # (see prediction.warning.* in locales). `params` carries values
+            # the localised string interpolates; clients on stale builds can
+            # fall back to the English `message` string for backward compat.
             if rf_spike['high_risk']:
+                percent = int(rf_spike['spike_probability'] * 100)
                 prediction['warnings'].insert(0, {
                     'level': 'high',
                     'type': 'stress_spike_predicted',
+                    'params': {'percent': percent},
                     'message': (
                         f'Based on your recent patterns, there is a '
-                        f'{int(rf_spike["spike_probability"] * 100)}% chance of a '
-                        f'high-stress day in the next 3 days. Consider preventive self-care.'
+                        f'{percent}% chance of a high-stress day in the next 3 days. '
+                        f'Consider preventive self-care.'
                     ),
                     'icon': '⚠️',
                 })
@@ -144,77 +150,89 @@ def get_mood_prediction(user):
         import logging
         logging.getLogger(__name__).debug('RF augmentation unavailable', exc_info=True)
 
-    # Generate warnings and recommendations
+    # Generate warnings and recommendations.
+    # Convention: `type` is the i18n key suffix on the frontend; `params` is
+    # the interpolation dict; `message` is a final-fallback English string
+    # for older clients that don't know the type yet. Recommendations are
+    # plain string IDs (frontend renders t(`prediction.rec.${id}`)).
+    note_count = recent_notes.count()
+
     # Warning 1: Declining mood trend
     if sentiment_slope < -0.02 and sentiment_strength > 0.3:
         prediction['warnings'].append({
             'level': 'medium' if sentiment_slope > -0.05 else 'high',
             'type': 'mood_decline',
-            'message': f'Your mood has been declining over the past {recent_notes.count()} days. This is a noticeable downward trend.',
-            'icon': '📉'
+            'params': {'days': note_count},
+            'message': f'Your mood has been declining over the past {note_count} days. This is a noticeable downward trend.',
+            'icon': '📉',
         })
-        prediction['recommendations'].append('Consider reaching out to friends, family, or a counselor for support.')
-        prediction['recommendations'].append('Engage in activities that previously brought you joy.')
+        prediction['recommendations'].append('reach_out')
+        prediction['recommendations'].append('joy_activities')
 
     # Warning 2: Increasing stress trend
     if stress_slope > 0.05 and stress_strength > 0.3:
         prediction['warnings'].append({
             'level': 'medium' if stress_slope < 0.15 else 'high',
             'type': 'stress_increase',
-            'message': f'Your stress levels are rising. Current trend suggests continued increase.',
-            'icon': '⚠️'
+            'params': {},
+            'message': 'Your stress levels are rising. Current trend suggests continued increase.',
+            'icon': '⚠️',
         })
-        prediction['recommendations'].append('Practice stress-reduction techniques like deep breathing or meditation.')
-        prediction['recommendations'].append('Review your current commitments and consider what you might delegate or postpone.')
+        prediction['recommendations'].append('deep_breathing')
+        prediction['recommendations'].append('review_commitments')
 
     # Warning 3: High current stress
     if current_stress > 7:
         prediction['warnings'].append({
             'level': 'high',
             'type': 'high_stress',
+            'params': {'level': round(current_stress, 1)},
             'message': f'Your current stress level is high ({current_stress:.1f}/10). This may impact your well-being.',
-            'icon': '🚨'
+            'icon': '🚨',
         })
-        prediction['recommendations'].append('Prioritize rest and self-care activities.')
-        prediction['recommendations'].append('Consider professional help if stress persists.')
+        prediction['recommendations'].append('rest_self_care')
+        prediction['recommendations'].append('professional_help')
 
     # Warning 4: Low current mood with declining trend
     if current_sentiment < -0.3 and sentiment_slope < 0:
         prediction['warnings'].append({
             'level': 'high',
             'type': 'mood_low_declining',
+            'params': {},
             'message': 'Your mood is low and continuing to decline. Please prioritize your mental health.',
-            'icon': '💔'
+            'icon': '💔',
         })
-        prediction['recommendations'].append('Reach out to a mental health professional.')
-        prediction['recommendations'].append('Talk to trusted friends or family members.')
+        prediction['recommendations'].append('mental_health_pro')
+        prediction['recommendations'].append('talk_friends')
 
     # Positive reinforcement
     if sentiment_slope > 0.02 and sentiment_strength > 0.3:
         prediction['warnings'].append({
             'level': 'positive',
             'type': 'mood_improving',
+            'params': {},
             'message': 'Your mood is improving! Keep up the positive momentum.',
-            'icon': '📈'
+            'icon': '📈',
         })
-        prediction['recommendations'].append('Reflect on what changes or habits have helped you feel better.')
-        prediction['recommendations'].append('Continue the practices that are working well for you.')
+        prediction['recommendations'].append('reflect_habits')
+        prediction['recommendations'].append('continue_practices')
 
     if stress_slope < -0.05 and stress_strength > 0.3:
         prediction['warnings'].append({
             'level': 'positive',
             'type': 'stress_decreasing',
+            'params': {},
             'message': 'Your stress levels are decreasing. Well done managing your stressors!',
-            'icon': '✅'
+            'icon': '✅',
         })
-        prediction['recommendations'].append('Maintain your current stress management strategies.')
+        prediction['recommendations'].append('maintain_strategies')
 
     # Add general recommendations if no specific ones
     if not prediction['recommendations']:
         prediction['recommendations'] = [
-            'Continue journaling regularly to track your emotional patterns.',
-            'Maintain a balanced routine with sleep, exercise, and social connection.',
-            'Be mindful of early warning signs and seek support when needed.',
+            'continue_journaling',
+            'balanced_routine',
+            'mindful_warning_signs',
         ]
 
     return prediction
@@ -242,43 +260,52 @@ def get_health_tips(user):
         avg_stress=Avg('stress_index')
     )
 
-    # Tip based on stress
+    # Tip based on stress.
+    # `tip_key` is the i18n key suffix on the frontend
+    # (renders as t(`prediction.tip.${tip_key}`)). `tip` stays as an English
+    # fallback for older clients that haven't picked up the new keys yet.
     if avg_stats['avg_stress'] and avg_stats['avg_stress'] > 6:
         tips.append({
             'category': 'stress',
+            'tip_key': 'breathing_4_7_8',
             'tip': 'High stress detected. Try the 4-7-8 breathing technique: breathe in for 4 counts, hold for 7, exhale for 8.',
-            'icon': '🫁'
+            'icon': '🫁',
         })
 
     # Tip based on mood
     if avg_stats['avg_sentiment'] and avg_stats['avg_sentiment'] < -0.2:
         tips.append({
             'category': 'mood',
+            'tip_key': 'physical_activity',
             'tip': 'Physical activity can boost mood. Try a 10-minute walk or light stretching.',
-            'icon': '🏃'
+            'icon': '🏃',
         })
 
     # General wellness tips
     general_tips = [
         {
             'category': 'sleep',
+            'tip_key': 'consistent_sleep',
             'tip': 'Maintain a consistent sleep schedule. Aim for 7-9 hours per night.',
-            'icon': '😴'
+            'icon': '😴',
         },
         {
             'category': 'nutrition',
+            'tip_key': 'hydration',
             'tip': 'Stay hydrated. Aim for 8 glasses of water daily. Dehydration can affect mood.',
-            'icon': '💧'
+            'icon': '💧',
         },
         {
             'category': 'social',
+            'tip_key': 'social_connection',
             'tip': 'Connect with others. Social support is crucial for mental well-being.',
-            'icon': '👥'
+            'icon': '👥',
         },
         {
             'category': 'mindfulness',
+            'tip_key': 'gratitude',
             'tip': 'Practice gratitude. Write down 3 things you\'re grateful for each day.',
-            'icon': '🙏'
+            'icon': '🙏',
         },
     ]
 

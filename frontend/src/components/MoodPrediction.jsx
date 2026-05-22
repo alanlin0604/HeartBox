@@ -2,6 +2,15 @@ import { useEffect, useState } from 'react'
 import { aiAPI } from '../api/ai'
 import { useLang } from '../context/LanguageContext'
 
+/**
+ * Mood Prediction widget — unified into one Card with internal section
+ * dividers per user request 2026-05-22 (was 5 separate glass panels which
+ * felt visually scattered). Each warning / recommendation / health tip now
+ * resolves through i18n: backend returns a stable `type` / `id` / `tip_key`
+ * which we look up as t(`prediction.warning.${type}`, params). If a key is
+ * missing on the client (stale build), we fall back to the English string
+ * the backend still ships in `message` / `tip` for backward compat.
+ */
 export default function MoodPrediction() {
   const { t } = useLang()
   const [data, setData] = useState(null)
@@ -31,7 +40,7 @@ export default function MoodPrediction() {
     return (
       <div className="glass p-6">
         <h2 className="text-lg font-semibold mb-4">{t('prediction.title')}</h2>
-        <p className="text-sm text-slate-400">{t('loading')}</p>
+        <p className="text-sm text-[var(--text-secondary)]">{t('loading')}</p>
       </div>
     )
   }
@@ -40,20 +49,24 @@ export default function MoodPrediction() {
     return (
       <div className="glass p-6">
         <h2 className="text-lg font-semibold mb-4">{t('prediction.title')}</h2>
-        <p className="text-sm text-slate-400">{error}</p>
+        <p className="text-sm text-[var(--text-secondary)]">{error}</p>
       </div>
     )
   }
 
   if (!data) return null
-
   const { prediction, health_tips } = data
 
   if (!prediction.has_prediction) {
     return (
       <div className="glass p-6">
         <h2 className="text-lg font-semibold mb-4">{t('prediction.title')}</h2>
-        <p className="text-sm text-slate-400">{prediction.message}</p>
+        <p className="text-sm text-[var(--text-secondary)]">
+          {/* `prediction.message` here is still English from the backend
+              when we have insufficient data — keep the localised key as
+              the primary, fall through to the backend hint only if missing. */}
+          {t('prediction.insufficientData') || prediction.message}
+        </p>
       </div>
     )
   }
@@ -66,101 +79,136 @@ export default function MoodPrediction() {
 
   const getTrendColor = (type, trend) => {
     if (type === 'sentiment') {
-      if (trend === 'improving') return 'text-green-400'
-      if (trend === 'declining') return 'text-red-400'
+      if (trend === 'improving') return 'text-green-500'
+      if (trend === 'declining') return 'text-red-500'
     } else {
-      // stress
-      if (trend === 'decreasing') return 'text-green-400'
-      if (trend === 'increasing') return 'text-red-400'
+      if (trend === 'decreasing') return 'text-green-500'
+      if (trend === 'increasing') return 'text-red-500'
     }
-    return 'text-slate-400'
+    return 'text-[var(--text-secondary)]'
   }
 
-  const getWarningColor = (level) => {
-    if (level === 'high') return 'border-red-500/30 bg-red-500/10'
-    if (level === 'medium') return 'border-yellow-500/30 bg-yellow-500/10'
-    if (level === 'positive') return 'border-green-500/30 bg-green-500/10'
-    return 'border-slate-500/30 bg-slate-500/10'
+  const getWarningStyle = (level) => {
+    if (level === 'high') return 'border-red-500/40 bg-red-500/10'
+    if (level === 'medium') return 'border-yellow-500/40 bg-yellow-500/10'
+    if (level === 'positive') return 'border-green-500/40 bg-green-500/10'
+    return 'border-slate-500/40 bg-slate-500/10'
+  }
+
+  // Look up a warning's localised message. Falls back to the backend's
+  // English `message` if the type isn't in the i18n catalog yet (e.g.
+  // backend rolled out before frontend), so the user always sees something.
+  const localizeWarning = (warning) => {
+    const key = `prediction.warning.${warning.type}`
+    const translated = t(key, warning.params || {})
+    if (translated && translated !== key) return translated
+    return warning.message || ''
+  }
+
+  const localizeRecommendation = (rec) => {
+    // Backend now sends string IDs (e.g. "reach_out"); pre-refactor builds
+    // sent the full English sentence — accept both transparently.
+    if (typeof rec !== 'string') return ''
+    const key = `prediction.rec.${rec}`
+    const translated = t(key)
+    if (translated && translated !== key) return translated
+    return rec  // legacy: backend still sent the English sentence
+  }
+
+  const localizeTip = (tip) => {
+    if (tip.tip_key) {
+      const key = `prediction.tip.${tip.tip_key}`
+      const translated = t(key)
+      if (translated && translated !== key) return translated
+    }
+    return tip.tip || ''
   }
 
   return (
-    <div className="space-y-6">
+    // ONE unified container per UX request 2026-05-22. Inner sections are
+    // separated by border-t dividers instead of nesting separate panels —
+    // less visual fragmentation, easier to scan top-to-bottom.
+    <div className="glass p-6 space-y-6">
       {/* Header */}
-      <div className="glass p-6">
-        <h1 className="text-3xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-rose-400">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-rose-500">
           {t('prediction.title')}
         </h1>
-        <p className="text-slate-400">{t('prediction.subtitle')}</p>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">
+          {t('prediction.subtitle')}
+        </p>
       </div>
 
-      {/* Current Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Current Status — sentiment + stress side-by-side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-[var(--card-border)]">
         {/* Sentiment */}
-        <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+        <div className="pt-4">
+          <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
             <span>😊</span>
             {t('prediction.moodTrend')}
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div>
-              <p className="text-sm text-slate-400">{t('prediction.current')}</p>
-              <p className="text-2xl font-bold">{prediction.sentiment.current}</p>
+              <p className="text-xs text-[var(--text-secondary)]">{t('prediction.current')}</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)]">{prediction.sentiment.current}</p>
             </div>
             <div>
-              <p className="text-sm text-slate-400">{t('prediction.trend')}</p>
-              <p className={`text-lg font-semibold ${getTrendColor('sentiment', prediction.sentiment.trend)}`}>
+              <p className="text-xs text-[var(--text-secondary)]">{t('prediction.trend')}</p>
+              <p className={`text-base font-semibold ${getTrendColor('sentiment', prediction.sentiment.trend)}`}>
                 {getTrendIcon(prediction.sentiment.trend)} {t(`prediction.trend_${prediction.sentiment.trend}`)}
               </p>
             </div>
             {Math.abs(prediction.sentiment.slope) > 0.01 && (
               <div>
-                <p className="text-sm text-slate-400">{t('prediction.forecast7d')}</p>
-                <p className="text-lg">{prediction.sentiment.forecast_7d}</p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('prediction.forecast7d')}</p>
+                <p className="text-base text-[var(--text-primary)]">{prediction.sentiment.forecast_7d}</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Stress */}
-        <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+        <div className="pt-4">
+          <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
             <span>📊</span>
             {t('prediction.stressTrend')}
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div>
-              <p className="text-sm text-slate-400">{t('prediction.current')}</p>
-              <p className="text-2xl font-bold">{prediction.stress.current} / 10</p>
+              <p className="text-xs text-[var(--text-secondary)]">{t('prediction.current')}</p>
+              <p className="text-2xl font-bold text-[var(--text-primary)]">{prediction.stress.current} / 10</p>
             </div>
             <div>
-              <p className="text-sm text-slate-400">{t('prediction.trend')}</p>
-              <p className={`text-lg font-semibold ${getTrendColor('stress', prediction.stress.trend)}`}>
+              <p className="text-xs text-[var(--text-secondary)]">{t('prediction.trend')}</p>
+              <p className={`text-base font-semibold ${getTrendColor('stress', prediction.stress.trend)}`}>
                 {getTrendIcon(prediction.stress.trend)} {t(`prediction.trend_${prediction.stress.trend}`)}
               </p>
             </div>
             {Math.abs(prediction.stress.slope) > 0.05 && (
               <div>
-                <p className="text-sm text-slate-400">{t('prediction.forecast7d')}</p>
-                <p className="text-lg">{prediction.stress.forecast_7d} / 10</p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('prediction.forecast7d')}</p>
+                <p className="text-base text-[var(--text-primary)]">{prediction.stress.forecast_7d} / 10</p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Warnings and Alerts */}
+      {/* Warnings */}
       {prediction.warnings && prediction.warnings.length > 0 && (
-        <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4">{t('prediction.alerts')}</h2>
-          <div className="space-y-3">
+        <div className="pt-4 border-t border-[var(--card-border)]">
+          <h2 className="text-base font-semibold mb-3">{t('prediction.alerts')}</h2>
+          <div className="space-y-2">
             {prediction.warnings.map((warning, index) => (
               <div
                 key={index}
-                className={`p-4 rounded-lg border ${getWarningColor(warning.level)}`}
+                className={`p-3 rounded-lg border ${getWarningStyle(warning.level)}`}
               >
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl flex-shrink-0">{warning.icon}</span>
-                  <p className="text-sm text-slate-200">{warning.message}</p>
+                  <span className="text-xl flex-shrink-0">{warning.icon}</span>
+                  <p className="text-sm text-[var(--text-primary)] leading-relaxed">
+                    {localizeWarning(warning)}
+                  </p>
                 </div>
               </div>
             ))}
@@ -170,13 +218,13 @@ export default function MoodPrediction() {
 
       {/* Recommendations */}
       {prediction.recommendations && prediction.recommendations.length > 0 && (
-        <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4">{t('prediction.recommendations')}</h2>
+        <div className="pt-4 border-t border-[var(--card-border)]">
+          <h2 className="text-base font-semibold mb-3">{t('prediction.recommendations')}</h2>
           <ul className="space-y-2">
             {prediction.recommendations.map((rec, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm text-slate-200">
-                <span className="text-orange-400 mt-1">•</span>
-                <span>{rec}</span>
+              <li key={index} className="flex items-start gap-2 text-sm text-[var(--text-primary)]">
+                <span className="text-orange-500 mt-0.5 flex-shrink-0">•</span>
+                <span className="leading-relaxed">{localizeRecommendation(rec)}</span>
               </li>
             ))}
           </ul>
@@ -185,17 +233,19 @@ export default function MoodPrediction() {
 
       {/* Health Tips */}
       {health_tips && health_tips.length > 0 && (
-        <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4">{t('prediction.healthTips')}</h2>
+        <div className="pt-4 border-t border-[var(--card-border)]">
+          <h2 className="text-base font-semibold mb-3">{t('prediction.healthTips')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {health_tips.map((tip, index) => (
               <div
                 key={index}
-                className="p-4 rounded-lg bg-white/5 border border-white/10"
+                className="p-3 rounded-lg bg-[var(--surface-secondary)] border border-[var(--card-border)]"
               >
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl flex-shrink-0">{tip.icon}</span>
-                  <p className="text-sm text-slate-200">{tip.tip}</p>
+                  <span className="text-xl flex-shrink-0">{tip.icon}</span>
+                  <p className="text-sm text-[var(--text-primary)] leading-relaxed">
+                    {localizeTip(tip)}
+                  </p>
                 </div>
               </div>
             ))}
@@ -203,7 +253,7 @@ export default function MoodPrediction() {
         </div>
       )}
 
-      <p className="text-xs text-slate-500 text-center">
+      <p className="text-xs text-[var(--text-tertiary)] text-center pt-2 border-t border-[var(--card-border)]">
         {t('prediction.disclaimer')}
       </p>
     </div>
