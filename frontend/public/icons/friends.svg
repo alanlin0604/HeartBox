@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+      
+      <g>
+        <circle cx="64" cy="42" r="14" fill="#FB7185"></circle>
+        <path d="M 44 84 C 44 66, 52 60, 64 60 C 76 60, 84 66, 84 84 Z" fill="#FB7185"></path>
+      </g>
+      
+      <g>
+        <circle cx="36" cy="46" r="16" fill="#E11D48"></circle>
+        <path d="M 14 92 C 14 72, 24 64, 36 64 C 48 64, 58 72, 58 92 Z" fill="#E11D48"></path>
+      </g>
+      
+      <g transform="translate(40 14)">
+        <path d="M 11 18 C 11 18, 0 12, 0 5 A 4 4 0 0 1 6 2 A 4 4 0 0 1 11 4 A 4 4 0 0 1 16 2 A 4 4 0 0 1 22 5 C 22 12, 11 18, 11 18 Z" fill="#FCD34D"></path>
+        
+        <path d="M 11 14 C 11 14, 4 10, 4 6 A 2.5 2.5 0 0 1 8 5 A 2.5 2.5 0 0 1 11 6 A 2.5 2.5 0 0 1 14 5 A 2.5 2.5 0 0 1 18 6 C 18 10, 11 14, 11 14 Z" fill="#E11D48" opacity="0.85"></path>
+      </g>
+    </svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+      
+      <rect x="10" y="18" width="80" height="64" rx="8" fill="#7C3AED"></rect>
+      
+      <rect x="10" y="18" width="80" height="16" rx="8" fill="#5B21B6"></rect>
+      <rect x="10" y="30" width="80" height="4" fill="#5B21B6"></rect>
+      
+      <path d="M 22 22 a 6 6 0 1 0 0 8 a 5 5 0 1 1 0 -8 z" fill="#FCD34D"></path>
+      
+      <rect x="34" y="24" width="28" height="2.5" rx="1" fill="#FFF" opacity="0.7"></rect>
+      <rect x="34" y="28.5" width="18" height="2" rx="1" fill="#FFF" opacity="0.4"></rect>
+      
+      <g font-family="system-ui, sans-serif" font-weight="800" fill="#FCD34D">
+        <text x="74" y="28" font-size="9">z</text>
+        <text x="80" y="24" font-size="6">z</text>
+      </g>
+      
+      <g>
+        
+        <line x1="18" y1="72" x2="82" y2="72" stroke="#A78BFA" stroke-width="0.8" opacity="0.5"></line>
+        
+        <path d="M 18 64 L 24 64 L 24 58 L 32 58 L 32 52 L 42 52 L 42 60 L 50 60 L 50 50 L 60 50 L 60 56 L 68 56 L 68 62 L 76 62 L 76 58 L 82 58" fill="none" stroke="#FCD34D" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"></path>
+        
+        <circle cx="50" cy="50" r="2.5" fill="#FCD34D"></circle>
+      </g>
+      
+      <g>
+        <rect x="18" y="76" width="14" height="3" rx="1.5" fill="#FCD34D"></rect>
+        <rect x="34" y="76" width="10" height="3" rx="1.5" fill="#A78BFA"></rect>
+        <rect x="46" y="76" width="16" height="3" rx="1.5" fill="#FB7185"></rect>
+        <rect x="64" y="76" width="12" height="3" rx="1.5" fill="#5EEAD4"></rect>
+      </g>
+    </svg>

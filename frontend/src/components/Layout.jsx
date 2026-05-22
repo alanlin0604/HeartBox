@@ -127,8 +127,8 @@ export default function Layout() {
       id: 'health',
       label: t('nav.group.health'),
       routes: [
-        { to: '/habits', label: t('nav.habits'), icon: '/icons/習慣追蹤.webp' },
-        { to: '/sleep-analysis', label: t('nav.sleepAnalysis'), icon: '/icons/呼吸與冥想.webp' },
+        { to: '/habits', label: t('nav.habits'), icon: '/icons/habit.svg' },
+        { to: '/sleep-analysis', label: t('nav.sleepAnalysis'), icon: '/icons/sleep.svg' },
         { to: '/breathe', label: t('nav.breathe'), icon: '/icons/呼吸與冥想.webp' },
       ],
     },
@@ -136,8 +136,8 @@ export default function Layout() {
       id: 'social',
       label: t('nav.group.social'),
       routes: [
-        { to: '/friends', label: t('friends.title'), icon: '/icons/諮商師.webp' },
-        { to: '/community', label: t('nav.community'), icon: '/icons/諮商師.webp' },
+        { to: '/friends', label: t('friends.title'), icon: '/icons/friends.svg' },
+        { to: '/community', label: t('nav.community'), icon: '/icons/anonymous.svg' },
         { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
         // /counselors hidden pre-launch — no approved counselors yet.
       ],
@@ -148,7 +148,7 @@ export default function Layout() {
       routes: [
         { to: '/learn', label: t('nav.learn'), icon: '/icons/學習.webp' },
         { to: '/achievements', label: t('nav.achievements'), icon: '/icons/成就.webp' },
-        { to: '/import', label: t('nav.dataImport'), icon: '/icons/功能指南.webp' },
+        { to: '/import', label: t('nav.dataImport'), icon: '/icons/import.svg' },
         { to: '/guide', label: t('nav.guide'), icon: '/icons/功能指南.webp' },
       ],
     },
@@ -158,19 +158,19 @@ export default function Layout() {
   const navLinks = [
     journalLink,
     { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.webp' },
-    { to: '/habits', label: t('nav.habits'), icon: '/icons/習慣追蹤.webp' },
+    { to: '/habits', label: t('nav.habits'), icon: '/icons/habit.svg' },
     { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
     // /personal-dashboard removed 2026-05-19 — redundant with /dashboard.
-    { to: '/friends', label: t('friends.title'), icon: '/icons/諮商師.webp' },
+    { to: '/friends', label: t('friends.title'), icon: '/icons/friends.svg' },
     // /counselors hidden pre-launch
     { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.webp' },
     { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.webp' },
-    { to: '/sleep-analysis', label: t('nav.sleepAnalysis'), icon: '/icons/呼吸與冥想.webp' },
-    { to: '/community', label: t('nav.community'), icon: '/icons/諮商師.webp' },
+    { to: '/sleep-analysis', label: t('nav.sleepAnalysis'), icon: '/icons/sleep.svg' },
+    { to: '/community', label: t('nav.community'), icon: '/icons/anonymous.svg' },
     { to: '/breathe', label: t('nav.breathe'), icon: '/icons/呼吸與冥想.webp' },
     { to: '/learn', label: t('nav.learn'), icon: '/icons/學習.webp' },
     { to: '/achievements', label: t('nav.achievements'), icon: '/icons/成就.webp' },
-    { to: '/import', label: t('nav.dataImport'), icon: '/icons/功能指南.webp' },
+    { to: '/import', label: t('nav.dataImport'), icon: '/icons/import.svg' },
     { to: '/guide', label: t('nav.guide'), icon: '/icons/功能指南.webp' },
   ]
 
