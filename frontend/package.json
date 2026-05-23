@@ -15,7 +15,8 @@
     "optimize:images": "node scripts/optimize-images.js",
     "check:i18n": "node scripts/check-i18n.js",
     "store:graphic": "node scripts/make-feature-graphic.js",
-    "store:screenshots": "node scripts/capture-screenshots.js"
+    "store:screenshots": "node scripts/capture-screenshots.js",
+    "store:screenshots:authed": "node scripts/capture-screenshots-authed.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
