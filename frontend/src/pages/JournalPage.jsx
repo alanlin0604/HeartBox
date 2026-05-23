@@ -44,6 +44,7 @@ export default function JournalPage() {
   const [dailyPrompt, setDailyPrompt] = useState('')
   const [promptContent, setPromptContent] = useState(null)
   const fetchIdRef = useRef(0)
+  const notesListRef = useRef(null)
 
   // Close context menu on click anywhere
   useEffect(() => {
@@ -193,6 +194,19 @@ export default function JournalPage() {
     try {
       const res = await createNote(content, metadata, tag_ids)
       const noteId = res.data.id
+      // Optimistic prepend. The user just hit save — show their note at the
+      // top of the list IMMEDIATELY so the action feels confirmed, before we
+      // sit on uploadAttachment + reanalyzeNote + fetchNotes (can take 2-5s
+      // on mobile with images). AI fields land later via the WebSocket
+      // 'heartbox:note_analyzed' event handler (line ~100). On mobile the
+      // form sits above the list and the user previously couldn't tell the
+      // note had been saved at all without scrolling — reported 2026-05-24.
+      setNotes((prev) => [res.data, ...prev])
+      // Scroll to the list so the user sees their new note. Defer to next
+      // tick so React commits the prepend first.
+      requestAnimationFrame(() => {
+        notesListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
       // Upload attachments after note creation (don't block refresh on failure)
       let attachFailed = false
       const hasImages = files.some((f) => f.type.startsWith('image/'))
@@ -318,7 +332,7 @@ export default function JournalPage() {
           <hr className="border-white/10" />
 
           {/* Browse section */}
-          <div className="flex items-center justify-between flex-wrap gap-2">
+          <div ref={notesListRef} className="flex items-center justify-between flex-wrap gap-2 scroll-mt-20">
             <div className="flex items-center gap-3">
               <h2 className="text-lg font-semibold">{showTrash ? t('journal.trash') : t('journal.recentNotes')}</h2>
               <button

@@ -1,28 +1,30 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useLang } from '../context/LanguageContext'
+import { useAuth } from '../context/AuthContext'
 import { updateProfile } from '../api/auth'
-import { createNote } from '../api/notes'
 import { useToast } from '../context/ToastContext'
 
 /**
- * First-launch onboarding. Walks the user through the four headline features
- * (journal / AI / dashboard / Health Connect) before asking them to write
- * their first journal entry inline.
+ * First-launch onboarding. Walks the user through the five headline features
+ * (welcome / journal / AI / dashboard / health) and then drops them on the
+ * Journal page with a hint toast — no inline editor (kept the flow shorter
+ * after users reported it felt long pre-Play-Store launch).
  *
- * Skipping is allowed at every step but the default flow ends in "write
- * something now" because retention curves for mood-journaling apps live and
- * die on day-1 first action.
+ * Bug 2026-05-24: clicking "重看介紹" in Settings re-flipped onboarding_completed
+ * back to false on the backend but no one refreshed AuthContext after finish(),
+ * so AuthContext kept user.onboarding_completed === false even after the modal
+ * closed. Any subsequent React re-render that re-ran Layout's effect re-opened
+ * the modal. Fix: refreshUser() in finish() to keep AuthContext in sync.
  */
 export default function OnboardingModal({ onComplete }) {
   const { t } = useLang()
+  const { refreshUser } = useAuth()
   const toast = useToast()
+  const navigate = useNavigate()
   const [step, setStep] = useState(0)
-  const [firstNote, setFirstNote] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [finishing, setFinishing] = useState(false)
 
-  // Feature intro slides — concrete UI cues ("點下方『日誌』tab") work better
-  // than abstract feature descriptions because new users won't scan the UI
-  // until told where to look.
   const intro = [
     {
       titleKey: 'onboarding.welcomeTitle',
@@ -55,85 +57,56 @@ export default function OnboardingModal({ onComplete }) {
       icon: '/icons/breathing.svg',
     },
   ]
-  const totalSteps = intro.length + 1 // +1 for the inline first-note step
 
-  const finish = async () => {
+  const isLastStep = step === intro.length - 1
+
+  const finish = async ({ navigateToJournal = false } = {}) => {
+    if (finishing) return
+    setFinishing(true)
     try {
       await updateProfile({ onboarding_completed: true })
     } catch { /* ignore */ }
-    onComplete()
-  }
-
-  const handleSaveFirst = async () => {
-    if (!firstNote.trim()) {
-      await finish()
-      return
-    }
-    setSaving(true)
+    // Refresh AuthContext so user.onboarding_completed reflects the new value;
+    // otherwise Layout's effect would re-open this modal on the next re-render.
     try {
-      await createNote(firstNote.trim())
-      toast?.success(t('onboarding.firstNoteSaved'))
-    } catch {
-      toast?.error(t('common.operationFailed'))
-    } finally {
-      setSaving(false)
-      await finish()
+      await refreshUser()
+    } catch { /* ignore */ }
+    onComplete()
+    if (navigateToJournal) {
+      navigate('/')
+      toast?.success(t('onboarding.firstNoteHint'))
     }
   }
 
-  if (step < intro.length) {
-    const current = intro[step]
-    return (
-      <Shell>
-        <img src={current.icon} alt="" className="w-16 h-16 mx-auto object-contain" />
-        <h2 className="text-xl font-bold">{t(current.titleKey)}</h2>
-        <p className="opacity-70">{t(current.descKey)}</p>
-        {current.hintKey && (
-          <div className="text-xs px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-300/90">
-            👉 {t(current.hintKey)}
-          </div>
-        )}
-        <StepDots count={totalSteps} active={step} />
-        <div className="flex justify-between">
-          {step > 0 ? (
-            <button onClick={() => setStep(step - 1)} className="btn-secondary">{t('common.goBack')}</button>
-          ) : <div />}
-          <div className="flex gap-2">
-            <button onClick={finish} className="btn-secondary text-sm opacity-70">
-              {t('onboarding.skip')}
-            </button>
-            <button onClick={() => setStep(step + 1)} className="btn-primary">{t('onboarding.next')}</button>
-          </div>
-        </div>
-      </Shell>
-    )
-  }
-
-  // Final step — write first journal entry inline
+  const current = intro[step]
   return (
     <Shell>
-      <h2 className="text-xl font-bold">{t('onboarding.firstNoteTitle')}</h2>
-      <p className="opacity-70 text-sm">{t('onboarding.firstNoteDesc')}</p>
-      <textarea
-        value={firstNote}
-        onChange={(e) => setFirstNote(e.target.value)}
-        placeholder={t('onboarding.firstNotePlaceholder')}
-        rows={5}
-        className="w-full p-3 rounded-lg bg-white/5 border border-white/10 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-        disabled={saving}
-      />
-      <StepDots count={totalSteps} active={totalSteps - 1} />
+      <img src={current.icon} alt="" className="w-16 h-16 mx-auto object-contain" />
+      <h2 className="text-xl font-bold">{t(current.titleKey)}</h2>
+      <p className="opacity-70">{t(current.descKey)}</p>
+      {current.hintKey && (
+        <div className="text-xs px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-300/90">
+          👉 {t(current.hintKey)}
+        </div>
+      )}
+      <StepDots count={intro.length} active={step} />
       <div className="flex justify-between">
-        <button onClick={() => setStep(intro.length - 1)} className="btn-secondary" disabled={saving}>
-          {t('common.goBack')}
-        </button>
+        {step > 0 ? (
+          <button onClick={() => setStep(step - 1)} className="btn-secondary" disabled={finishing}>{t('common.goBack')}</button>
+        ) : <div />}
         <div className="flex gap-2">
-          <button onClick={finish} className="btn-secondary" disabled={saving}>
-            {t('onboarding.skip')}
-          </button>
-          <button onClick={handleSaveFirst} className="btn-primary" disabled={saving}>
-            {saving ? t('common.loading') : t('onboarding.saveFirst')}
-          </button>
+          {!isLastStep && (
+            <button onClick={() => finish()} className="btn-secondary text-sm opacity-70" disabled={finishing}>
+              {t('onboarding.skip')}
+            </button>
+          )}
+          {isLastStep ? (
+            <button onClick={() => finish({ navigateToJournal: true })} className="btn-primary" disabled={finishing}>
+              {finishing ? t('common.loading') : t('onboarding.complete')}
+            </button>
+          ) : (
+            <button onClick={() => setStep(step + 1)} className="btn-primary">{t('onboarding.next')}</button>
+          )}
         </div>
       </div>
     </Shell>

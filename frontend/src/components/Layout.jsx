@@ -70,7 +70,12 @@ export default function Layout() {
     if (user && user.onboarding_completed === false) {
       setOnboardingDone(false)
     }
-  }, [user])
+    // Watch ONLY the relevant fields. Using `[user]` would re-fire any time
+    // AuthContext replaced the user object (refreshUser, auth check, etc.) and
+    // could spuriously reopen the modal if a stale snapshot still had
+    // onboarding_completed === false. OnboardingModal.finish() now calls
+    // refreshUser() to keep this in sync.
+  }, [user?.id, user?.onboarding_completed])
 
   // Close both dropdowns on outside click (single listener)
   useEffect(() => {
@@ -564,6 +569,19 @@ export default function Layout() {
                     {link.label}
                   </NavLink>
                 ))}
+                {/* Settings \u2014 placed at the bottom of the More menu so mobile
+                    users don't have to scroll back to the top-right user
+                    dropdown for the most frequently-used app config. */}
+                <NavLink
+                  to="/settings"
+                  onClick={() => { setMoreOpen(false); setMobileNavOpen(false) }}
+                  className={({ isActive }) =>
+                    `block px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${isActive ? 'text-orange-500' : 'opacity-70 hover:opacity-100'}`
+                  }
+                >
+                  <img src="/icons/settings-gear.svg" alt="" className="w-7 h-7 object-contain" />
+                  {t('settings.title')}
+                </NavLink>
                 {user?.is_staff && (
                   <NavLink
                     to="/admin"
