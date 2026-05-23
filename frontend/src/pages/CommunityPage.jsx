@@ -6,6 +6,9 @@ import { Card, Button, Modal } from '../components/ui'
 import SkeletonCard from '../components/SkeletonCard'
 
 const REPORT_REASONS = [
+  // Report reasons stay as emoji glyphs — the new icon set didn't include
+  // bespoke artwork for each (spam / hate / self-harm / …) and these are
+  // already universally recognisable. Touch nothing here.
   { value: 'spam', icon: '🗑️' },
   { value: 'harassment', icon: '⚠️' },
   { value: 'hate', icon: '🚫' },
@@ -21,10 +24,14 @@ const REPORT_REASONS = [
 // structure. Renders only at the boundary between the two groups, so
 // users with no friends see no divider (entire feed is "public"), and
 // users with no public posts left see only the friends header.
-function FeedSectionHeader({ title, subtitle, icon, spacedTop = false }) {
+// `iconSrc` takes precedence over `icon` (legacy emoji string) so callers
+// can opt into the new artwork set incrementally without breaking shape.
+function FeedSectionHeader({ title, subtitle, icon, iconSrc, spacedTop = false }) {
   return (
     <div className={`flex items-center gap-3 ${spacedTop ? 'mt-6 pt-4 border-t border-[var(--border-primary)]' : 'mb-3'}`}>
-      <span className="text-2xl">{icon}</span>
+      {iconSrc
+        ? <img src={iconSrc} alt="" aria-hidden="true" className="w-8 h-8 object-contain" />
+        : <span className="text-2xl">{icon}</span>}
       <div className="flex-1 min-w-0">
         <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
         {subtitle && (
@@ -37,15 +44,19 @@ function FeedSectionHeader({ title, subtitle, icon, spacedTop = false }) {
 
 // AI-categorized emotion buckets used by sentiment analysis (`analyze_sentiment`
 // in backend). Each pill filters the feed by `?category=` query param.
+// Now uses the new artwork set (svg paths) instead of native emoji glyphs
+// so the filter strip matches the rest of the redesigned UI. `icon` is
+// rendered via <img>; categories without dedicated artwork stay as the
+// emoji string and fall through to <span> rendering.
 const CATEGORY_FILTERS = [
-  { value: '', icon: '🌐' },
-  { value: 'happiness', icon: '😊' },
-  { value: 'gratitude', icon: '🙏' },
-  { value: 'sadness', icon: '😢' },
-  { value: 'anxiety', icon: '😰' },
-  { value: 'stress', icon: '😣' },
-  { value: 'anger', icon: '😠' },
-  { value: 'fear', icon: '😨' },
+  { value: '', iconSrc: '/icons/globe.svg' },
+  { value: 'happiness', iconSrc: '/icons/mood-happy.svg' },
+  { value: 'gratitude', iconSrc: '/icons/mood-gratitude.svg' },
+  { value: 'sadness', iconSrc: '/icons/mood-sad.svg' },
+  { value: 'anxiety', iconSrc: '/icons/mood-anxious.svg' },
+  { value: 'stress', iconSrc: '/icons/mood-stress.svg' },
+  { value: 'anger', iconSrc: '/icons/mood-angry.svg' },
+  { value: 'fear', iconSrc: '/icons/mood-fear.svg' },
 ]
 
 export default function CommunityPage() {
@@ -289,7 +300,7 @@ export default function CommunityPage() {
                   : 'bg-transparent border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)]'
               }`}
             >
-              <span aria-hidden="true">{cat.icon}</span>
+              <img src={cat.iconSrc} alt="" aria-hidden="true" className="w-5 h-5 object-contain" />
               {label}
             </button>
           )
@@ -334,14 +345,14 @@ export default function CommunityPage() {
                   <FeedSectionHeader
                     title={t('community.feedFriends')}
                     subtitle={t('community.feedFriendsDesc')}
-                    icon="👥"
+                    iconSrc="/icons/my-friends.svg"
                   />
                 )}
                 {showPublicHeader && (
                   <FeedSectionHeader
                     title={t('community.feedPublic')}
                     subtitle={t('community.feedPublicDesc')}
-                    icon="🌐"
+                    iconSrc="/icons/globe.svg"
                     spacedTop={!isFirst}
                   />
                 )}
@@ -362,12 +373,17 @@ export default function CommunityPage() {
                 </div>
               )}
 
-              {/* Reactions */}
+              {/* Reactions — emoji glyphs replaced with new artwork set.
+                  `support` (the 💪 fist-bump variant) maps to cheer-fist.svg. */}
               <div className="flex items-center gap-3 pt-4 border-t border-[var(--border-primary)]">
                 {['hug', 'support', 'heart'].map(type => {
                   const count = post.reaction_counts?.[type] || 0
                   const hasReacted = post.user_reacted?.includes(type)
-                  const emoji = { hug: '🤗', support: '💪', heart: '❤️' }[type]
+                  const iconSrc = {
+                    hug: '/icons/hug.svg',
+                    support: '/icons/cheer-fist.svg',
+                    heart: '/icons/hearts-react.svg',
+                  }[type]
 
                   return (
                     <button
@@ -379,7 +395,7 @@ export default function CommunityPage() {
                           : 'bg-[var(--surface-secondary)] text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)]'
                       }`}
                     >
-                      <span className="text-xl">{emoji}</span>
+                      <img src={iconSrc} alt="" aria-hidden="true" className="w-6 h-6 object-contain" />
                       {count > 0 && (
                         <span className="text-sm font-medium">{count}</span>
                       )}
