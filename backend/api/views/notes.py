@@ -6,6 +6,7 @@ Extracted from views/__init__.py. Re-exported for backward compatibility.
 import csv
 import io
 import mimetypes
+import threading
 from datetime import datetime
 
 from django.core.cache import cache
@@ -100,6 +101,38 @@ def _ai_analysis_worker(note_id, user_id):
             logger.exception('WebSocket fan-out failed after AI analysis')
     except Exception:
         logger.exception('Background AI analysis worker crashed for note %s', note_id)
+
+
+def _post_save_worker(user_id):
+    """Run achievement checks after a note is saved.
+
+    Previously this ran inline in perform_create, but check_achievements
+    fires ~25 aggregate queries against MoodNote / SharedNote / Booking /
+    AIChatSession / Conversation / Message / Feedback / NoteAttachment /
+    Friendship / SharedWithFriend / FriendComment / PublicPost /
+    PostReaction / DailySleep / HealthMetric / Habit / SelfAssessment /
+    WellnessSession / DashboardLayout — and a two-pass loop reruns the
+    whole thing if any meta achievement unlocks. On Neon, with a user
+    that has 800+ notes (the seed_demo_account default), each pass takes
+    1-2 seconds; the total cost was driving the user-perceived save
+    latency to 5+ seconds even though AI analysis was already async.
+
+    Unlock notifications still reach the frontend via the WebSocket
+    fan-out inside `_emit_unlock_notifications`, so dropping the
+    X-New-Achievements response header (which carried the same info on
+    the synchronous path) is a non-regression.
+    """
+    try:
+        from django.contrib.auth import get_user_model
+        from api.services.achievements import check_achievements
+        UserModel = get_user_model()
+        try:
+            user = UserModel.objects.get(id=user_id)
+        except UserModel.DoesNotExist:
+            return
+        check_achievements(user)
+    except Exception:
+        logger.exception('Background achievement check failed for user %s', user_id)
 
 
 def _vision_analysis_worker(note_id, user_id, image_urls):
@@ -230,9 +263,8 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         seconds later. AI engine has its own three-tier fallback so a
         failed OpenAI call still produces some feedback.
         """
-        import threading
-        from django.db import transaction
-        # Defer the thread spawn until the outer DB transaction commits,
+        # `threading` and `transaction` are imported at module-level. Defer
+        # the thread spawn until the outer DB transaction commits, otherwise
         # otherwise the thread can race against the SELECT and see a
         # row that doesn't exist yet (PostgreSQL read-committed default).
         transaction.on_commit(
@@ -258,7 +290,10 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         note = serializer.save(user=self.request.user)
         self._run_ai_analysis(note)
         self._invalidate_user_cache()
-        # Update journal streak
+        # Streak update stays inline — it's a single UPDATE (~50ms vs
+        # check_achievements's ~25 queries) and the streak count needs to
+        # be accurate immediately so the X-Streak-Milestone toast lands
+        # on the same response.
         try:
             from api.services.streaks import update_streak, get_streak_milestone
             streak = update_streak(self.request.user)
@@ -267,14 +302,17 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
                 self._streak_milestone = milestone
         except Exception as e:
             logger.warning('Streak update failed for user %s: %s', self.request.user.pk, e)
-        # Auto-check achievements
-        try:
-            from api.services.achievements import check_achievements
-            new_achievements = check_achievements(self.request.user)
-            if new_achievements:
-                self._new_achievements = new_achievements
-        except Exception as e:
-            logger.warning('Achievement check failed for user %s: %s', self.request.user.pk, e)
+        # Achievement check goes to a background thread — see _post_save_worker.
+        # Unlocks still notify the user via the existing WebSocket fan-out
+        # (`_emit_unlock_notifications` inside check_achievements).
+        user_id = self.request.user.id
+        transaction.on_commit(
+            lambda: threading.Thread(
+                target=_post_save_worker,
+                args=(user_id,),
+                daemon=True,
+            ).start()
+        )
 
     def perform_update(self, serializer):
         note = serializer.save()
