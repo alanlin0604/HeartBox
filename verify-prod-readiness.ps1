@@ -17,7 +17,10 @@
 param(
     [string]$Frontend = "https://heartbox.tw",
     [string]$ApiBase = "https://heartbox-api-598139488748.asia-east1.run.app",
-    [string]$DemoUser = "demo@heartbox.tw",
+    # Login form sends `username`, not email — seed_demo_account creates
+    # the user with `username='demo'` and email='demo@heartbox.tw' as a
+    # separate field. Using the email here always returns 401.
+    [string]$DemoUser = "demo",
     [string]$DemoPass = "DemoPass2026"
 )
 
@@ -193,19 +196,25 @@ Test-Step "Release AAB built locally (optional)" {
     return "warn"  # Most users build via GitHub Actions, AAB lives in the artifact zip not here.
 }
 
-# 12. Git: any backend changes not yet on Cloud Run?
-Test-Step "All backend commits deployed (heuristic)" {
-    # Look at the last commit time vs. local prod-deploy marker. If
-    # deploy-backend.ps1 wasn't touched recently and there are newer
-    # backend commits, deploy is probably stale.
-    $lastDeployTouched = (Get-Item (Join-Path $PSScriptRoot "deploy-backend.ps1")).LastWriteTime
-    $backendChanges = git log -1 --format="%cd" --date=iso -- backend/ 2>$null
-    if (-not $backendChanges) { return "warn" }
-    $lastBackendChange = [DateTime]::Parse($backendChanges)
-    if ($lastBackendChange -gt $lastDeployTouched.AddHours(1)) {
-        return "deploy may be stale (last backend change > deploy script touch)"
+# 12. Backend deploy fresh enough — uses the .last-backend-deploy marker
+# written by deploy-backend.ps1 at the end of a successful push. Earlier
+# version compared against deploy-backend.ps1's LastWriteTime which never
+# changed across runs, so this check always flagged "stale" even right
+# after a deploy. Marker approach is unambiguous.
+Test-Step "Backend deploy fresh (vs latest backend commit)" {
+    $markerPath = Join-Path $PSScriptRoot ".last-backend-deploy"
+    if (-not (Test-Path $markerPath)) {
+        return "no deploy marker — run .\deploy-backend.ps1 (or `Set-Content .last-backend-deploy 'manual'` if you deployed another way)"
     }
-    return "warn"  # heuristic — always warn so user double-checks
+    $markerTime = (Get-Item $markerPath).LastWriteTime
+    $backendChanges = git log -1 --format="%cd" --date=iso -- backend/ 2>$null
+    if (-not $backendChanges) { return $true }
+    $lastBackendChange = [DateTime]::Parse($backendChanges)
+    if ($lastBackendChange -gt $markerTime.AddMinutes(5)) {
+        $minutesAhead = [Math]::Round(($lastBackendChange - $markerTime).TotalMinutes)
+        return "stale: backend commit is ~$minutesAhead min newer than last deploy"
+    }
+    return $true
 }
 
 Write-Host ""

@@ -76,3 +76,4 @@ test_db.sqlite3
 lighthouse-*.json
 lighthouse-*.html
 npm-audit.json
+.last-backend-deploy

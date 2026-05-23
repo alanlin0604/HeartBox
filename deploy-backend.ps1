@@ -44,6 +44,14 @@ if ($LASTEXITCODE -ne 0) { throw "gcloud run deploy failed" }
 
 $NewRevision = (gcloud run services describe $Service --region $Region `
     --format="value(status.latestCreatedRevisionName)" --project $Project).Trim()
+
+# Marker file consumed by verify-prod-readiness.ps1's "deploy stale" check.
+# Earlier the check compared against this script's LastWriteTime, which never
+# changed when the user ran the script, so the check always flagged the
+# deploy as stale. Writing a dedicated marker is unambiguous.
+$Stamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+"Deploy verified at $Stamp (revision: $NewRevision)" | Out-File -FilePath ".last-backend-deploy" -Encoding ascii
+
 Write-Host ""
 Write-Host "New revision: $NewRevision" -ForegroundColor Green
 Write-Host ""

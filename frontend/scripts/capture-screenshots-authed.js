@@ -40,7 +40,12 @@ const TARGET = (process.env.TARGET || 'http://localhost:4173').replace(/\/$/, ''
 const VIEWPORT = { width: 1080, height: 2400, deviceScaleFactor: 1 }
 const LANGS = ['zh-TW', 'en', 'ja']
 
-const DEMO_USER = process.env.DEMO_USER || 'demo@heartbox.tw'
+// `username` from seed_demo_account is 'demo'; the email value is a
+// separate field on the user record and does NOT work as a login
+// identifier here (the auth endpoint accepts username only). Keep the
+// env var name as DEMO_USER for clarity even though the value is the
+// username, not the email.
+const DEMO_USER = process.env.DEMO_USER || 'demo'
 const DEMO_PASS = process.env.DEMO_PASS || 'DemoPass2026'
 
 // Auth-required pages to capture. `wait` is a per-page extra delay (ms)
