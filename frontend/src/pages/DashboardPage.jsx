@@ -124,7 +124,7 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center gap-6">
               {data?.current_streak > 0 && (
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl">🔥</span>
+                  <img src="/icons/flame.svg" alt="" aria-hidden="true" className="w-10 h-10 object-contain" />
                   <div>
                     <div className="text-sm text-[var(--text-tertiary)] mb-0.5">{t('dashboard.currentStreak')}</div>
                     <div className="text-xl font-bold text-[var(--text-primary)]">
@@ -135,7 +135,7 @@ export default function DashboardPage() {
               )}
               {data?.longest_streak > 0 && (
                 <div className="flex items-center gap-3 opacity-80">
-                  <span className="text-3xl">🏆</span>
+                  <img src="/icons/trophy.svg" alt="" aria-hidden="true" className="w-10 h-10 object-contain" />
                   <div>
                     <div className="text-sm text-[var(--text-tertiary)] mb-0.5">{t('dashboard.bestStreak')}</div>
                     <div className="text-lg font-semibold text-[var(--text-primary)]">

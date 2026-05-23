@@ -14,7 +14,26 @@ const COLORS = [
   '#06b6d4', // cyan-500
 ];
 
-const ICONS = ['✓', '🏃', '📚', '🧘', '💪', '🎯', '💧', '🌙', '☀️', '🍎', '🎨', '✍️'];
+// Habit icon options — strings stored on Habit.icon. New entries are SVG
+// paths (start with "/"); existing habits in DB may still hold the old
+// emoji characters, which the renderer falls back to displaying as text.
+// The 12 slots roughly match the original set (check / run / book(art) /
+// meditate / muscle / target / water / brush(/clean) / sun / apple /
+// banana / cooking).
+const ICONS = [
+  '/icons/habit-check.svg',
+  '/icons/habit-runner.svg',
+  '/icons/habit-art.svg',
+  '/icons/habit-meditate.svg',
+  '/icons/habit-muscle.svg',
+  '/icons/habit-target.svg',
+  '/icons/habit-water.svg',
+  '/icons/habit-brush.svg',
+  '/icons/habit-sun.svg',
+  '/icons/habit-apple.svg',
+  '/icons/habit-banana.svg',
+  '/icons/act-cooking.svg',
+];
 
 const FREQUENCIES = [
   { value: 'daily', label: 'habit.frequencyDaily' },
@@ -188,11 +207,13 @@ export default function HabitForm({ habit, onSubmit, onClose }) {
                   type="button"
                   onClick={() => handleChange('icon', icon)}
                   className={`
-                    w-12 h-12 rounded-lg text-2xl transition-all duration-200
+                    w-12 h-12 rounded-lg text-2xl transition-all duration-200 flex items-center justify-center
                     ${formData.icon === icon ? 'bg-orange-500/20 ring-2 ring-orange-500 scale-110' : 'bg-[var(--card-bg)] hover:bg-orange-500/10 hover:scale-105'}
                   `}
                 >
-                  {icon}
+                  {icon.startsWith('/')
+                    ? <img src={icon} alt="" aria-hidden="true" className="w-7 h-7 object-contain" />
+                    : icon}
                 </button>
               ))}
             </div>

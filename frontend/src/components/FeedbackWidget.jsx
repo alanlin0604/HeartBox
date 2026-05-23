@@ -42,7 +42,7 @@ export default function FeedbackWidget() {
         className="glass-card p-4 w-full text-left hover:bg-white/10 transition-colors cursor-pointer group"
       >
         <div className="flex items-center gap-2">
-          <span className="text-xl">💬</span>
+          <img src="/icons/feedback.svg" alt="" aria-hidden="true" className="w-6 h-6 object-contain" />
           <div>
             <p className="text-sm font-semibold group-hover:text-orange-400 transition-colors">
               {t('feedback.title')}

@@ -509,7 +509,8 @@ export default function SettingsPage() {
               }}
               className="btn-secondary text-sm"
             >
-              👋 {t('settings.replayTour')}
+              <img src="/icons/replay-intro.svg" alt="" aria-hidden="true" className="inline-block w-5 h-5 object-contain align-middle mr-1.5" />
+              {t('settings.replayTour')}
             </button>
           </div>
 

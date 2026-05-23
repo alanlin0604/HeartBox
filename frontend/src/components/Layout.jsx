@@ -394,10 +394,7 @@ export default function Layout() {
                   onClick={() => { navigate('/settings'); setMenuOpen(false) }}
                   className="w-full text-left px-4 py-2.5 text-sm hover:bg-orange-500/10 transition-colors cursor-pointer flex items-center gap-2"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                  </svg>
+                  <img src="/icons/settings-gear.svg" alt="" aria-hidden="true" className="w-5 h-5 object-contain" />
                   {t('settings.title')}
                 </button>
 
@@ -407,17 +404,13 @@ export default function Layout() {
                   className="w-full text-left px-4 py-2.5 text-sm hover:bg-orange-500/10 transition-colors cursor-pointer flex items-center gap-2"
                   aria-label={theme === 'dark' ? t('aria.switchToLight') : t('aria.switchToDark')}
                 >
-                  <span className="text-base w-4 text-center">{theme === 'dark' ? '☀️' : '🌙'}</span>
+                  <img src="/icons/dark-mode.svg" alt="" aria-hidden="true" className="w-5 h-5 object-contain" />
                   {theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark')}
                 </button>
 
                 {/* Language */}
                 <div className="px-4 py-2.5 flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="2" y1="12" x2="22" y2="12" />
-                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                  </svg>
+                  <img src="/icons/language.svg" alt="" aria-hidden="true" className="w-5 h-5 object-contain" />
                   <div className="flex items-center gap-1">
                     {LANG_OPTIONS.map((opt) => (
                       <button
@@ -442,11 +435,7 @@ export default function Layout() {
                   onClick={() => { logout(); setMenuOpen(false) }}
                   className="w-full text-left px-4 py-2.5 text-sm hover:bg-red-500/10 text-red-500 transition-colors cursor-pointer flex items-center gap-2"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1="21" y1="12" x2="9" y2="12" />
-                  </svg>
+                  <img src="/icons/logout.svg" alt="" aria-hidden="true" className="w-5 h-5 object-contain" />
                   {t('nav.logout')}
                 </button>
               </div>
@@ -486,11 +475,7 @@ export default function Layout() {
           <div className="border-t border-[var(--card-border)] pt-3 space-y-3">
             {/* Language picker (mobile) — desktop has its own in the user dropdown */}
             <div className="flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
+              <img src="/icons/language.svg" alt="" aria-hidden="true" className="w-5 h-5 object-contain" />
               <div className="flex items-center gap-1">
                 {LANG_OPTIONS.map((opt) => (
                   <button
@@ -520,7 +505,7 @@ export default function Layout() {
                 className="text-sm opacity-70 hover:opacity-100 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--card-border)] transition-colors"
                 aria-label={theme === 'dark' ? t('aria.switchToLight') : t('aria.switchToDark')}
               >
-                <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
+                <img src="/icons/dark-mode.svg" alt="" aria-hidden="true" className="w-4 h-4 object-contain" />
                 <span>{theme === 'dark' ? t('nav.themeLight') : t('nav.themeDark')}</span>
               </button>
               <button

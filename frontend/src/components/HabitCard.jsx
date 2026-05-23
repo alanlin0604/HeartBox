@@ -75,10 +75,12 @@ export default function HabitCard({ habit, onCheckIn, onUncheckIn, onEdit, onDel
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+            className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl overflow-hidden"
             style={{ backgroundColor: `${habit.color}20`, color: habit.color }}
           >
-            {habit.icon || '✓'}
+            {habit.icon?.startsWith('/')
+              ? <img src={habit.icon} alt="" aria-hidden="true" className="w-8 h-8 object-contain" />
+              : (habit.icon || '✓')}
           </div>
           <div>
             <h3 className="font-semibold text-lg text-[var(--text-primary)]">

@@ -260,7 +260,7 @@ export default function JournalPage() {
     <>
       {streak > 0 && (
         <div className="glass-card p-3 flex items-center gap-2 text-sm">
-          <span className="text-xl">🔥</span>
+          <img src="/icons/flame.svg" alt="" aria-hidden="true" className="w-6 h-6 object-contain" />
           <span className="font-medium">{t('journal.streak', { days: streak })}</span>
         </div>
       )}

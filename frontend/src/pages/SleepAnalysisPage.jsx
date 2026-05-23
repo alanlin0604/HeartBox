@@ -166,7 +166,7 @@ export default function SleepAnalysisPage() {
                 {stats.avg_sleep_hours != null ? `${stats.avg_sleep_hours.toFixed(1)}h` : '--'}
               </p>
             </div>
-            <div className="text-4xl">😴</div>
+            <img src="/icons/sleep-hours.svg" alt="" aria-hidden="true" className="w-12 h-12 object-contain" />
           </div>
           {stats.sleep_debt != null && (
             <p className={`text-sm mt-2 ${stats.sleep_debt >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -185,7 +185,7 @@ export default function SleepAnalysisPage() {
                 {stats.avg_quality_score != null ? `${stats.avg_quality_score}%` : '--'}
               </p>
             </div>
-            <div className="text-4xl">⭐</div>
+            <img src="/icons/sleep-quality.svg" alt="" aria-hidden="true" className="w-12 h-12 object-contain" />
           </div>
           {stats.total_records != null && (
             <p className="text-sm mt-2 text-[var(--text-secondary)]">
@@ -204,7 +204,7 @@ export default function SleepAnalysisPage() {
                 {stats.most_common_pattern ? t(`sleep.chronotype.${stats.most_common_pattern}`, { defaultValue: stats.most_common_pattern }) : '--'}
               </p>
             </div>
-            <div className="text-4xl">🌙</div>
+            <img src="/icons/sleep-pattern.svg" alt="" aria-hidden="true" className="w-12 h-12 object-contain" />
           </div>
         </Card>
       </div>
@@ -220,7 +220,7 @@ export default function SleepAnalysisPage() {
         {/* Issues */}
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="text-2xl">⚠️</span>
+            <img src="/icons/alert.svg" alt="" aria-hidden="true" className="w-7 h-7 object-contain" />
             {t('sleep.detectedIssues')}
           </h3>
           {issues.length > 0 ? (
@@ -240,7 +240,7 @@ export default function SleepAnalysisPage() {
         {/* Recommendations */}
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <span className="text-2xl">💡</span>
+            <img src="/icons/lightbulb.svg" alt="" aria-hidden="true" className="w-7 h-7 object-contain" />
             {t('sleep.recommendations')}
           </h3>
           {recommendations.length > 0 ? (

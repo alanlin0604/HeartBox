@@ -119,7 +119,23 @@ export default function PsychoContentPage() {
                   className="glass p-5 text-left hover:bg-orange-500/5 transition-colors cursor-pointer"
                 >
                   <div className="flex items-start gap-4">
-                    <span className="text-3xl">{course.icon_emoji}</span>
+                    {/* Map the backend's emoji glyph to the new artwork set.
+                        Unmapped courses fall through to display the original
+                        emoji so seed data without artwork still renders. */}
+                    {(() => {
+                      const ICON_MAP = {
+                        '🧠': '/icons/brain.svg',
+                        '🌱': '/icons/sprout.svg',
+                        '💚': '/icons/emotion-heart.svg',
+                        '❤️': '/icons/emotion-heart.svg',
+                        '🧘': '/icons/meditate.svg',
+                        '🫁': '/icons/breath-mindful.svg',
+                      }
+                      const src = ICON_MAP[course.icon_emoji]
+                      return src
+                        ? <img src={src} alt="" aria-hidden="true" className="w-10 h-10 object-contain" />
+                        : <span className="text-3xl">{course.icon_emoji}</span>
+                    })()}
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-lg">{title}</h3>
                       <p className="text-sm text-slate-400 mt-1 line-clamp-2">{desc}</p>

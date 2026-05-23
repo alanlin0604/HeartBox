@@ -106,10 +106,16 @@ export default function MoodPrediction() {
     )
   }
 
+  // Trend indicator — for sentiment improving / stress decreasing we want
+  // an "up" feel (green) and vice versa; for stress increasing / sentiment
+  // declining we want a "down" feel (red). Stable = no arrow. Returns an
+  // <img> element (or null) so the caller can just render {it}.
   const getTrendIcon = (trend) => {
-    if (trend === 'improving' || trend === 'decreasing') return '📈'
-    if (trend === 'declining' || trend === 'increasing') return '📉'
-    return '➡️'
+    const up = (trend === 'improving' || trend === 'decreasing')
+    const down = (trend === 'declining' || trend === 'increasing')
+    if (up) return <img src="/icons/trend-up.svg" alt="" aria-hidden="true" className="inline-block w-5 h-5 object-contain align-middle mr-1" />
+    if (down) return <img src="/icons/trend-down.svg" alt="" aria-hidden="true" className="inline-block w-5 h-5 object-contain align-middle mr-1" />
+    return null
   }
 
   const getTrendColor = (type, trend) => {
@@ -198,7 +204,7 @@ export default function MoodPrediction() {
         {/* Sentiment */}
         <div className="pt-4">
           <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
-            <span>😊</span>
+            <img src="/icons/mood-trend.svg" alt="" aria-hidden="true" className="w-6 h-6 object-contain" />
             {t('prediction.moodTrend')}
           </h2>
           <div className="space-y-2.5">
@@ -224,7 +230,7 @@ export default function MoodPrediction() {
         {/* Stress */}
         <div className="pt-4">
           <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
-            <span>📊</span>
+            <img src="/icons/stress-trend.svg" alt="" aria-hidden="true" className="w-6 h-6 object-contain" />
             {t('prediction.stressTrend')}
           </h2>
           <div className="space-y-2.5">
