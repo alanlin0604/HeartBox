@@ -106,16 +106,43 @@ export default function MoodPrediction() {
     )
   }
 
-  // Trend indicator — for sentiment improving / stress decreasing we want
-  // an "up" feel (green) and vice versa; for stress increasing / sentiment
-  // declining we want a "down" feel (red). Stable = no arrow. Returns an
-  // <img> element (or null) so the caller can just render {it}.
+  // Trend indicator — arrow always follows the LITERAL direction of the
+  // number, not whether it's "good" or "bad". Earlier version mapped by
+  // valence (improving + decreasing → up; declining + increasing → down)
+  // which produced the same down-arrow for both "心情下降中" and "壓力上升中"
+  // because both were tagged "bad". User flagged this 2026-05-23 — fix
+  // is to mirror the Chinese trend label exactly:
+  //   improving (sentiment ↑) / increasing (stress ↑) → up arrow
+  //   declining (sentiment ↓) / decreasing (stress ↓) → down arrow
+  // Color in the arrow art is decorative — the text label color (set by
+  // getTrendColor below) communicates good vs. bad.
   const getTrendIcon = (trend) => {
-    const up = (trend === 'improving' || trend === 'decreasing')
-    const down = (trend === 'declining' || trend === 'increasing')
-    if (up) return <img src="/icons/trend-up.svg" alt="" aria-hidden="true" className="inline-block w-5 h-5 object-contain align-middle mr-1" />
-    if (down) return <img src="/icons/trend-down.svg" alt="" aria-hidden="true" className="inline-block w-5 h-5 object-contain align-middle mr-1" />
+    if (trend === 'improving' || trend === 'increasing') {
+      return <img src="/icons/trend-up.svg" alt="" aria-hidden="true" className="inline-block w-5 h-5 object-contain align-middle mr-1" />
+    }
+    if (trend === 'declining' || trend === 'decreasing') {
+      return <img src="/icons/trend-down.svg" alt="" aria-hidden="true" className="inline-block w-5 h-5 object-contain align-middle mr-1" />
+    }
     return null
+  }
+
+  // Mood section header icon. Was a fixed smiley which felt wrong when
+  // the user's trend was declining ("心情下降中" with a smile is jarring).
+  // Now reflects the trend: improving = happy, declining = sad, stable
+  // or unknown = neutral-positive grateful pose.
+  const getMoodHeaderIcon = (trend) => {
+    if (trend === 'improving') return '/icons/mood-happy.svg'
+    if (trend === 'declining') return '/icons/mood-sad.svg'
+    return '/icons/mood-gratitude.svg'
+  }
+
+  // Stress section header icon — mirrors the same pattern. If stress is
+  // rising the icon shows worry; if falling, calm; stable stays as the
+  // neutral gauge dial.
+  const getStressHeaderIcon = (trend) => {
+    if (trend === 'increasing') return '/icons/mood-anxious.svg'
+    if (trend === 'decreasing') return '/icons/mood-happy.svg'
+    return '/icons/stress-trend.svg'
   }
 
   const getTrendColor = (type, trend) => {
@@ -204,7 +231,7 @@ export default function MoodPrediction() {
         {/* Sentiment */}
         <div className="pt-4">
           <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
-            <img src="/icons/mood-trend.svg" alt="" aria-hidden="true" className="w-6 h-6 object-contain" />
+            <img src={getMoodHeaderIcon(prediction.sentiment.trend)} alt="" aria-hidden="true" className="w-6 h-6 object-contain" />
             {t('prediction.moodTrend')}
           </h2>
           <div className="space-y-2.5">
@@ -230,7 +257,7 @@ export default function MoodPrediction() {
         {/* Stress */}
         <div className="pt-4">
           <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
-            <img src="/icons/stress-trend.svg" alt="" aria-hidden="true" className="w-6 h-6 object-contain" />
+            <img src={getStressHeaderIcon(prediction.stress.trend)} alt="" aria-hidden="true" className="w-6 h-6 object-contain" />
             {t('prediction.stressTrend')}
           </h2>
           <div className="space-y-2.5">
