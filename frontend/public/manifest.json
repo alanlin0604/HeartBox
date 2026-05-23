@@ -46,9 +46,9 @@
       "description": "開始撰寫新的心情日記",
       "icons": [
         {
-          "src": "/icons/日誌.png",
-          "sizes": "192x192",
-          "type": "image/png"
+          "src": "/icons/nav-journal.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
         }
       ]
     },
@@ -59,9 +59,9 @@
       "description": "查看心情趨勢與分析",
       "icons": [
         {
-          "src": "/icons/每週報告.png",
-          "sizes": "192x192",
-          "type": "image/png"
+          "src": "/icons/weekly-report.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
         }
       ]
     },
@@ -72,9 +72,9 @@
       "description": "與 AI 心理健康助手聊天",
       "icons": [
         {
-          "src": "/icons/AI 聊天.png",
-          "sizes": "192x192",
-          "type": "image/png"
+          "src": "/icons/ai-chat.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
         }
       ]
     }

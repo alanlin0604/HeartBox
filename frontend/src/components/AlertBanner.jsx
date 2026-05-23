@@ -36,9 +36,12 @@ export default memo(function AlertBanner() {
             key={`${alert.type}-${i}`}
             className={`rounded-xl border p-4 flex items-start gap-3 ${style}`}
           >
-            <span className="text-2xl mt-0.5">
-              {alert.severity === 'high' ? '🚨' : '⚠️'}
-            </span>
+            <img
+              src="/icons/alert.svg"
+              alt=""
+              aria-hidden="true"
+              className="w-7 h-7 object-contain mt-0.5 flex-shrink-0"
+            />
             <div className="flex-1">
               <p className="text-base font-bold">
                 {t(`alert.${alert.type}.title`)}

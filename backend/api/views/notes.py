@@ -353,8 +353,15 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def trash(self, request):
-        """List soft-deleted notes with pagination."""
-        qs = MoodNote.objects.filter(user=request.user, is_deleted=True).order_by('-deleted_at')
+        """List soft-deleted notes with pagination.
+
+        prefetch_related('tags') avoids an N+1: MoodNoteListSerializer
+        nests TagSerializer(many=True) which would otherwise fire one
+        extra SELECT per row.
+        """
+        qs = MoodNote.objects.filter(
+            user=request.user, is_deleted=True
+        ).prefetch_related('tags').order_by('-deleted_at')
         page = self.paginate_queryset(qs)
         if page is not None:
             serializer = MoodNoteListSerializer(page, many=True)
