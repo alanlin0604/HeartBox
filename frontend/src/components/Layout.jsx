@@ -108,7 +108,7 @@ export default function Layout() {
   }, [])
 
   // Single high-traffic route shown standalone on desktop.
-  const journalLink = { to: '/', label: t('nav.journal'), icon: '/icons/日誌.webp', end: true }
+  const journalLink = { to: '/', label: t('nav.journal'), icon: '/icons/nav-journal.svg', end: true }
 
   // Desktop dropdown groups — hover to expand. Each group's `routes`
   // becomes a vertical menu panel under the trigger.
@@ -117,10 +117,10 @@ export default function Layout() {
       id: 'analytics',
       label: t('nav.group.analytics'),
       routes: [
-        { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.webp' },
+        { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/mood-report.svg' },
         // /personal-dashboard removed 2026-05-19 — redundant with /dashboard.
-        { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.webp' },
-        { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.webp' },
+        { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/weekly-report.svg' },
+        { to: '/assessments', label: t('nav.assessments'), icon: '/icons/survey.svg' },
       ],
     },
     {
@@ -129,7 +129,7 @@ export default function Layout() {
       routes: [
         { to: '/habits', label: t('nav.habits'), icon: '/icons/habit.svg' },
         { to: '/sleep-analysis', label: t('nav.sleepAnalysis'), icon: '/icons/sleep.svg' },
-        { to: '/breathe', label: t('nav.breathe'), icon: '/icons/呼吸與冥想.webp' },
+        { to: '/breathe', label: t('nav.breathe'), icon: '/icons/breathing.svg' },
       ],
     },
     {
@@ -138,7 +138,7 @@ export default function Layout() {
       routes: [
         { to: '/friends', label: t('friends.title'), icon: '/icons/friends.svg' },
         { to: '/community', label: t('nav.community'), icon: '/icons/anonymous.svg' },
-        { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
+        { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/ai-chat.svg' },
         // /counselors hidden pre-launch — no approved counselors yet.
       ],
     },
@@ -146,10 +146,10 @@ export default function Layout() {
       id: 'more',
       label: t('nav.more'),
       routes: [
-        { to: '/learn', label: t('nav.learn'), icon: '/icons/學習.webp' },
-        { to: '/achievements', label: t('nav.achievements'), icon: '/icons/成就.webp' },
+        { to: '/learn', label: t('nav.learn'), icon: '/icons/learning.svg' },
+        { to: '/achievements', label: t('nav.achievements'), icon: '/icons/achievement.svg' },
         { to: '/import', label: t('nav.dataImport'), icon: '/icons/import.svg' },
-        { to: '/guide', label: t('nav.guide'), icon: '/icons/功能指南.webp' },
+        { to: '/guide', label: t('nav.guide'), icon: '/icons/guide.svg' },
       ],
     },
   ]
@@ -157,21 +157,21 @@ export default function Layout() {
   // Flattened list still used for mobile bottom nav + mobile More + slide-down menu.
   const navLinks = [
     journalLink,
-    { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/心情週報月報.webp' },
+    { to: '/dashboard', label: t('nav.dashboard'), icon: '/icons/mood-report.svg' },
     { to: '/habits', label: t('nav.habits'), icon: '/icons/habit.svg' },
-    { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/AI 聊天.webp' },
+    { to: '/ai-chat', label: t('nav.aiChat'), icon: '/icons/ai-chat.svg' },
     // /personal-dashboard removed 2026-05-19 — redundant with /dashboard.
     { to: '/friends', label: t('friends.title'), icon: '/icons/friends.svg' },
     // /counselors hidden pre-launch
-    { to: '/assessments', label: t('nav.assessments'), icon: '/icons/問卷評估.webp' },
-    { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/每週報告.webp' },
+    { to: '/assessments', label: t('nav.assessments'), icon: '/icons/survey.svg' },
+    { to: '/weekly-summary', label: t('nav.weeklySummary'), icon: '/icons/weekly-report.svg' },
     { to: '/sleep-analysis', label: t('nav.sleepAnalysis'), icon: '/icons/sleep.svg' },
     { to: '/community', label: t('nav.community'), icon: '/icons/anonymous.svg' },
-    { to: '/breathe', label: t('nav.breathe'), icon: '/icons/呼吸與冥想.webp' },
-    { to: '/learn', label: t('nav.learn'), icon: '/icons/學習.webp' },
-    { to: '/achievements', label: t('nav.achievements'), icon: '/icons/成就.webp' },
+    { to: '/breathe', label: t('nav.breathe'), icon: '/icons/breathing.svg' },
+    { to: '/learn', label: t('nav.learn'), icon: '/icons/learning.svg' },
+    { to: '/achievements', label: t('nav.achievements'), icon: '/icons/achievement.svg' },
     { to: '/import', label: t('nav.dataImport'), icon: '/icons/import.svg' },
-    { to: '/guide', label: t('nav.guide'), icon: '/icons/功能指南.webp' },
+    { to: '/guide', label: t('nav.guide'), icon: '/icons/guide.svg' },
   ]
 
   // Mobile bottom: first 4 + More dropdown holding the rest.

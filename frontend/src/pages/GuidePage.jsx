@@ -2,14 +2,14 @@ import { useEffect } from 'react'
 import { useLang } from '../context/LanguageContext'
 
 const FEATURES = [
-  { icon: '/icons/日誌.webp', titleKey: 'nav.journal', descKey: 'guide.journalDesc' },
-  { icon: '/icons/心情週報月報.webp', titleKey: 'nav.dashboard', descKey: 'guide.dashboardDesc' },
-  { icon: '/icons/問卷評估.webp', titleKey: 'nav.assessments', descKey: 'guide.assessmentsDesc' },
-  { icon: '/icons/每週報告.webp', titleKey: 'nav.weeklySummary', descKey: 'guide.weeklySummaryDesc' },
-  { icon: '/icons/呼吸與冥想.webp', titleKey: 'nav.breathe', descKey: 'guide.breatheDesc' },
-  { icon: '/icons/學習.webp', titleKey: 'nav.learn', descKey: 'guide.learnDesc' },
-  { icon: '/icons/AI 聊天.webp', titleKey: 'nav.aiChat', descKey: 'guide.aiChatDesc' },
-  { icon: '/icons/成就.webp', titleKey: 'nav.achievements', descKey: 'guide.achievementsDesc' },
+  { icon: '/icons/nav-journal.svg', titleKey: 'nav.journal', descKey: 'guide.journalDesc' },
+  { icon: '/icons/mood-report.svg', titleKey: 'nav.dashboard', descKey: 'guide.dashboardDesc' },
+  { icon: '/icons/survey.svg', titleKey: 'nav.assessments', descKey: 'guide.assessmentsDesc' },
+  { icon: '/icons/weekly-report.svg', titleKey: 'nav.weeklySummary', descKey: 'guide.weeklySummaryDesc' },
+  { icon: '/icons/breathing.svg', titleKey: 'nav.breathe', descKey: 'guide.breatheDesc' },
+  { icon: '/icons/learning.svg', titleKey: 'nav.learn', descKey: 'guide.learnDesc' },
+  { icon: '/icons/ai-chat.svg', titleKey: 'nav.aiChat', descKey: 'guide.aiChatDesc' },
+  { icon: '/icons/achievement.svg', titleKey: 'nav.achievements', descKey: 'guide.achievementsDesc' },
   { icon: '\u2699\uFE0F', titleKey: 'settings.title', descKey: 'guide.settingsDesc', isEmoji: true },
 ]
 

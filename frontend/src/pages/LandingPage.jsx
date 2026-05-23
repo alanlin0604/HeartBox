@@ -10,13 +10,13 @@ export default function LandingPage() {
   const ctaLabel = returning ? t('login.submit') : t('landing.getStarted')
 
   const features = [
-    { icon: '/icons/日誌.webp', titleKey: 'landing.featureJournal', descKey: 'landing.featureJournalDesc' },
-    { icon: '/icons/AI 聊天.webp', titleKey: 'landing.featureAI', descKey: 'landing.featureAIDesc' },
-    { icon: '/icons/心情週報月報.webp', titleKey: 'landing.featureAnalytics', descKey: 'landing.featureAnalyticsDesc' },
-    { icon: '/icons/呼吸與冥想.webp', titleKey: 'landing.featureBreathe', descKey: 'landing.featureBreatheDesc' },
+    { icon: '/icons/nav-journal.svg', titleKey: 'landing.featureJournal', descKey: 'landing.featureJournalDesc' },
+    { icon: '/icons/ai-chat.svg', titleKey: 'landing.featureAI', descKey: 'landing.featureAIDesc' },
+    { icon: '/icons/mood-report.svg', titleKey: 'landing.featureAnalytics', descKey: 'landing.featureAnalyticsDesc' },
+    { icon: '/icons/breathing.svg', titleKey: 'landing.featureBreathe', descKey: 'landing.featureBreatheDesc' },
     // Counselor feature hidden pre-launch — re-enable with /counselors.
     // { icon: '/icons/諮商師.webp', titleKey: 'landing.featureCounselor', descKey: 'landing.featureCounselorDesc' },
-    { icon: '/icons/問卷評估.webp', titleKey: 'landing.featureAssessment', descKey: 'landing.featureAssessmentDesc' },
+    { icon: '/icons/survey.svg', titleKey: 'landing.featureAssessment', descKey: 'landing.featureAssessmentDesc' },
   ]
 
   return (

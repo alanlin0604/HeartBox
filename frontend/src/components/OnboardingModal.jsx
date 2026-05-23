@@ -34,25 +34,25 @@ export default function OnboardingModal({ onComplete }) {
       titleKey: 'onboarding.journalTitle',
       descKey: 'onboarding.journalDesc',
       hintKey: 'onboarding.journalHint',
-      icon: '/icons/日誌.webp',
+      icon: '/icons/nav-journal.svg',
     },
     {
       titleKey: 'onboarding.aiTitle',
       descKey: 'onboarding.aiDesc',
       hintKey: 'onboarding.aiHint',
-      icon: '/icons/AI 聊天.webp',
+      icon: '/icons/ai-chat.svg',
     },
     {
       titleKey: 'onboarding.dashboardTitle',
       descKey: 'onboarding.dashboardDesc',
       hintKey: 'onboarding.dashboardHint',
-      icon: '/icons/心情週報月報.webp',
+      icon: '/icons/mood-report.svg',
     },
     {
       titleKey: 'onboarding.healthTitle',
       descKey: 'onboarding.healthDesc',
       hintKey: 'onboarding.healthHint',
-      icon: '/icons/呼吸與冥想.webp',
+      icon: '/icons/breathing.svg',
     },
   ]
   const totalSteps = intro.length + 1 // +1 for the inline first-note step
