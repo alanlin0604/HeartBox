@@ -40,8 +40,9 @@ HeartBox 心事盒——一款專為現代人設計的私密 AI 心情日記。
 - AI 不會用你的資料訓練模型
 
 📊 數據視覺化
-- 個人化儀表板，自由排列
-- 情緒趨勢、壓力雷達、睡眠分析
+- 情緒趨勢、壓力雷達、心情日曆、年度像素圖
+- 天氣／活動／睡眠關聯分析，找出影響你心情的因素
+- AI 情緒預測（Random Forest），預估未來 3 天的心情與壓力走向
 - 週報、月報自動產生
 
 ❤️ 健康整合（Health Connect）
@@ -101,8 +102,9 @@ Every journal entry is end-to-end encrypted with AES-CBC + HMAC-SHA256 (Fernet).
 - Your data is never used to train AI models
 
 📊 Data Visualization
-- Customizable personal dashboard, drag-and-drop layout
-- Mood trends, stress radar, sleep analysis
+- Mood trends, stress radar, year-in-pixels calendar, sleep analysis
+- Weather / activity / sleep correlation analysis — surface the patterns that move your mood
+- AI mood forecast (Random Forest) — predict sentiment + stress for the next 3 days
 - Weekly and monthly reports generated automatically
 
 ❤️ Health Integration (Health Connect)
@@ -162,8 +164,9 @@ HeartBox（ハートボックス）— 現代を生きるあなたのための�
 - データはAIモデルの学習には使用されません
 
 📊 データ可視化
-- カスタマイズ可能なパーソナルダッシュボード
-- 気分の推移、ストレスレーダー、睡眠分析
+- 気分の推移、ストレスレーダー、ピクセルカレンダー、睡眠分析
+- 天気・活動・睡眠との相関分析で、気分に影響する要因を発見
+- AI気分予測（ランダムフォレスト）：今後3日間の気分・ストレスを予測
 - 週次・月次レポートを自動生成
 
 ❤️ ヘルスデータ連携（Health Connect）

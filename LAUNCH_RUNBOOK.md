@@ -5,9 +5,34 @@
 
 ---
 
+## 階段 0：先跑 readiness check（30 秒）
+
+```powershell
+cd c:\Users\alan9\OneDrive\Desktop\HeartBox
+.\verify-prod-readiness.ps1
+```
+
+12 點檢查（backend / frontend / 本地素材 / deploy 狀態）一次告訴你哪些紅。
+照清單依序解 FAIL，每解一個就再跑一次確認變 PASS。
+
+---
+
 ## 階段 A：素材生成（~2 小時，可離線做）
 
-### A1. Backend deploy（先做，因為 prod 還跑舊 prediction schema）
+### A1. Backend deploy（必做 — 截至本 runbook 寫成時有 5 個 backend commit 未 deploy）
+
+未 deploy 的改動（按時間排）：
+- `814fe1a` chore: pre-launch quality pass — trash N+1 fix, alert icon, manifest cleanup
+- `1b82216` feat(prediction,i18n): unify Mood Prediction into one card + fully localize
+- `59f40e1` feat(perf,ux): async AI on note save, remove redundant dashboard, friend-first community
+- `515f84a` launch-prep: finish counselor hide, patch HC crash, prune stale docs
+- `ae5c6b1` launch-prep: compliance, crisis safety, retention, data rights, marketing
+
+deploy 上去會生效：
+- 寫日記不再卡 5-15 秒（async AI worker）
+- 社群好友動態優先顯示
+- 情緒預測 response schema 用 i18n key（前端 reverse-map 就可以拿掉）
+- 諮商師相關 endpoints 已隱藏（從 UI 端無影響，但 schema 變乾淨）
 
 ```powershell
 cd c:\Users\alan9\OneDrive\Desktop\HeartBox
