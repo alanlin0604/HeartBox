@@ -80,13 +80,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'moodnotes_pro.wsgi.application'
 ASGI_APPLICATION = 'moodnotes_pro.asgi.application'
 
-# Channels
-REDIS_URL = os.getenv('REDIS_URL')
-if REDIS_URL:
+# Channels — multi-instance WebSocket fan-out needs a cross-process
+# message broker. Falls back to CELERY_BROKER_URL because in production
+# both point at the same Upstash Redis; one env var is enough. Local
+# dev with no Redis just gets InMemoryChannelLayer.
+CHANNELS_REDIS_URL = os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL')
+if CHANNELS_REDIS_URL and CHANNELS_REDIS_URL.startswith(('redis://', 'rediss://')):
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {'hosts': [REDIS_URL]},
+            'CONFIG': {'hosts': [CHANNELS_REDIS_URL]},
         },
     }
 else:
@@ -95,6 +98,11 @@ else:
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
+# Cache uses REDIS_URL only when set EXPLICITLY (not the CELERY fallback).
+# Local memory cache works in production too — Cloud Run keeps min-instances
+# warm so the locmem hit rate is fine, and skipping a Redis connect on
+# every cold start avoids a DNS race I hit when REDIS_URL was first set.
+REDIS_URL = os.getenv('REDIS_URL')
 
 # Database — Neon PostgreSQL via DATABASE_URL, fallback to SQLite
 DATABASE_URL = os.getenv('DATABASE_URL')
