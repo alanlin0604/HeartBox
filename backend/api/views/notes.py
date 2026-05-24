@@ -276,15 +276,24 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         )
 
     def _invalidate_user_cache(self):
-        """Invalidate analytics and calendar caches for the current user."""
+        """Invalidate analytics and calendar caches for the current user.
+
+        Previously only deleted the {week,month}_{7,30} permutations because
+        those are the common defaults — but any custom (period, lookback)
+        pair the user picked would keep its 5-minute stale cache, so new
+        tags / activity correlations could disappear from the dashboard
+        until TTL expired. 2026-05-24: switched to an explicit list that
+        covers every period × lookback option offered by the UI (see
+        DashboardPage.jsx where lookback ∈ {7,14,30,60,90}).
+        """
         uid = self.request.user.id
         now = timezone.now()
-        cache.delete_many([
-            f'analytics_{uid}_week_30',
-            f'analytics_{uid}_month_30',
-            f'analytics_{uid}_week_7',
-            f'calendar_{uid}_{now.year}_{now.month}',
-        ])
+        keys = []
+        for period in ('week', 'month'):
+            for lookback in (7, 14, 30, 60, 90):
+                keys.append(f'analytics_{uid}_{period}_{lookback}')
+        keys.append(f'calendar_{uid}_{now.year}_{now.month}')
+        cache.delete_many(keys)
 
     def perform_create(self, serializer):
         note = serializer.save(user=self.request.user)

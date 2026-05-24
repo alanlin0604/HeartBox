@@ -406,6 +406,141 @@ ACHIEVEMENT_DEFINITIONS = {
         'name_key': 'achievement.achievement_legend',
         'desc_key': 'achievement.achievement_legend_desc',
     },
+
+    # ============================================================
+    # ===== 2026-05-24 expansion: 55 new achievements ============
+    # Target: cross the 100-total threshold so the Achievements
+    # page feels meaningfully gamified pre-Play-Store launch.
+    # New helpers + progress fields below in _get_progress.
+    # ============================================================
+
+    # --- Writing (extended) ---
+    'notes_500': {'category': 'writing', 'icon': 'trophy_silver', 'threshold': 500,
+                  'name_key': 'achievement.notes_500', 'desc_key': 'achievement.notes_500_desc'},
+    'notes_1000': {'category': 'writing', 'icon': 'trophy_gold', 'threshold': 1000,
+                   'name_key': 'achievement.notes_1000', 'desc_key': 'achievement.notes_1000_desc'},
+    'words_1k_note': {'category': 'writing', 'icon': 'scroll_long', 'threshold': 1000,
+                      'name_key': 'achievement.words_1k_note', 'desc_key': 'achievement.words_1k_note_desc'},
+    'morning_writer': {'category': 'writing', 'icon': 'sun_morning', 'threshold': 5,
+                       'name_key': 'achievement.morning_writer', 'desc_key': 'achievement.morning_writer_desc'},
+    'evening_writer': {'category': 'writing', 'icon': 'moon_evening', 'threshold': 5,
+                       'name_key': 'achievement.evening_writer', 'desc_key': 'achievement.evening_writer_desc'},
+    'midnight_writer': {'category': 'writing', 'icon': 'owl', 'threshold': 3,
+                        'name_key': 'achievement.midnight_writer', 'desc_key': 'achievement.midnight_writer_desc'},
+    'photo_album': {'category': 'writing', 'icon': 'photo_stack', 'threshold': 10,
+                    'name_key': 'achievement.photo_album', 'desc_key': 'achievement.photo_album_desc'},
+    'detailed_writer': {'category': 'writing', 'icon': 'book_open', 'threshold': 10,
+                        'name_key': 'achievement.detailed_writer', 'desc_key': 'achievement.detailed_writer_desc'},
+
+    # --- Consistency (extended) ---
+    'streak_14': {'category': 'consistency', 'icon': 'flame_blue', 'threshold': 14,
+                  'name_key': 'achievement.streak_14', 'desc_key': 'achievement.streak_14_desc'},
+    'streak_60': {'category': 'consistency', 'icon': 'flame_purple', 'threshold': 60,
+                  'name_key': 'achievement.streak_60', 'desc_key': 'achievement.streak_60_desc'},
+    'streak_100': {'category': 'consistency', 'icon': 'flame_diamond', 'threshold': 100,
+                   'name_key': 'achievement.streak_100', 'desc_key': 'achievement.streak_100_desc'},
+    'streak_365': {'category': 'consistency', 'icon': 'crown_gold', 'threshold': 365,
+                   'name_key': 'achievement.streak_365', 'desc_key': 'achievement.streak_365_desc'},
+    'comeback_kid': {'category': 'consistency', 'icon': 'phoenix', 'threshold': 1,
+                     'name_key': 'achievement.comeback_kid', 'desc_key': 'achievement.comeback_kid_desc'},
+
+    # --- Mood (extended) ---
+    'happy_week': {'category': 'mood', 'icon': 'smile_big', 'threshold': 1,
+                   'name_key': 'achievement.happy_week', 'desc_key': 'achievement.happy_week_desc'},
+    'calm_week': {'category': 'mood', 'icon': 'leaf_zen', 'threshold': 1,
+                  'name_key': 'achievement.calm_week', 'desc_key': 'achievement.calm_week_desc'},
+    'emotional_spectrum': {'category': 'mood', 'icon': 'rainbow_full', 'threshold': 5,
+                           'name_key': 'achievement.emotional_spectrum', 'desc_key': 'achievement.emotional_spectrum_desc'},
+    'mood_journal_50': {'category': 'mood', 'icon': 'brain_star', 'threshold': 50,
+                        'name_key': 'achievement.mood_journal_50', 'desc_key': 'achievement.mood_journal_50_desc'},
+
+    # --- Health (extended) ---
+    'sleep_streak_14': {'category': 'health', 'icon': 'bed_clouds', 'threshold': 14,
+                        'name_key': 'achievement.sleep_streak_14', 'desc_key': 'achievement.sleep_streak_14_desc'},
+    'sleep_streak_30': {'category': 'health', 'icon': 'bed_stars', 'threshold': 30,
+                        'name_key': 'achievement.sleep_streak_30', 'desc_key': 'achievement.sleep_streak_30_desc'},
+    'sleep_logger_30': {'category': 'health', 'icon': 'log_sleep', 'threshold': 30,
+                        'name_key': 'achievement.sleep_logger_30', 'desc_key': 'achievement.sleep_logger_30_desc'},
+    'early_sleeper': {'category': 'health', 'icon': 'crescent_moon', 'threshold': 5,
+                      'name_key': 'achievement.early_sleeper', 'desc_key': 'achievement.early_sleeper_desc'},
+    'step_streak_7': {'category': 'health', 'icon': 'sneaker_streak', 'threshold': 7,
+                      'name_key': 'achievement.step_streak_7', 'desc_key': 'achievement.step_streak_7_desc'},
+    'step_streak_30': {'category': 'health', 'icon': 'sneaker_gold', 'threshold': 30,
+                      'name_key': 'achievement.step_streak_30', 'desc_key': 'achievement.step_streak_30_desc'},
+    'health_sync_100': {'category': 'health', 'icon': 'watch_pulse', 'threshold': 100,
+                        'name_key': 'achievement.health_sync_100', 'desc_key': 'achievement.health_sync_100_desc'},
+    'health_data_diverse': {'category': 'health', 'icon': 'health_grid', 'threshold': 5,
+                            'name_key': 'achievement.health_data_diverse', 'desc_key': 'achievement.health_data_diverse_desc'},
+
+    # --- Wellness (extended) ---
+    'habit_count_3': {'category': 'wellness', 'icon': 'target_3', 'threshold': 3,
+                      'name_key': 'achievement.habit_count_3', 'desc_key': 'achievement.habit_count_3_desc'},
+    'habit_count_5': {'category': 'wellness', 'icon': 'target_5', 'threshold': 5,
+                      'name_key': 'achievement.habit_count_5', 'desc_key': 'achievement.habit_count_5_desc'},
+    'breathing_minutes_30': {'category': 'wellness', 'icon': 'lungs_air', 'threshold': 30,
+                             'name_key': 'achievement.breathing_minutes_30', 'desc_key': 'achievement.breathing_minutes_30_desc'},
+    'breathing_minutes_120': {'category': 'wellness', 'icon': 'lungs_deep', 'threshold': 120,
+                              'name_key': 'achievement.breathing_minutes_120', 'desc_key': 'achievement.breathing_minutes_120_desc'},
+    'meditation_sessions_30': {'category': 'wellness', 'icon': 'lotus_open', 'threshold': 30,
+                               'name_key': 'achievement.meditation_sessions_30', 'desc_key': 'achievement.meditation_sessions_30_desc'},
+    'wellness_master_100': {'category': 'wellness', 'icon': 'wellness_crown', 'threshold': 100,
+                            'name_key': 'achievement.wellness_master_100', 'desc_key': 'achievement.wellness_master_100_desc'},
+    'breathing_streak_7': {'category': 'wellness', 'icon': 'wind_streak', 'threshold': 7,
+                           'name_key': 'achievement.breathing_streak_7', 'desc_key': 'achievement.breathing_streak_7_desc'},
+    'diverse_wellness': {'category': 'wellness', 'icon': 'mosaic', 'threshold': 3,
+                         'name_key': 'achievement.diverse_wellness', 'desc_key': 'achievement.diverse_wellness_desc'},
+
+    # --- Explore (extended) ---
+    'tag_collector_30': {'category': 'explore', 'icon': 'tags_full', 'threshold': 30,
+                         'name_key': 'achievement.tag_collector_30', 'desc_key': 'achievement.tag_collector_30_desc'},
+    'all_features_tried': {'category': 'explore', 'icon': 'compass_star', 'threshold': 6,
+                           'name_key': 'achievement.all_features_tried', 'desc_key': 'achievement.all_features_tried_desc'},
+    'diverse_activities': {'category': 'explore', 'icon': 'activity_grid', 'threshold': 10,
+                           'name_key': 'achievement.diverse_activities', 'desc_key': 'achievement.diverse_activities_desc'},
+    'weather_diversity': {'category': 'explore', 'icon': 'weather_full', 'threshold': 5,
+                          'name_key': 'achievement.weather_diversity', 'desc_key': 'achievement.weather_diversity_desc'},
+    'assessment_master_10': {'category': 'explore', 'icon': 'clipboard_star', 'threshold': 10,
+                             'name_key': 'achievement.assessment_master_10', 'desc_key': 'achievement.assessment_master_10_desc'},
+    'pin_master_10': {'category': 'explore', 'icon': 'pin_stack', 'threshold': 10,
+                      'name_key': 'achievement.pin_master_10', 'desc_key': 'achievement.pin_master_10_desc'},
+
+    # --- AI (extended) ---
+    'ai_chat_100': {'category': 'social', 'icon': 'robot_pro', 'threshold': 100,
+                    'name_key': 'achievement.ai_chat_100', 'desc_key': 'achievement.ai_chat_100_desc'},
+    'ai_chat_500': {'category': 'social', 'icon': 'robot_master', 'threshold': 500,
+                    'name_key': 'achievement.ai_chat_500', 'desc_key': 'achievement.ai_chat_500_desc'},
+    'daily_ai_chat_7': {'category': 'social', 'icon': 'robot_streak', 'threshold': 7,
+                        'name_key': 'achievement.daily_ai_chat_7', 'desc_key': 'achievement.daily_ai_chat_7_desc'},
+
+    # --- Friends (extended) ---
+    'friends_10': {'category': 'friends', 'icon': 'users_group', 'threshold': 10,
+                   'name_key': 'achievement.friends_10', 'desc_key': 'achievement.friends_10_desc'},
+    'friends_25': {'category': 'friends', 'icon': 'users_crowd', 'threshold': 25,
+                   'name_key': 'achievement.friends_25', 'desc_key': 'achievement.friends_25_desc'},
+    'friend_share_10': {'category': 'friends', 'icon': 'gift_stack', 'threshold': 10,
+                        'name_key': 'achievement.friend_share_10', 'desc_key': 'achievement.friend_share_10_desc'},
+    'friend_comment_25': {'category': 'friends', 'icon': 'message_heart_full', 'threshold': 25,
+                          'name_key': 'achievement.friend_comment_25', 'desc_key': 'achievement.friend_comment_25_desc'},
+    'friend_share_received_5': {'category': 'friends', 'icon': 'gift_received', 'threshold': 5,
+                                'name_key': 'achievement.friend_share_received_5', 'desc_key': 'achievement.friend_share_received_5_desc'},
+
+    # --- Community (extended) ---
+    'community_posts_5': {'category': 'community', 'icon': 'megaphone_5', 'threshold': 5,
+                          'name_key': 'achievement.community_posts_5', 'desc_key': 'achievement.community_posts_5_desc'},
+    'community_posts_20': {'category': 'community', 'icon': 'megaphone_pro', 'threshold': 20,
+                           'name_key': 'achievement.community_posts_20', 'desc_key': 'achievement.community_posts_20_desc'},
+    'community_top_post': {'category': 'community', 'icon': 'sparkle_star', 'threshold': 10,
+                           'name_key': 'achievement.community_top_post', 'desc_key': 'achievement.community_top_post_desc'},
+    'community_active_10': {'category': 'community', 'icon': 'calendar_active', 'threshold': 10,
+                            'name_key': 'achievement.community_active_10', 'desc_key': 'achievement.community_active_10_desc'},
+    'reactions_given_50': {'category': 'community', 'icon': 'thumbs_pro', 'threshold': 50,
+                           'name_key': 'achievement.reactions_given_50', 'desc_key': 'achievement.reactions_given_50_desc'},
+
+    # --- Meta (extended) ---
+    'achievement_master': {'category': 'meta', 'icon': 'medal_silver', 'threshold': 50,
+                           'name_key': 'achievement.achievement_master', 'desc_key': 'achievement.achievement_master_desc'},
+    'achievement_god': {'category': 'meta', 'icon': 'medal_diamond', 'threshold': 100,
+                        'name_key': 'achievement.achievement_god', 'desc_key': 'achievement.achievement_god_desc'},
 }
 
 
@@ -573,6 +708,273 @@ def _get_quality_sleep_week(user):
     return 0
 
 
+def _get_window_stat(values_by_date, window=7, *, fn=sum, divisor=None):
+    """Slide a window of N consecutive dates across (date → numeric) data,
+    return the best value of fn(window_values) / (divisor or 1).
+
+    Used for happy_week / calm_week — find the best (or worst) 7-day
+    window's average sentiment / stress. Returns None if no window
+    qualifies (fewer than N consecutive days).
+    """
+    if not values_by_date:
+        return None
+    sorted_dates = sorted(values_by_date.keys())
+    best = None
+    for i in range(len(sorted_dates) - window + 1):
+        slice_dates = sorted_dates[i:i + window]
+        if (slice_dates[-1] - slice_dates[0]).days != window - 1:
+            continue
+        agg = fn(values_by_date[d] for d in slice_dates)
+        if divisor:
+            agg = agg / divisor
+        if best is None:
+            best = agg
+        else:
+            best = max(best, agg) if fn is sum or fn is max else min(best, agg)
+    return best
+
+
+def _happy_week_hit(user):
+    """1 if any 7-consecutive-day window has avg sentiment > 0.4."""
+    from datetime import date as _date
+    rows = (
+        MoodNote.objects.filter(user=user, sentiment_score__isnull=False)
+        .values_list('created_at__date', 'sentiment_score')
+    )
+    # average per day (multiple notes / day → mean)
+    by_date = {}
+    counts = {}
+    for d, s in rows:
+        by_date[d] = by_date.get(d, 0) + float(s)
+        counts[d] = counts.get(d, 0) + 1
+    daily_avg = {d: by_date[d] / counts[d] for d in by_date}
+    sorted_dates = sorted(daily_avg.keys())
+    for i in range(len(sorted_dates) - 6):
+        if (sorted_dates[i + 6] - sorted_dates[i]).days != 6:
+            continue
+        window = [daily_avg[d] for d in sorted_dates[i:i + 7]]
+        if sum(window) / 7 > 0.4:
+            return 1
+    return 0
+
+
+def _calm_week_hit(user):
+    """1 if any 7-consecutive-day window has avg stress_index < 4."""
+    rows = (
+        MoodNote.objects.filter(user=user, stress_index__isnull=False)
+        .values_list('created_at__date', 'stress_index')
+    )
+    by_date = {}
+    counts = {}
+    for d, s in rows:
+        by_date[d] = by_date.get(d, 0) + float(s)
+        counts[d] = counts.get(d, 0) + 1
+    daily_avg = {d: by_date[d] / counts[d] for d in by_date}
+    sorted_dates = sorted(daily_avg.keys())
+    for i in range(len(sorted_dates) - 6):
+        if (sorted_dates[i + 6] - sorted_dates[i]).days != 6:
+            continue
+        window = [daily_avg[d] for d in sorted_dates[i:i + 7]]
+        if sum(window) / 7 < 4:
+            return 1
+    return 0
+
+
+def _has_7day_gap_and_returned(user):
+    """1 if the user ever had a 7+ day gap between consecutive entries
+    AND wrote again afterwards. Detects 'comeback' behavior."""
+    dates = list(
+        MoodNote.objects.filter(user=user, is_deleted=False)
+        .values_list('created_at__date', flat=True)
+        .distinct()
+        .order_by('created_at__date')
+    )
+    if len(dates) < 2:
+        return 0
+    for i in range(1, len(dates)):
+        if (dates[i] - dates[i - 1]).days >= 7:
+            return 1
+    return 0
+
+
+def _get_step_streak(user, threshold=10000):
+    """Longest streak of consecutive days where steps >= threshold."""
+    rows = (
+        HealthMetric.objects.filter(user=user, metric_type='steps', value__gte=threshold)
+        .values_list('date', flat=True)
+        .distinct()
+        .order_by('date')
+    )
+    dates = list(rows)
+    if not dates:
+        return 0
+    best = 1
+    run = 1
+    for i in range(1, len(dates)):
+        if (dates[i] - dates[i - 1]).days == 1:
+            run += 1
+            best = max(best, run)
+        else:
+            run = 1
+    return best
+
+
+def _distinct_health_types_synced(user):
+    return (
+        HealthMetric.objects.filter(user=user)
+        .exclude(source='manual')
+        .values_list('metric_type', flat=True)
+        .distinct()
+        .count()
+    )
+
+
+def _breathing_minutes_total(user):
+    from django.db.models import Sum
+    secs = WellnessSession.objects.filter(
+        user=user, session_type='breathing',
+    ).aggregate(s=Sum('duration_seconds'))['s'] or 0
+    return secs // 60
+
+
+def _meditation_count(user):
+    return WellnessSession.objects.filter(user=user, session_type='meditation').count()
+
+
+def _breathing_day_streak(user):
+    """Longest consecutive-day streak of any breathing session."""
+    dates = list(
+        WellnessSession.objects.filter(user=user, session_type='breathing')
+        .values_list('completed_at__date', flat=True)
+        .distinct()
+        .order_by('completed_at__date')
+    )
+    if not dates:
+        return 0
+    best = 1
+    run = 1
+    for i in range(1, len(dates)):
+        if (dates[i] - dates[i - 1]).days == 1:
+            run += 1
+            best = max(best, run)
+        else:
+            run = 1
+    return best
+
+
+def _wellness_session_type_count(user):
+    return (
+        WellnessSession.objects.filter(user=user)
+        .values_list('session_type', flat=True).distinct().count()
+    )
+
+
+def _distinct_activities_in_metadata(user):
+    """Count distinct activity tags across the user's notes (legacy metadata.activities)."""
+    activities = set()
+    for meta in MoodNote.objects.filter(user=user, is_deleted=False).order_by('-created_at').values_list('metadata', flat=True)[:500]:
+        if meta and isinstance(meta, dict):
+            for a in (meta.get('activities') or []):
+                activities.add(a)
+    return len(activities)
+
+
+def _distinct_weather_in_metadata(user):
+    weathers = set()
+    for meta in MoodNote.objects.filter(user=user, is_deleted=False).order_by('-created_at').values_list('metadata', flat=True)[:500]:
+        if meta and isinstance(meta, dict):
+            w = meta.get('weather')
+            if w:
+                weathers.add(w)
+    return len(weathers)
+
+
+def _features_used_count(user):
+    """Count of distinct major features the user has touched.
+
+    Tracks 6 features: journal, AI chat, habit tracking, dashboard
+    customization, friends, community. Drives the all_features_tried
+    achievement — encourages users to explore the breadth of the app.
+    """
+    n = 0
+    if MoodNote.objects.filter(user=user, is_deleted=False).exists(): n += 1
+    if AIChatSession.objects.filter(user=user).exists(): n += 1
+    if Habit.objects.filter(user=user).exists(): n += 1
+    if DashboardLayout.objects.filter(user=user).exists(): n += 1
+    if Friendship.objects.filter(user=user).exists(): n += 1
+    if PublicPost.objects.filter(user=user).exists(): n += 1
+    return n
+
+
+def _early_sleeper_count(user):
+    """Count of DailySleep rows where bedtime hour < 23 (local time).
+
+    DateTimeField stores UTC; we approximate by checking the hour of
+    the stored datetime. Not timezone-perfect but good enough for
+    a gamification metric.
+    """
+    n = 0
+    for bt in DailySleep.objects.filter(user=user, bedtime__isnull=False).values_list('bedtime', flat=True):
+        if bt and bt.hour < 23 and bt.hour >= 19:
+            n += 1
+    return n
+
+
+def _community_top_post_reactions(user):
+    """Max reaction count received on any single PublicPost the user made."""
+    from django.db.models import Count
+    row = (
+        PublicPost.objects.filter(user=user, is_active=True)
+        .annotate(rc=Count('reactions'))
+        .order_by('-rc').values_list('rc', flat=True).first()
+    )
+    return row or 0
+
+
+def _community_post_distinct_dates(user):
+    return (
+        PublicPost.objects.filter(user=user, is_active=True)
+        .values_list('created_at__date', flat=True).distinct().count()
+    )
+
+
+def _shares_received(user):
+    """Count of SharedWithFriend rows where this user is the recipient."""
+    return SharedWithFriend.objects.filter(shared_with=user).count()
+
+
+def _daily_ai_chat_streak(user):
+    """Longest streak of consecutive days with at least one AI chat session."""
+    dates = list(
+        AIChatSession.objects.filter(user=user)
+        .values_list('created_at__date', flat=True)
+        .distinct()
+        .order_by('created_at__date')
+    )
+    if not dates:
+        return 0
+    best = 1
+    run = 1
+    for i in range(1, len(dates)):
+        if (dates[i] - dates[i - 1]).days == 1:
+            run += 1
+            best = max(best, run)
+        else:
+            run = 1
+    return best
+
+
+def _long_notes_count(user, threshold=300):
+    """Notes whose plaintext is >= threshold chars."""
+    from django.db.models.functions import Length
+    return (
+        MoodNote.objects.filter(user=user, is_deleted=False)
+        .annotate(text_len=Length('search_text'))
+        .filter(text_len__gte=threshold)
+        .count()
+    )
+
+
 def _get_longest_habit_streak(user):
     """Across all of the user's habits, the longest single-habit consecutive-day streak."""
     habits = Habit.objects.filter(user=user, is_active=True).values_list('id', flat=True)
@@ -639,6 +1041,12 @@ def _get_progress(user):
         low_stress_count=Count('id', filter=Q(stress_index__isnull=False, stress_index__lte=3)),
         has_high_sentiment=Count('id', filter=Q(sentiment_score__gt=0.6)),
         has_low_sentiment=Count('id', filter=Q(sentiment_score__lt=-0.6)),
+        # New (2026-05-24): hour-windowed counts for morning/evening/midnight
+        # writer achievements. Buckets are inclusive lower / exclusive upper.
+        morning_notes=Count('id', filter=Q(created_at__hour__gte=5, created_at__hour__lt=9, is_deleted=False)),
+        evening_notes=Count('id', filter=Q(created_at__hour__gte=18, created_at__hour__lt=22, is_deleted=False)),
+        # midnight = 23:00-23:59 OR 00:00-02:59
+        midnight_notes=Count('id', filter=(Q(created_at__hour__gte=23) | Q(created_at__hour__lt=3)) & Q(is_deleted=False)),
     )
     note_count = note_agg['note_count']
 
@@ -758,6 +1166,96 @@ def _get_progress(user):
         'achievement_hunter': unlocked_count,
         'achievement_legend': unlocked_count,
     }
+
+    # === 2026-05-24 expansion: progress for the 55 new achievements ===
+    # Compute extra metrics needed by the new definitions. All defensive —
+    # any helper that hits a missing row just returns 0.
+    long_notes_300 = _long_notes_count(user, threshold=300)
+    happy_week = _happy_week_hit(user)
+    calm_week = _calm_week_hit(user)
+    has_comeback = _has_7day_gap_and_returned(user)
+    step_streak = _get_step_streak(user, threshold=10000)
+    health_types = _distinct_health_types_synced(user)
+    breathing_min = _breathing_minutes_total(user)
+    meditation_n = _meditation_count(user)
+    breathing_streak = _breathing_day_streak(user)
+    wellness_types = _wellness_session_type_count(user)
+    activities_n = _distinct_activities_in_metadata(user)
+    weather_types_n = _distinct_weather_in_metadata(user)
+    features_used = _features_used_count(user)
+    early_sleeps = _early_sleeper_count(user)
+    top_post_reactions = _community_top_post_reactions(user)
+    community_post_dates = _community_post_distinct_dates(user)
+    ai_chat_streak = _daily_ai_chat_streak(user)
+    shares_recv = _shares_received(user)
+
+    result.update({
+        # writing (extended)
+        'notes_500': note_count,
+        'notes_1000': note_count,
+        'words_1k_note': max_len,
+        'morning_writer': note_agg['morning_notes'],
+        'evening_writer': note_agg['evening_notes'],
+        'midnight_writer': note_agg['midnight_notes'],
+        'photo_album': other_counts['image_count'],
+        'detailed_writer': long_notes_300,
+        # consistency (extended)
+        'streak_14': longest_streak,
+        'streak_60': longest_streak,
+        'streak_100': longest_streak,
+        'streak_365': longest_streak,
+        'comeback_kid': has_comeback,
+        # mood (extended)
+        'happy_week': happy_week,
+        'calm_week': calm_week,
+        'emotional_spectrum': mood_buckets,
+        'mood_journal_50': note_agg['ai_analyzed'],
+        # health (extended)
+        'sleep_streak_14': longest_sleep_streak,
+        'sleep_streak_30': longest_sleep_streak,
+        'sleep_logger_30': new_counts['sleep_logs'],
+        'early_sleeper': early_sleeps,
+        'step_streak_7': step_streak,
+        'step_streak_30': step_streak,
+        'health_sync_100': new_counts['health_synced'],
+        'health_data_diverse': health_types,
+        # wellness (extended)
+        'habit_count_3': new_counts['habits_count'],
+        'habit_count_5': new_counts['habits_count'],
+        'breathing_minutes_30': breathing_min,
+        'breathing_minutes_120': breathing_min,
+        'meditation_sessions_30': meditation_n,
+        'wellness_master_100': new_counts['wellness_sessions'],
+        'breathing_streak_7': breathing_streak,
+        'diverse_wellness': wellness_types,
+        # explore (extended)
+        'tag_collector_30': tag_count,
+        'all_features_tried': features_used,
+        'diverse_activities': activities_n,
+        'weather_diversity': weather_types_n,
+        'assessment_master_10': new_counts['assessments_count'],
+        'pin_master_10': note_agg['pinned_count'],
+        # AI (extended)
+        'ai_chat_100': other_counts['ai_session_count'],
+        'ai_chat_500': other_counts['ai_session_count'],
+        'daily_ai_chat_7': ai_chat_streak,
+        # friends (extended)
+        'friends_10': new_counts['friend_count'],
+        'friends_25': new_counts['friend_count'],
+        'friend_share_10': new_counts['friend_share_count'],
+        'friend_comment_25': new_counts['friend_comment_count'],
+        'friend_share_received_5': shares_recv,
+        # community (extended)
+        'community_posts_5': new_counts['community_posts'],
+        'community_posts_20': new_counts['community_posts'],
+        'community_top_post': top_post_reactions,
+        'community_active_10': community_post_dates,
+        'reactions_given_50': new_counts['community_reactions_given'],
+        # meta (extended)
+        'achievement_master': unlocked_count,
+        'achievement_god': unlocked_count,
+    })
+
     cache.set(cache_key, result, _PROGRESS_CACHE_TTL)
     return result
 
