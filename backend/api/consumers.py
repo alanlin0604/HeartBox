@@ -235,10 +235,9 @@ class NotificationConsumer(HeartbeatMixin, AuthMixin, AsyncJsonWebsocketConsumer
 
     async def connect(self):
         self._authenticated = False
-
-        # Accept connection first (needed for first-message auth)
         await self.accept()
-
+        import logging
+        logging.getLogger(__name__).info('WS_CONNECT channel=%s', self.channel_name)
         user = self.scope.get('user')
         if self.is_authenticated():
             self._authenticated = True
@@ -247,18 +246,26 @@ class NotificationConsumer(HeartbeatMixin, AuthMixin, AsyncJsonWebsocketConsumer
             await self.start_heartbeat()
 
     async def disconnect(self, close_code):
+        import logging
+        logging.getLogger(__name__).info(
+            'WS_DISCONNECT channel=%s code=%s authed=%s group=%s',
+            getattr(self, 'channel_name', '?'), close_code, self._authenticated,
+            getattr(self, 'group_name', None),
+        )
         await self.stop_heartbeat()
         if hasattr(self, 'group_name') and self._authenticated:
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive_json(self, content):
-        # Handle pong responses
+        import logging
+        logger = logging.getLogger(__name__)
         if content.get('type') == 'pong':
             return
 
         if not self._authenticated:
             if content.get('type') == 'auth':
                 if not await self.authenticate_via_message(content):
+                    logger.info('WS_AUTH_FAIL channel=%s', self.channel_name)
                     return
                 self._authenticated = True
                 user = self.scope['user']
@@ -266,6 +273,7 @@ class NotificationConsumer(HeartbeatMixin, AuthMixin, AsyncJsonWebsocketConsumer
                 await self.channel_layer.group_add(self.group_name, self.channel_name)
                 await self.start_heartbeat()
                 await self.send_json({'type': 'auth_ok'})
+                logger.info('WS_AUTH_OK channel=%s user=%s group=%s', self.channel_name, user.id, self.group_name)
                 return
             else:
                 await self.send_json({'error': 'Authentication required'})
@@ -273,4 +281,8 @@ class NotificationConsumer(HeartbeatMixin, AuthMixin, AsyncJsonWebsocketConsumer
                 return
 
     async def notify(self, event):
+        import logging
+        logging.getLogger(__name__).info(
+            'WS_NOTIFY channel=%s type=%s', self.channel_name, event['data'].get('type'),
+        )
         await self.send_json(event['data'])

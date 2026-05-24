@@ -81,6 +81,7 @@ def _ai_analysis_worker(note_id, user_id):
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
             layer = get_channel_layer()
+            logger.info('WS_FANOUT_START note=%s user=%s layer=%s', note.id, user_id, type(layer).__name__ if layer else None)
             if layer is not None:
                 async_to_sync(layer.group_send)(
                     f'notifications_{user_id}',
@@ -97,8 +98,9 @@ def _ai_analysis_worker(note_id, user_id):
                         },
                     },
                 )
+                logger.info('WS_FANOUT_OK note=%s user=%s group=notifications_%s', note.id, user_id, user_id)
         except Exception:
-            logger.exception('WebSocket fan-out failed after AI analysis')
+            logger.exception('WS_FANOUT_FAIL after AI analysis')
     except Exception:
         logger.exception('Background AI analysis worker crashed for note %s', note_id)
 
