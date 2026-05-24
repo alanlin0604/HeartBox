@@ -147,6 +147,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const fileInputRef = useRef(null)
   const recognitionRef = useRef(null)
   const editorRef = useRef(null)
+  const tagInputRef = useRef(null)
 
   // Initial content from localStorage draft
   const [initialContent] = useState(() => {
@@ -219,7 +220,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     return () => { urls.forEach((url) => URL.revokeObjectURL(url)) }
   }, [files])
 
-  const handleSubmit = useCallback((e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
     const content = editorRef.current?.getHTML() || ''
     if (!content.trim() || content === '<p></p>') return
@@ -234,7 +235,13 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
       metadata.type = metadataType
     }
 
-    const tag_ids = selectedTags.map(tag => tag.id)
+    // Materialize any pending text in TagInput as a real Tag row before
+    // assembling tag_ids. Without this, a user who typed "happy" but
+    // clicked Submit without pressing Enter would save a note with no
+    // tags, and the Dashboard "常用標籤" widget would stay empty even
+    // though they thought they tagged the entry.
+    const pendingTags = (await tagInputRef.current?.flush()) || []
+    const tag_ids = [...selectedTags, ...pendingTags].map(tag => tag.id)
     onSubmit(content, metadata, files, tag_ids)
     try { localStorage.removeItem('heartbox_draft') } catch { /* ignore */ }
     editorRef.current?.clear()
@@ -497,7 +504,7 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
           placeholder={t('noteForm.temperature')}
           className="glass-input"
         />
-        <TagInput value={selectedTags} onChange={setSelectedTags} />
+        <TagInput ref={tagInputRef} value={selectedTags} onChange={setSelectedTags} />
       </div>
 
       {/* File upload area */}

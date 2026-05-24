@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import { tagAPI } from '../api/tags'
 import { useLang } from '../context/LanguageContext'
 
@@ -14,7 +14,7 @@ const TAG_COLORS = [
   '#6366f1', // indigo
 ]
 
-export default function TagInput({ value = [], onChange }) {
+function TagInputImpl({ value = [], onChange }, ref) {
   const { t } = useLang()
   const [input, setInput] = useState('')
   const [suggestions, setSuggestions] = useState([])
@@ -56,26 +56,46 @@ export default function TagInput({ value = [], onChange }) {
   }, [input])
 
   async function handleCreateTag() {
-    const name = input.trim().toLowerCase()
-    if (!name) return
+    return await createTagFromInput(input)
+  }
 
-    // Check if tag already exists
+  // Internal — name-aware create. Returns the tag object (existing or
+  // newly-created) so the imperative `flush()` API can return it to
+  // NoteForm, which needs the id synchronously to include in tag_ids on
+  // submit. Falls back to null on API failure.
+  async function createTagFromInput(rawName) {
+    const name = (rawName || '').trim().toLowerCase()
+    if (!name) return null
     const existing = allTags.find(t => t.name === name)
     if (existing) {
       handleSelectTag(existing)
-      return
+      return existing
     }
-
-    // Create new tag
     try {
       const color = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)]
       const newTag = await tagAPI.create({ name, color })
-      setAllTags([...allTags, newTag])
+      setAllTags(prev => [...prev, newTag])
       handleSelectTag(newTag)
+      return newTag
     } catch (err) {
       console.error('Failed to create tag:', err)
+      return null
     }
   }
+
+  // Imperative API for parent forms: pull whatever pending text is in the
+  // input, materialize it as a Tag row, return the resulting tag(s) so
+  // the parent can include them in the submission without waiting for
+  // React state to flush. Fixes the "user typed a tag, clicked Submit
+  // without pressing Enter, note saved without the tag" bug.
+  useImperativeHandle(ref, () => ({
+    async flush() {
+      if (!input.trim()) return []
+      const tag = await createTagFromInput(input)
+      setInput('')
+      return tag ? [tag] : []
+    },
+  }), [input, allTags])
 
   function handleSelectTag(tag) {
     if (!value.find(v => v.id === tag.id)) {
@@ -102,6 +122,17 @@ export default function TagInput({ value = [], onChange }) {
     } else if (e.key === 'Backspace' && !input && value.length > 0) {
       handleRemoveTag(value[value.length - 1].id)
     }
+  }
+
+  // Hide dropdown on blur. We intentionally do NOT auto-create the
+  // pending tag here because of a timing race with form submit: blur on
+  // click-Submit fires BEFORE the submit handler, so an async tag-create
+  // would still leave selectedTags stale by the time the handler reads
+  // it. NoteForm calls `tagInputRef.current.flush()` from inside its
+  // submit handler instead, which materializes the pending tag AND
+  // returns it synchronously so it can be included in tag_ids.
+  function handleBlur() {
+    setTimeout(() => setShowDropdown(false), 200)
   }
 
   return (
@@ -135,7 +166,7 @@ export default function TagInput({ value = [], onChange }) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => input && setShowDropdown(true)}
-          onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+          onBlur={handleBlur}
           placeholder={value.length === 0 ? t('tags.placeholder') : ''}
           className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm"
         />
@@ -171,3 +202,6 @@ export default function TagInput({ value = [], onChange }) {
     </div>
   )
 }
+
+const TagInput = forwardRef(TagInputImpl)
+export default TagInput
