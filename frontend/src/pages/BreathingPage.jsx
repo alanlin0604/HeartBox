@@ -306,7 +306,7 @@ export default function BreathingPage() {
           onClick={() => navigate(`/learn/courses/${courseId}`)}
           className="glass p-4 w-full text-left flex items-center gap-3 hover:bg-orange-500/5 transition-colors cursor-pointer"
         >
-          <span className="text-2xl">📚</span>
+          <img src="/icons/learning.svg" alt="" aria-hidden="true" className="w-10 h-10 object-contain flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm text-slate-400">{t('breathe.learnMore')}</p>
             <p className="text-sm font-semibold text-orange-400">{t('breathe.learnMoreLink')}</p>

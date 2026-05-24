@@ -80,24 +80,29 @@ TEMPLATES = [
 WSGI_APPLICATION = 'moodnotes_pro.wsgi.application'
 ASGI_APPLICATION = 'moodnotes_pro.asgi.application'
 
-# Channels — multi-instance WebSocket fan-out needs a cross-process
-# message broker. Falls back to CELERY_BROKER_URL because in production
-# both point at the same Upstash Redis; one env var is enough. Local
-# dev with no Redis just gets InMemoryChannelLayer.
-CHANNELS_REDIS_URL = os.getenv('REDIS_URL') or os.getenv('CELERY_BROKER_URL')
-if CHANNELS_REDIS_URL and CHANNELS_REDIS_URL.startswith(('redis://', 'rediss://')):
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {'hosts': [CHANNELS_REDIS_URL]},
-        },
-    }
-else:
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels.layers.InMemoryChannelLayer',
-        },
-    }
+# Channels — InMemoryChannelLayer everywhere.
+#
+# History: tried channels_redis pointing at Upstash (rediss://) on
+# 2026-05-23 but Cloud Run instances can't DNS-resolve
+# `pleasant-anteater-37478.upstash.io` ("Error -2 ... Name or service
+# not known"), so every group_send raised and `note_analyzed` events
+# never reached the consumer. Reverted 2026-05-24.
+#
+# Trade-off: InMemoryChannelLayer is per-process, so cross-instance
+# WS fan-out doesn't work. We mitigate by pinning Cloud Run to a single
+# instance (`--min-instances=1 --max-instances=1`). At current load
+# (<100 daily users) that's plenty; scaling out is deferred until we
+# stand up Memorystore or fix the Upstash DNS path.
+#
+# If you ever raise max-instances above 1, you MUST restore a real
+# cross-process broker — otherwise a user whose note POST lands on
+# instance A while their WS is on instance B will silently miss
+# `note_analyzed` and have to refresh.
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 # Cache uses REDIS_URL only when set EXPLICITLY (not the CELERY fallback).
 # Local memory cache works in production too — Cloud Run keeps min-instances
 # warm so the locmem hit rate is fine, and skipping a Redis connect on
