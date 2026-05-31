@@ -156,7 +156,7 @@ export default function SleepAnalysisPage() {
       </div>
 
       {/* ===== A. SUMMARY ===== */}
-      <DashboardSection id="sleep-summary" title={t('sleep.section.summary')}>
+      <DashboardSection id="sleep-summary" title={t('sleep.section.summary')} icon="/icons/sleep.svg">
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/20">
@@ -215,17 +215,17 @@ export default function SleepAnalysisPage() {
       </DashboardSection>
 
       {/* ===== B. TRENDS ===== */}
-      <DashboardSection id="sleep-trends" title={t('sleep.section.trends')}>
+      <DashboardSection id="sleep-trends" title={t('sleep.section.trends')} icon="/icons/mood-trend.svg">
       <SleepTrendsChart data={trendsData} />
       </DashboardSection>
 
       {/* ===== C. CORRELATIONS ===== */}
-      <DashboardSection id="sleep-corr" title={t('sleep.section.correlations')}>
+      <DashboardSection id="sleep-corr" title={t('sleep.section.correlations')} icon="/icons/brain.svg">
       <SleepCorrelation data={analysisData} />
       </DashboardSection>
 
       {/* ===== D. INSIGHTS ===== */}
-      <DashboardSection id="sleep-insights" title={t('sleep.section.insights')}>
+      <DashboardSection id="sleep-insights" title={t('sleep.section.insights')} icon="/icons/lightbulb.svg">
       {/* Issues & Recommendations */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Issues */}

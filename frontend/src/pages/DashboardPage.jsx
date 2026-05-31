@@ -126,11 +126,11 @@ export default function DashboardPage() {
   // health snapshot is reference data, history goes last (tall and
   // exploratory, not glanceable). 2026-06-01 reorg.
   const SECTIONS = [
-    { id: 'overview', label: t('dashboard.section.overview') },
-    { id: 'patterns', label: t('dashboard.section.patterns') },
-    { id: 'body-mind', label: t('dashboard.section.bodyMind') },
-    { id: 'health', label: t('dashboard.section.healthSnapshot') },
-    { id: 'history', label: t('dashboard.section.history') },
+    { id: 'overview',  label: t('dashboard.section.overview'),       icon: '/icons/mood-report.svg' },
+    { id: 'patterns',  label: t('dashboard.section.patterns'),       icon: '/icons/activity.svg' },
+    { id: 'body-mind', label: t('dashboard.section.bodyMind'),       icon: '/icons/brain.svg' },
+    { id: 'health',    label: t('dashboard.section.healthSnapshot'), icon: '/icons/nav-health.svg' },
+    { id: 'history',   label: t('dashboard.section.history'),        icon: '/icons/weekly-report.svg' },
   ]
 
   return (
@@ -142,6 +142,7 @@ export default function DashboardPage() {
         id="overview"
         title={t('dashboard.section.overview')}
         subtitle={t('dashboard.section.overviewSub')}
+        icon="/icons/mood-report.svg"
       >
       <MoodPrediction />
 
@@ -281,6 +282,7 @@ export default function DashboardPage() {
         id="patterns"
         title={t('dashboard.section.patterns')}
         subtitle={t('dashboard.section.patternsSub')}
+        icon="/icons/activity.svg"
       >
       {/* Weather Correlation */}
       <Card padding="lg">
@@ -383,6 +385,7 @@ export default function DashboardPage() {
         id="body-mind"
         title={t('dashboard.section.bodyMind')}
         subtitle={t('dashboard.section.bodyMindSub')}
+        icon="/icons/brain.svg"
       >
       {/* Sleep-Mood Correlation */}
       {sleepCorrelation.scatter_data?.length > 0 && (
@@ -467,6 +470,7 @@ export default function DashboardPage() {
         id="health"
         title={t('dashboard.section.healthSnapshot')}
         subtitle={t('dashboard.section.healthSnapshotSub')}
+        icon="/icons/nav-health.svg"
       >
       {/* Health Overview */}
       <div className="glass p-6">
@@ -595,6 +599,7 @@ export default function DashboardPage() {
         id="history"
         title={t('dashboard.section.history')}
         subtitle={t('dashboard.section.historySub')}
+        icon="/icons/weekly-report.svg"
       >
       <MoodCalendar />
       <YearInPixels />

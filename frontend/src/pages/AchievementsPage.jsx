@@ -104,6 +104,7 @@ export default function AchievementsPage() {
           id="ach-unlocked"
           title={t('achievement.section.unlocked')}
           subtitle={`${unlocked.length}`}
+          icon="/icons/trophy.svg"
         >
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {unlocked.map((a) => <AchievementCard key={a.id} a={a} t={t} lang={lang} />)}
@@ -117,6 +118,7 @@ export default function AchievementsPage() {
           id="ach-progress"
           title={t('achievement.section.inProgress')}
           subtitle={`${inProgress.length}`}
+          icon="/icons/flame.svg"
         >
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {inProgress.map((a) => <AchievementCard key={a.id} a={a} t={t} lang={lang} />)}
