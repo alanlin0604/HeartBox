@@ -7,6 +7,7 @@ import { Card, Button } from '../components/ui'
 import SkeletonCard from '../components/SkeletonCard'
 import SleepTrendsChart from '../components/sleep/SleepTrendsChart'
 import SleepCorrelation from '../components/sleep/SleepCorrelation'
+import DashboardSection from '../components/DashboardSection'
 
 export default function SleepAnalysisPage() {
   const { t } = useLang()
@@ -154,6 +155,8 @@ export default function SleepAnalysisPage() {
         </div>
       </div>
 
+      {/* ===== A. SUMMARY ===== */}
+      <DashboardSection id="sleep-summary" title={t('sleep.section.summary')}>
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="p-6 bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/20">
@@ -209,12 +212,20 @@ export default function SleepAnalysisPage() {
         </Card>
       </div>
 
-      {/* Trends Chart */}
+      </DashboardSection>
+
+      {/* ===== B. TRENDS ===== */}
+      <DashboardSection id="sleep-trends" title={t('sleep.section.trends')}>
       <SleepTrendsChart data={trendsData} />
+      </DashboardSection>
 
-      {/* Correlation Analysis */}
+      {/* ===== C. CORRELATIONS ===== */}
+      <DashboardSection id="sleep-corr" title={t('sleep.section.correlations')}>
       <SleepCorrelation data={analysisData} />
+      </DashboardSection>
 
+      {/* ===== D. INSIGHTS ===== */}
+      <DashboardSection id="sleep-insights" title={t('sleep.section.insights')}>
       {/* Issues & Recommendations */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Issues */}
@@ -257,6 +268,7 @@ export default function SleepAnalysisPage() {
           )}
         </Card>
       </div>
+      </DashboardSection>
     </div>
   )
 }

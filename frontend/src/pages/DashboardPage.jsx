@@ -11,6 +11,8 @@ import MoodCalendar from '../components/MoodCalendar'
 import YearInPixels from '../components/YearInPixels'
 import EmptyState from '../components/EmptyState'
 import MoodPrediction from '../components/MoodPrediction'
+import DashboardSection from '../components/DashboardSection'
+import SectionAnchorBar from '../components/SectionAnchorBar'
 import { Card } from '../components/ui'
 const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
 const LazyScatterChart = lazy(() => import('../components/charts/LazyScatterChart'))
@@ -118,14 +120,29 @@ export default function DashboardPage() {
     </div>
   )
 
+  // 5-bucket categorization so the page reads as chapters rather than a
+  // 3000px wall of disparate charts. Order is deliberate: overview first
+  // (above the fold), patterns and body-mind feed the user's curiosity,
+  // health snapshot is reference data, history goes last (tall and
+  // exploratory, not glanceable). 2026-06-01 reorg.
+  const SECTIONS = [
+    { id: 'overview', label: t('dashboard.section.overview') },
+    { id: 'patterns', label: t('dashboard.section.patterns') },
+    { id: 'body-mind', label: t('dashboard.section.bodyMind') },
+    { id: 'health', label: t('dashboard.section.healthSnapshot') },
+    { id: 'history', label: t('dashboard.section.history') },
+  ]
+
   return (
-    <div className="space-y-8 mt-6 pb-8">
-      <MoodCalendar />
+    <div className="space-y-10 mt-6 pb-8">
+      <SectionAnchorBar sections={SECTIONS} />
 
-      {/* Year in Pixels */}
-      <YearInPixels />
-
-      {/* AI Mood Prediction — surfaces stress + trend warnings */}
+      {/* ===== A. OVERVIEW ===== */}
+      <DashboardSection
+        id="overview"
+        title={t('dashboard.section.overview')}
+        subtitle={t('dashboard.section.overviewSub')}
+      >
       <MoodPrediction />
 
       {/* Stats Cards */}
@@ -257,7 +274,14 @@ export default function DashboardPage() {
           </>
         )}
       </Card>
+      </DashboardSection>
 
+      {/* ===== B. PATTERNS ===== */}
+      <DashboardSection
+        id="patterns"
+        title={t('dashboard.section.patterns')}
+        subtitle={t('dashboard.section.patternsSub')}
+      >
       {/* Weather Correlation */}
       <Card padding="lg">
         <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">{t('dashboard.weatherCorrelation')}</h2>
@@ -296,6 +320,7 @@ export default function DashboardPage() {
       </Card>
 
       {/* Frequent Tags */}
+      {/* (continues in same Patterns section) */}
       <div className="glass p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">{t('dashboard.frequentTags')}</h2>
@@ -346,6 +371,19 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Stress Radar — pulled up from page-bottom into Patterns where
+          it conceptually belongs (tag-driven self-report signal). */}
+      <Suspense fallback={<ChartSkeleton />}>
+        <StressRadarChart data={stressByTag} />
+      </Suspense>
+      </DashboardSection>
+
+      {/* ===== C. BODY & MIND ===== */}
+      <DashboardSection
+        id="body-mind"
+        title={t('dashboard.section.bodyMind')}
+        subtitle={t('dashboard.section.bodyMindSub')}
+      >
       {/* Sleep-Mood Correlation */}
       {sleepCorrelation.scatter_data?.length > 0 && (
         <div className="glass p-6">
@@ -377,14 +415,13 @@ export default function DashboardPage() {
       )}
 
       {/* Health-Mood Correlation — one scatter card per metric type that
-          has enough samples (backend min: 3 days of overlap). Backend
-          already computed Pearson r / p-value / scatter points in
-          get_health_mood_correlation; we just paint them. Order is fixed
-          by HEALTH_METRIC_LABEL so the cards always appear in the same
-          sequence regardless of dict iteration order. */}
+          has enough samples (backend min: 3 days of overlap). Pearson r,
+          p-value, and scatter points come from get_health_mood_correlation.
+          Order is fixed via HEALTH_METRIC_LABEL so cards appear in the
+          same sequence regardless of dict iteration. Inline header is
+          omitted now that the parent DashboardSection provides one. */}
       {Object.keys(healthMoodCorr).length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">{t('dashboard.healthMoodTitle')}</h2>
           {Object.entries(HEALTH_METRIC_LABEL).map(([metricType, meta]) => {
             const corr = healthMoodCorr[metricType]
             if (!corr?.scatter_data?.length) return null
@@ -423,6 +460,14 @@ export default function DashboardPage() {
         </div>
       )}
 
+      </DashboardSection>
+
+      {/* ===== D. HEALTH SNAPSHOT ===== */}
+      <DashboardSection
+        id="health"
+        title={t('dashboard.section.healthSnapshot')}
+        subtitle={t('dashboard.section.healthSnapshotSub')}
+      >
       {/* Health Overview */}
       <div className="glass p-6">
         <h2 className="text-lg font-semibold mb-4">{t('health.dashboardTitle')}</h2>
@@ -538,34 +583,22 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Health-Mood Correlation */}
-      {healthData?.health_mood_correlation && Object.keys(healthData.health_mood_correlation).length > 0 && (
-        <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-4">{t('health.moodCorrelation')}</h2>
-          <div className="space-y-3">
-            {Object.entries(healthData.health_mood_correlation).map(([type, data]) => (
-              <div key={type} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
-                <span className="text-sm font-medium">{t(`health.metric_${type}`)}</span>
-                <div className="text-right">
-                  <span className={`text-sm font-bold ${
-                    data.correlation > 0.2 ? 'text-green-400' :
-                    data.correlation < -0.2 ? 'text-red-400' : 'opacity-60'
-                  }`}>
-                    r = {data.correlation}
-                  </span>
-                  <span className="text-xs opacity-50 ml-2">(n={data.sample_size})</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs opacity-40 mt-3">{t('health.correlationHint')}</p>
-        </div>
-      )}
+      {/* Old Health-Mood text summary deleted 2026-06-01 — duplicated
+          the new Body & Mind scatter cards which already render the
+          same r/p/n values inline. Less noise, less cognitive load. */}
+      {/* Old bottom-of-page Stress Radar moved up into Patterns section
+          where it conceptually belongs. */}
+      </DashboardSection>
 
-      {/* Stress Radar Chart */}
-      <Suspense fallback={<ChartSkeleton />}>
-        <StressRadarChart data={stressByTag} />
-      </Suspense>
+      {/* ===== E. HISTORY ===== */}
+      <DashboardSection
+        id="history"
+        title={t('dashboard.section.history')}
+        subtitle={t('dashboard.section.historySub')}
+      >
+      <MoodCalendar />
+      <YearInPixels />
+      </DashboardSection>
     </div>
   )
 }

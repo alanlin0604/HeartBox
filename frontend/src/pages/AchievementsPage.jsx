@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useLang } from '../context/LanguageContext'
 import { getAchievements } from '../api/achievements'
 import LoadingSpinner from '../components/LoadingSpinner'
+import DashboardSection from '../components/DashboardSection'
 import { useToast } from '../context/ToastContext'
 import { LOCALE_MAP } from '../utils/locales'
 
@@ -36,23 +37,48 @@ export default function AchievementsPage() {
     return () => { cancelled = true }
   }, [toast, t])
 
-  const filtered = category === 'all'
-    ? achievements
-    : achievements.filter((a) => a.category === category)
+  const filtered = useMemo(() => (
+    category === 'all'
+      ? achievements
+      : achievements.filter((a) => a.category === category)
+  ), [category, achievements])
+
+  // Split into two visual buckets so the user immediately sees what
+  // they've earned vs what they're still working toward — was a single
+  // grid before, which buried unlocked badges among 70+ in-progress
+  // ones (we crossed 100 total on 2026-05-24). In-progress sorted by
+  // proximity to threshold so the next-easy-win is on top.
+  const unlocked = useMemo(() => filtered.filter((a) => a.unlocked), [filtered])
+  const inProgress = useMemo(() => {
+    return filtered
+      .filter((a) => !a.unlocked)
+      .sort((a, b) => (b.current / b.threshold) - (a.current / a.threshold))
+  }, [filtered])
 
   const unlockedCount = achievements.filter((a) => a.unlocked).length
   const totalCount = achievements.length
+  const percent = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0
 
   if (loading) return <LoadingSpinner />
 
   return (
-    <div className="space-y-6 mt-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('achievement.title')}</h1>
-        <span className="text-sm text-slate-400">
-          {unlockedCount}/{totalCount}
-        </span>
+    <div className="space-y-8 mt-4 pb-8">
+      {/* Header with overall progress bar \u2014 replaces the bare "12/107"
+          counter with a visual completion bar so users get an at-a-glance
+          sense of how far they are. */}
+      <div className="glass-card p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">{t('achievement.title')}</h1>
+          <span className="text-sm opacity-70">
+            {unlockedCount}/{totalCount} <span className="opacity-50">({percent}%)</span>
+          </span>
+        </div>
+        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-yellow-500 to-amber-400 transition-all duration-500"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
       </div>
 
       {/* Category tabs */}
@@ -72,65 +98,82 @@ export default function AchievementsPage() {
         ))}
       </div>
 
-      {/* Achievement grid */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((a) => (
-          <div
-            key={a.id}
-            className={`glass-card p-5 space-y-3 transition-all ${
-              a.unlocked
-                ? 'border-yellow-500/40 shadow-[0_0_15px_rgba(234,179,8,0.15)]'
-                : 'opacity-70'
-            }`}
-          >
-            {/* Top row */}
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{a.unlocked ? getIcon(a.icon) : '\u{1F512}'}</span>
-                <div>
-                  <h3 className="font-semibold text-sm">
-                    {t(`achievement.${a.id}`)}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    {t(`achievement.${a.id}_desc`)}
-                  </p>
-                </div>
-              </div>
-              {a.unlocked && (
-                <span className="text-green-500 text-xs font-medium whitespace-nowrap">
-                  {'\u2713'} {t('achievement.unlocked')}
-                </span>
-              )}
-            </div>
-
-            {/* Progress bar */}
-            <div>
-              <div className="flex justify-between text-xs text-slate-400 mb-1">
-                <span>{a.current}/{a.threshold}</span>
-                {a.unlocked && a.unlocked_at && (
-                  <span>{new Date(a.unlocked_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
-                )}
-              </div>
-              <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    a.unlocked
-                      ? 'bg-gradient-to-r from-yellow-500 to-amber-400'
-                      : 'bg-gradient-to-r from-orange-500 to-rose-500'
-                  }`}
-                  style={{ width: `${Math.min((a.current / a.threshold) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
+      {/* === Unlocked section === */}
+      {unlocked.length > 0 && (
+        <DashboardSection
+          id="ach-unlocked"
+          title={t('achievement.section.unlocked')}
+          subtitle={`${unlocked.length}`}
+        >
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {unlocked.map((a) => <AchievementCard key={a.id} a={a} t={t} lang={lang} />)}
           </div>
-        ))}
-      </div>
+        </DashboardSection>
+      )}
+
+      {/* === In-progress section === */}
+      {inProgress.length > 0 && (
+        <DashboardSection
+          id="ach-progress"
+          title={t('achievement.section.inProgress')}
+          subtitle={`${inProgress.length}`}
+        >
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {inProgress.map((a) => <AchievementCard key={a.id} a={a} t={t} lang={lang} />)}
+          </div>
+        </DashboardSection>
+      )}
 
       {filtered.length === 0 && (
         <div className="text-center py-12 opacity-50">
           {t('achievement.noAchievements')}
         </div>
       )}
+    </div>
+  )
+}
+
+function AchievementCard({ a, t, lang }) {
+  return (
+    <div
+      className={`glass-card p-5 space-y-3 transition-all ${
+        a.unlocked
+          ? 'border-yellow-500/40 shadow-[0_0_15px_rgba(234,179,8,0.15)]'
+          : 'opacity-75'
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{a.unlocked ? getIcon(a.icon) : '\u{1F512}'}</span>
+          <div>
+            <h3 className="font-semibold text-sm">{t(`achievement.${a.id}`)}</h3>
+            <p className="text-xs text-slate-400">{t(`achievement.${a.id}_desc`)}</p>
+          </div>
+        </div>
+        {a.unlocked && (
+          <span className="text-green-500 text-xs font-medium whitespace-nowrap">
+            {'\u2713'} {t('achievement.unlocked')}
+          </span>
+        )}
+      </div>
+      <div>
+        <div className="flex justify-between text-xs text-slate-400 mb-1">
+          <span>{a.current}/{a.threshold}</span>
+          {a.unlocked && a.unlocked_at && (
+            <span>{new Date(a.unlocked_at).toLocaleDateString(LOCALE_MAP[lang] || lang)}</span>
+          )}
+        </div>
+        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${
+              a.unlocked
+                ? 'bg-gradient-to-r from-yellow-500 to-amber-400'
+                : 'bg-gradient-to-r from-orange-500 to-rose-500'
+            }`}
+            style={{ width: `${Math.min((a.current / a.threshold) * 100, 100)}%` }}
+          />
+        </div>
+      </div>
     </div>
   )
 }
