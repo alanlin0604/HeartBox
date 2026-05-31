@@ -1093,6 +1093,8 @@
   "dashboard.yearInPixels": "年間ピクセルマップ",
   "dashboard.activityCorrelation": "活動—気分の相関",
   "dashboard.sleepCorrelation": "睡眠—気分の相関",
+  "dashboard.healthMoodTitle": "ヘルスデータ—気分の相関",
+  "dashboard.healthMoodCardTitle": "{metric} ↔ 気分",
   "sleep.title": "今日の睡眠",
   "sleep.saved": "睡眠記録を保存しました",
   "sleep.recorded": "記録済み",

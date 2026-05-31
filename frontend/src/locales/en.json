@@ -1093,6 +1093,8 @@
   "dashboard.yearInPixels": "Year in Pixels",
   "dashboard.activityCorrelation": "Activity–Mood Correlation",
   "dashboard.sleepCorrelation": "Sleep–Mood Correlation",
+  "dashboard.healthMoodTitle": "Health–Mood Correlation",
+  "dashboard.healthMoodCardTitle": "{metric} ↔ Mood",
   "sleep.title": "Today's Sleep",
   "sleep.saved": "Sleep record saved",
   "sleep.recorded": "Recorded",

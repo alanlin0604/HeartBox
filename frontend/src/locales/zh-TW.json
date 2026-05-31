@@ -1093,6 +1093,8 @@
   "dashboard.yearInPixels": "年度像素圖",
   "dashboard.activityCorrelation": "活動—心情關聯",
   "dashboard.sleepCorrelation": "睡眠—心情關聯",
+  "dashboard.healthMoodTitle": "健康數據—心情關聯",
+  "dashboard.healthMoodCardTitle": "{metric} ↔ 心情",
   "sleep.title": "今日睡眠",
   "sleep.saved": "睡眠紀錄已儲存",
   "sleep.recorded": "已記錄",

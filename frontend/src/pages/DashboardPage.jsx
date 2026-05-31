@@ -75,6 +75,18 @@ export default function DashboardPage() {
     })),
   [data, t])
   const sleepCorrelation = useMemo(() => data?.sleep_correlation || {}, [data])
+  // health_mood_correlation comes from getHealthSummary (not the main
+  // analytics endpoint). Backend already computes Pearson r + scatter
+  // points for steps / heart_rate / hrv / exercise_minutes / active_calories
+  // vs daily mood — we just need to render them as scatter charts.
+  const healthMoodCorr = useMemo(() => healthData?.health_mood_correlation || {}, [healthData])
+  const HEALTH_METRIC_LABEL = useMemo(() => ({
+    steps: { key: 'health.steps', color: '#60a5fa' },
+    heart_rate: { key: 'health.heartRate', color: '#f87171' },
+    hrv: { key: 'health.hrv', color: '#fb923c' },
+    active_calories: { key: 'health.calories', color: '#fbbf24' },
+    exercise_minutes: { key: 'health.exerciseMinutes', color: '#4ade80' },
+  }), [])
 
   // Theme-aware chart colors
   const gridStroke = useMemo(() => theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', [theme])
@@ -361,6 +373,53 @@ export default function DashboardPage() {
               ]}
             />
           </Suspense>
+        </div>
+      )}
+
+      {/* Health-Mood Correlation — one scatter card per metric type that
+          has enough samples (backend min: 3 days of overlap). Backend
+          already computed Pearson r / p-value / scatter points in
+          get_health_mood_correlation; we just paint them. Order is fixed
+          by HEALTH_METRIC_LABEL so the cards always appear in the same
+          sequence regardless of dict iteration order. */}
+      {Object.keys(healthMoodCorr).length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">{t('dashboard.healthMoodTitle')}</h2>
+          {Object.entries(HEALTH_METRIC_LABEL).map(([metricType, meta]) => {
+            const corr = healthMoodCorr[metricType]
+            if (!corr?.scatter_data?.length) return null
+            const label = t(meta.key)
+            return (
+              <div key={metricType} className="glass p-6">
+                <h3 className="text-md font-semibold mb-2">
+                  {t('dashboard.healthMoodCardTitle', { metric: label })}
+                </h3>
+                {corr.correlation != null && (
+                  <p className="text-sm opacity-60 mb-4">
+                    {t('dashboard.pearson', {
+                      r: corr.correlation,
+                      p: corr.p_value,
+                      n: corr.sample_size,
+                    })}
+                  </p>
+                )}
+                <Suspense fallback={<ChartSkeleton />}>
+                  <LazyScatterChart
+                    data={corr.scatter_data}
+                    xAxisKey="value"
+                    yAxisKey="sentiment"
+                    height={220}
+                    gridStroke={gridStroke}
+                    axisStroke={axisStroke}
+                    tooltipStyle={tooltipStyle}
+                    scatters={[
+                      { name: label, fill: meta.color, data: corr.scatter_data },
+                    ]}
+                  />
+                </Suspense>
+              </div>
+            )
+          })}
         </div>
       )}
 
