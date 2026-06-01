@@ -387,6 +387,20 @@ export default function DashboardPage() {
         subtitle={t('dashboard.section.bodyMindSub')}
         icon="/icons/brain.svg"
       >
+      {/* If neither Sleep-Mood nor any Health-Mood correlation has ≥3
+          days of overlap, both inner blocks render nothing and the
+          section header floats above a void (reported 2026-06-01). Show
+          an actionable empty state so users know what to do to fill it
+          — usually they need either more sleep records or a Health
+          Connect / HealthKit sync from the mobile app. */}
+      {sleepCorrelation.scatter_data?.length > 0 || Object.keys(healthMoodCorr).length > 0 ? null : (
+        <EmptyState
+          title={t('dashboard.bodyMindEmptyTitle')}
+          description={t('dashboard.bodyMindEmptyDesc')}
+          actionText={t('dashboard.bodyMindEmptyAction')}
+          onAction={() => navigate('/settings', { state: { tab: 'health' } })}
+        />
+      )}
       {/* Sleep-Mood Correlation */}
       {sleepCorrelation.scatter_data?.length > 0 && (
         <div className="glass p-6">
