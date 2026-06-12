@@ -21,6 +21,24 @@ class CustomUser(AbstractUser):
     # both to minimise PII and to mirror what we actually need (age-gate
     # only — we do not personalise on date of birth).
     age_confirmed_13_plus = models.BooleanField(default=False)
+    # 2026-06-02: advisor feedback — split consent into 3 distinct gates
+    # so users can decline AI-training use of their data without losing
+    # the rest of the app, and minors (13-17) need parental sign-off.
+    # `consent_ai_training_at` is the timestamp the user opted in (or
+    # explicitly declined → null). `age_band` is one of 18_plus / 13_17 /
+    # under_13. Under-13 fails registration. 13-17 requires a guardian
+    # email + email-link confirmation before the account unlocks.
+    AGE_BAND_CHOICES = (
+        ('18_plus', 'Adult (18+)'),
+        ('13_17',   'Minor (13-17, guardian required)'),
+        ('under_13', 'Under 13 (not allowed)'),
+    )
+    consent_ai_training = models.BooleanField(default=False)
+    consent_ai_training_at = models.DateTimeField(null=True, blank=True)
+    age_band = models.CharField(max_length=10, choices=AGE_BAND_CHOICES, blank=True, default='')
+    guardian_email = models.EmailField(blank=True, default='')
+    guardian_consent_token = models.CharField(max_length=64, blank=True, default='')
+    guardian_consent_at = models.DateTimeField(null=True, blank=True)
     # 30-day grace period when the user requests account deletion. Filled
     # by DeleteAccountView; a Celery beat task hard-deletes the row after
     # this date. Null means "active account, no pending deletion".

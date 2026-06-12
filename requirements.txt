@@ -34,3 +34,4 @@ django-celery-beat==2.8.1
 drf-spectacular==0.28.0
 matplotlib==3.10.0
 numpy==2.2.6
+openpyxl==3.1.5

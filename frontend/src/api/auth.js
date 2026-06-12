@@ -29,6 +29,22 @@ export const deleteAccount = (password) =>
 export const verifyEmail = (uid, token) =>
   api.get('/auth/verify-email/', { params: { uid, token } });
 
+/**
+ * Submit the 3-step consent gate (ToS + AI training opt-in + age band).
+ * For users in the 13-17 age band, `guardian_email` is required and the
+ * backend will email the guardian a verification link.
+ */
+export const submitConsent = ({ acceptsTerms, consentAiTraining, ageBand, guardianEmail }) =>
+  api.post('/auth/consent/', {
+    accepts_terms: !!acceptsTerms,
+    consent_ai_training: !!consentAiTraining,
+    age_band: ageBand,
+    guardian_email: guardianEmail || '',
+  });
+
+export const guardianConfirm = (token) =>
+  api.get('/auth/guardian-confirm/', { params: { token } });
+
 export const resendVerification = () =>
   api.post('/auth/resend-verification/');
 

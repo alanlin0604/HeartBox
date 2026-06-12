@@ -15,7 +15,10 @@ from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..models import CounselorProfile, MoodNote, SelfAssessment, SharedAssessment
+from ..models import (
+    CounselorProfile, DailySleep, Habit, HabitLog,
+    MoodNote, SelfAssessment, SharedAssessment,
+)
 from ..serializers import SelfAssessmentSerializer, SharedAssessmentSerializer
 from ..services.analytics import (
     get_activity_mood_correlation, get_calendar_data, get_frequent_tags,
@@ -99,6 +102,126 @@ class AnalyticsView(APIView):
         }
         cache.set(cache_key, result, CACHE_TTL_ANALYTICS)
         return Response(result)
+
+
+class MyProgressView(APIView):
+    """Baseline-vs-current comparison so users can SEE that using HeartBox
+    correlates with improvement. Added 2026-06-02 per thesis-advisor
+    feedback ("the user should have a control group / before-after view").
+
+    Baseline window: the FIRST 7 calendar days the user wrote any journal
+    (or the first 7 days after account creation if there are no notes).
+    Current window: the most recent 7 calendar days ending today.
+
+    For each window we aggregate:
+      - avg_sentiment    (MoodNote.sentiment_score, daily mean of means)
+      - avg_stress       (MoodNote.stress_index, daily mean of means)
+      - journal_days     (distinct dates with at least one note)
+      - habit_completion (HabitLog rows / [active_habit × window_days])
+      - avg_sleep_hours  (DailySleep.sleep_hours mean, if any rows)
+
+    Returns null for metrics that have no baseline OR no current data so
+    the frontend can render a friendly "not enough data yet" message
+    instead of a misleading 0 → 0 delta.
+    """
+
+    def get(self, request):
+        from datetime import timedelta
+        from django.db.models import Avg, Count
+
+        user = request.user
+        today = timezone.localdate()
+
+        # --- Find baseline window ---
+        first_note_date = (
+            MoodNote.objects.filter(user=user, is_deleted=False)
+            .order_by('created_at')
+            .values_list('created_at__date', flat=True)
+            .first()
+        )
+        baseline_start = first_note_date or user.created_at.date()
+        baseline_end = baseline_start + timedelta(days=6)
+
+        current_end = today
+        current_start = current_end - timedelta(days=6)
+
+        # If the user hasn't been using HeartBox long enough to have a
+        # baseline week distinct from the current week, return a sentinel
+        # so the UI can show "keep using for 1 more week to unlock".
+        if baseline_end >= current_start:
+            return Response({
+                'has_enough_data': False,
+                'days_until_unlock': max(0, (current_start - baseline_end).days * -1),
+                'baseline_start': baseline_start.isoformat(),
+                'current_end': current_end.isoformat(),
+            })
+
+        def window_stats(start, end):
+            note_qs = MoodNote.objects.filter(
+                user=user, is_deleted=False,
+                created_at__date__gte=start,
+                created_at__date__lte=end,
+            )
+            agg = note_qs.aggregate(
+                avg_sentiment=Avg('sentiment_score'),
+                avg_stress=Avg('stress_index'),
+            )
+            journal_days = (
+                note_qs.values_list('created_at__date', flat=True).distinct().count()
+            )
+
+            sleep_qs = DailySleep.objects.filter(user=user, date__gte=start, date__lte=end)
+            sleep_agg = sleep_qs.aggregate(avg_hours=Avg('sleep_hours'))
+
+            # Habit completion = total logs / (active habits × window days).
+            # Clamped at 1.0 in case the user logs more than once per day.
+            active_habits = Habit.objects.filter(user=user, is_active=True).count()
+            window_days = (end - start).days + 1
+            habit_logs = HabitLog.objects.filter(
+                habit__user=user, date__gte=start, date__lte=end,
+            ).count()
+            denom = active_habits * window_days
+            habit_completion = round(min(habit_logs / denom, 1.0), 3) if denom else None
+
+            return {
+                'window_start': start.isoformat(),
+                'window_end': end.isoformat(),
+                'avg_sentiment': round(agg['avg_sentiment'], 3) if agg['avg_sentiment'] is not None else None,
+                'avg_stress':    round(agg['avg_stress'], 2)    if agg['avg_stress']    is not None else None,
+                'journal_days':  journal_days,
+                'avg_sleep_hours': round(sleep_agg['avg_hours'], 2) if sleep_agg['avg_hours'] is not None else None,
+                'habit_completion': habit_completion,
+            }
+
+        baseline = window_stats(baseline_start, baseline_end)
+        current = window_stats(current_start, current_end)
+
+        # Deltas. Sign convention: positive = improvement.
+        # sentiment ↑ is good, stress ↓ is good — we invert stress so a
+        # positive delta always means "better".
+        def safe_delta(curr, base, *, invert=False):
+            if curr is None or base is None:
+                return None
+            d = curr - base
+            return round(-d if invert else d, 3)
+
+        deltas = {
+            'avg_sentiment': safe_delta(current['avg_sentiment'], baseline['avg_sentiment']),
+            'avg_stress':    safe_delta(current['avg_stress'],    baseline['avg_stress'], invert=True),
+            'journal_days':  safe_delta(current['journal_days'],  baseline['journal_days']),
+            'avg_sleep_hours': safe_delta(current['avg_sleep_hours'], baseline['avg_sleep_hours']),
+            'habit_completion': safe_delta(current['habit_completion'], baseline['habit_completion']),
+        }
+
+        days_using = (today - baseline_start).days + 1
+
+        return Response({
+            'has_enough_data': True,
+            'days_using': days_using,
+            'baseline': baseline,
+            'current': current,
+            'deltas': deltas,
+        })
 
 
 class CalendarView(APIView):

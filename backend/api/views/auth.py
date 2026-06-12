@@ -599,6 +599,133 @@ class IsEmailVerified(permissions.BasePermission):
         return request.user.is_authenticated and request.user.email_verified
 
 
+# === Consent (2026-06-02) ===
+# Advisor asked for an explicit pre-use consent gate covering:
+#   1. ToS + privacy
+#   2. AI training data opt-in (independent — declining must still let
+#      the user use the rest of the app)
+#   3. Age band (18+ / 13-17 / under 13). Under 13 fails. 13-17 needs
+#      guardian email confirmation before the account unlocks.
+# The flow is captured in this single endpoint so the frontend can
+# render it as one multi-step modal and store one POST.
+
+class SubmitConsentView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [GeneralWriteThrottle]
+
+    VALID_AGE_BANDS = {'18_plus', '13_17', 'under_13'}
+
+    def post(self, request):
+        from django.utils import timezone
+        import secrets
+
+        user = request.user
+        data = request.data or {}
+
+        # --- Field validation ---
+        accepts_terms = bool(data.get('accepts_terms'))
+        consent_ai_training = bool(data.get('consent_ai_training'))
+        age_band = (data.get('age_band') or '').strip()
+        guardian_email = (data.get('guardian_email') or '').strip()
+
+        if not accepts_terms:
+            return error_response('consent.terms_required',
+                                  'You must accept the terms to use HeartBox.', 400)
+        if age_band not in self.VALID_AGE_BANDS:
+            return error_response('consent.age_band_required',
+                                  'Pick an age band.', 400)
+        if age_band == 'under_13':
+            # Under-13 is hard-blocked. We also schedule the account
+            # for deletion to comply with COPPA-style age-gate.
+            user.deletion_scheduled_at = timezone.now()
+            user.save(update_fields=['deletion_scheduled_at'])
+            return error_response('consent.under_13_not_allowed',
+                                  'HeartBox is not available for users under 13.', 403)
+        if age_band == '13_17' and not guardian_email:
+            return error_response('consent.guardian_email_required',
+                                  'A guardian email is required for users aged 13-17.', 400)
+
+        # --- Persist consent ---
+        now = timezone.now()
+        user.terms_accepted_at = now
+        user.age_confirmed_13_plus = True
+        user.age_band = age_band
+        user.consent_ai_training = consent_ai_training
+        user.consent_ai_training_at = now if consent_ai_training else None
+        if age_band == '13_17':
+            user.guardian_email = guardian_email
+            user.guardian_consent_token = secrets.token_urlsafe(32)
+        else:
+            # Clear any stale guardian data if the user re-runs the flow
+            # after switching age bands.
+            user.guardian_email = ''
+            user.guardian_consent_token = ''
+            user.guardian_consent_at = None
+        user.save(update_fields=[
+            'terms_accepted_at', 'age_confirmed_13_plus', 'age_band',
+            'consent_ai_training', 'consent_ai_training_at',
+            'guardian_email', 'guardian_consent_token', 'guardian_consent_at',
+        ])
+
+        # --- Send guardian email if minor ---
+        # Best-effort: a send failure shouldn't roll back the consent
+        # record — the user can re-trigger from the consent screen.
+        if age_band == '13_17':
+            try:
+                self._send_guardian_email(user)
+            except Exception:
+                pass
+
+        log_action(user, 'consent.submit', {'age_band': age_band,
+                                            'ai_training': consent_ai_training})
+        return Response(UserProfileSerializer(user).data)
+
+    def _send_guardian_email(self, user):
+        frontend = settings.FRONTEND_URL.rstrip('/')
+        link = f'{frontend}/guardian-consent?token={user.guardian_consent_token}'
+        subject = '[HeartBox] 家長同意確認 / Guardian Consent Required'
+        body = (
+            f'您好，\n\n'
+            f'您的子女 {user.username} 透過 HeartBox（心事盒）申請使用本服務。\n'
+            f'HeartBox 是一款心理健康日記應用程式，所有日記內容均以 AES-256 加密儲存。\n\n'
+            f'由於您的子女年齡介於 13-17 歲，需經家長同意才能正式使用全部功能。\n\n'
+            f'若您同意子女使用本服務，請點擊以下連結：\n{link}\n\n'
+            f'若您不同意，請忽略此信，帳號將在 30 天內自動關閉。\n\n'
+            f'隱私權政策：{frontend}/privacy\n'
+            f'使用條款：{frontend}/terms\n\n'
+            f'— HeartBox 團隊'
+        )
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL or None,
+                  [user.guardian_email], fail_silently=False)
+
+
+class GuardianConfirmView(APIView):
+    """Public endpoint hit by guardian's email link to confirm consent."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from django.utils import timezone
+        token = (request.query_params.get('token') or '').strip()
+        if not token:
+            return error_response('guardian.invalid_token', 'Missing token.', 400)
+        try:
+            user = User.objects.get(
+                guardian_consent_token=token,
+                age_band='13_17',
+                guardian_consent_at__isnull=True,
+            )
+        except User.DoesNotExist:
+            return error_response('guardian.invalid_token',
+                                  'Invalid or already-used token.', 400)
+        user.guardian_consent_at = timezone.now()
+        # Burn the token so it can't be replayed.
+        user.guardian_consent_token = ''
+        user.save(update_fields=['guardian_consent_at', 'guardian_consent_token'])
+        log_action(user, 'consent.guardian_confirm', {'guardian': user.guardian_email})
+        return Response({'detail': 'Guardian consent recorded',
+                         'username': user.username})
+
+
 # === 2FA TOTP ===
 
 class TOTPSetupView(APIView):

@@ -18,6 +18,7 @@ from .views import (
     AdminUserListView,
     AlertsView,
     AnalyticsView,
+    MyProgressView,
     AvailableSlotsView,
     BookingActionView,
     BookingCreateView,
@@ -76,6 +77,8 @@ from .views import (
     RegisterView,
     ReminderSettingsView,
     ResendVerificationView,
+    SubmitConsentView,
+    GuardianConfirmView,
     ForgotPasswordView,
     LoginView,
     LogoutOtherDevicesView,
@@ -160,6 +163,7 @@ urlpatterns = [
     path('auth/export/csv/', ExportCSVView.as_view(), name='export-csv'),
     # Analytics
     path('analytics/', AnalyticsView.as_view(), name='analytics'),
+    path('analytics/progress/', MyProgressView.as_view(), name='analytics-progress'),
     path('analytics/calendar/', CalendarView.as_view(), name='analytics-calendar'),
     path('analytics/year-pixels/', YearPixelsView.as_view(), name='year-pixels'),
     # Achievements
@@ -255,6 +259,8 @@ urlpatterns = [
     # Email Verification
     path('auth/verify-email/', VerifyEmailView.as_view(), name='verify-email'),
     path('auth/resend-verification/', ResendVerificationView.as_view(), name='resend-verification'),
+    path('auth/consent/', SubmitConsentView.as_view(), name='submit-consent'),
+    path('auth/guardian-confirm/', GuardianConfirmView.as_view(), name='guardian-confirm'),
     # 2FA
     path('auth/2fa/setup/', TOTPSetupView.as_view(), name='2fa-setup'),
     path('auth/2fa/verify/', TOTPVerifyView.as_view(), name='2fa-verify'),

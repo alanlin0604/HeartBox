@@ -11,6 +11,7 @@ import MoodCalendar from '../components/MoodCalendar'
 import YearInPixels from '../components/YearInPixels'
 import EmptyState from '../components/EmptyState'
 import MoodPrediction from '../components/MoodPrediction'
+import ProgressCompareCard from '../components/ProgressCompareCard'
 import DashboardSection from '../components/DashboardSection'
 import SectionAnchorBar from '../components/SectionAnchorBar'
 import { Card } from '../components/ui'
@@ -144,6 +145,7 @@ export default function DashboardPage() {
         subtitle={t('dashboard.section.overviewSub')}
         icon="/icons/mood-report.svg"
       >
+      <ProgressCompareCard />
       <MoodPrediction />
 
       {/* Stats Cards */}

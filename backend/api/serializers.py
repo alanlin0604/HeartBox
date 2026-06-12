@@ -60,6 +60,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     is_counselor = serializers.SerializerMethodField()
     avatar = serializers.ImageField(required=False, allow_null=True)
+    # 2026-06-02: surfaces "has this user run the post-launch consent
+    # flow yet?" so the frontend can show ConsentModal blocking the app
+    # until they've explicitly answered the new AI-training opt-in and
+    # age-band questions. True for any pre-launch user whose age_band
+    # is still empty.
+    requires_consent = serializers.SerializerMethodField()
+    is_minor_pending_guardian = serializers.SerializerMethodField()
 
     AVATAR_MAX_BYTES = 2 * 1024 * 1024  # 2 MB
     AVATAR_ALLOWED_FORMATS = {'JPEG', 'PNG', 'WEBP', 'GIF'}
@@ -70,11 +77,19 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'bio', 'avatar', 'is_counselor', 'is_staff',
             'timezone', 'onboarding_completed', 'email_verified',
             'deletion_scheduled_at', 'created_at', 'updated_at',
+            'requires_consent', 'is_minor_pending_guardian',
         )
         read_only_fields = (
             'id', 'username', 'is_staff', 'email_verified',
             'deletion_scheduled_at', 'created_at', 'updated_at',
+            'requires_consent', 'is_minor_pending_guardian',
         )
+
+    def get_requires_consent(self, obj) -> bool:
+        return obj.age_band == ''
+
+    def get_is_minor_pending_guardian(self, obj) -> bool:
+        return obj.age_band == '13_17' and obj.guardian_consent_at is None
 
     def get_is_counselor(self, obj) -> bool:
         return hasattr(obj, 'counselor_profile') and obj.counselor_profile.is_approved

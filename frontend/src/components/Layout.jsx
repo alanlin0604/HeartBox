@@ -12,6 +12,11 @@ import { useToast } from '../context/ToastContext'
 // OnboardingModal only renders for users who haven't completed onboarding,
 // so it lives in its own chunk and only downloads when actually shown.
 const OnboardingModal = lazy(() => import('./OnboardingModal'))
+// ConsentModal — post-launch 3-step gate added 2026-06-02 (thesis-advisor
+// feedback). Takes priority over OnboardingModal so the user can't bypass
+// the AI-training opt-in and age-band questions by clicking through onboarding
+// first.
+const ConsentModal = lazy(() => import('./ConsentModal'))
 
 const ROUTE_PRELOADS = {
   '/': () => import('../pages/JournalPage'),
@@ -76,6 +81,11 @@ export default function Layout() {
     // onboarding_completed === false. OnboardingModal.finish() now calls
     // refreshUser() to keep this in sync.
   }, [user?.id, user?.onboarding_completed])
+
+  // Consent gate — render ConsentModal when the backend reports
+  // user.requires_consent (= age_band field empty). Keeps the user from
+  // touching the rest of the app until they've answered the 3 questions.
+  const consentRequired = user && user.requires_consent === true
 
   // Close both dropdowns on outside click (single listener)
   useEffect(() => {
@@ -619,8 +629,15 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Onboarding Modal (lazy — only loaded for users who haven't seen it) */}
-      {!onboardingDone && (
+      {/* Consent gate takes precedence over onboarding — render it first
+          and suppress the onboarding modal until the user has answered
+          the 3 consent steps. Otherwise the user could click through the
+          friendly onboarding flow and never see the AI-training opt-in. */}
+      {consentRequired ? (
+        <Suspense fallback={null}>
+          <ConsentModal />
+        </Suspense>
+      ) : !onboardingDone && (
         <Suspense fallback={null}>
           <OnboardingModal onComplete={() => setOnboardingDone(true)} />
         </Suspense>

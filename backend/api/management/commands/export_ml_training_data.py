@@ -65,6 +65,19 @@ class Command(BaseCommand):
             default='ml/datasets',
             help='Directory (relative to backend/) to write CSVs into.',
         )
+        parser.add_argument(
+            '--format',
+            choices=['csv', 'xlsx'],
+            default='csv',
+            help=(
+                'Output format. xlsx produces three sheets: '
+                'Raw_Features (one row per user-day), '
+                'Feature_Description (column name → 中文說明 + 來源), '
+                'Sample_Distribution (n rows, n users, time range, target stats). '
+                'Use for thesis / demo slides where reviewers want to see the '
+                'data behind the model rather than just performance numbers.'
+            ),
+        )
 
     def handle(self, *args, **opts):
         task = opts['task']
@@ -72,12 +85,14 @@ class Command(BaseCommand):
         horizon = opts['horizon']
         min_entries = opts['min_entries']
         output_dir = opts['output_dir']
+        fmt = opts['format']
 
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=days)
 
         os.makedirs(output_dir, exist_ok=True)
-        outfile = os.path.join(output_dir, f'{task}_{end_date.isoformat()}.csv')
+        ext = 'xlsx' if fmt == 'xlsx' else 'csv'
+        outfile = os.path.join(output_dir, f'{task}_{end_date.isoformat()}.{ext}')
 
         # --- Pull per-user-day aggregates in 4 queries (no N+1) ---
         self.stdout.write(self.style.NOTICE(
@@ -150,12 +165,22 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('No rows produced — too little data.'))
             return
 
-        # Write CSV
-        field_order = ['user_id', 'ref_date'] + [k for k in rows[0].keys() if k not in ('user_id', 'ref_date')]
-        with open(outfile, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=field_order)
-            writer.writeheader()
-            writer.writerows(rows)
+        # Stable column order: identifiers first, target last, features in between.
+        target_cols = [k for k in rows[0].keys() if k.startswith('target_')]
+        feature_cols = [
+            k for k in rows[0].keys()
+            if k not in ('user_id', 'ref_date') and not k.startswith('target_')
+        ]
+        field_order = ['user_id', 'ref_date'] + feature_cols + target_cols
+
+        if fmt == 'csv':
+            with open(outfile, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=field_order)
+                writer.writeheader()
+                writer.writerows(rows)
+        else:
+            self._write_xlsx(outfile, rows, field_order, feature_cols, target_cols,
+                              task, start_date, end_date, horizon, min_entries)
 
         self.stdout.write(self.style.SUCCESS(f'Wrote {len(rows)} rows -> {outfile}'))
 
@@ -347,3 +372,113 @@ class Command(BaseCommand):
         feats['bedtime_std_14d'] = round(_stats.stdev(bedtime_hours), 2) if len(bedtime_hours) >= 2 else 0.0
 
         return feats
+
+    # ----------------------------------------------------------------------
+    # XLSX writer — adds 3 explanatory sheets the CSV path can't carry.
+    # Lazy-imports openpyxl + pandas so the regular CSV path stays light.
+    # ----------------------------------------------------------------------
+
+    def _write_xlsx(self, outfile, rows, field_order, feature_cols, target_cols,
+                    task, start_date, end_date, horizon, min_entries):
+        import pandas as pd
+        from openpyxl.styles import Font, PatternFill, Alignment
+
+        df_raw = pd.DataFrame(rows)[field_order]
+
+        # ----- Sheet 2: Feature_Description -----
+        # Hand-mapped column → 中文說明 + 來源. Lag-prefixed columns share a
+        # template description, expanded across the 4 LAG_WINDOWS automatically.
+        DESC_TEMPLATE = {
+            'sent_lag_{w}d_mean':         ('近 {w} 天平均情緒分數（-1 至 +1）',                'MoodNote.sentiment_score'),
+            'stress_lag_{w}d_mean':       ('近 {w} 天平均壓力指數（0-10）',                    'MoodNote.stress_index'),
+            'stress_lag_{w}d_max':        ('近 {w} 天最高壓力指數',                            'MoodNote.stress_index'),
+            'entries_lag_{w}d':           ('近 {w} 天日記則數',                                'MoodNote 計數'),
+            'sleep_lag_{w}d_mean':        ('近 {w} 天平均睡眠時數',                            'DailySleep.sleep_hours'),
+            'sleep_quality_lag_{w}d_mean':('近 {w} 天平均主觀睡眠品質（1-5）',                  'DailySleep.sleep_quality'),
+            'deep_sleep_pct_lag_{w}d_mean':('近 {w} 天深層睡眠占比',                            'DailySleep.deep/light/rem 分鐘'),
+            'habit_lag_{w}d_mean':        ('近 {w} 天習慣完成率（0-1）',                       'HabitLog ÷ 活躍 Habit 數'),
+            'steps_lag_{w}d_mean':        ('近 {w} 天平均步數',                                'HealthMetric (steps)'),
+            'exercise_lag_{w}d_mean':     ('近 {w} 天平均運動分鐘',                            'HealthMetric (exercise_minutes)'),
+            'hrv_lag_{w}d_mean':          ('近 {w} 天平均心率變異 (HRV)',                       'HealthMetric (hrv)'),
+            'rhr_lag_{w}d_mean':          ('近 {w} 天平均靜止心率',                            'HealthMetric (heart_rate)'),
+        }
+        STATIC_DESC = {
+            'user_id':            ('使用者 ID（已匿名化）',                                'CustomUser.id'),
+            'ref_date':           ('該樣本的參考日（features 為當天回溯）',                 '推導自 MoodNote.created_at'),
+            'day_of_week':        ('星期幾（0=週一 … 6=週日）',                            '推導自 ref_date'),
+            'is_weekend':         ('是否週末（0/1）',                                       '推導自 ref_date'),
+            'day_of_month':       ('幾號（1-31）',                                          '推導自 ref_date'),
+            'current_streak':     ('目前連續寫日記天數',                                    'JournalStreak.current_streak'),
+            'bedtime_std_14d':    ('近 14 天就寢時間標準差（生活規律性指標）',              'DailySleep.bedtime'),
+            'target_sentiment':   ('預測標的：第 horizon 天的情緒分數',                     '同 sent_lag 但取未來日'),
+            'target_stress':      ('預測標的：第 horizon 天的壓力指數',                     '同 stress_lag 但取未來日'),
+            'target_spike':       ('預測標的：未來 horizon 天內出現高壓事件（stress>=7）為 1', 'MoodNote.stress_index'),
+        }
+        desc_rows = []
+        for col in field_order:
+            if col in STATIC_DESC:
+                cn, source = STATIC_DESC[col]
+            else:
+                cn, source = '—', '—'
+                for tpl_key, (tpl_cn, tpl_src) in DESC_TEMPLATE.items():
+                    for w in LAG_WINDOWS:
+                        if col == tpl_key.format(w=w):
+                            cn = tpl_cn.format(w=w)
+                            source = tpl_src
+                            break
+                    if cn != '—':
+                        break
+            desc_rows.append({'欄位': col, '中文說明': cn, '資料來源': source})
+        df_desc = pd.DataFrame(desc_rows)
+
+        # ----- Sheet 3: Sample_Distribution -----
+        stat_rows = [
+            {'項目': '任務 (task)',                      '值': task},
+            {'項目': '預測 horizon (天)',                '值': horizon},
+            {'項目': '資料時間範圍',                     '值': f'{start_date} ~ {end_date}'},
+            {'項目': '最少日記門檻 (min_entries)',       '值': min_entries},
+            {'項目': '總樣本數 (rows)',                  '值': len(df_raw)},
+            {'項目': '不同使用者數 (users)',             '值': df_raw['user_id'].nunique()},
+            {'項目': 'feature 欄位數',                   '值': len(feature_cols)},
+            {'項目': 'target 欄位數',                    '值': len(target_cols)},
+        ]
+        if task == 'mood_prediction':
+            if 'target_sentiment' in df_raw.columns:
+                s = df_raw['target_sentiment'].dropna()
+                stat_rows += [
+                    {'項目': 'target_sentiment min/mean/max',
+                     '值': f'{s.min():.3f} / {s.mean():.3f} / {s.max():.3f}'},
+                ]
+            if 'target_stress' in df_raw.columns:
+                s = df_raw['target_stress'].dropna()
+                stat_rows += [
+                    {'項目': 'target_stress min/mean/max',
+                     '值': f'{s.min():.2f} / {s.mean():.2f} / {s.max():.2f}'},
+                ]
+        else:
+            if 'target_spike' in df_raw.columns:
+                pos = int(df_raw['target_spike'].sum())
+                total = len(df_raw)
+                stat_rows.append({'項目': 'positive rate (spike)',
+                                  '值': f'{pos} / {total} = {pos / total * 100:.1f}%'})
+        df_stats = pd.DataFrame(stat_rows)
+
+        # ----- Write workbook -----
+        with pd.ExcelWriter(outfile, engine='openpyxl') as writer:
+            df_raw.to_excel(writer, sheet_name='Raw_Features', index=False)
+            df_desc.to_excel(writer, sheet_name='Feature_Description', index=False)
+            df_stats.to_excel(writer, sheet_name='Sample_Distribution', index=False)
+
+            # Light styling: header row bold + orange fill, wide enough columns.
+            header_font = Font(bold=True, color='FFFFFF')
+            header_fill = PatternFill('solid', fgColor='C2410C')
+            for sheet_name in writer.sheets:
+                ws = writer.sheets[sheet_name]
+                for cell in ws[1]:
+                    cell.font = header_font
+                    cell.fill = header_fill
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                # Auto-width per column (capped at 40 to avoid runaway).
+                for col_cells in ws.columns:
+                    longest = max((len(str(c.value)) for c in col_cells if c.value is not None), default=0)
+                    ws.column_dimensions[col_cells[0].column_letter].width = min(max(longest + 2, 10), 40)
