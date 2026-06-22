@@ -104,39 +104,62 @@ class LLMProvider(abc.ABC):
     # local models love to add markdown fences or trailing commentary.
     # ------------------------------------------------------------------
     @staticmethod
+    def _balanced_json_objects(text: str, *, max_candidates: int = 5):
+        """Yield each top-level balanced ``{ ... }`` substring in ``text``.
+
+        Walks the text once per candidate, tracks brace depth, and respects
+        backslash-escaped quotes inside strings. Stops after ``max_candidates``
+        to avoid pathological scans on adversarial input.
+
+        Used by ``parse_json_tolerant`` so a small-model preamble that
+        contains a literal ``{`` in prose (``"with curly braces in {prose}"``)
+        does not permanently latch the parser onto the wrong substring —
+        if the first balanced block fails ``json.loads`` we slide past it
+        and try the next candidate, then raise only if none parse.
+        """
+        idx = 0
+        yielded = 0
+        n = len(text)
+        while yielded < max_candidates:
+            start = text.find('{', idx)
+            if start < 0:
+                return
+            depth = 0
+            in_string = False
+            escape = False
+            end = -1
+            for i in range(start, n):
+                c = text[i]
+                if escape:
+                    escape = False
+                    continue
+                if in_string:
+                    if c == '\\':
+                        escape = True
+                    elif c == '"':
+                        in_string = False
+                    continue
+                if c == '"':
+                    in_string = True
+                    continue
+                if c == '{':
+                    depth += 1
+                elif c == '}':
+                    depth -= 1
+                    if depth == 0:
+                        end = i
+                        break
+            if end < 0:
+                return
+            yield text[start:end + 1]
+            yielded += 1
+            idx = end + 1
+
+    @staticmethod
     def _first_balanced_json_object(text: str) -> str | None:
-        """Return the substring of the FIRST balanced ``{ ... }`` block, or
-        None. Walks the text once, tracks brace depth, and respects
-        backslash-escaped quotes inside strings — so multi-object output
-        like ``{ "a": 1 }\\n{ "b": 2 }`` returns just ``{ "a": 1 }`` instead
-        of ``re.search(r'\\{[\\s\\S]*\\}')`` greedily swallowing both into a
-        single unparseable blob."""
-        start = text.find('{')
-        if start < 0:
-            return None
-        depth = 0
-        in_string = False
-        escape = False
-        for i in range(start, len(text)):
-            c = text[i]
-            if escape:
-                escape = False
-                continue
-            if in_string:
-                if c == '\\':
-                    escape = True
-                elif c == '"':
-                    in_string = False
-                continue
-            if c == '"':
-                in_string = True
-                continue
-            if c == '{':
-                depth += 1
-            elif c == '}':
-                depth -= 1
-                if depth == 0:
-                    return text[start:i + 1]
+        """Back-compat shim: return only the first balanced substring or None."""
+        for candidate in LLMProvider._balanced_json_objects(text, max_candidates=1):
+            return candidate
         return None
 
     @staticmethod
@@ -170,15 +193,22 @@ class LLMProvider(abc.ABC):
         except (ValueError, json.JSONDecodeError):
             pass
 
-        # Fallback: find first balanced { ... } using a brace-depth walker
-        # rather than a greedy regex (which would swallow trailing prose).
-        candidate = LLMProvider._first_balanced_json_object(text)
-        if candidate:
+        # Fallback: walk text and try each balanced ``{ ... }`` substring
+        # until one parses as a dict. Slides past prose-embedded braces
+        # like ``Here is the JSON: "with {prose} in it" {actual: 1}``.
+        last_err: Exception | None = None
+        for candidate in LLMProvider._balanced_json_objects(text):
             try:
                 parsed = json.loads(candidate)
-                if isinstance(parsed, dict):
-                    return parsed
             except (ValueError, json.JSONDecodeError) as e:
-                raise LLMProviderError(f'JSON extracted but failed to parse: {e}') from e
+                last_err = e
+                continue
+            if isinstance(parsed, dict):
+                return parsed
+            # parsed but not a dict (e.g. list at top-level) — keep looking.
 
+        if last_err is not None:
+            raise LLMProviderError(
+                f'JSON extracted but no candidate parsed: {last_err}'
+            ) from last_err
         raise LLMProviderError(f'no JSON object found in response: {raw[:120]!r}')

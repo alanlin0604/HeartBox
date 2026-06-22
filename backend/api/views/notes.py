@@ -140,7 +140,17 @@ def _post_save_worker(user_id):
 def _vision_analysis_worker(note_id, user_id, image_urls):
     """Background worker for image-aware re-analysis. Same shape as the
     text-only worker but calls analyze_with_images on the vision provider
-    (LLaVA via the local llm_server)."""
+    (LLaVA via the local llm_server).
+
+    NOTE on the text-vs-vision race: ``perform_create`` schedules a text
+    worker via ``transaction.on_commit``, and the user may POST /reanalyze
+    immediately after — spawning this vision worker before the text
+    worker has run. Both write to ``sentiment_score`` / ``stress_index``
+    / ``ai_feedback``; last-writer wins. The race window is small in
+    practice (the user has to act inside ~100ms) and both workers
+    converge to the same fields, so we accept it for v1. A proper fix
+    would add an ``analysis_version`` field + select_for_update, but
+    that needs a migration we are not landing before the 6/30 demo."""
     try:
         from api.models import MoodNote
         from api.services.ai_engine import ai_engine

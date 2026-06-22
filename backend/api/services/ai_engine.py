@@ -376,6 +376,17 @@ class AIEngine:
 
         except Exception as e:
             logger.warning('Vision analysis failed, falling back to text-only: %s', e)
+            # Preserve image-derived sentiment if the FIRST vision call
+            # succeeded — only the feedback call failed. Re-running the
+            # full text pipeline would throw away the (more accurate)
+            # image-grounded score and recompute it from text alone.
+            # The basic-with-crisis-guard helper still injects the hotline
+            # when HIGH is matched, so safety is preserved either way.
+            if result['sentiment_score'] is not None:
+                result['ai_feedback'] = self._basic_feedback_with_crisis_guard(
+                    text, result['sentiment_score'],
+                )
+                return result
             return self.analyze(text)
 
         return result
