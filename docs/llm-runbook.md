@@ -139,18 +139,18 @@ notepad %USERPROFILE%\.heartbox-llm.env
 
 或者 demo 用 mock provider（後端設 `LLM_PROVIDER=mock`），但這違背「真實推論」的論述。
 
-### 5.3 緊急 fallback：切回 OpenAI
+### 5.3 緊急 fallback：先前的 OpenAI 退路已移除
 
-**只有所有 local 都失敗才用**。在 Cloud Run console 改 env：
+之前版本的這節說「失敗時切 `LLM_PROVIDER=openai` + `OPENAI_API_KEY`」—— **這條路已在 Phase 0b 砍掉**，現在的 factory（`backend/api/services/llm/factory.py`）只接受 `remote_taide` / `mock` 兩個值，其他輸入會直接 raise `LLMProviderError`，oncall 跟著舊版改 env var 是浪費時間。
 
-```
-LLM_PROVIDER=openai            ← 需要程式碼支援，目前砍掉了
-OPENAI_API_KEY=<key>
-```
+**正規的緊急 fallback：讓推論失敗，退到後端的本地關鍵詞層**。後端的 tier-2 fallback 就是為此設計：
+- AI 推論回 `LLMProviderError` → ai_engine 接住 → 走 `_analyze_sentiment_local` 算情緒分數 → 走 `_basic_feedback_with_crisis_guard` 給罐頭回覆（**HIGH crisis 仍會 prepend hotline**，這是 Batch 4 修的）。
+- 使用者看到「分析以本地關鍵詞為主」的 banner（前端 graceful degradation），但日記能存、情緒分數能跑、crisis 偵測照樣 work。
 
-⚠️ **這違背「資料不離境」的核心論述**。如果 demo 時走這條路，必須在現場誠實告知委員。
-
-實務上更建議的緊急 fallback：**讓推論失敗，退到後端的本地關鍵詞層**。後端的 tier-2 fallback 就是為此設計，使用者看到「分析以本地關鍵詞為主」的 banner，至少日記能存、情緒分數能跑、crisis 偵測也照樣工作。
+如果真的需要在 demo 當下用雲端 LLM：寫一個新的 `OpenAIProvider`（複製 `RemoteTAIDEProvider`）+ 自己的 opt-in env var（**不要叫 `LLM_PROVIDER=openai`**，避免日後又被誤用），同時要：
+1. 跟委員講明資料離境（這違背核心論述）。
+2. PR 通過 `no-openai-check.yml` CI guard（會擋 `import openai`）— 你得 vendor 一個 openai-compatible client。
+3. 改 `factory.py` 的 docstring（目前明確寫 OpenAI 退路被砍）。
 
 ## 6. 定期維護
 

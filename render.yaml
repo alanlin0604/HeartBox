@@ -50,5 +50,7 @@ services:
         value: "5/hour"
       - key: THROTTLE_PASSWORD_RESET
         value: "5/hour"
+      - key: CRON_SECRET
+        generateValue: true
       - key: PYTHON_VERSION
         value: "3.12.0"

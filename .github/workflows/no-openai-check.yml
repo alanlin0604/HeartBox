@@ -24,12 +24,16 @@ jobs:
         run: |
           set -e
           # ---------------------------------------------------------------
-          # Forbidden patterns. Three signals combined into one regex:
-          #   - import openai / from openai
-          #   - OPENAI_<X>     (env var leftovers)
-          #   - 'gpt-4o-mini'  (the model name we used to hardcode)
+          # Forbidden patterns. Broadened in the Phase 0b adversarial review
+          # so the previous (import openai|OPENAI_(API_KEY|MODEL|ORG)|gpt-4o)
+          # pattern can no longer be bypassed by:
+          #   - OPENAI_BASE_URL / OPENAI_PROJECT / OPENAI_API_BASE (any suffix)
+          #   - langchain_openai (the LangChain wrapper that re-imports openai)
+          #   - gpt-3.5 / gpt-4 / gpt-4-turbo / gpt-4.1 / o1 / o3 model names
+          #   - api.openai.com hardcoded base URLs
+          #   - the bare `OpenAI(` constructor (alias-renamed imports)
           # ---------------------------------------------------------------
-          PATTERN='(import openai|from openai|OPENAI_(API_KEY|MODEL|ORG)|gpt-4o(-mini|-2024)?)'
+          PATTERN='((import|from)\s+(openai|langchain_openai)\b|OPENAI_[A-Z_]+|gpt-[34][0-9.o-]*|text-embedding-(ada|3)|api\.openai\.com)'
 
           EXCLUDES=(
             --glob '!llm_server/**'
@@ -41,6 +45,10 @@ jobs:
             --glob '!**/migrations/**'
             --glob '!**/*.lock'
             --glob '!HANDOFF_*.md'
+            --glob '!.claude/**'
+            --glob '!frontend/dist/**'
+            --glob '!frontend/build/**'
+            --glob '!**/__pycache__/**'
           )
 
           if rg -n -e "$PATTERN" "${EXCLUDES[@]}" .; then

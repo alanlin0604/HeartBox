@@ -38,8 +38,11 @@ DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
 # 產生方式：python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ENCRYPTION_KEY=你的fernet-key
 
-# OpenAI（AI 分析、聊天功能）
-OPENAI_API_KEY=你的openai-api-key
+# 自架 LLM 推論伺服器（TAIDE + LLaVA，取代 OpenAI）
+# 本地開發若還沒架 llm_server，可用 LLM_PROVIDER=mock 跳過真實推論。
+LLM_PROVIDER=mock
+LLM_SERVER_URL=
+LLM_SERVER_API_KEY=
 
 # CORS（本地開發）
 CORS_ALLOWED_ORIGINS=http://localhost:5173
@@ -178,4 +181,4 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 確認後端已啟動在 `localhost:8000`，且 `.env` 中 `CORS_ALLOWED_ORIGINS` 包含 `http://localhost:5173`。
 
 ### Q: AI 功能沒有回應？
-確認 `.env` 中的 `OPENAI_API_KEY` 有效且有餘額。AI 功能為選用，缺少 API Key 時會優雅降級（不影響其他功能）。
+本地開發預設 `LLM_PROVIDER=mock`，AI 端點會回固定字串確認流程可跑。要連到真實 TAIDE 推論需設 `LLM_PROVIDER=remote_taide` 並填 `LLM_SERVER_URL` / `LLM_SERVER_API_KEY` 指向 `llm_server/`（見 `docs/llm-runbook.md`）。缺設定時 settings.py 不會 crash — 提供者 `is_configured()` 回 False，AI 功能會優雅降級到關鍵詞分析。
