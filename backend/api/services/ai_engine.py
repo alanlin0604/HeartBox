@@ -191,7 +191,19 @@ class AIEngine:
             return reply
         except Exception as e:
             logger.warning('Personalized feedback failed: %s', e)
-            return self._generate_basic_feedback(sentiment_score)
+            return self._basic_feedback_with_crisis_guard(text, sentiment_score)
+
+    def _basic_feedback_with_crisis_guard(self, text: str, sentiment_score: float) -> str:
+        """Return canned feedback for ``sentiment_score`` but never strip the
+        crisis hotline. Used by every Tier-1/Tier-2 fallback path so a HIGH
+        match in ``text`` always surfaces the hotline even when no LLM call
+        succeeded — that's the whole point of defense-in-depth.
+        """
+        basic = self._generate_basic_feedback(sentiment_score)
+        crisis = CrisisGuard.detect(text)
+        if crisis is not None and crisis.severity == 'HIGH':
+            return CrisisGuard.prepend_hotline(basic, crisis.locale)
+        return basic
 
     def _generate_rag_feedback(self, text: str, sentiment_score: float) -> str:
         """Retrieve-then-stuff RAG: pull docs from Chroma, format into the
@@ -401,7 +413,11 @@ class AIEngine:
                 else:
                     result['ai_feedback'] = self._generate_personalized_feedback(text, score)
 
-            except (LLMProviderError, Exception) as e:
+            except Exception as e:
+                # ``LLMProviderError`` is an ``Exception`` subclass — listing
+                # both was equivalent to ``except Exception``. We deliberately
+                # catch broadly here because a Tier-1 failure must never block
+                # a note from being saved.
                 logger.warning('Provider analysis failed, falling back to local: %s', e)
 
         # Tier 2: Local keyword analysis

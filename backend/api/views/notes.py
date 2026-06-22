@@ -139,7 +139,8 @@ def _post_save_worker(user_id):
 
 def _vision_analysis_worker(note_id, user_id, image_urls):
     """Background worker for image-aware re-analysis. Same shape as the
-    text-only worker but calls analyze_with_images (GPT-4o vision)."""
+    text-only worker but calls analyze_with_images on the vision provider
+    (LLaVA via the local llm_server)."""
     try:
         from api.models import MoodNote
         from api.services.ai_engine import ai_engine
@@ -362,15 +363,20 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reanalyze(self, request, pk=None):
-        """Re-analyze note with attached images using GPT vision.
+        """Re-analyze note with attached images using the vision LLM.
 
         Scheduled to run in the background — same async pattern as
         perform_create. Frontend polls or listens for the
         `note_analyzed` WebSocket event to refresh.
         """
         note = self.get_object()
+        # FileField.url returns a relative path (``/media/xxx.jpg``). The
+        # vision LLM lives on a separate host (llm_server) and cannot resolve
+        # that path; it MUST receive an absolute URL. Use the incoming
+        # request's host so dev/prod both work without a hardcoded base.
         image_urls = [
-            att.file.url for att in note.attachments.filter(file_type='image')[:3]
+            request.build_absolute_uri(att.file.url)
+            for att in note.attachments.filter(file_type='image')[:3]
         ]
         if image_urls and note.content:
             import threading
