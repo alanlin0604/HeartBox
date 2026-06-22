@@ -286,11 +286,25 @@ class InferenceEngine:
         timeout_s: float,
         op_label: str,
     ):
-        """Wait for ``fut`` with timeout. On timeout: set ``stop_event`` so the
-        HF generate loop bails at the next token, then JOIN the worker thread
-        before raising — that's the only way ``_swap_lock`` can be released
-        safely without leaving a zombie thread that still holds the GPU model.
+        """Wait for ``fut`` with timeout. On timeout OR caller cancellation:
+        set ``stop_event`` so the HF generate loop bails at the next token,
+        then JOIN the worker thread before propagating — that is the only
+        way ``_swap_lock`` can be released safely without leaving a zombie
+        thread holding the GPU model.
+
+        ``CancelledError`` is handled symmetrically with ``TimeoutError``
+        because Starlette / uvicorn surface a client disconnect as a task
+        cancellation on this coroutine: if we ignore it the worker stays
+        alive past ``_swap_lock`` release, and the next request can call
+        ``swap_to`` and GC the very tensors the orphan thread is still
+        reading.
         """
+        def _drain_worker_sync(reason: str) -> None:
+            """Synchronously kick the stop event from inside an exception
+            handler. Used in the fallback path where awaiting again is not
+            safe (e.g. nested cancellation)."""
+            stop_event.set()
+
         try:
             return await asyncio.wait_for(asyncio.shield(fut), timeout=timeout_s)
         except asyncio.TimeoutError as e:
@@ -310,6 +324,29 @@ class InferenceEngine:
                 # the original timeout to the client.
                 pass
             raise TimeoutError(f'{op_label} generation exceeded {timeout_s}s') from e
+        except asyncio.CancelledError:
+            # Client disconnect, app shutdown, or upstream cancellation.
+            # Drain the worker on the way out so the orphan does not
+            # outlive _swap_lock — same cleanup as the timeout path,
+            # then re-raise so the FastAPI runner observes the cancel.
+            if not fut.done():
+                stop_event.set()
+                try:
+                    await asyncio.wait_for(
+                        asyncio.shield(fut), timeout=_STOP_GRACE_SECONDS,
+                    )
+                except asyncio.TimeoutError:
+                    logger.error(
+                        '%s worker did not exit within %.1fs of stop signal '
+                        'during cancellation — thread leaked',
+                        op_label, _STOP_GRACE_SECONDS,
+                    )
+                except asyncio.CancelledError:
+                    # Nested cancel — let the framework finish unwinding.
+                    pass
+                except Exception:
+                    pass
+            raise
 
     async def chat(
         self,
@@ -428,37 +465,52 @@ class InferenceEngine:
 # ----------------------------------------------------------------------
 # JSON best-effort parsing — same contract as the Django-side helper.
 # ----------------------------------------------------------------------
-def _first_balanced_json_object(text: str) -> str | None:
-    """First balanced ``{ ... }`` substring. Mirrors
-    ``LLMProvider._first_balanced_json_object`` in the Django backend so the
-    server and client recover identically from messy model output."""
-    start = text.find('{')
-    if start < 0:
-        return None
-    depth = 0
-    in_string = False
-    escape = False
-    for i in range(start, len(text)):
-        c = text[i]
-        if escape:
-            escape = False
-            continue
-        if in_string:
-            if c == '\\':
-                escape = True
-            elif c == '"':
-                in_string = False
-            continue
-        if c == '"':
-            in_string = True
-            continue
-        if c == '{':
-            depth += 1
-        elif c == '}':
-            depth -= 1
-            if depth == 0:
-                return text[start:i + 1]
-    return None
+def _balanced_json_objects(text: str, *, max_candidates: int = 5):
+    """Yield each top-level balanced ``{ ... }`` substring. Mirrors the
+    Django ``LLMProvider._balanced_json_objects`` so server and client
+    recover identically from messy model output.
+
+    Walks the text once per candidate, tracks brace depth, respects
+    backslash-escaped quotes inside strings, and caps at
+    ``max_candidates`` to avoid pathological adversarial input.
+    """
+    idx = 0
+    yielded = 0
+    n = len(text)
+    while yielded < max_candidates:
+        start = text.find('{', idx)
+        if start < 0:
+            return
+        depth = 0
+        in_string = False
+        escape = False
+        end = -1
+        for i in range(start, n):
+            c = text[i]
+            if escape:
+                escape = False
+                continue
+            if in_string:
+                if c == '\\':
+                    escape = True
+                elif c == '"':
+                    in_string = False
+                continue
+            if c == '"':
+                in_string = True
+                continue
+            if c == '{':
+                depth += 1
+            elif c == '}':
+                depth -= 1
+                if depth == 0:
+                    end = i
+                    break
+        if end < 0:
+            return
+        yield text[start:end + 1]
+        yielded += 1
+        idx = end + 1
 
 
 def best_effort_json(raw: str) -> dict | None:
@@ -473,12 +525,14 @@ def best_effort_json(raw: str) -> dict | None:
             return parsed
     except (ValueError, json.JSONDecodeError):
         pass
-    candidate = _first_balanced_json_object(text)
-    if candidate:
+    # Try each balanced candidate until one parses as a dict — handles
+    # ``Sure! Here is the JSON: "{prose}" {real: 1}`` where the first
+    # brace lives inside a literal string and only the second parses.
+    for candidate in _balanced_json_objects(text):
         try:
             parsed = json.loads(candidate)
-            if isinstance(parsed, dict):
-                return parsed
         except (ValueError, json.JSONDecodeError):
-            return None
+            continue
+        if isinstance(parsed, dict):
+            return parsed
     return None
