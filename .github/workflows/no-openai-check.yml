@@ -1,0 +1,52 @@
+name: no-openai-check
+
+# Enforce the OpenAI cut: no vendor SDK or hardcoded model name may sneak
+# back into production code. ``llm_server/`` is excluded because that path
+# legitimately speaks an OpenAI-compatible HTTP protocol (TAIDE/LLaVA server).
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  no-openai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
+
+      - name: Reject OpenAI imports + hardcoded model names
+        run: |
+          set -e
+          # ---------------------------------------------------------------
+          # Forbidden patterns. Three signals combined into one regex:
+          #   - import openai / from openai
+          #   - OPENAI_<X>     (env var leftovers)
+          #   - 'gpt-4o-mini'  (the model name we used to hardcode)
+          # ---------------------------------------------------------------
+          PATTERN='(import openai|from openai|OPENAI_(API_KEY|MODEL|ORG)|gpt-4o(-mini|-2024)?)'
+
+          EXCLUDES=(
+            --glob '!llm_server/**'
+            --glob '!.github/workflows/no-openai-check.yml'
+            --glob '!docs/**'
+            --glob '!research/**'
+            --glob '!**/CHANGELOG*'
+            --glob '!**/.env.example'
+            --glob '!**/migrations/**'
+            --glob '!**/*.lock'
+          )
+
+          if rg -n -e "$PATTERN" "${EXCLUDES[@]}" .; then
+            echo ''
+            echo '✗ Found banned OpenAI references above.'
+            echo '  HeartBox is OpenAI-free in production code as of the 2026-06 capstone migration.'
+            echo '  If you intentionally need an OpenAI-compatible HTTP path, place it under llm_server/.'
+            exit 1
+          fi
+          echo '✓ no banned OpenAI references found.'
