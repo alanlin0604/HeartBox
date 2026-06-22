@@ -811,6 +811,10 @@ class AIChatTests(APITestCase):
     """Test AI chat session and messaging endpoints."""
 
     def setUp(self):
+        # Make LLM provider deterministic for this test class.
+        from api.services.llm.factory import reset_llm_provider_cache
+        reset_llm_provider_cache()
+
         self.user = CustomUser.objects.create_user(
             username='chatuser', email='chat@test.com', password='ChatPass123!',
         )
@@ -818,6 +822,10 @@ class AIChatTests(APITestCase):
             username='otheruser', email='other@test.com', password='OtherPass123!',
         )
         self.client.force_authenticate(user=self.user)
+
+    def tearDown(self):
+        from api.services.llm.factory import reset_llm_provider_cache
+        reset_llm_provider_cache()
 
     def test_create_session(self):
         resp = self.client.post('/api/ai-chat/sessions/', format='json')
@@ -852,7 +860,7 @@ class AIChatTests(APITestCase):
         session.refresh_from_db()
         self.assertFalse(session.is_active)
 
-    @override_settings(OPENAI_API_KEY='')
+    @override_settings(LLM_PROVIDER='mock', LLM_MOCK_CONFIGURED=False)
     def test_send_message_returns_both(self):
         session = AIChatSession.objects.create(user=self.user)
         resp = self.client.post(
@@ -884,7 +892,7 @@ class AIChatTests(APITestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @override_settings(OPENAI_API_KEY='')
+    @override_settings(LLM_PROVIDER='mock', LLM_MOCK_CONFIGURED=False)
     def test_first_message_sets_title(self):
         session = AIChatSession.objects.create(user=self.user)
         self.client.post(
@@ -901,7 +909,7 @@ class AIChatTests(APITestCase):
         resp = self.client.get(f'/api/ai-chat/sessions/{session.id}/')
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
 
-    @override_settings(OPENAI_API_KEY='')
+    @override_settings(LLM_PROVIDER='mock', LLM_MOCK_CONFIGURED=False)
     def test_user_message_has_sentiment(self):
         session = AIChatSession.objects.create(user=self.user)
         resp = self.client.post(
@@ -1460,12 +1468,24 @@ class NotificationWebSocketPushTests(APITestCase):
 # ===== Item 14: AI service tests =====
 
 @override_settings(REST_FRAMEWORK={**NO_THROTTLE})
+@override_settings(LLM_PROVIDER='mock', LLM_MOCK_CONFIGURED=False)
 class AISentimentTests(APITestCase):
-    """Test AI analysis fallback behavior."""
+    """Test AI analysis fallback behavior.
+
+    Class-level override forces the mock provider to report unconfigured,
+    so analyze() drops to Tier-2 local keyword analysis — the exact branch
+    these tests are meant to exercise.
+    """
 
     def setUp(self):
+        from api.services.llm.factory import reset_llm_provider_cache
+        reset_llm_provider_cache()
         self.user = CustomUser.objects.create_user(username='aitest', password='pass1234')
         self.client.force_authenticate(user=self.user)
+
+    def tearDown(self):
+        from api.services.llm.factory import reset_llm_provider_cache
+        reset_llm_provider_cache()
 
     def test_note_analysis_graceful_degradation(self):
         """Note creation should succeed even if AI analysis fails."""

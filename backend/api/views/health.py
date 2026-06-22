@@ -26,7 +26,7 @@ from ..serializers import (
 )
 from ..services.pdf_export import generate_weekly_summary_pdf
 
-from . import _get_openai_client, error_response, logger
+from . import _get_llm_provider_or_none, error_response, logger
 
 
 class HealthMetricListView(generics.ListAPIView):
@@ -560,8 +560,8 @@ class WeeklySummaryView(APIView):
             # Generate AI summary
             ai_summary = ''
             try:
-                client = _get_openai_client()
-                if client:
+                provider = _get_llm_provider_or_none()
+                if provider:
                     lang = request.headers.get('Accept-Language', 'zh-TW')
                     lang_map = {'zh-TW': 'Traditional Chinese', 'en': 'English', 'ja': 'Japanese'}
                     lang_name = lang_map.get(lang, 'Traditional Chinese')
@@ -592,14 +592,13 @@ class WeeklySummaryView(APIView):
                     # Dynamic token limit: base 300 + 100 per diary entry, cap at 1500
                     max_tok = min(300 + note_count * 100, 1500)
 
-                    resp = client.chat.completions.create(
-                        model='gpt-4o-mini',
-                        messages=[{'role': 'system', 'content': content}],
+                    ai_summary = provider.chat(
+                        system=content,
+                        user='Please write this week’s summary.',
                         max_tokens=max_tok,
                         temperature=0.7,
                         timeout=30,
-                    )
-                    ai_summary = resp.choices[0].message.content.strip()
+                    ).strip()
             except Exception as e:
                 logger.warning('Weekly summary AI generation failed: %s', e)
 

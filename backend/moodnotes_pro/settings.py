@@ -234,12 +234,33 @@ if ENCRYPTION_KEY:
     except Exception as e:
         raise RuntimeError(f'Invalid ENCRYPTION_KEY: {e}. Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"')
 
-# OpenAI
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
-OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+# LLM provider — talks to the self-hosted FastAPI inference server
+# (TAIDE for chat / LLaVA for vision), reached via Cloudflare Tunnel.
+# No external AI vendor is contacted in production; user journal data
+# never leaves Taiwan-resident infrastructure.
+#
+# LLM_PROVIDER:
+#   - 'remote_taide' (default) — talk to llm_server over HTTP, OpenAI-compat shape
+#   - 'mock'                   — deterministic stub for tests
+LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'remote_taide')
+# Empty default — caller's `is_configured()` returns False until both URL and
+# API key are set, so daily-prompt / weekly-summary endpoints silently skip
+# AI rather than blocking 10s on a connect timeout to a dead localhost.
+LLM_SERVER_URL = os.getenv('LLM_SERVER_URL', '')
+LLM_SERVER_API_KEY = os.getenv('LLM_SERVER_API_KEY', '')
+LLM_MODEL = os.getenv('LLM_MODEL', 'taide-lx-7b-chat')
+LLM_VISION_MODEL = os.getenv('LLM_VISION_MODEL', 'llava-v1.6-mistral-7b')
+# `or '30'` handles the present-but-empty case (`LLM_TIMEOUT_S=` in env);
+# bare os.getenv default only fires when the var is absent, so we'd crash
+# at import time on Cloud Run if an operator cleared the row without
+# removing it.
+LLM_TIMEOUT_S = float(os.getenv('LLM_TIMEOUT_S') or '30')
 
 # ChromaDB
 CHROMA_PERSIST_DIR = os.getenv('CHROMA_PERSIST_DIR', str(BASE_DIR / 'chroma_db'))
+# BGE-M3 vectors are 1024-dim; OpenAI's were 1536-dim. The collection
+# name must change because Chroma rejects mismatched-dim inserts.
+CHROMA_COLLECTION_NAME = os.getenv('CHROMA_COLLECTION_NAME', 'psychology_kb_bgem3')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
 # Email

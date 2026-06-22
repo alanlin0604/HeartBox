@@ -38,20 +38,16 @@ CACHE_TTL_CALENDAR = 300        # 5 minutes
 CACHE_TTL_YEAR_PIXELS = 3600    # 1 hour
 CACHE_TTL_DAILY_PROMPT = 86400  # 24 hours
 
-# Lazy singleton for OpenAI client
-_openai_client = None
+def _get_llm_provider_or_none():
+    """Return the configured LLM provider, or None if it can't serve a request.
 
-
-def _get_openai_client():
-    """Return a shared OpenAI client instance (lazy-initialized)."""
-    global _openai_client
-    if _openai_client is None:
-        from openai import OpenAI
-        from django.conf import settings as django_settings
-        api_key = getattr(django_settings, 'OPENAI_API_KEY', '')
-        if api_key:
-            _openai_client = OpenAI(api_key=api_key)
-    return _openai_client
+    Replaces the legacy ``_get_openai_client()`` lazy singleton. Callers (e.g.
+    daily prompt / weekly summary) keep the same fall-back behaviour they had
+    when the OpenAI key was unset: when this returns None, skip the AI call.
+    """
+    from api.services.llm import get_llm_provider
+    provider = get_llm_provider()
+    return provider if provider.is_configured() else None
 
 
 def create_notification_if_enabled(user, notification_type, **kwargs):

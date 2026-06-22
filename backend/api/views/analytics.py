@@ -29,7 +29,7 @@ from ..services.alerts import check_mood_alerts
 
 from . import (
     CACHE_TTL_ANALYTICS, CACHE_TTL_CALENDAR, CACHE_TTL_DAILY_PROMPT,
-    CACHE_TTL_YEAR_PIXELS, _get_openai_client, _push_ws_notification,
+    CACHE_TTL_YEAR_PIXELS, _get_llm_provider_or_none, _push_ws_notification,
     create_notification_if_enabled, error_response, logger,
 )
 
@@ -370,8 +370,8 @@ class DailyPromptView(APIView):
             avg_s = recent['avg_s']
             avg_st = recent['avg_st']
 
-            client = _get_openai_client()
-            if client:
+            provider = _get_llm_provider_or_none()
+            if provider:
                 lang = request.headers.get('Accept-Language', 'zh-TW')
                 lang_map = {'zh-TW': 'Traditional Chinese', 'en': 'English', 'ja': 'Japanese'}
                 lang_name = lang_map.get(lang, 'Traditional Chinese')
@@ -381,23 +381,19 @@ class DailyPromptView(APIView):
                 if avg_st is not None:
                     mood_ctx += f"Average stress level is {avg_st:.1f}/10. "
 
-                resp = client.chat.completions.create(
-                    model='gpt-4o-mini',
-                    messages=[{
-                        'role': 'system',
-                        'content': (
-                            f'You are a gentle journaling coach. {mood_ctx}'
-                            f'Generate one short, open-ended journaling prompt in {lang_name}. '
-                            f'Keep it to ONE simple question (under 20 words). '
-                            f'The prompt should be easy to start writing from directly. '
-                            f'Avoid long instructions or multi-part questions. No quotes or labels.'
-                        ),
-                    }],
+                prompt_text = provider.chat(
+                    system=(
+                        f'You are a gentle journaling coach. {mood_ctx}'
+                        f'Generate one short, open-ended journaling prompt in {lang_name}. '
+                        f'Keep it to ONE simple question (under 20 words). '
+                        f'The prompt should be easy to start writing from directly. '
+                        f'Avoid long instructions or multi-part questions. No quotes or labels.'
+                    ),
+                    user='Generate today’s prompt.',
                     max_tokens=60,
                     temperature=0.8,
                     timeout=15,
-                )
-                prompt_text = resp.choices[0].message.content.strip()
+                ).strip()
         except Exception as e:
             logger.warning('Daily prompt generation failed: %s', e)
 

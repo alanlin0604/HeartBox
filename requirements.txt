@@ -7,10 +7,14 @@ python-dotenv==1.1.0
 psycopg2-binary==2.9.10
 cryptography==44.0.3
 langchain==0.3.25
-langchain-openai==0.3.18
 langchain-chroma==0.2.6
 chromadb==1.0.20
-openai==1.78.1
+# BGE-M3 embeddings for Chroma. Loaded inside the Django process.
+# sentence-transformers and httpx are the only hard runtime deps for the LLM
+# seam; the TAIDE / LLaVA model weights live behind the FastAPI service in
+# llm_server/ on a separate machine — see requirements-llm.txt for that side.
+sentence-transformers==5.6.0
+httpx==0.28.1
 jieba==0.42.1
 pypdf==6.8.0
 pandas==2.2.3

@@ -1,10 +1,19 @@
+"""AI companion chat (HeartBot / 小心).
+
+Talks to the LLM via ``api.services.llm.get_llm_provider()`` — no vendor SDK
+imported here. Crisis-keyword detection runs against the latest user message
+so the safety preamble + hotline string is prepended even if the underlying
+model misbehaves.
+"""
 import logging
 
 from django.conf import settings
 
+from api.services.llm import LLMProviderError, get_llm_provider
+from api.services.llm.crisis_guard import CrisisGuard
+
 logger = logging.getLogger(__name__)
 
-# Trilingual system prompts for the AI chat companion
 SYSTEM_PROMPTS = {
     'zh-TW': (
         '你是一位溫暖、專業的心理健康夥伴，名叫「小心」。'
@@ -69,44 +78,62 @@ def _get_lang(accept_language):
     return 'zh-TW'
 
 
+def _locale_for_crisis(lang: str) -> str:
+    """Map ai_chat lang code to CrisisGuard's Locale type."""
+    if lang in ('zh-TW', 'en', 'ja'):
+        return lang
+    return 'zh-TW'
+
+
 def analyze_user_message(text):
-    """Quick local sentiment analysis for a user message (no API call)."""
+    """Quick local sentiment analysis (no provider call)."""
     from api.services.ai_engine import AIEngine
     words = AIEngine._segment_text(text)
     return AIEngine._analyze_sentiment_local(words)
 
 
 def generate_ai_response(session_messages, lang='zh-TW'):
-    """
-    Generate an AI response given conversation history.
-    Uses OpenAI Chat API with the last 20 messages for context.
-    Falls back to a canned response if OpenAI is unavailable.
+    """Generate the next AI turn given conversation history.
+
+    Calls the configured LLM provider with the last 20 messages.
+    Falls back to a canned response on any provider error.
     """
     system_prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS['zh-TW'])
 
-    # Build messages list: system + last 20 messages
+    # Inspect the latest user message for crisis signals before sending.
+    last_user_text = ''
+    for msg in reversed(session_messages):
+        if getattr(msg, 'role', None) == 'user':
+            last_user_text = getattr(msg, 'content', '') or ''
+            break
+
+    crisis = CrisisGuard.detect(last_user_text, locale=_locale_for_crisis(lang))
+    if crisis is not None:
+        system_prompt = CrisisGuard.inject_preamble(system_prompt, crisis.locale)
+
     messages = [{'role': 'system', 'content': system_prompt}]
-    recent = session_messages[-20:]
-    for msg in recent:
+    for msg in session_messages[-20:]:
         messages.append({
             'role': msg.role,
             'content': msg.content,
         })
 
-    if not getattr(settings, 'OPENAI_API_KEY', None):
-        logger.warning('OPENAI_API_KEY not set, returning fallback response')
+    provider = get_llm_provider()
+    if not provider.is_configured():
+        logger.warning('LLM provider not configured, returning fallback response')
         return FALLBACK_RESPONSES.get(lang, FALLBACK_RESPONSES['zh-TW'])
 
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        response = client.chat.completions.create(
-            model=getattr(settings, 'OPENAI_MODEL', 'gpt-4o-mini'),
+        reply = provider.chat_messages(
             messages=messages,
             temperature=0.8,
             max_tokens=500,
         )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
+    except (LLMProviderError, Exception) as e:
         logger.warning('AI chat response generation failed: %s', e)
         return FALLBACK_RESPONSES.get(lang, FALLBACK_RESPONSES['zh-TW'])
+
+    # Defense-in-depth: even if the model ignored the preamble, prepend hotline.
+    if crisis is not None and crisis.severity == 'HIGH':
+        reply = CrisisGuard.prepend_hotline(reply, crisis.locale)
+    return reply
