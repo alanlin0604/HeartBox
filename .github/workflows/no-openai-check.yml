@@ -40,7 +40,7 @@ jobs:
           # variable name in code that refers to a now-removed function).
           # Env-var names stay case-sensitive (env-var convention is
           # uppercase); model names and URLs are case-insensitive.
-          PATTERN='((import|from)\s+(openai|langchain_openai)\b|OPENAI_[A-Z_]+|(?i:gpt-[0-9][0-9.o-]*|\bo[1-9]-(preview|mini|pro)\b|text-embedding-(ada|3)|api\.openai\.com))'
+          PATTERN='((import|from)\s+(openai|langchain_openai)\b|OPENAI_[A-Z_]+|(?i:gpt-[0-9][0-9.o-]*|\bo[1-9]-(preview|mini|pro)\b|text-(davinci|babbage|curie|ada)-[0-9]+|gpt-oss(-[0-9]+[a-z]?)?|text-embedding-(ada|3)|api\.openai\.com))'
 
           EXCLUDES=(
             --glob '!llm_server/**'

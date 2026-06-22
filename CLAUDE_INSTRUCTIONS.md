@@ -22,7 +22,7 @@
 幫我建立環境變數檔案
 ```
 **Claude 會建立：**
-- `backend/.env` - 包含 Django、資料庫、OpenAI、Email 設定
+- `backend/.env` - 包含 Django、資料庫、自架 LLM 伺服器（TAIDE/LLaVA）、Email 設定
 - `frontend/.env` - 包含 Vite API URL、Sentry DSN
 
 ⚠️ **你需要手動填入的敏感資訊：**

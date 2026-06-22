@@ -89,7 +89,7 @@ Demo 機：會場提供的筆電（不是這台 RTX 3060 Ti）
 
 **動作**：
 
-1. 切到 **/about/architecture** 頁（or 投影片）
+1. 切到投影片架構頁（前端 `/about/architecture` route 不存在 — 走簡報；或開 `docs/system-architecture.md` 的 ASCII 圖）
 2. 指圖：使用者 → Cloudflare Pages → Cloud Run → Cloudflare Tunnel → 家裡 GPU
 3. 強調紅線：「**這條線上沒有任何境外 AI 服務**」
 

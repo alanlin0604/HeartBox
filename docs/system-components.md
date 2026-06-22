@@ -223,7 +223,7 @@
 | 服務 | 功能 |
 |------|------|
 | `encryption.py` | Fernet AES-256 加密/解密 + 金鑰輪替（MultiFernet） |
-| `ai_engine.py` | 三級降級 AI 分析：OpenAI → 本地中文關鍵字 → 模板回覆；RAG 回饋（ChromaDB + LangChain） |
+| `ai_engine.py` | 三級降級 AI 分析：自架 TAIDE（via llm_server）→ 本地中文關鍵字 → 模板回覆（HIGH crisis 保留 hotline）；RAG 回饋（ChromaDB + bge-m3） |
 | `ai_chat.py` | AI 聊天回覆生成（20 則歷史上下文）、本地情緒分析、危機偵測、三語系統提示 |
 | `analytics.py` | 情緒趨勢、天氣相關性、日曆資料、年度像素、標籤分析、睡眠-情緒相關、感恩統計 |
 | `search.py` | 多條件筆記搜尋（日期、情緒、壓力、標籤、關鍵字） |
@@ -266,7 +266,8 @@
 | DRF | 3.16.0 | REST API |
 | SimpleJWT | 5.5.0 | JWT 認證 |
 | Channels + Daphne | 4.2.0 | WebSocket + ASGI |
-| OpenAI | 1.78.1 | GPT-4o AI 分析 |
+| sentence-transformers | 5.x | bge-m3 embedding 載入 |
+| httpx | 0.28.x | LLM provider 後端 HTTP client |
 | LangChain | 0.3.25 | RAG 框架 |
 | ChromaDB | 1.0.20 | 向量資料庫 |
 | Jieba | 0.42.1 | 中文分詞 |
@@ -377,7 +378,7 @@ CustomUser ─┬─< MoodNote ──< NoteAttachment
 | **後端** | Google Cloud Run | Daphne ASGI、自動擴縮、asia-east1 |
 | **資料庫** | Neon PostgreSQL | Serverless Postgres、自動擴縮 |
 | **儲存** | Google Cloud Storage | 附件圖片儲存 |
-| **AI** | OpenAI API | GPT-4o-mini 情緒分析 + 聊天 |
+| **AI** | 自架 llm_server（TAIDE + LLaVA + bge-m3） | 繁中情緒分析、AI 聊天、視覺分析；台灣 GPU、資料不離境 |
 | **向量庫** | ChromaDB | RAG 知識庫（LangChain 整合） |
 | **監控** | Sentry | 錯誤追蹤 + 效能監控 |
 

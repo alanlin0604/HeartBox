@@ -125,7 +125,7 @@
 - **API**：`GET /api/daily-prompt/`
 
 ### 2.8 圖像感知 AI 重新分析
-- **說明**：使用 GPT-4o Vision 結合附件圖片重新分析筆記情緒
+- **說明**：使用自架 LLaVA-v1.6-mistral-7b 結合附件圖片重新分析筆記情緒（資料不離境）
 - **前端**：`NoteDetailPage.jsx`（重新分析按鈕）
 - **後端**：`MoodNoteViewSet.reanalyze` → `ai_engine.analyze_with_images()`
 - **API**：`POST /api/notes/{id}/reanalyze/`
@@ -138,9 +138,9 @@
 - **說明**：筆記建立/更新時自動分析：情緒分數（-1.0 ~ 1.0）、壓力指數（0 ~ 10）、AI 回饋文字
 - **後端**：`MoodNoteViewSet._run_ai_analysis()` → `ai_engine.analyze()`
 - **三級降級策略**：
-  1. OpenAI GPT-4o-mini（JSON 結構化輸出）
+  1. 自架 TAIDE-LX-7B-Chat（JSON 結構化輸出，4-bit NF4 量化，台灣 GPU）
   2. 本地中文關鍵字匹配（Jieba 分詞）
-  3. 基礎模板回覆
+  3. 基礎模板回覆（HIGH crisis 仍會 prepend 1925/988/0120 hotline）
 - **RAG 強化**：情緒分數 < -0.4 時啟用 ChromaDB + LangChain 知識庫回饋
 
 ### 3.2 AI 回饋生成
@@ -148,7 +148,7 @@
 - **後端**：`services/ai_engine.py`
 - **策略**：
   - 負面情緒（< -0.4）：RAG 知識庫回饋（專業心理學建議）
-  - 其他情緒：OpenAI 個人化回饋 → 本地回饋 → 模板回饋
+  - 其他情緒：TAIDE 個人化回饋 → 本地回饋 → 模板回饋
 
 ### 3.3 多輪 AI 對話
 - **說明**：多會話制 AI 聊天助手，支援會話管理（建立、釘選、重命名、刪除）
@@ -390,7 +390,7 @@
 ### 9.1 AI 每週摘要
 - **說明**：自動生成每週情緒/壓力平均、熱門活動、AI 洞察文字
 - **前端**：`WeeklySummaryPage.jsx`
-- **後端**：`WeeklySummaryView`（OpenAI 生成 → 快取）、`WeeklySummaryListView`
+- **後端**：`WeeklySummaryView`（TAIDE 生成 → 快取）、`WeeklySummaryListView`
 - **API**：`GET /api/weekly-summary/?week_start=YYYY-MM-DD`、`GET /api/weekly-summary/list/`
 - **資料**：mood_avg、stress_avg、note_count、top_activities（JSON）、ai_summary
 
