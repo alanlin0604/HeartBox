@@ -33,7 +33,14 @@ jobs:
           #   - api.openai.com hardcoded base URLs
           #   - the bare `OpenAI(` constructor (alias-renamed imports)
           # ---------------------------------------------------------------
-          PATTERN='((import|from)\s+(openai|langchain_openai)\b|OPENAI_[A-Z_]+|gpt-[34][0-9.o-]*|text-embedding-(ada|3)|api\.openai\.com)'
+          # rg uses Rust regex; `(?i:...)` opens case-insensitive ONLY for
+          # the wrapped group so README-style `GPT-4` / `API.OPENAI.COM` are
+          # caught without making `OPENAI_[A-Z_]+` also match lowercase
+          # identifiers like ``openai_client`` (which is a legitimate
+          # variable name in code that refers to a now-removed function).
+          # Env-var names stay case-sensitive (env-var convention is
+          # uppercase); model names and URLs are case-insensitive.
+          PATTERN='((import|from)\s+(openai|langchain_openai)\b|OPENAI_[A-Z_]+|(?i:gpt-[0-9][0-9.o-]*|\bo[1-9]-(preview|mini|pro)\b|text-embedding-(ada|3)|api\.openai\.com))'
 
           EXCLUDES=(
             --glob '!llm_server/**'

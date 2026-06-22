@@ -166,17 +166,33 @@ def _verify_peer_ip(response, safe_ips: set[str], host: str) -> None:
     landed on 127.0.0.1 because the attacker flipped the zone between
     the two getaddrinfo calls (validation vs httpx-internal).
 
-    Silent if no peer info is available (e.g. mock transports in tests).
-    Raises ``ValueError`` on mismatch.
+    Uses httpcore's ``'server_addr'`` extension key — adversarial review
+    found the previous ``'peername'`` key is NOT recognized by any
+    httpcore backend (anyio / trio / sync) and silently returned None,
+    making the entire peer-verify a no-op. Verified against
+    ``httpcore/_backends/anyio.py`` which recognizes only
+    ``{ssl_object, client_addr, server_addr, socket, is_readable}``.
+
+    Fails CLOSED on missing peer info: in production every real
+    connection has a populated ``server_addr``; an absent extension
+    means a misconfigured client or test mock, and we would rather
+    reject than open the SSRF window. Tests that mock the transport
+    must inject a stub with the extension set.
     """
     stream = response.extensions.get('network_stream') if hasattr(response, 'extensions') else None
     if stream is None:
-        return
-    peer = stream.get_extra_info('peername')
-    if not peer:
-        return
-    peer_ip = peer[0] if isinstance(peer, tuple) else None
-    if peer_ip and peer_ip not in safe_ips:
+        raise ValueError(
+            f'cannot verify peer IP for {host!r}: network_stream extension '
+            'missing — refusing to fetch (would open SSRF rebind window)'
+        )
+    peer = stream.get_extra_info('server_addr')
+    if not peer or not isinstance(peer, tuple) or len(peer) < 1:
+        raise ValueError(
+            f'cannot verify peer IP for {host!r}: server_addr extension '
+            f'returned {peer!r} — refusing to fetch'
+        )
+    peer_ip = peer[0]
+    if peer_ip not in safe_ips:
         raise ValueError(
             f'DNS rebind detected for {host!r}: connected to {peer_ip}, '
             f'expected one of {sorted(safe_ips)}'

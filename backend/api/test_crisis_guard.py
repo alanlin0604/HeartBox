@@ -283,13 +283,15 @@ class TestObfuscationBypass(unittest.TestCase):
     def test_no_separator_smashed_input(self):
         # Adversarial review caught: the previous obfuscation pass skipped
         # the scan when ``normalized == text.lower()``, so ALREADY-smashed
-        # inputs slipped through. These must trigger HIGH.
+        # inputs slipped through. These (single-token compacts only) must
+        # trigger HIGH. Phrasal multi-word compacts (enditall / endmylife /
+        # dontwanttolive / jumpoff) were dropped in a later round to stop
+        # cross-clause FPs — see test_phrasal_compacts_removed_no_obfuscation_match.
         for txt in [
             'killmyself',
             'iwanttodie',
             'wantingtodie',
             'wanttokill',
-            'endmylife',
             'cutmyself',
             'selfharm',
             'suicide',
@@ -302,7 +304,9 @@ class TestObfuscationBypass(unittest.TestCase):
         # Adversarial review caught: whole-string normalize fused
         # "end it. All meetings" -> "enditall" and false-routed benign
         # English to the moderation review queue. Per-clause split MUST
-        # leave these untouched (no HIGH match).
+        # leave these untouched (no HIGH match). A second-pass review
+        # then found three further fusion-FP routes: comma-no-space,
+        # U+2026 ellipsis, and the dropped multi-word compacts.
         #
         # NOTE: cases like "Stop the press. End it all came together" are
         # NOT in this list — the raw pattern ``\bend\s+it\s+all\b`` matches
@@ -314,11 +318,35 @@ class TestObfuscationBypass(unittest.TestCase):
             'self, harm reduction is a public-health approach',
             'will kill, my self image is fine',
             'Let me end it: all the bickering must stop.',
+            # Second-pass review additions:
+            'end it,all meetings',                       # comma + no space
+            'end it…all I want is peace',                # U+2026 ellipsis
+            'end it...all I want is peace',              # ASCII ellipsis
+            'I should jump,off the deck',                # comma + no space
+            'don’t want to live in this city',       # smart-quote + benign
+            'kill, my self-image is fine',               # comma fuses kill+myself
         ]:
             m = CrisisGuard.detect(txt)
             self.assertTrue(
                 m is None or m.severity != 'HIGH',
                 f'{txt!r} should NOT trigger HIGH — got {m}',
+            )
+
+    def test_phrasal_compacts_removed_no_obfuscation_match(self):
+        # The phrasal multi-word English compacts (enditall, endmylife,
+        # dontwanttolive, jumpoff) were dropped after adversarial review
+        # because their fused form composed innocently in benign English.
+        # Smashed forms of these phrases now intentionally rely on the
+        # raw pattern (which requires whitespace between words). Verify
+        # the no-space variants are silently skipped — the trade-off the
+        # design accepts.
+        for txt in ['enditall', 'endmylife', 'dontwanttolive', 'jumpoff']:
+            m = CrisisGuard.detect(txt)
+            # These MUST not raise HIGH on the obfuscation pass alone —
+            # we documented this as the acceptable coverage loss.
+            self.assertTrue(
+                m is None or m.severity != 'HIGH',
+                f'{txt!r} no-space phrasal compact should not match HIGH',
             )
 
     def test_fullwidth_obfuscation(self):

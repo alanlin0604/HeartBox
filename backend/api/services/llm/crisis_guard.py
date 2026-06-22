@@ -88,31 +88,56 @@ _MEDIUM_COMPILED = [re.compile(p, re.IGNORECASE) for p in _MEDIUM_PATTERNS_RAW]
 #    leetspeak are NOT covered (would need a confusables table); a TODO
 #    is left in code for v2.
 _NORMALIZE = re.compile(r'[\W_]+')
-# Sentence/clause boundaries. Crucially the ``.!?`` punctuation only splits
-# when followed by whitespace or end-of-string — otherwise ``k.i.l.l`` and
-# ``我.想.死`` would be shredded into single-letter clauses and the
-# obfuscation defense the split was meant to serve would be defeated.
-# CJK full-width 。！？ + line breaks always split. Commas only split if
-# followed by whitespace (English convention) — bare commas inside a
-# tokenized identifier do not.
-_CLAUSE_SPLIT = re.compile(r'[.!?](?=\s|$)|[。！？\n]+|,(?=\s)|[;:]')
+# Sentence / clause boundaries. The split happens AFTER NFKC fold, so
+# full-width characters first map to ASCII; only the post-fold forms
+# need to appear in this regex.
+#
+#   * ``[.!?](?=\s|$)`` — ASCII period/bang/question split ONLY when
+#     followed by whitespace or end-of-string, so ``k.i.l.l`` and
+#     ``我.想.死`` (obfuscation with internal ASCII dots) are NOT shredded.
+#   * ``[。！？\n]+`` — full-width CJK sentence-enders and any newline
+#     always split, no trailing-whitespace requirement.
+#   * ``…+`` — U+2026 HORIZONTAL ELLIPSIS, AND any run of three or
+#     more ASCII dots (NFKC folds U+2026 to "..." inside the obfuscation
+#     pass). Common in informal prose / journaling
+#     ("I should end it...all I want is peace") that would otherwise
+#     fuse across the ellipsis.
+#   * ``,|[;:]`` — every comma, semicolon, colon. Adversarial review
+#     showed ``,(?=\s)`` (comma + whitespace only) let ``end it,all
+#     meetings`` (no space) fuse and FP. The unconditional split sacrifices
+#     comma-obfuscation cases like ``k,i,l,l,m,y,s,e,l,f`` (rare in
+#     practice) in exchange for not routing benign no-space-after-comma
+#     English to the moderation review queue.
+_CLAUSE_SPLIT = re.compile(r'[.!?](?=\s|$)|\.{3,}|[。！？…\n]+|[,;:]')
 
 # Compact HIGH-severity patterns: no \b, no \s+ — designed to match
 # *normalized* text where all separators have been stripped.
+#
+# Phrasal multi-word English compacts are deliberately omitted here:
+# ``enditall`` / ``endmylife`` / ``dontwanttolive`` / ``jumpoff`` were
+# all flagged by adversarial review because their components compose
+# innocently across clause boundaries with no-space punctuation
+# variants ("end it,all meetings", "end it…all I want is peace",
+# "Jump. Off the deck looks dangerous"). The raw patterns in
+# ``crisis_detector._CRISIS_PATTERNS`` still catch the legitimate
+# spaced versions; we accept losing obfuscation coverage for the
+# narrow cases of dot-separated multi-word phrases ("e.n.d i.t a.l.l")
+# rather than route benign English to the moderation review queue.
+#
+# Single-token compacts (killmyself, wanttodie, cutmyself, …) are
+# retained because their components compose into a benign phrase far
+# less often, and the obfuscation case is more common (a journaling
+# author smashing one keyword to bypass keyword scanners).
 _HIGH_OBFUSCATION_PATTERNS: list[str] = [
-    # English
+    # English — single-word + tight two-token compacts only.
     r'killmyself',
     r'want(?:ing|s|ed)?todie',
     r'wanttokill',
-    r'endmylife',
-    r'enditall',
-    r'dontwanttolive',
     r'cutmyself',
     r'selfharm',
     r'suicide',
     r'suicidal',
     r'overdose',
-    r'jumpoff',
     # zh-TW / zh-CN — CJK passes \W normalize unchanged
     r'想[要]?死',
     r'不想活',

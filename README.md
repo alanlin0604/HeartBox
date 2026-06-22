@@ -18,7 +18,7 @@
 - 💬 AI 心理諮詢對話
 - 📈 智能情緒分析
 - 💡 個性化建議與洞察
-- 🧠 基於 GPT-4 的自然語言理解
+- 🧠 基於自架 TAIDE + LLaVA 的繁中自然語言理解（資料不離境）
 
 ### 💪 健康數據整合
 - ❤️ 心率、HRV 監測
@@ -58,9 +58,11 @@
 - **加密**: Fernet (對稱加密)
 
 ### AI & 數據
-- **LLM**: OpenAI GPT-4o-mini
+- **LLM (chat)**: TAIDE-LX-7B-Chat（自架，4-bit NF4 量化）
+- **LLM (vision)**: LLaVA-v1.6-mistral-7b（自架，4-bit）
+- **Embedding**: BAAI bge-m3（自架，多語言）
 - **向量數據庫**: ChromaDB
-- **AI 框架**: LangChain
+- **AI 框架**: LangChain retriever + 自研 LLM provider seam
 - **數據分析**: Pandas, NumPy, SciPy
 
 ### 部署
@@ -249,7 +251,9 @@ HeartBox 高度重視用戶隱私和數據安全：
 
 ## 🙏 致謝
 
-- [OpenAI](https://openai.com) - GPT-4 API
+- [TAIDE](https://taide.tw/) - 繁中 LLM 模型
+- [LLaVA](https://llava-vl.github.io/) - 多模態視覺 LLM
+- [BAAI](https://huggingface.co/BAAI/bge-m3) - bge-m3 embedding model
 - [Django](https://www.djangoproject.com/) - 後端框架
 - [React](https://react.dev/) - 前端框架
 - [Tailwind CSS](https://tailwindcss.com/) - CSS 框架
