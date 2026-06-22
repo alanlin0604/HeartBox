@@ -1,0 +1,19 @@
+# Local LLM inference server stack (runs on dev machine with GPU).
+# NOT installed on production Cloud Run — heavy (~5GB), GPU-only, only
+# needed for the FastAPI inference service in llm_server/.
+#
+# Install with:
+#   .\venv\Scripts\pip.exe install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+#   .\venv\Scripts\pip.exe install -r requirements-llm.txt
+#
+# torch is omitted from this file because it must be installed from the
+# CUDA-specific PyTorch index, not PyPI. See top comment.
+
+transformers==4.46.3
+accelerate==1.14.0
+bitsandbytes==0.49.2
+sentence-transformers==5.6.0
+FlagEmbedding==1.4.0
+huggingface_hub==0.36.2
+fastapi==0.138.0
+uvicorn[standard]==0.46.0
