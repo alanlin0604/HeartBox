@@ -201,5 +201,108 @@ class TestHotlineMessageShape(unittest.TestCase):
             self.assertTrue(HOTLINE_MESSAGE[loc], f'{loc} hotline message is empty')
 
 
+class TestWantToDieAndOverdose(unittest.TestCase):
+    """Coverage for the bug-#14 gap: ``want to die`` family + overdose / jump off."""
+
+    def test_want_to_die_variants(self):
+        for txt in [
+            'I want to die',
+            'i want to die tonight',
+            'sometimes I just want to die',
+            'wanting to die for years',
+            'I wanted to die last night',
+            'she wants to die',
+        ]:
+            m = CrisisGuard.detect(txt)
+            self.assertIsNotNone(m, f'{txt!r} should match')
+            self.assertEqual(m.severity, 'HIGH', f'{txt!r} should be HIGH')
+
+    def test_overdose_pattern(self):
+        for txt in ['considering overdose tonight', 'planning an overdose']:
+            m = CrisisGuard.detect(txt)
+            self.assertIsNotNone(m, f'{txt!r} should match')
+            self.assertEqual(m.severity, 'HIGH')
+
+    def test_jump_off_pattern(self):
+        m = CrisisGuard.detect('I might jump off the bridge')
+        self.assertIsNotNone(m)
+        self.assertEqual(m.severity, 'HIGH')
+
+
+class TestObfuscationBypass(unittest.TestCase):
+    """Coverage for bug #13: separator-character obfuscation must still trip."""
+
+    def test_dot_separator_english(self):
+        m = CrisisGuard.detect('I want to k.i.l.l m.y.s.e.l.f tonight')
+        self.assertIsNotNone(m)
+        self.assertEqual(m.severity, 'HIGH')
+
+    def test_space_separator_english(self):
+        m = CrisisGuard.detect('I want to k i l l m y s e l f tonight')
+        self.assertIsNotNone(m)
+        self.assertEqual(m.severity, 'HIGH')
+
+    def test_punctuation_separator_chinese(self):
+        m = CrisisGuard.detect('我.想.死了')
+        self.assertIsNotNone(m)
+        self.assertEqual(m.severity, 'HIGH')
+
+    def test_underscored_obfuscation(self):
+        m = CrisisGuard.detect('s_u_i_c_i_d_e plan')
+        self.assertIsNotNone(m)
+        self.assertEqual(m.severity, 'HIGH')
+
+    def test_mixed_obfuscation_overdose(self):
+        m = CrisisGuard.detect('thinking about an o-v-e-r-d-o-s-e')
+        self.assertIsNotNone(m)
+        self.assertEqual(m.severity, 'HIGH')
+
+    def test_clean_text_unaffected(self):
+        # Normal text without obfuscation should still be classified normally.
+        self.assertIsNone(CrisisGuard.detect('今天和朋友吃飯，很開心'))
+
+
+class TestLocaleGuessDominantScript(unittest.TestCase):
+    """Coverage for bug #12: dominant-script wins, not first-hit."""
+
+    def test_english_dominant_over_single_cjk_char(self):
+        # Sentence is overwhelmingly English; a single CJK char should not
+        # flip the hotline to Taiwan.
+        m = CrisisGuard.detect('I really want to kill myself, mom 媽')
+        self.assertIsNotNone(m)
+        self.assertEqual(m.locale, 'en')
+
+    def test_japanese_dominant_over_english_word(self):
+        m = CrisisGuard.detect('死にたい、もう限界 kill')
+        self.assertIsNotNone(m)
+        self.assertEqual(m.locale, 'ja')
+
+    def test_chinese_dominant_unchanged(self):
+        m = CrisisGuard.detect('我真的不想活了')
+        self.assertIsNotNone(m)
+        self.assertEqual(m.locale, 'zh-TW')
+
+    def test_pure_english_unchanged(self):
+        m = CrisisGuard.detect('I want to die')
+        self.assertEqual(m.locale, 'en')
+
+    def test_no_text_falls_back_to_zh_tw(self):
+        # Numeric-only / no script chars defaults to zh-TW (capstone audience).
+        from api.services.llm.crisis_guard import CrisisGuard as G
+        self.assertEqual(G._guess_locale('1234567890'), 'zh-TW')
+
+
+class TestNoDuplicateCrisisPatterns(unittest.TestCase):
+    """Bug #20 (MEDIUM): 自殺 was listed twice. Keep dedup invariant."""
+
+    def test_no_duplicate_patterns(self):
+        from api.services.crisis_detector import _CRISIS_PATTERNS
+        self.assertEqual(
+            len(_CRISIS_PATTERNS),
+            len(set(_CRISIS_PATTERNS)),
+            'crisis_detector._CRISIS_PATTERNS contains duplicates',
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

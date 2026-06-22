@@ -66,7 +66,54 @@ _MEDIUM_PATTERNS_RAW: list[str] = [
 _HIGH_COMPILED = [re.compile(p, re.IGNORECASE) for p in _HIGH_PATTERNS_RAW]
 _MEDIUM_COMPILED = [re.compile(p, re.IGNORECASE) for p in _MEDIUM_PATTERNS_RAW]
 
-# CJK script ranges for cheap locale guessing.
+# Obfuscation defense: strip every non-word char (punctuation, whitespace,
+# underscore) then re-run a *compact* HIGH-pattern list. Catches "k.i.l.l
+# m.y.s.e.l.f", "我 . 想 . 死", "su!ic!ide" without bloating the main list
+# with combinatorial variants. CJK chars are \w in Python's default Unicode
+# regex so 想死 / 死にたい pass through normalize unchanged.
+_NORMALIZE = re.compile(r'[\W_]+')
+
+# Compact HIGH-severity patterns: no \b, no \s+ — designed to match
+# *normalized* text where all separators have been stripped.
+_HIGH_OBFUSCATION_PATTERNS: list[str] = [
+    # English
+    r'killmyself',
+    r'want(?:ing|s|ed)?todie',
+    r'wanttokill',
+    r'endmylife',
+    r'enditall',
+    r'dontwanttolive',
+    r'cutmyself',
+    r'selfharm',
+    r'suicide',
+    r'suicidal',
+    r'overdose',
+    r'jumpoff',
+    # zh-TW / zh-CN — CJK passes \W normalize unchanged
+    r'想[要]?死',
+    r'不想活',
+    r'想去死',
+    r'結束(?:生命|這一切|自己)',
+    r'自殺',
+    r'活不下去',
+    r'想要?消失',
+    r'割腕',
+    r'自殘',
+    r'吞藥',
+    # Japanese
+    r'死にたい',
+    r'消えたい',
+    r'死ぬしかない',
+    r'リストカット',
+]
+_HIGH_OBFUSCATION_COMPILED = [
+    re.compile(p, re.IGNORECASE) for p in _HIGH_OBFUSCATION_PATTERNS
+]
+
+# CJK script ranges for cheap locale guessing. ``findall`` lets us *count*
+# script characters so the dominant script wins rather than the first script
+# encountered — the prior ``search``-first behavior mis-routed "I really
+# want to kill myself, 媽" to zh-TW because of a single CJK char.
 _HIRAGANA_KATAKANA = re.compile(r'[぀-ヿ]')
 _CJK = re.compile(r'[一-鿿]')
 _ASCII_ALPHA = re.compile(r'[A-Za-z]')
@@ -153,8 +200,19 @@ class CrisisGuard:
 
         loc: Locale = locale or cls._guess_locale(text)
 
-        # HIGH first
+        # HIGH first — raw scan.
         high_hits = [p.pattern for p in _HIGH_COMPILED if p.search(text)]
+
+        # Obfuscation defense: if raw didn't hit, retry against text with all
+        # non-word separators removed. Catches "k.i.l.l m.y.s.e.l.f", "我.想.死"
+        # without forcing every pattern to enumerate separator variants.
+        if not high_hits:
+            normalized = _NORMALIZE.sub('', text.lower())
+            if normalized and normalized != text.lower():
+                high_hits = [
+                    p.pattern for p in _HIGH_OBFUSCATION_COMPILED if p.search(normalized)
+                ]
+
         if high_hits:
             return CrisisMatch(
                 severity='HIGH',
@@ -200,10 +258,17 @@ class CrisisGuard:
     # ------------------------------------------------------------------
     @staticmethod
     def _guess_locale(text: str) -> Locale:
-        if _HIRAGANA_KATAKANA.search(text):
+        # Count chars per script so the *dominant* script picks the hotline.
+        # Search-first behavior misrouted code-switching text: one CJK char in
+        # an otherwise-English sentence was routing US-style crisis content to
+        # the Taiwan hotline.
+        h = len(_HIRAGANA_KATAKANA.findall(text))
+        c = len(_CJK.findall(text))
+        a = len(_ASCII_ALPHA.findall(text))
+        if h > max(c, a):
             return 'ja'
-        if _CJK.search(text):
-            return 'zh-TW'
-        if _ASCII_ALPHA.search(text):
+        if a > max(h, c):
             return 'en'
+        if c > 0:
+            return 'zh-TW'
         return 'zh-TW'

@@ -39,15 +39,17 @@ _CRISIS_PATTERNS = [
     r'\bkill\s+myself\b',
     r'\bend\s+(?:it\s+all|my\s+life)\b',
     r"\bdon't\s+want\s+to\s+live\b",
+    r'\bwant(?:ing|s|ed)?\s+to\s+die\b',
     r'\bsuicide\b',
     r'\bsuicidal\b',
     r'\bself[-\s]?harm\b',
     r'\bcut\s+myself\b',
-    # Japanese
+    r'\boverdose\b',
+    r'\bjump\s+off\b',
+    # Japanese — 自殺 already covered under Mandarin (same CJK)
     r'死にたい',
     r'消えたい',
     r'死ぬしかない',
-    r'自殺',
     r'リストカット',
 ]
 
