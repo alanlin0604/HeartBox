@@ -44,16 +44,35 @@ class TestDetectMandarinMedium(unittest.TestCase):
             self.assertIsNotNone(m, f'{txt!r} should match')
             self.assertEqual(m.severity, 'MEDIUM', f'{txt!r} should be MEDIUM, got {m.severity}')
 
-    def test_bare_tired_no_false_positive(self):
-        # 今天上班好累 must NOT trigger — bare 累 in everyday context is fine.
-        # We test the bare-累 case that the design called out as a false-positive risk.
+    def test_好累_fires_medium_intentionally(self):
+        # 好累 IS a documented MEDIUM signal — the system intentionally
+        # nudges a softer-tone preamble for everyday mild fatigue. Pinned
+        # so a future "relax everything" refactor cannot silently drop it.
         for txt in ['今天上班好累', '昨天跑步好累', '工作好累但很充實']:
             m = CrisisGuard.detect(txt)
-            # 好累 fires MEDIUM intentionally (mood signal worth softer tone).
-            # The real false-positive guard is that BARE 累 does not fire.
-            if m is not None:
-                self.assertEqual(m.severity, 'MEDIUM',
-                                 f'{txt!r}: only MEDIUM allowed for mild fatigue')
+            self.assertIsNotNone(m, f'{txt!r} should match MEDIUM')
+            self.assertEqual(m.severity, 'MEDIUM')
+
+    def test_bare_tired_no_match(self):
+        # Bare 累 / 累了 without any 好/真的/活著 prefix MUST NOT trigger —
+        # this is the original false-positive risk the design called out
+        # (every Taiwanese says "我累了" at the end of the day). The prior
+        # ``if m is not None`` shape passed trivially even when the bug
+        # returned; this is the stronger assertion that would actually
+        # catch a regression.
+        for txt in ['我累', '累', '累了']:
+            self.assertIsNone(
+                CrisisGuard.detect(txt),
+                f'{txt!r} (bare fatigue) should NOT trigger crisis',
+            )
+
+    def test_想消失_now_matches(self):
+        # Adversarial review caught: _CRISIS_PATTERNS required 要 ("想要消失")
+        # but the obfuscation list allowed optional 要 ("想要?消失"), so
+        # bare "我想消失" was silently missed. Both lists now use 想要?消失.
+        m = CrisisGuard.detect('我想消失')
+        self.assertIsNotNone(m, '想消失 should match HIGH')
+        self.assertEqual(m.severity, 'HIGH')
 
     def test_medium_not_in_review_queue(self):
         self.assertFalse(CrisisGuard.should_review_queue('撐不下去'))
@@ -260,6 +279,60 @@ class TestObfuscationBypass(unittest.TestCase):
     def test_clean_text_unaffected(self):
         # Normal text without obfuscation should still be classified normally.
         self.assertIsNone(CrisisGuard.detect('今天和朋友吃飯，很開心'))
+
+    def test_no_separator_smashed_input(self):
+        # Adversarial review caught: the previous obfuscation pass skipped
+        # the scan when ``normalized == text.lower()``, so ALREADY-smashed
+        # inputs slipped through. These must trigger HIGH.
+        for txt in [
+            'killmyself',
+            'iwanttodie',
+            'wantingtodie',
+            'wanttokill',
+            'endmylife',
+            'cutmyself',
+            'selfharm',
+            'suicide',
+        ]:
+            m = CrisisGuard.detect(txt)
+            self.assertIsNotNone(m, f'{txt!r} should match HIGH (no-separator case)')
+            self.assertEqual(m.severity, 'HIGH', f'{txt!r} should be HIGH')
+
+    def test_cross_sentence_does_not_fuse(self):
+        # Adversarial review caught: whole-string normalize fused
+        # "end it. All meetings" -> "enditall" and false-routed benign
+        # English to the moderation review queue. Per-clause split MUST
+        # leave these untouched (no HIGH match).
+        #
+        # NOTE: cases like "Stop the press. End it all came together" are
+        # NOT in this list — the raw pattern ``\bend\s+it\s+all\b`` matches
+        # them legitimately and that's a coverage-vs-precision trade-off
+        # of the keyword approach, not a normalize-fusion bug.
+        for txt in [
+            'The boss said end it. All meetings cancelled.',
+            'Jump. Off the deck looks dangerous.',
+            'self, harm reduction is a public-health approach',
+            'will kill, my self image is fine',
+            'Let me end it: all the bickering must stop.',
+        ]:
+            m = CrisisGuard.detect(txt)
+            self.assertTrue(
+                m is None or m.severity != 'HIGH',
+                f'{txt!r} should NOT trigger HIGH — got {m}',
+            )
+
+    def test_fullwidth_obfuscation(self):
+        # Adversarial review caught: full-width IME chars (ｋｉｌｌ ｍｙｓｅｌｆ)
+        # passed straight through. NFKC normalization in the obfuscation
+        # path must fold these back to ASCII before pattern matching.
+        for txt in [
+            'ｋｉｌｌ ｍｙｓｅｌｆ',
+            'ｓｕｉｃｉｄｅ tonight',
+            'ｗａｎｔ ｔｏ ｄｉｅ',
+        ]:
+            m = CrisisGuard.detect(txt)
+            self.assertIsNotNone(m, f'{txt!r} (full-width) should match HIGH')
+            self.assertEqual(m.severity, 'HIGH')
 
 
 class TestLocaleGuessDominantScript(unittest.TestCase):

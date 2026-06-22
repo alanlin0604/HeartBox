@@ -24,6 +24,7 @@ detection.
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -66,12 +67,35 @@ _MEDIUM_PATTERNS_RAW: list[str] = [
 _HIGH_COMPILED = [re.compile(p, re.IGNORECASE) for p in _HIGH_PATTERNS_RAW]
 _MEDIUM_COMPILED = [re.compile(p, re.IGNORECASE) for p in _MEDIUM_PATTERNS_RAW]
 
-# Obfuscation defense: strip every non-word char (punctuation, whitespace,
-# underscore) then re-run a *compact* HIGH-pattern list. Catches "k.i.l.l
-# m.y.s.e.l.f", "我 . 想 . 死", "su!ic!ide" without bloating the main list
-# with combinatorial variants. CJK chars are \w in Python's default Unicode
-# regex so 想死 / 死にたい pass through normalize unchanged.
+# Obfuscation defense — three pieces that together close the gaps the
+# adversarial review surfaced:
+#
+# 1. ``_NORMALIZE`` strips every \W_ char (punctuation, whitespace,
+#    underscore) within a clause. CJK chars are \w in Python's default
+#    Unicode regex, so 想死 / 死にたい pass through unchanged.
+#
+# 2. ``_CLAUSE_SPLIT`` splits text on sentence-ending punctuation (. ! ? \n)
+#    or clause-ending separators (, followed by whitespace, ; :) BEFORE
+#    normalize runs. Without this, "end it. All meetings cancelled" would
+#    fuse to "enditall" and falsely route benign English to the moderation
+#    review queue. Per-clause normalization preserves the legitimate
+#    bypass case (``k.i.l.l m.y.s.e.l.f`` lives entirely inside one
+#    clause and still fuses to ``killmyself``).
+#
+# 3. ``unicodedata.normalize('NFKC', text)`` folds full-width ASCII
+#    (ｋｉｌｌ U+FF21-FF5A, common on Japanese/Chinese IMEs) back to plain
+#    ASCII before pattern matching. Cyrillic/Greek homoglyphs and
+#    leetspeak are NOT covered (would need a confusables table); a TODO
+#    is left in code for v2.
 _NORMALIZE = re.compile(r'[\W_]+')
+# Sentence/clause boundaries. Crucially the ``.!?`` punctuation only splits
+# when followed by whitespace or end-of-string — otherwise ``k.i.l.l`` and
+# ``我.想.死`` would be shredded into single-letter clauses and the
+# obfuscation defense the split was meant to serve would be defeated.
+# CJK full-width 。！？ + line breaks always split. Commas only split if
+# followed by whitespace (English convention) — bare commas inside a
+# tokenized identifier do not.
+_CLAUSE_SPLIT = re.compile(r'[.!?](?=\s|$)|[。！？\n]+|,(?=\s)|[;:]')
 
 # Compact HIGH-severity patterns: no \b, no \s+ — designed to match
 # *normalized* text where all separators have been stripped.
@@ -109,6 +133,25 @@ _HIGH_OBFUSCATION_PATTERNS: list[str] = [
 _HIGH_OBFUSCATION_COMPILED = [
     re.compile(p, re.IGNORECASE) for p in _HIGH_OBFUSCATION_PATTERNS
 ]
+
+
+def _obfuscation_hits(text: str) -> list[str]:
+    """Per-clause normalized scan against the compact HIGH list.
+
+    NFKC folds full-width input first so ``ｋｉｌｌ ｍｙｓｅｌｆ`` is folded to
+    ``kill myself`` before normalization. Returns the list of matched
+    pattern strings (empty = no obfuscation hit).
+    """
+    folded = unicodedata.normalize('NFKC', text).lower()
+    hits: list[str] = []
+    for clause in _CLAUSE_SPLIT.split(folded):
+        normalized = _NORMALIZE.sub('', clause)
+        if not normalized:
+            continue
+        for p in _HIGH_OBFUSCATION_COMPILED:
+            if p.search(normalized):
+                hits.append(p.pattern)
+    return hits
 
 # CJK script ranges for cheap locale guessing. ``findall`` lets us *count*
 # script characters so the dominant script wins rather than the first script
@@ -203,15 +246,15 @@ class CrisisGuard:
         # HIGH first — raw scan.
         high_hits = [p.pattern for p in _HIGH_COMPILED if p.search(text)]
 
-        # Obfuscation defense: if raw didn't hit, retry against text with all
-        # non-word separators removed. Catches "k.i.l.l m.y.s.e.l.f", "我.想.死"
-        # without forcing every pattern to enumerate separator variants.
+        # Obfuscation defense: per-clause normalized scan. Runs unconditionally
+        # when raw missed — including the no-separator case ``killmyself`` that
+        # an earlier version of this guard skipped because the normalized text
+        # equalled the input. Per-clause split prevents cross-sentence fusion
+        # (``end it. All meetings`` no longer collapses to ``enditall``).
         if not high_hits:
-            normalized = _NORMALIZE.sub('', text.lower())
-            if normalized and normalized != text.lower():
-                high_hits = [
-                    p.pattern for p in _HIGH_OBFUSCATION_COMPILED if p.search(normalized)
-                ]
+            obf_hits = _obfuscation_hits(text)
+            if obf_hits:
+                high_hits = obf_hits
 
         if high_hits:
             return CrisisMatch(
