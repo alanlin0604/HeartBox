@@ -27,7 +27,7 @@
 
 ⚠️ **你需要手動填入的敏感資訊：**
 - `DJANGO_SECRET_KEY` - Django 金鑰
-- `OPENAI_API_KEY` - OpenAI API 金鑰
+- `LLM_SERVER_URL` 與 `LLM_SERVER_API_KEY` - 自架 TAIDE/LLaVA 伺服器設定
 - `EMAIL_HOST_PASSWORD` - Email 密碼
 - `DATABASE_URL` - 資料庫連線字串（選填）
 
@@ -84,7 +84,7 @@
 
 ### 必須
 - [ ] `DJANGO_SECRET_KEY` - Django 金鑰
-- [ ] `OPENAI_API_KEY` - OpenAI API 金鑰
+- [ ] `LLM_SERVER_URL` 與 `LLM_SERVER_API_KEY` - 自架 LLM 伺服器
 - [ ] `EMAIL_HOST_PASSWORD` - support@heartbox.tw 的密碼
 
 ### 選填

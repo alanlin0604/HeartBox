@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import abc
 import json
-import re
 from typing import Literal
 
 
@@ -80,7 +79,7 @@ class LLMProvider(abc.ABC):
         Raises ``LLMProviderError`` if the model output cannot be coerced to JSON.
         ``schema_hint`` (optional) is appended to the system prompt to nudge the
         model toward the right shape — small local models need this more than
-        gpt-4o-mini did.
+        larger hosted models do.
         """
 
     def vision(
@@ -104,6 +103,42 @@ class LLMProvider(abc.ABC):
     # Tolerant JSON parsing — shared across all providers because small
     # local models love to add markdown fences or trailing commentary.
     # ------------------------------------------------------------------
+    @staticmethod
+    def _first_balanced_json_object(text: str) -> str | None:
+        """Return the substring of the FIRST balanced ``{ ... }`` block, or
+        None. Walks the text once, tracks brace depth, and respects
+        backslash-escaped quotes inside strings — so multi-object output
+        like ``{ "a": 1 }\\n{ "b": 2 }`` returns just ``{ "a": 1 }`` instead
+        of ``re.search(r'\\{[\\s\\S]*\\}')`` greedily swallowing both into a
+        single unparseable blob."""
+        start = text.find('{')
+        if start < 0:
+            return None
+        depth = 0
+        in_string = False
+        escape = False
+        for i in range(start, len(text)):
+            c = text[i]
+            if escape:
+                escape = False
+                continue
+            if in_string:
+                if c == '\\':
+                    escape = True
+                elif c == '"':
+                    in_string = False
+                continue
+            if c == '"':
+                in_string = True
+                continue
+            if c == '{':
+                depth += 1
+            elif c == '}':
+                depth -= 1
+                if depth == 0:
+                    return text[start:i + 1]
+        return None
+
     @staticmethod
     def parse_json_tolerant(raw: str) -> dict:
         """Extract a JSON object from a model response that may contain
@@ -135,11 +170,12 @@ class LLMProvider(abc.ABC):
         except (ValueError, json.JSONDecodeError):
             pass
 
-        # Fallback: find first balanced { ... }
-        match = re.search(r'\{[\s\S]*\}', text)
-        if match:
+        # Fallback: find first balanced { ... } using a brace-depth walker
+        # rather than a greedy regex (which would swallow trailing prose).
+        candidate = LLMProvider._first_balanced_json_object(text)
+        if candidate:
             try:
-                parsed = json.loads(match.group(0))
+                parsed = json.loads(candidate)
                 if isinstance(parsed, dict):
                     return parsed
             except (ValueError, json.JSONDecodeError) as e:

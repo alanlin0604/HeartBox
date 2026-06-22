@@ -149,8 +149,10 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/heartbox
 
-# OpenAI
-OPENAI_API_KEY=your-openai-key
+# Self-hosted LLM server (TAIDE + LLaVA)
+LLM_PROVIDER=remote_taide
+LLM_SERVER_URL=https://your-llm-server.example.com
+LLM_SERVER_API_KEY=your-llm-server-key
 
 # Email (GoDaddy SMTP)
 EMAIL_HOST=smtpout.secureserver.net
@@ -266,7 +268,7 @@ gcloud config set run/region asia-east1
 
 ### 必須備份
 - [ ] Django `DJANGO_SECRET_KEY`
-- [ ] `OPENAI_API_KEY`
+- [ ] `LLM_SERVER_URL` 與 `LLM_SERVER_API_KEY`（自架 TAIDE/LLaVA）
 - [ ] Email 密碼 (`EMAIL_HOST_PASSWORD`)
 - [ ] Google Cloud 服務帳號金鑰
 - [ ] GitHub Personal Access Token（如果有）

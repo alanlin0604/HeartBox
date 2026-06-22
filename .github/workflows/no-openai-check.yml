@@ -37,9 +37,10 @@ jobs:
             --glob '!docs/**'
             --glob '!research/**'
             --glob '!**/CHANGELOG*'
-            --glob '!**/.env.example'
+            --glob '!**/.env*.example'
             --glob '!**/migrations/**'
             --glob '!**/*.lock'
+            --glob '!HANDOFF_*.md'
           )
 
           if rg -n -e "$PATTERN" "${EXCLUDES[@]}" .; then

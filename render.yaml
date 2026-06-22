@@ -20,7 +20,11 @@ services:
         sync: false
       - key: ENCRYPTION_KEY
         sync: false
-      - key: OPENAI_API_KEY
+      - key: LLM_PROVIDER
+        value: "remote_taide"
+      - key: LLM_SERVER_URL
+        sync: false
+      - key: LLM_SERVER_API_KEY
         sync: false
       - key: REDIS_URL
         sync: false

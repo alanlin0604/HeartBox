@@ -1,14 +1,16 @@
 """Factory for the singleton LLMProvider.
 
-Dispatches on ``settings.LLM_PROVIDER``:
+Dispatches on ``settings.LLM_PROVIDER``. Exactly two backends are supported
+in production code as of the Phase 0b OpenAI cut-over:
 
 * ``remote_taide`` (default) – ``RemoteTAIDEProvider`` talking to the FastAPI
   inference server (TAIDE/LLaVA) over an OpenAI-compatible HTTP API.
 * ``mock`` – ``MockProvider`` for unit tests. Deterministic, no network.
-* ``openai`` – legacy escape hatch. ``OpenAIProvider`` is NOT shipped by
-  default; the user must add it back if they want to revert. Listed here so
-  the failure mode is "ImportError at provider construction" rather than
-  "silently downgrades to mock".
+
+Any other value raises ``LLMProviderError`` at construction. There is NO
+``openai`` provider — that branch was removed deliberately so the OpenAI
+escape hatch can't be flipped back on by a misconfigured env var without
+re-adding the dependency.
 
 Singleton with double-checked locking to mirror the existing ``AIEngine``
 pattern — required because ``_run_full_analysis`` is sometimes called from

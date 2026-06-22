@@ -125,7 +125,11 @@ class RemoteTAIDEProvider(LLMProvider):
         except httpx.HTTPError as e:
             status = 'network'
             raise LLMProviderError(f'network error calling {model}: {e}') from e
-        except (ValueError, KeyError) as e:
+        except (ValueError, KeyError, AttributeError, TypeError) as e:
+            # AttributeError / TypeError: server returned an unexpected shape
+            # (e.g. ``data`` is a list, or ``choices[0]`` is a string), and
+            # the chained ``.get(...)`` blew up. Treat the same as parse error
+            # so callers only ever have to handle LLMProviderError.
             status = 'parse'
             raise LLMProviderError(f'parse error from {model}: {e}') from e
         finally:
@@ -195,7 +199,7 @@ class RemoteTAIDEProvider(LLMProvider):
         timeout: float | None = None,
     ) -> dict:
         # Append schema hint to nudge small models. TAIDE-LX-7B is less reliable
-        # at JSON than gpt-4o-mini, so we double down on the instruction.
+        # at JSON than larger hosted models, so we double down on the instruction.
         sys_with_hint = system
         if schema_hint:
             sys_with_hint = (

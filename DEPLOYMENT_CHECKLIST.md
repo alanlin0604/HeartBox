@@ -10,7 +10,9 @@ Set these in your hosting platform:
 - `CORS_ALLOWED_ORIGINS=<frontend-domain>`
 - `CSRF_TRUSTED_ORIGINS=<frontend-domain>`
 - `ENCRYPTION_KEY=<fernet-key>`
-- `OPENAI_API_KEY=<optional>`
+- `LLM_PROVIDER=remote_taide` (or `mock` for tests)
+- `LLM_SERVER_URL=<llm-server-url>`
+- `LLM_SERVER_API_KEY=<llm-server-api-key>`
 - `FRONTEND_URL=<frontend-domain>`
 - `DEFAULT_FROM_EMAIL=<noreply address>`
 - `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`

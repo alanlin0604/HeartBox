@@ -127,6 +127,11 @@ If TAIDE is hallucinating badly under demo pressure:
    ```
 2. Restart `start.bat`.
 
-If the entire local stack is broken on demo day, flip the Cloud Run env
-`LLM_PROVIDER=openai` + restore `OPENAI_API_KEY`. **This sends user data
-offshore** — disclose this trade-off to the committee if you take this path.
+If the entire local stack is broken on demo day, the safest fallback is
+`LLM_PROVIDER=mock` — every endpoint returns deterministic canned text
+without sending user data anywhere. The OpenAI escape hatch was removed
+in Phase 0b (no `openai` value is accepted by the factory, and the
+no-openai CI guard would block any attempt to re-add it). If a cloud
+LLM is genuinely required for the demo, add a new provider class behind
+its own opt-in env var and disclose the data-residency trade-off to the
+committee before flipping it.

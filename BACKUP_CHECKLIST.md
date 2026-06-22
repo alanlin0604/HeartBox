@@ -53,10 +53,10 @@
   - 變數名：`DJANGO_SECRET_KEY`
   - 生成方式：`python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`
   
-- [ ] **OpenAI API Key** - AI 功能必需
-  - 來源：OpenAI Dashboard (https://platform.openai.com/api-keys)
-  - 變數名：`OPENAI_API_KEY`
-  - ⚠️ 如果遺失需要重新生成
+- [ ] **自架 LLM Server (TAIDE + LLaVA)** - AI 功能必需
+  - 來源：自行部署的 `llm_server/`（見 `docs/llm-runbook.md`）
+  - 變數名：`LLM_SERVER_URL`、`LLM_SERVER_API_KEY`
+  - ⚠️ 如果 API key 遺失，可在 LLM server 端重新生成
   
 - [ ] **Email 密碼** - GoDaddy SMTP
   - 帳號：`support@heartbox.tw`
