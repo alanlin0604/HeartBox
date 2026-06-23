@@ -124,7 +124,20 @@ class AIEngine:
     # --- RAG retrieval (no LangChain RetrievalQA) --------------------------
 
     def _get_retriever(self):
-        """Lazy-load Chroma retriever using BGE-M3 embeddings."""
+        """Lazy-load Chroma retriever using BGE-M3 embeddings.
+
+        Auto-bootstrap behavior: if the configured collection is empty AND
+        ``backend/knowledge_base/`` contains .txt/.pdf source files, we
+        run ``load_knowledge_base`` inline before returning. This makes
+        Cloud Run (stateless, no persistent disk) work without operator
+        intervention — the first warm-up after a cold deploy populates
+        the local ChromaDB on disk; ``min_instances=1`` then keeps that
+        disk alive for the lifetime of the revision.
+
+        The bootstrap cost (5-30s) is paid by the ``apps.ready()``
+        background pre-warm thread, NOT by a user request, because that
+        thread calls ``ai_engine._get_retriever()`` at process startup.
+        """
         if self._retriever is not None:
             return self._retriever
 
@@ -133,8 +146,7 @@ class AIEngine:
 
             persist_dir = settings.CHROMA_PERSIST_DIR
             if not os.path.exists(persist_dir):
-                logger.info('ChromaDB directory not found — RAG unavailable')
-                return None
+                os.makedirs(persist_dir, exist_ok=True)
 
             from api.services.llm.embeddings import BgeM3Embeddings
             collection_name = getattr(settings, 'CHROMA_COLLECTION_NAME', 'psychology_kb_bgem3')
@@ -145,8 +157,39 @@ class AIEngine:
                 collection_name=collection_name,
             )
             if vectorstore._collection.count() == 0:
-                logger.info('ChromaDB collection %s is empty — RAG unavailable', collection_name)
-                return None
+                kb_dir = os.path.join(settings.BASE_DIR, 'knowledge_base')
+                has_source = (
+                    os.path.isdir(kb_dir)
+                    and any(f.endswith(('.txt', '.pdf')) for f in os.listdir(kb_dir))
+                )
+                if has_source and not os.getenv('CHROMA_DISABLE_AUTO_BOOTSTRAP'):
+                    logger.info(
+                        'ChromaDB collection %s empty — auto-bootstrapping from %s',
+                        collection_name, kb_dir,
+                    )
+                    try:
+                        from django.core.management import call_command
+                        call_command('load_knowledge_base', verbosity=0)
+                    except Exception as e:
+                        logger.warning('Auto-bootstrap failed: %s', e)
+                        return None
+                    # Re-init vectorstore so the count picks up the new chunks.
+                    vectorstore = Chroma(
+                        persist_directory=persist_dir,
+                        embedding_function=BgeM3Embeddings(),
+                        collection_name=collection_name,
+                    )
+                    if vectorstore._collection.count() == 0:
+                        logger.warning(
+                            'Auto-bootstrap completed but collection still empty — RAG unavailable'
+                        )
+                        return None
+                else:
+                    logger.info(
+                        'ChromaDB collection %s empty and no knowledge_base/ — RAG unavailable',
+                        collection_name,
+                    )
+                    return None
 
             self._retriever = vectorstore.as_retriever(search_kwargs={'k': 3})
             return self._retriever
