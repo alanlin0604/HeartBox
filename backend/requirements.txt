@@ -1,3 +1,9 @@
+# Force CPU-only torch wheels so sentence-transformers does not pull
+# the 10+ GB nvidia-cublas / cuda-toolkit stack into the Cloud Run image.
+# Cloud Run heartbox-api runs on CPU only — TAIDE / LLaVA / GPU inference
+# live in the separate llm_server/ service on the home GPU box.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 Django==5.2.12
 djangorestframework==3.16.0
 djangorestframework-simplejwt==5.5.1
@@ -13,6 +19,9 @@ chromadb==1.0.20
 # sentence-transformers and httpx are the only hard runtime deps for the LLM
 # seam; the TAIDE / LLaVA model weights live behind the FastAPI service in
 # llm_server/ on a separate machine — see requirements-llm.txt for that side.
+# Pin torch to the CPU wheel explicitly so transitive resolution prefers
+# the CPU index (otherwise sentence-transformers triggers nvidia-cublas pull).
+torch==2.12.1+cpu
 sentence-transformers==5.6.0
 httpx==0.28.1
 jieba==0.42.1
