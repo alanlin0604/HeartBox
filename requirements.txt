@@ -22,7 +22,8 @@ scipy==1.15.3
 scikit-learn==1.5.2
 joblib==1.4.2
 reportlab==4.4.0
-channels[daphne]==4.2.0
+channels==4.2.0
+daphne==4.2.1                # ASGI server (was implied by channels[daphne], now explicit for buildpack)
 channels-redis==4.2.1
 whitenoise==6.8.2
 django-storages[google]==1.14.4
