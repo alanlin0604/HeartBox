@@ -1,0 +1,42 @@
+Django==5.2.12
+djangorestframework==3.16.0
+djangorestframework-simplejwt==5.5.1
+django-cors-headers==4.7.0
+dj-database-url==2.3.0
+python-dotenv==1.1.0
+psycopg2-binary==2.9.10
+cryptography==44.0.3
+langchain==0.3.25
+langchain-chroma==0.2.6
+chromadb==1.0.20
+# BGE-M3 embeddings for Chroma. Loaded inside the Django process.
+# sentence-transformers and httpx are the only hard runtime deps for the LLM
+# seam; the TAIDE / LLaVA model weights live behind the FastAPI service in
+# llm_server/ on a separate machine — see requirements-llm.txt for that side.
+sentence-transformers==5.6.0
+httpx==0.28.1
+jieba==0.42.1
+pypdf==6.8.0
+pandas==2.2.3
+scipy==1.15.3
+scikit-learn==1.5.2
+joblib==1.4.2
+reportlab==4.4.0
+channels==4.2.0
+daphne==4.2.1                # ASGI server (was implied by channels[daphne], now explicit for buildpack)
+channels-redis==4.2.1
+whitenoise==6.8.2
+django-storages[google]==1.14.4
+Pillow==12.1.1
+sentry-sdk[django]==2.19.2
+pyotp==2.9.0
+qrcode==8.0
+django-allauth[socialaccount]==65.14.1
+pywebpush==2.0.1
+celery==5.4.0
+redis>=5.0.0
+django-celery-beat==2.8.1
+drf-spectacular==0.28.0
+matplotlib==3.10.0
+numpy==2.2.6
+openpyxl==3.1.5
