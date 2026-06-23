@@ -17,26 +17,64 @@
 
 ---
 
-## 你剩下要做的（只剩 1-2 件，其他都做完了）
+## 你剩下要做的（**只剩 1 件**，其他全部做完了）
+
+⚠️ Production 部署完成 — 詳見下方「部署狀態速查」+「踩雷記錄」。
+
+
 
 | # | 項目 | 必要性 | 狀態 | 備註 |
 |---|---|---|---|---|
 | ~~1~~ | ~~Cloudflare Tunnel~~ | ✅ DONE | — | tunnel UUID `6612d45e-3ea1-49c3-91c9-19050dd7b1a4`、DNS CNAME + ingress 都寫好、外網 https://llm.heartbox.tw 可用 |
 | ~~2~~ | ~~Production env 變數~~ | ✅ DONE | — | Cloud Run heartbox-api 已切 `LLM_PROVIDER=remote_taide`、`LLM_SERVER_URL`、key 等 7 個變數；舊 OPENAI_* 已 remove |
 | ~~3~~ | ~~Production 灌 knowledge base~~ | ✅ DONE (code) | — | `_get_retriever` 改成 auto-bootstrap，配 bge-m3 pre-warm 自動建索引；等新 image deploy 後生效 |
-| **4** | **NSSM 包 llm_server 成 service** | 🟡 強烈建議 | ⏳ 待你做 | 需要系統管理員 PowerShell + UAC，我做不來 |
+| **4-prod-deploy** | Production deploy 新 image（revision `00175-ftm`）+ 補完 36 env vars + 2Gi/2vCPU/--cpu-boost/--timeout=300 | ✅ DONE | 10 次 deploy 才通過，踩雷記錄見最下面 |
+| **5 NSSM** | **NSSM 包 llm_server 成 service** | 🟡 強烈建議 | ⏳ 待你做 | 需要系統管理員 PowerShell + UAC，我做不來 |
 | 5 | **GPU monitor 視窗** | 🟡 建議 | ✅ 隨時可用 | 跑 `.\scripts\gpu-monitor.ps1` 就好 |
 | ~~6~~ | ~~Mock fallback Cloud Run revision~~ | ✅ DONE | — | `heartbox-api-00198-ful` (LLM_PROVIDER=mock, 0% traffic) 待命 |
 | ~~7~~ | ~~API key rotation 演練~~ | ✅ DONE (script) | — | `scripts/rotate-llm-key.ps1` 寫好 wizard，要演練時跑它即可 |
 
 **剩下唯一你必須親自動的是 §4 NSSM service**（要 UAC admin），其他全部我已搞定。
 
+## Production 部署狀態速查
+
+```
+Cloud Run: heartbox-api / asia-east1
+  active:    heartbox-api-00175-ftm @100% traffic
+  standby:   heartbox-api-00198-ful  @0% (mock-fallback tag)
+  config:    2Gi memory, 2 vCPU, min=max=1 instance, --cpu-boost on, --timeout 300
+  env:       LLM_PROVIDER=remote_taide --> https://llm.heartbox.tw (你家 GPU)
+             DISABLE_AI_PREWARM=1 (避免 cold-start OOM；RAG 暫降級 tier-2)
+             PYTHONUNBUFFERED=1 (確保 stderr 進 Cloud Logging)
+             CHROMA_PERSIST_DIR=/tmp/chroma_db (Cloud Run 唯一可寫位置)
+  image:     sha256:53dfb549... (Python 3.13, daphne, CPU-only torch 2.12.1)
+
+Frontend:   https://heartbox.tw 正常服務
+Cron OK:    /api/internal/cron/weekly-summaries/ 200 in 4.1s
+            /api/internal/cron/habit-reminders/  200 (每 15 分鐘自動跑)
+```
+
 緊急切流量到 mock fallback（GPU 掛時用）：
 ```powershell
 gcloud run services update-traffic heartbox-api --region=asia-east1 --to-revisions=heartbox-api-00198-ful=100
 # 切回正常：
-gcloud run services update-traffic heartbox-api --region=asia-east1 --to-latest
+gcloud run services update-traffic heartbox-api --region=asia-east1 --to-revisions=heartbox-api-00175-ftm=100
 ```
+
+## ⚠️ Production 部署踩過的雷（給未來的你 / 其他人接手用）
+
+連續 10 次 deploy 才通過。每次失敗都暴露新一層問題，記下來避免下次再踩：
+
+1. **Cloud Run buildpack 不再支援 Python 3.12** — 新 builder（universal_builder_20260614）只給 3.13/3.14。Pin in `backend/.python-version`。
+2. **Python 3.14 wheels 尚未齊全** — `psycopg2-binary` 沒 cp314 wheel，pip 嘗試 source build 撞 `pg_config` 缺失。Pin 3.13。
+3. **buildpack 從 `--source` root 找 `requirements.txt`** — `gcloud run deploy --source=backend` 看 `backend/requirements.txt`，不是 repo root 的。要 mirror。
+4. **buildpack 不認 `channels[daphne]` extras** — pip 不裝 daphne 雖然 requirements 有 extras。拆兩行 explicit `channels==X` + `daphne==Y`。
+5. **Procfile 用 bare `daphne` 找不到** — PATH 沒接到 venv bin。改用 `python -m daphne`。
+6. **sentence-transformers 預設拉 CUDA torch** — `torch-2.12.1` 拉了 10 GB nvidia-cublas / cuda-toolkit，container OOM。requirements.txt 加 `--extra-index-url https://download.pytorch.org/whl/cpu` + pin `torch==2.12.1+cpu`。
+7. **`gcloud run deploy --source=backend` 上傳整個 venv** — 5.7 GB Windows venv 進 build context。建 `backend/.gcloudignore` 排除 `venv/` 等。
+8. **`--set-env-vars` 會洗掉所有現有 env vars** — 我用 `--set-env-vars="PYTHONUNBUFFERED=1,..."` 結果把 `DJANGO_SECRET_KEY` / `DATABASE_URL` / 30 個其他 var 全刪掉，container exit 1 在 settings.py import time。要用 `--update-env-vars` 漸進式 patch，或用 `--env-vars-file=full.yaml` 一次性回填全部。
+9. **settings.py `raise RuntimeError(...)` 在 logging 配置前 fire** — 任何 env var 缺失 → 退出 1，stderr 在 Cloud Logging 沒接到（除非設 `PYTHONUNBUFFERED=1`）。看似 silent exit，實際是 traceback 沒 flush。
+10. **gcloud 顯示的 failed revision 名常是過時的** — 連續 deploy 失敗時 error message 會卡在最早失敗的 revision name。要自己看 `revisions list` 抓真正的 latest。
 
 ## §1 Cloudflare Tunnel — 已完成記錄（給將來的你）
 
