@@ -17,3 +17,8 @@ FlagEmbedding==1.4.0
 huggingface_hub==0.36.2
 fastapi==0.138.0
 uvicorn[standard]==0.46.0
+# pydantic-settings is required by llm_server/config.py to load API_KEY
+# and friends from ~/.heartbox-llm.env. Without it the config silently
+# falls back to BaseModel (no env-file support) and start.bat dies with
+# RuntimeError('API_KEY missing') despite the file existing.
+pydantic-settings==2.11.0
