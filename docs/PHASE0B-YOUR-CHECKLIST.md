@@ -17,19 +17,26 @@
 
 ---
 
-## 你剩下要做的（6 件事，§1 已劃掉）
+## 你剩下要做的（只剩 1-2 件，其他都做完了）
 
-| # | 項目 | 必要性 | 預估時間 | 為什麼非做不可 |
+| # | 項目 | 必要性 | 狀態 | 備註 |
 |---|---|---|---|---|
-| ~~1~~ | ~~Cloudflare Tunnel~~ | ✅ DONE | — | tunnel UUID `6612d45e-3ea1-49c3-91c9-19050dd7b1a4`，DNS CNAME + ingress rule 都寫好 |
-| 2 | **Production env 變數** | 🔴 必做 | 10 分 | `render.yaml` 只宣告 key，dashboard 要實際填值 |
-| 3 | **Production 灌 knowledge base** | 🔴 必做 | 5 分 | 新 collection `psychology_kb_bgem3` 是 1024-dim，prod 要重灌 |
-| 4 | **NSSM 包 llm_server 成 service** | 🟡 強烈建議 | 15 分 | 沒 auto-restart 一掛就掛（剛剛重啟過一次） |
-| 5 | **GPU monitor 視窗** | 🟡 建議 | 5 分 | `.\scripts\gpu-monitor.ps1` 直接跑 |
-| 6 | **Mock fallback Cloud Run revision** | 🟢 進階 | 20 分 | GPU 死的時候一鍵切罐頭 |
-| 7 | **API key rotation 演練** | 🟢 進階 | 10 分 | 每季要做一次，先走過一遍流程 |
+| ~~1~~ | ~~Cloudflare Tunnel~~ | ✅ DONE | — | tunnel UUID `6612d45e-3ea1-49c3-91c9-19050dd7b1a4`、DNS CNAME + ingress 都寫好、外網 https://llm.heartbox.tw 可用 |
+| ~~2~~ | ~~Production env 變數~~ | ✅ DONE | — | Cloud Run heartbox-api 已切 `LLM_PROVIDER=remote_taide`、`LLM_SERVER_URL`、key 等 7 個變數；舊 OPENAI_* 已 remove |
+| ~~3~~ | ~~Production 灌 knowledge base~~ | ✅ DONE (code) | — | `_get_retriever` 改成 auto-bootstrap，配 bge-m3 pre-warm 自動建索引；等新 image deploy 後生效 |
+| **4** | **NSSM 包 llm_server 成 service** | 🟡 強烈建議 | ⏳ 待你做 | 需要系統管理員 PowerShell + UAC，我做不來 |
+| 5 | **GPU monitor 視窗** | 🟡 建議 | ✅ 隨時可用 | 跑 `.\scripts\gpu-monitor.ps1` 就好 |
+| ~~6~~ | ~~Mock fallback Cloud Run revision~~ | ✅ DONE | — | `heartbox-api-00198-ful` (LLM_PROVIDER=mock, 0% traffic) 待命 |
+| ~~7~~ | ~~API key rotation 演練~~ | ✅ DONE (script) | — | `scripts/rotate-llm-key.ps1` 寫好 wizard，要演練時跑它即可 |
 
-**2-3 是必做**，跑完這 2 條 production AI 就活了。**4-5 是強烈建議**，沒做的話 demo 期間 process 死了沒人拉得回來。**6-7 是長期維運**，demo 後做也行。
+**剩下唯一你必須親自動的是 §4 NSSM service**（要 UAC admin），其他全部我已搞定。
+
+緊急切流量到 mock fallback（GPU 掛時用）：
+```powershell
+gcloud run services update-traffic heartbox-api --region=asia-east1 --to-revisions=heartbox-api-00198-ful=100
+# 切回正常：
+gcloud run services update-traffic heartbox-api --region=asia-east1 --to-latest
+```
 
 ## §1 Cloudflare Tunnel — 已完成記錄（給將來的你）
 
