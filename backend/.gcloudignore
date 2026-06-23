@@ -1,0 +1,48 @@
+# Exclude files from gcloud run deploy --source upload.
+# Without this file, gcloud falls back to .gitignore — but that lives
+# at the repo root, NOT in backend/, so subdir-only deploys upload
+# everything including the local Windows venv (5+ GB).
+#
+# The previous failed build (75760887, 2026-06-23 13:02) unzipped a
+# Windows-format venv into /workspace/venv/Lib/site-packages, which
+# produced an unusable Linux container image and triggered "Container
+# import failed" from Cloud Run.
+
+# Local Python venv — must NOT ship to Linux container
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Local-only data dirs
+chroma_db/
+media/
+staticfiles/
+*.sqlite3
+test_db.sqlite3
+test_run.log
+download_models.log
+download_models.py
+
+# Local tooling output
+*.log
+htmlcov/
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Reports / dumps not needed at runtime
+backend-safety-report.txt
+bandit-report.txt
+HABIT_TRACKER_API.md
+SLEEP_ANALYSIS_API.md
+smoke_test.sh
+docs/
