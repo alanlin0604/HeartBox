@@ -1,1 +1,1 @@
-web: daphne -b 0.0.0.0 -p $PORT moodnotes_pro.asgi:application
+web: python -m daphne -b 0.0.0.0 -p $PORT moodnotes_pro.asgi:application
