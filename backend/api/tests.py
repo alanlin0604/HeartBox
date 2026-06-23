@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from django.core import mail
 from django.test import override_settings
+from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
@@ -13,6 +16,15 @@ from .models import (
     Booking, Conversation, CounselorProfile, CustomUser, Message,
     MoodNote, NoteAttachment, Notification, SharedNote, UserAchievement,
 )
+
+
+def _future_date(days: int = 14) -> str:
+    """Return an ISO date N days from today. Used by booking tests so the
+    hardcoded ``2026-06-15`` style strings stop being date-bombs once
+    the calendar passes the literal date. The booking endpoint rejects
+    past dates with 400, so anchoring tests to a moving offset keeps
+    CI green forever."""
+    return (timezone.now().date() + timedelta(days=days)).isoformat()
 
 # Disable throttling for all non-throttle tests
 NO_THROTTLE = {
@@ -645,7 +657,7 @@ class BookingTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         resp = self.client.post('/api/bookings/create/', {
             'counselor_id': self.profile.id,
-            'date': '2026-06-15',
+            'date': _future_date(14),
             'start_time': '10:00',
             'end_time': '11:00',
         }, format='json')
@@ -654,17 +666,18 @@ class BookingTests(APITestCase):
 
     def test_booking_conflict(self):
         self.client.force_authenticate(user=self.user)
+        conflict_date = _future_date(15)
         # Create first booking
         self.client.post('/api/bookings/create/', {
             'counselor_id': self.profile.id,
-            'date': '2026-06-16',
+            'date': conflict_date,
             'start_time': '14:00',
             'end_time': '15:00',
         }, format='json')
         # Try overlapping booking
         resp = self.client.post('/api/bookings/create/', {
             'counselor_id': self.profile.id,
-            'date': '2026-06-16',
+            'date': conflict_date,
             'start_time': '14:30',
             'end_time': '15:30',
         }, format='json')
@@ -1085,7 +1098,7 @@ class CounselorPricingTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         resp = self.client.post('/api/bookings/create/', {
             'counselor_id': self.profile.id,
-            'date': '2026-07-01',
+            'date': _future_date(30),
             'start_time': '10:00',
             'end_time': '11:00',
         }, format='json')
@@ -1097,7 +1110,7 @@ class CounselorPricingTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         resp = self.client.post('/api/bookings/create/', {
             'counselor_id': self.profile.id,
-            'date': '2026-07-02',
+            'date': _future_date(31),
             'start_time': '11:00',
             'end_time': '12:00',
         }, format='json')
@@ -1110,7 +1123,7 @@ class CounselorPricingTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         resp = self.client.post('/api/bookings/create/', {
             'counselor_id': self.profile.id,
-            'date': '2026-07-03',
+            'date': _future_date(32),
             'start_time': '13:00',
             'end_time': '14:00',
         }, format='json')
@@ -1427,7 +1440,7 @@ class NotificationWebSocketPushTests(APITestCase):
         """Booking should create a notification for the counselor."""
         resp = self.client.post('/api/bookings/create/', {
             'counselor_id': self.profile.id,
-            'date': '2026-06-20',
+            'date': _future_date(20),
             'start_time': '10:00',
             'end_time': '11:00',
         }, format='json')
@@ -1527,7 +1540,7 @@ class ConcurrencyTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         data = {
             'counselor_id': self.profile.id,
-            'date': '2026-07-20',
+            'date': _future_date(40),
             'start_time': '10:00',
             'end_time': '11:00',
         }
