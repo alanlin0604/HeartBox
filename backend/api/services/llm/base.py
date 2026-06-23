@@ -1,12 +1,14 @@
 """Abstract base for LLM providers + tolerant JSON parser.
 
-Every concrete provider (RemoteTAIDE, Mock, OpenAI legacy) inherits ``LLMProvider``
-and raises ``LLMProviderError`` on any failure (network, HTTP 5xx, JSON parse,
-empty response). Callers only need to handle that one exception class plus the
-usual ``Exception`` for true catastrophes.
+Every concrete provider (RemoteTAIDE, Mock) inherits ``LLMProvider`` and
+raises ``LLMProviderError`` on any failure (network, HTTP 5xx, JSON parse,
+empty response). Callers only need to handle that one exception class plus
+the usual ``Exception`` for true catastrophes.
 
-The message format mirrors OpenAI's chat-completions schema so that fronting a
-TAIDE deployment with vLLM's OpenAI-compatible server requires no adapter.
+The message format mirrors the OpenAI chat-completions JSON shape — but the
+actual transport in Phase 0b talks to the self-hosted ``llm_server/``
+FastAPI service (no OpenAI vendor involved). The legacy OpenAI provider
+was removed at the factory level; see ``factory.py`` for details.
 """
 from __future__ import annotations
 

@@ -51,8 +51,9 @@ def _ai_analysis_worker(note_id, user_id):
 
     Wraps the entire pipeline in a try/except: under no circumstance do
     we want a background thread to crash the worker process. The AI
-    engine itself has three tiers of fallback (OpenAI+RAG → OpenAI plain
-    → local keyword), so an analysis failure here is a last-resort.
+    engine itself has three tiers of fallback (TAIDE+RAG → TAIDE plain
+    → local keyword; the local keyword tier still injects the crisis
+    hotline on HIGH matches), so an analysis failure here is a last-resort.
     """
     try:
         from api.models import MoodNote

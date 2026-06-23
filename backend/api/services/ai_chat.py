@@ -7,8 +7,6 @@ model misbehaves.
 """
 import logging
 
-from django.conf import settings
-
 from api.services.llm import LLMProviderError, get_llm_provider
 from api.services.llm.crisis_guard import CrisisGuard
 

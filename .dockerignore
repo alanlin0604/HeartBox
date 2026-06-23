@@ -15,3 +15,16 @@ docs/
 *.png
 render.yaml
 .editorconfig
+
+# Phase 0b: llm_server runs ONLY on the home GPU box; it has ~5GB of HF /
+# torch / bitsandbytes deps that must NOT ship in the Cloud Run image.
+# Keeping it out of the build context also speeds up `docker build`.
+llm_server/
+requirements-llm.txt
+backend/download_models.py
+backend/check_env.py
+
+# Operator-side artifacts that should never enter the production image
+*.log
+HANDOFF_*.md
+scripts/

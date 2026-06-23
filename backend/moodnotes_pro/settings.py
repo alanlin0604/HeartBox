@@ -435,3 +435,9 @@ if SENTRY_DSN:
         send_default_pii=False,
         before_send=_sentry_scrub,
     )
+    # Tag the LLM provider + model so error events are filterable in Sentry
+    # by which inference backend was in use. Helpful when triaging "AI
+    # broken" reports — quickly know if the user was on remote_taide or
+    # the mock provider when the error fired.
+    sentry_sdk.set_tag('llm_provider', LLM_PROVIDER)
+    sentry_sdk.set_tag('llm_model', LLM_MODEL)

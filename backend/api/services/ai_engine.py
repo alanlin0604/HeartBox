@@ -1,13 +1,19 @@
 """Singleton AI engine for journal sentiment + feedback.
 
-Three-tier strategy (unchanged from the OpenAI era):
-  1. LLM provider call (TAIDE via remote FastAPI server, or mock in tests).
-  2. Local Chinese keyword analysis (no network).
+Three-tier strategy:
+  1. LLM provider call (TAIDE via the self-hosted FastAPI server, or mock
+     in tests). Provider is dispatched via ``api.services.llm.factory``.
+  2. Local Chinese keyword analysis (no network) when the provider raises
+     ``LLMProviderError`` — this is the warm-fallback path that keeps
+     daily-prompt / weekly-summary working during a TAIDE outage.
   3. Graceful degradation — note always saves; banner says "暫時無法分析".
 
 The provider seam lives in ``api.services.llm`` — this module knows nothing
-about OpenAI, TAIDE, or any HTTP client. Crisis-keyword detection runs BEFORE
-the LLM call so the system prompt is steered to a safer tone for at-risk users.
+about which HTTP client / model name is used. Crisis-keyword detection runs
+BEFORE the LLM call so the system prompt is steered to a safer tone for
+at-risk users, and ``_basic_feedback_with_crisis_guard`` re-injects the
+hotline on every fallback path so a HIGH-severity match is never silently
+stripped (see backend/api/test_ai_engine_crisis_failsafe.py).
 """
 import json
 import logging

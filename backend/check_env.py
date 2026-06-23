@@ -5,10 +5,13 @@ In production architecture:
   - Django backend:       runs bge-m3 via sentence_transformers (CPU/GPU)
 These never share a process, so the Windows DLL ordering issue between
 bitsandbytes and sentence_transformers doesn't surface in production.
-This script verifies each in its own subprocess.
+This script verifies each in its own subprocess, plus reports on the
+configuration env vars the backend will read at startup.
 """
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 INFERENCE_CHECK = """
 import torch
@@ -53,12 +56,55 @@ def run(label, code):
         return False
     return True
 
+def check_env_vars():
+    """Report which Phase 0b configuration vars are set.
+
+    Does NOT validate that values are correct — just that they exist and
+    are non-empty. The actual `is_configured()` check happens at
+    provider construction time inside the Django app.
+    """
+    print('--- 4. Configuration env vars ---', flush=True)
+
+    llm_env_file = Path(os.environ.get('USERPROFILE', str(Path.home()))) / '.heartbox-llm.env'
+    if llm_env_file.exists():
+        with open(llm_env_file, encoding='utf-8') as f:
+            content = f.read()
+        api_key_set = 'API_KEY=' in content and len(content.split('API_KEY=', 1)[1].split('\n', 1)[0].strip()) >= 32
+        print(f'  llm_server  ~/.heartbox-llm.env exists, API_KEY set: {api_key_set}')
+    else:
+        print(f'  llm_server  ~/.heartbox-llm.env MISSING ({llm_env_file})')
+
+    # Backend-side env vars (read from process env or backend/.env)
+    backend_vars = [
+        ('LLM_PROVIDER', 'Required: remote_taide or mock'),
+        ('LLM_SERVER_URL', 'Required for remote_taide'),
+        ('LLM_SERVER_API_KEY', 'Required for remote_taide'),
+        ('LLM_MODEL', 'Optional, default taide-lx-7b-chat'),
+        ('CHROMA_COLLECTION_NAME', 'Optional, default psychology_kb_bgem3'),
+        ('SENTRY_DSN', 'Optional, enables error tracking'),
+        ('CRON_SECRET', 'Required for /api/cron/* endpoints'),
+    ]
+    backend_env = Path(__file__).parent / '.env'
+    backend_env_content = backend_env.read_text(encoding='utf-8') if backend_env.exists() else ''
+    print(f'  backend     .env exists: {backend_env.exists()}')
+    for key, note in backend_vars:
+        in_env = key in os.environ and bool(os.environ[key])
+        in_file = (key + '=') in backend_env_content
+        status = 'set' if in_env else ('in .env' if in_file else 'NOT SET')
+        print(f'    {key:30} {status:10}  ({note})')
+
+    print('=== env config: REPORTED ===')
+    return True
+
+
 ok = True
 ok &= run('1. Inference stack (TAIDE + LLaVA)', INFERENCE_CHECK)
 print()
 ok &= run('2. Embedding stack (bge-m3)', EMBEDDING_CHECK)
 print()
 ok &= run('3. FastAPI server stack', FASTAPI_CHECK)
+print()
+ok &= check_env_vars()
 print()
 print('=== OVERALL:', 'PASS' if ok else 'FAIL', '===')
 sys.exit(0 if ok else 1)

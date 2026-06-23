@@ -41,9 +41,12 @@ CACHE_TTL_DAILY_PROMPT = 86400  # 24 hours
 def _get_llm_provider_or_none():
     """Return the configured LLM provider, or None if it can't serve a request.
 
-    Replaces the legacy ``_get_openai_client()`` lazy singleton. Callers (e.g.
-    daily prompt / weekly summary) keep the same fall-back behaviour they had
-    when the OpenAI key was unset: when this returns None, skip the AI call.
+    Callers (daily prompt, weekly summary) should skip the AI call entirely
+    when this returns None — falling back to the template path is preferable
+    to surfacing a generic error to the user. The provider's
+    ``is_configured()`` returns False when ``LLM_SERVER_URL`` or
+    ``LLM_SERVER_API_KEY`` is empty, so a missing config does NOT block
+    on a 10-second connect timeout.
     """
     from api.services.llm import get_llm_provider
     provider = get_llm_provider()
