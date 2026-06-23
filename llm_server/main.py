@@ -200,6 +200,43 @@ def _verify_peer_ip(response, safe_ips: set[str], host: str) -> None:
 
 
 # ----------------------------------------------------------------------
+# Multimodal message normalization helper — module-level so it is unit-
+# testable. Mutates ``messages`` so the LAST user message contains one
+# ``image_url`` content block per URL when ``urls`` is non-empty.
+#
+# Why this matters: VisionRequest allows ``content`` to be a plain string
+# (per the OpenAI shape), and clients commonly pass ``image_urls`` as a
+# separate top-level field. Without an ``image_url`` block somewhere in
+# the messages, the chat-template path emits zero ``<image>``
+# placeholders — LLaVA-Next's visual encoder then aligns embeddings to
+# the wrong positions and the reply either errors or repeats the prompt
+# verbatim. We normalize the message shape here so callers do not have
+# to know LLaVA's prompt-template quirks.
+# ----------------------------------------------------------------------
+def _ensure_image_blocks(messages: list[dict], urls: list[str]) -> None:
+    if not urls:
+        return
+    target = None
+    for m in reversed(messages):
+        if m.get('role') == 'user':
+            target = m
+            break
+    if target is None:
+        target = {'role': 'user', 'content': ''}
+        messages.append(target)
+    content = target.get('content', '')
+    if isinstance(content, list):
+        if any(isinstance(b, dict) and b.get('type') == 'image_url' for b in content):
+            return  # caller already wired it correctly
+        content = list(content)
+    else:
+        content = [{'type': 'text', 'text': str(content) if content else ''}]
+    for u in urls:
+        content.append({'type': 'image_url', 'image_url': {'url': u}})
+    target['content'] = content
+
+
+# ----------------------------------------------------------------------
 # Image fetch helper — kept tight (5s per image, 15s total, content-type check).
 # ----------------------------------------------------------------------
 async def _fetch_images(urls: list[str], *, max_total: int = 3) -> list:
@@ -391,44 +428,6 @@ def create_app(settings: Settings | None = None) -> 'FastAPI':
             allow_methods=['POST', 'GET'],
             allow_headers=['Content-Type', 'X-API-Key'],
         )
-
-    # ------------------------------------------------------------------
-    # Multimodal helpers.
-    # ------------------------------------------------------------------
-    def _ensure_image_blocks(messages: list[dict], urls: list[str]) -> None:
-        """Mutate ``messages`` so the LAST user message contains one
-        ``image_url`` content block per URL when ``urls`` is non-empty.
-
-        Why this matters: VisionRequest allows ``content`` to be a plain
-        string (per the OpenAI shape), and clients commonly pass
-        ``image_urls`` as a separate top-level field. Without an
-        ``image_url`` block somewhere in the messages, the chat-template
-        path emits zero ``<image>`` placeholders — LLaVA-Next's visual
-        encoder then aligns embeddings to the wrong positions and the
-        reply either errors or repeats the prompt verbatim. We
-        normalize the message shape here so callers do not have to
-        know LLaVA's prompt-template quirks.
-        """
-        if not urls:
-            return
-        target = None
-        for m in reversed(messages):
-            if m.get('role') == 'user':
-                target = m
-                break
-        if target is None:
-            target = {'role': 'user', 'content': ''}
-            messages.append(target)
-        content = target.get('content', '')
-        if isinstance(content, list):
-            if any(isinstance(b, dict) and b.get('type') == 'image_url' for b in content):
-                return  # caller already wired it correctly
-            content = list(content)
-        else:
-            content = [{'type': 'text', 'text': str(content) if content else ''}]
-        for u in urls:
-            content.append({'type': 'image_url', 'image_url': {'url': u}})
-        target['content'] = content
 
     # ------------------------------------------------------------------
     # Routes.

@@ -57,6 +57,14 @@
 
 **30 秒答**：Firebase / Supabase 把資料庫直接連到使用者裝置，少寫 backend 但**所有 auth / row-level security 規則寫在前端 config**，攻擊面大且驗證複雜。我們選 Django：(1) ORM + 多年驗證過的 auth 套件，(2) 後端集中決定誰能看誰的資料、不依賴客戶端規則，(3) Cloud Run scale-to-zero 對學生專案成本友好（idle 時 NT$0），(4) Cloudflare Tunnel 不開家裡 inbound port，所有家裡 GPU 暴露面 = 0。整套組合成本控制 + 安全姿態 + 開發速度的平衡點。
 
+## Q13. 「你們的 obfuscation 防護能擋什麼，又擋不到什麼？」
+
+**30 秒答**：raw regex 抓含空白的「kill myself」「想死」這種正寫；NFKC 把全形 `ｋｉｌｌ ｍｙｓｅｌｆ` 折回 ASCII；接著 per-clause 把「k.i.l.l m.y.s.e.l.f」normalize 成 `killmyself` 後比對。**但我們不擋 dot-separated 的多詞片語**（例如 `e.n.d i.t a.l.l` / `j.u.m.p o.f.f`）—— 因為這些片語的 compact 形（`enditall` / `jumpoff`）會在無辜英文裡跨子句融合，例如 `end it,all meetings cancelled` normalize 後也含 `enditall`。trade-off 經對抗式 review 確認後接受：**寧可漏這幾個 contrived case，也不要把無辜日記送進 review queue 導致使用者不安**。Leetspeak（`k1ll`）和 Cyrillic homoglyph 也都還沒擋，列為 v2 待辦。最重要的是：所有 fallback 路徑（local keyword、template）也都會 `prepend_hotline()`，即使 obfuscation 漏抓，使用者明寫「我想死」這種正寫一定看到 1925 橫幅。
+
+## Q14. 「llm_server 的 SSRF 防護怎麼做？被問到 `image_url=http://169.254.169.254` 你怎麼答？」
+
+**60 秒答**：vision 端點 `/v1/vision` 收到 image URL 後做兩階段檢查。**第一階段**：`getaddrinfo()` 解出全部 IP，逐一驗 `is_private` / `is_loopback` / `is_link_local` / `is_reserved` / `is_multicast`，任一非公網就拒絕。第一階段擋掉 99% 的情況。**第二階段**（防 DNS rebinding）：發 HTTP request 後，從 httpx 拿 `response.extensions['network_stream'].get_extra_info('server_addr')` 抓 TCP peer 實際 IP，若不在第一階段 pre-validated 的 safe set 裡就拒絕。同時關 `follow_redirects` 不讓 302 跳到內網。額外有 streaming 8MB cap（用 `aiter_bytes` 邊讀邊算）跟 PIL `MAX_IMAGE_PIXELS=16MP` 防 decompression bomb。**這設計通過三輪對抗式 review**，前兩輪都找出 bug（第一次 `peername` key 錯填 / 第二次 cancel 漏接 / 第三次 README 還寫 GPT-4），全部修掉了。
+
 ---
 
 ## 委員可能問的「沒準備到」題
