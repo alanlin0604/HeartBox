@@ -1,34 +1,57 @@
 # Phase 0b 剩下你要做的事（純專案部署）
 
-**最後修訂**：2026-06-23  
+**最後修訂**：2026-06-23 晚（§1 Cloudflare Tunnel 已完成）  
 **範圍**：只談 code / infra / 部署。報告、demo 演練、錄影那些**不在這份**。
 
 ## 先確認 Claude 已做完什麼（不用再碰）
 
-- ✅ 17 commits 已 push 到 origin/main
+- ✅ 20+ commits 已 push 到 origin/main
 - ✅ GitHub Actions 雙綠（CI + no-openai-check）
 - ✅ `~/.heartbox-llm.env` 已建（API key 在裡面）
 - ✅ TAIDE / LLaVA / bge-m3 / Llama-3-Taiwan 4 個模型已下載
 - ✅ 本機 `llm_server` 已驗 boot / chat / SSRF / auth 全通過
 - ✅ 本機 ChromaDB `psychology_kb_bgem3` 已灌 104 chunks
-- ✅ 全套 164 個 Django tests + 21 個 llm_server tests 全綠
+- ✅ 全套 239 個 Django tests + 21 個 llm_server tests 全綠
 - ✅ booking date-bomb 已修，CI 不再紅
+- ✅ **§1 Cloudflare Tunnel 接通了** — `https://llm.heartbox.tw` 外網能打到家裡 GPU 跑 TAIDE
 
 ---
 
-## 你剩下要做的（7 件事）
+## 你剩下要做的（6 件事，§1 已劃掉）
 
 | # | 項目 | 必要性 | 預估時間 | 為什麼非做不可 |
 |---|---|---|---|---|
-| 1 | **Cloudflare Tunnel** | 🔴 必做 | 30-45 分 | Cloud Run 打不到家裡 GPU，沒這個 production AI 全部走 fallback |
+| ~~1~~ | ~~Cloudflare Tunnel~~ | ✅ DONE | — | tunnel UUID `6612d45e-3ea1-49c3-91c9-19050dd7b1a4`，DNS CNAME + ingress rule 都寫好 |
 | 2 | **Production env 變數** | 🔴 必做 | 10 分 | `render.yaml` 只宣告 key，dashboard 要實際填值 |
 | 3 | **Production 灌 knowledge base** | 🔴 必做 | 5 分 | 新 collection `psychology_kb_bgem3` 是 1024-dim，prod 要重灌 |
-| 4 | **NSSM 包 llm_server 成 service** | 🟡 強烈建議 | 15 分 | 沒 auto-restart 一掛就掛 |
-| 5 | **GPU monitor 視窗** | 🟡 建議 | 5 分 | 沒監控不知道溫度多高、VRAM 多滿 |
+| 4 | **NSSM 包 llm_server 成 service** | 🟡 強烈建議 | 15 分 | 沒 auto-restart 一掛就掛（剛剛重啟過一次） |
+| 5 | **GPU monitor 視窗** | 🟡 建議 | 5 分 | `.\scripts\gpu-monitor.ps1` 直接跑 |
 | 6 | **Mock fallback Cloud Run revision** | 🟢 進階 | 20 分 | GPU 死的時候一鍵切罐頭 |
 | 7 | **API key rotation 演練** | 🟢 進階 | 10 分 | 每季要做一次，先走過一遍流程 |
 
-**1-3 是必做**，跑完這 3 條 production AI 就活了。**4-5 是強烈建議**，沒做的話 demo 期間 process 死了沒人拉得回來。**6-7 是長期維運**，demo 後做也行。
+**2-3 是必做**，跑完這 2 條 production AI 就活了。**4-5 是強烈建議**，沒做的話 demo 期間 process 死了沒人拉得回來。**6-7 是長期維運**，demo 後做也行。
+
+## §1 Cloudflare Tunnel — 已完成記錄（給將來的你）
+
+```
+Domain:        heartbox.tw  (Cloudflare zone 206a568a2a4799f72bc29866ac9cd730)
+Tunnel name:   heartbox-llm
+Tunnel UUID:   6612d45e-3ea1-49c3-91c9-19050dd7b1a4
+Public URL:    https://llm.heartbox.tw
+Routes to:     http://127.0.0.1:8765 (local llm_server FastAPI)
+Connector:     Cloudflared Windows service (auto-start, 6/20 token-mode install)
+DNS record:    CNAME llm.heartbox.tw → 6612d45e-...cfargotunnel.com (proxied)
+Ingress rule:  llm.heartbox.tw → http://127.0.0.1:8765 → catch-all 404
+```
+
+驗證指令：
+```powershell
+curl https://llm.heartbox.tw/health
+# {"status":"ok"}
+```
+
+要改 ingress / 加 hostname 走 Cloudflare Zero Trust dashboard：  
+https://one.dash.cloudflare.com/ → Networks → Tunnels → heartbox-llm → Public Hostnames
 
 ---
 
