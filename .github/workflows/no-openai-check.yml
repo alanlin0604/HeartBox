@@ -56,6 +56,7 @@ jobs:
             --glob '!frontend/dist/**'
             --glob '!frontend/build/**'
             --glob '!**/__pycache__/**'
+            --glob '!scripts/pre-deploy-check.ps1'
           )
 
           if rg -n -e "$PATTERN" "${EXCLUDES[@]}" .; then

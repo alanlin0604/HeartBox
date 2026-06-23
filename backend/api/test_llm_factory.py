@@ -61,7 +61,7 @@ class TestFactoryDispatch(FactoryTestCaseBase):
             get_llm_provider()
         self.assertIn("'openai'", str(ctx.exception).lower().replace('"', "'"))
 
-    @override_settings(LLM_PROVIDER='gpt-4')
+    @override_settings(LLM_PROVIDER='nonexistent-backend')
     def test_any_unknown_value_raises(self):
         with self.assertRaises(LLMProviderError):
             get_llm_provider()
@@ -93,7 +93,7 @@ class TestFactorySingleton(FactoryTestCaseBase):
         first = get_llm_provider()
         # Override LLM_PROVIDER to an invalid value INSIDE the test.
         # Without reset_llm_provider_cache(), the cached mock wins.
-        with override_settings(LLM_PROVIDER='gpt-4-turbo'):
+        with override_settings(LLM_PROVIDER='nonexistent-backend'):
             second = get_llm_provider()
         self.assertIs(first, second)
         self.assertEqual(second.name, 'mock')
@@ -102,7 +102,7 @@ class TestFactorySingleton(FactoryTestCaseBase):
     def test_reset_actually_resets(self):
         first = get_llm_provider()
         reset_llm_provider_cache()
-        with override_settings(LLM_PROVIDER='gpt-4-turbo'):
+        with override_settings(LLM_PROVIDER='nonexistent-backend'):
             with self.assertRaises(LLMProviderError):
                 get_llm_provider()
         # And the original cache slot is now empty / re-fetchable.
