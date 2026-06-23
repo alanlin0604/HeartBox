@@ -44,6 +44,8 @@ verify：開 https://heartbox-api-598139488748.asia-east1.run.app/api/health/ �
 
 ### A2. Demo 帳號 seed 到 prod
 
+⚠️ **`--set-env-vars` 警告**：對 `services update`（更新運行中服務）使用 `--set-env-vars` 會**覆蓋掉所有舊的 env vars**（曾踩過：洗掉 DJANGO_SECRET_KEY / DATABASE_URL 等 30 個 var，container 起不來連續 10 次 deploy）。要漸進式加變數請用 `--update-env-vars`。下面 `jobs deploy` 是建立全新 job（不存在洗掉問題），但養成習慣分清楚。
+
 ```powershell
 # Cloud Run 一次性 job — 等同把 manage.py 命令 run 在 prod DB 上
 gcloud run jobs deploy seed-demo `

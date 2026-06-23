@@ -31,7 +31,7 @@ Cloud Run has no Celery beat process; an external scheduler hits the API
 on a fixed cadence. Each endpoint validates `X-Cron-Secret: $CRON_SECRET`.
 
 ```bash
-SVC_URL=https://heartbox-api-<hash>-de.a.run.app
+SVC_URL=https://heartbox-api-598139488748.asia-east1.run.app  # the project-number form; the *-hash-de.a.run.app alias also works but isn't always in DJANGO_ALLOWED_HOSTS
 SECRET="<same value as CRON_SECRET>"
 
 # Habit reminders — every 15 minutes

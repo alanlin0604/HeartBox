@@ -57,6 +57,20 @@ if (-not (Confirm "Continue?")) {
     exit 0
 }
 
+# Optional SPOF mitigation: bump min_instances=2 so the revision flip
+# during the env-var update doesn't 503 while a new instance warms up.
+# The default Cloud Run config is min=max=1, which means a brief
+# unavailability gap on top of the 30-60s key-mismatch window.
+$BumpInstances = Confirm "Temporarily bump min_instances 1->2 to avoid 503 during revision flip? (recommended for low-traffic windows)"
+if ($BumpInstances) {
+    Write-Host "→ Bumping min_instances to 2..." -ForegroundColor Yellow
+    gcloud run services update heartbox-api `
+      --region=$Region `
+      --min-instances=2 `
+      --quiet 2>&1 | Out-Null
+    Write-Host "  Will restore to min=1 after rotation completes." -ForegroundColor DarkGray
+}
+
 # 1. Generate
 $python = "$PSScriptRoot\..\backend\venv\Scripts\python.exe"
 if (-not (Test-Path $python)) { $python = "python" }
@@ -135,6 +149,15 @@ if ($ok) {
     Write-Host "✓ Tunnel /health responding" -ForegroundColor Green
 } else {
     Write-Host "✗ Tunnel /health timing out — verify llm_server + cloudflared services" -ForegroundColor Red
+}
+
+# Restore min_instances if we bumped earlier
+if ($BumpInstances) {
+    Write-Host "→ Restoring min_instances back to 1..." -ForegroundColor Yellow
+    gcloud run services update heartbox-api `
+      --region=$Region `
+      --min-instances=1 `
+      --quiet 2>&1 | Out-Null
 }
 
 Write-Host ""

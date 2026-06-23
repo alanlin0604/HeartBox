@@ -7,8 +7,19 @@ on:
     branches: [main]
 
 jobs:
+  reqs-parity:
+    # Cheap pre-flight: requirements.txt at repo root and backend/ must
+    # stay byte-identical (one drove Render builds, the other drives
+    # Cloud Run buildpack). Drift led to one deploy chain succeeding while
+    # the other silently pulled the wrong torch wheel — see commit 5b912b8.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check-reqs-parity.sh
+
   backend-test:
     runs-on: ubuntu-latest
+    needs: reqs-parity
     defaults:
       run:
         working-directory: backend
