@@ -5,9 +5,12 @@ Extracted from views/__init__.py. Re-exported for backward compatibility.
 """
 
 import random
+import re
 from datetime import timedelta
 
 from django.core.cache import cache
+
+from ..services.llm.sanitize import scrub_llm_output
 from django.db.models import Avg
 from django.utils import timezone
 
@@ -349,16 +352,73 @@ DEFAULT_PROMPTS_MAP = {
 }
 
 
+# System-prompt fingerprints that should NEVER appear in a daily prompt.
+# If any of these substrings is in the model output it means the model is
+# parroting the system prompt back instead of generating a question.
+_DAILY_PROMPT_FINGERPRINTS = (
+    'journaling coach',
+    'open-ended journaling prompt',
+    'generate one',
+    'average stress level',
+    "mood score this week",
+    '一位溫柔的',
+    '日記教練',
+)
+
+
+def _sanitize_daily_prompt(raw, *, mood_avg=None, stress_avg=None):
+    """Clean a generated daily prompt. Returns the cleaned string, or ``None``
+    if the output should be rejected and fallback used.
+
+    Rejection criteria:
+      * scrub leaves empty / template-only text
+      * length > 200 chars (real prompts are 1 line)
+      * contains a blank-line pair (means it's multi-paragraph prose)
+      * contains a system-prompt fingerprint
+      * contains the mood/stress numeric strings injected into the system prompt
+    """
+    if not raw:
+        return None
+    cleaned = scrub_llm_output(raw)
+    if not cleaned:
+        return None
+    # Strip wrapping quotes / 「」 / 『』 / 「」 the model often adds.
+    cleaned = cleaned.strip().strip('"\'').strip('「」『』').strip()
+    if not cleaned or len(cleaned) > 200:
+        return None
+    if '\n\n' in cleaned:
+        return None
+    lowered = cleaned.lower()
+    if any(fp in lowered for fp in _DAILY_PROMPT_FINGERPRINTS):
+        return None
+    # Numeric fingerprints from the system prompt's mood_ctx.
+    if mood_avg is not None and f'{mood_avg:.2f}' in cleaned:
+        return None
+    if stress_avg is not None and f'{stress_avg:.1f}' in cleaned:
+        return None
+    return cleaned
+
+
+# Short TTL for fallback prompts so one bad day doesn't pin the cache for 24h.
+CACHE_TTL_DAILY_PROMPT_FALLBACK = 600
+
+
 class DailyPromptView(APIView):
+    # Cache-key version bumped to invalidate any historical template-leak
+    # entries (workflow audit wf_ba1ab074-010). Bump again on future format
+    # changes so old cache rows die naturally.
+    CACHE_KEY_VERSION = 'v2'
+
     def get(self, request):
         today = timezone.now().date().isoformat()
-        cache_key = f'daily_prompt_{request.user.id}_{today}'
+        cache_key = f'daily_prompt_{self.CACHE_KEY_VERSION}_{request.user.id}_{today}'
         cached = cache.get(cache_key)
         if cached:
             return Response({'prompt': cached})
 
         # Generate prompt based on recent mood
         prompt_text = None
+        avg_s = avg_st = None
         try:
             recent = MoodNote.objects.filter(
                 user=request.user,
@@ -381,7 +441,7 @@ class DailyPromptView(APIView):
                 if avg_st is not None:
                     mood_ctx += f"Average stress level is {avg_st:.1f}/10. "
 
-                prompt_text = provider.chat(
+                raw = provider.chat(
                     system=(
                         f'You are a gentle journaling coach. {mood_ctx}'
                         f'Generate one short, open-ended journaling prompt in {lang_name}. '
@@ -393,16 +453,29 @@ class DailyPromptView(APIView):
                     max_tokens=60,
                     temperature=0.8,
                     timeout=15,
-                ).strip()
+                )
+                prompt_text = _sanitize_daily_prompt(
+                    raw, mood_avg=avg_s, stress_avg=avg_st,
+                )
+                if prompt_text is None:
+                    logger.warning(
+                        'daily_prompt sanitize_rejected raw_len=%d',
+                        len(raw or ''),
+                    )
         except Exception as e:
             logger.warning('Daily prompt generation failed: %s', e)
 
+        used_fallback = False
         if not prompt_text:
             lang = request.headers.get('Accept-Language', 'zh-TW')
             prompts = DEFAULT_PROMPTS_MAP.get(lang, DEFAULT_PROMPTS_ZH)
             prompt_text = random.choice(prompts)
+            used_fallback = True
 
-        cache.set(cache_key, prompt_text, CACHE_TTL_DAILY_PROMPT)
+        # Short TTL for fallback so a degraded LLM doesn't pin the cache for
+        # 24h. Successful AI generations get the full TTL.
+        ttl = CACHE_TTL_DAILY_PROMPT_FALLBACK if used_fallback else CACHE_TTL_DAILY_PROMPT
+        cache.set(cache_key, prompt_text, ttl)
         return Response({'prompt': prompt_text})
 
 

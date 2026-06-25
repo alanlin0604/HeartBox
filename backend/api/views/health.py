@@ -24,6 +24,7 @@ from ..serializers import (
     HealthMetricSerializer, HealthSyncSerializer, ReminderSettingsSerializer,
     WeeklySummarySerializer,
 )
+from ..services.llm.sanitize import scrub_llm_output
 from ..services.pdf_export import generate_weekly_summary_pdf
 
 from . import _get_llm_provider_or_none, error_response, logger
@@ -586,7 +587,8 @@ class WeeklySummaryView(APIView):
                         f'1. Key emotional themes and patterns observed this week\n'
                         f'2. Specific observations tied to diary content\n'
                         f'3. Personalized suggestions based on what the user wrote\n'
-                        f'Be warm, supportive, and specific (not generic).'
+                        f'Be warm, supportive, and specific (not generic). '
+                        f'Summarize THEMES only; DO NOT quote diary text verbatim.'
                     )
 
                     # Dynamic token limit: base 300 + 100 per diary entry, cap at 1500
@@ -598,7 +600,30 @@ class WeeklySummaryView(APIView):
                         max_tokens=max_tok,
                         temperature=0.7,
                         timeout=30,
-                    ).strip()
+                    )
+                    # Scrub template markers BEFORE persistence — WeeklySummary
+                    # is permanent and gets embedded in PDF exports, so a leak
+                    # here would survive every future view.
+                    ai_summary = scrub_llm_output(ai_summary)
+                    # Verbatim diary echo defense: model occasionally copies a
+                    # journal sentence into the summary. Mask any 80+-char run
+                    # of a diary excerpt that appears verbatim in ai_summary.
+                    for excerpt in note_previews:
+                        if not excerpt or len(excerpt) < 80:
+                            continue
+                        for start in range(0, len(excerpt) - 80 + 1, 40):
+                            window = excerpt[start:start + 80]
+                            if window in ai_summary:
+                                ai_summary = ai_summary.replace(window, '[…]')
+                    # If nothing useful survived sanitization, fall back to a
+                    # deterministic template — never persist an empty / garbage
+                    # summary as if it were the model's answer.
+                    if len(ai_summary) < 40:
+                        ai_summary = (
+                            f'{note_count} 篇日記，平均心情 {agg["avg_s"]:.2f}，'
+                            f'壓力 {agg["avg_st"]:.1f}/10。'
+                            f'主要活動：{top_activities or "—"}。'
+                        )
             except Exception as e:
                 logger.warning('Weekly summary AI generation failed: %s', e)
 

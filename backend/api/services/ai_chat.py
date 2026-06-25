@@ -9,6 +9,7 @@ import logging
 
 from api.services.llm import LLMProviderError, get_llm_provider
 from api.services.llm.crisis_guard import CrisisGuard
+from api.services.llm.sanitize import detect_system_echo, scrub_llm_output
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +130,20 @@ def generate_ai_response(session_messages, lang='zh-TW'):
         )
     except (LLMProviderError, Exception) as e:
         logger.warning('AI chat response generation failed: %s', e)
+        return FALLBACK_RESPONSES.get(lang, FALLBACK_RESPONSES['zh-TW'])
+
+    # Consumer-side scrub. ORDER MATTERS — must run BEFORE hotline prepend
+    # so the canonical hotline string isn't itself flagged as echo. ai_chat
+    # is doubly risky: (a) reply renders directly to UI; (b) AIChatMessage
+    # row persists the content and the next turn feeds it back as history,
+    # so a leak self-reinforces unless killed at write time.
+    reply = scrub_llm_output(reply)
+    base_system = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPTS['zh-TW'])
+    if not reply or detect_system_echo(reply, base_system):
+        logger.warning(
+            'ai_chat system_echo_or_empty detected lang=%s reply_len=%d',
+            lang, len(reply),
+        )
         return FALLBACK_RESPONSES.get(lang, FALLBACK_RESPONSES['zh-TW'])
 
     # Defense-in-depth: even if the model ignored the preamble, prepend hotline.

@@ -185,30 +185,26 @@ class InferenceEngine:
         and a missing placeholder breaks the chat path entirely.
         """
         tokenizer = self._tokenizer
-        if hasattr(tokenizer, 'apply_chat_template'):
-            try:
-                return tokenizer.apply_chat_template(
-                    messages, tokenize=False, add_generation_prompt=True,
-                )
-            except Exception:
-                pass
-        parts = []
-        for m in messages:
-            content = m.get('content', '')
-            if isinstance(content, list):
-                rendered = []
-                for b in content:
-                    btype = b.get('type')
-                    if btype == 'text':
-                        rendered.append(b.get('text', ''))
-                    elif btype == 'image_url':
-                        # Preserve a marker so the visual encoder's
-                        # embeddings line up with the right position.
-                        rendered.append('<image>')
-                content = ' '.join(rendered)
-            parts.append(f"{m.get('role', 'user')}: {content}")
-        parts.append('assistant:')
-        return '\n'.join(parts)
+        if not hasattr(tokenizer, 'apply_chat_template'):
+            # Every model we ship (TAIDE-LX-7B, LLaVA-v1.6, Llama-3-Taiwan)
+            # has a chat_template; the old manual fallback was dead code that
+            # emitted a 'role: content\n…\nassistant:' shape and was the only
+            # reason the previous prompt-strip used split('assistant:') —
+            # which then leaked the whole prompt when the real path was taken.
+            # Refuse explicitly rather than silently produce a bad format.
+            raise RuntimeError(
+                'tokenizer has no apply_chat_template — refusing to fall back '
+                'to manual prompt formatting (would risk template leak)'
+            )
+        try:
+            return tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True,
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f'apply_chat_template failed: {e}; refusing manual fallback '
+                '(would risk template leak)'
+            ) from e
 
     def _make_stop_criteria(self, stop_event: threading.Event):
         """Build a ``StoppingCriteriaList`` that polls ``stop_event`` between
@@ -268,15 +264,18 @@ class InferenceEngine:
         if stop_event.is_set():
             raise TimeoutError('generation cancelled by stop event')
 
-        full = tokenizer.decode(output_ids[0], skip_special_tokens=True)
-        # Strip the prompt prefix.
-        if full.startswith(prompt):
-            reply = full[len(prompt):].strip()
-        else:
-            # Fallback: take everything after the last 'assistant:' marker
-            reply = full.split('assistant:')[-1].strip()
-        tokens_out = output_ids.shape[1] - tokens_in
-        return reply, int(tokens_in), int(tokens_out)
+        # HF generate() always returns [input_ids ++ new_ids] concatenated.
+        # Slicing by token count is the only correct way to recover the new
+        # tokens — string-based prompt stripping is fragile because
+        # skip_special_tokens=True removes BOS / <|begin_of_text|> from the
+        # decoded text but those bytes were never in the source `prompt`,
+        # so full.startswith(prompt) is False and a fallback split would
+        # leak the entire chat template (system + user + assistant) to the
+        # caller. See workflow audit wf_ba1ab074-010.
+        new_ids = output_ids[0][tokens_in:]
+        reply = tokenizer.decode(new_ids, skip_special_tokens=True).strip()
+        tokens_out = int(new_ids.shape[0])
+        return reply, int(tokens_in), tokens_out
 
     async def _await_with_cancel(
         self,
@@ -420,13 +419,14 @@ class InferenceEngine:
         if stop_event.is_set():
             raise TimeoutError('vision generation cancelled by stop event')
 
-        full = processor.tokenizer.decode(output_ids[0], skip_special_tokens=True)
-        if full.startswith(prompt):
-            reply = full[len(prompt):].strip()
-        else:
-            reply = full.split('assistant:')[-1].strip()
-        tokens_out = output_ids.shape[1] - tokens_in
-        return reply, int(tokens_in), int(tokens_out)
+        # Same token-slice fix as the chat path. LLaVA-Next expands <image>
+        # placeholders into hundreds of patch tokens; tokens_in is computed
+        # AFTER that expansion (line 409 reads inputs.input_ids.shape[1]),
+        # so the slice is exactly the post-input new tokens.
+        new_ids = output_ids[0][tokens_in:]
+        reply = processor.tokenizer.decode(new_ids, skip_special_tokens=True).strip()
+        tokens_out = int(new_ids.shape[0])
+        return reply, int(tokens_in), tokens_out
 
     async def vision(
         self,

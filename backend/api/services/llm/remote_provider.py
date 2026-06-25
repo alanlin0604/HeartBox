@@ -20,6 +20,7 @@ import time
 from typing import Literal
 
 from .base import LLMProvider, LLMProviderError
+from .sanitize import scrub_llm_output
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,24 @@ class RemoteTAIDEProvider(LLMProvider):
             if not isinstance(text, str) or not text:
                 status = 'error'
                 raise LLMProviderError(f'empty response from {model}')
-            return text.strip()
+            # Defense-in-depth scrub: even if the upstream llm_server engine
+            # regresses and leaks [INST] / <<SYS>> / role markers, they never
+            # reach the DB / cache / UI. See sanitize.py for the marker set.
+            cleaned = scrub_llm_output(text)
+            if cleaned != text:
+                logger.warning(
+                    'llm_template_leak provider=%s op=%s model=%s removed_chars=%d',
+                    self.name, op, model, len(text) - len(cleaned),
+                    extra={'llm_provider': self.name, 'llm_op': op,
+                           'llm_model': model, 'llm_event': 'template_leak'},
+                )
+            if not cleaned:
+                status = 'error'
+                raise LLMProviderError(
+                    f'empty response after sanitization from {model} '
+                    f'(raw was {len(text)} chars of template-only)'
+                )
+            return cleaned
         except httpx.TimeoutException as e:
             status = 'timeout'
             raise LLMProviderError(f'timeout calling {model}: {e}') from e
