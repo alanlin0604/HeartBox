@@ -1,8 +1,8 @@
 # Phase 0b 狀態報告：OpenAI → 自架 LLM 遷移
 
-**日期**：2026-06-25
+**日期**：2026-06-25（最後更新 commit 4f43145）
 **Capstone Defense**：2026-06-30（5 天後）
-**生產環境**：Cloud Run `heartbox-api-00180-nnj`（4Gi） + Cloudflare Tunnel `llm.heartbox.tw` → 家裡 GPU `127.0.0.1:8765`
+**生產環境**：Cloud Run `heartbox-api-00181-5bm`（4Gi） + Cloudflare Tunnel `llm.heartbox.tw` → 家裡 GPU `127.0.0.1:8765`
 
 ---
 
@@ -107,21 +107,28 @@
 
 ---
 
-## 仍待處理（11 個，全部 LOW / INFO，1 個 MEDIUM）
+## 已關閉項目（commit 4f43145, 2026-06-25）
 
-| Severity | 維度 | Owner | 為什麼還沒做 |
-|---|---|---|---|
-| **MEDIUM** | llm_server rate limiting | assistant-can-do | 沒有 slowapi / token-bucket / per-IP throttle。被洩漏的 API key 可以對 tunnel 持續打到 GPU 耗盡，到金鑰輪換為止。**可用性問題，不是洩密**。`_swap_lock` 天然序列化 (~1 req/5-15s) + Cloudflare edge throttle 已經算自然防禦。建議用 slowapi sliding-window keyed by `X-API-Key`，這樣可以發多把 key 分別 revoke。 |
-| LOW | API_KEY 最小長度 / 熵 | assistant-can-do | [config.py:34](../llm_server/config.py#L34) 只檢查非空；理論上 `API_KEY=x` 也會 boot 並接受 1-char key。加 Pydantic `Field(min_length=32)` 或 startup assertion 就好。 |
-| LOW | Body-size middleware streaming-bytes 強制 | assistant-can-do | [main.py:387-398](../llm_server/main.py#L387-L398) 信任 `Content-Length`。Uvicorn/Starlette 在 transport 層強制 declared CL 所以實際安全，但 defense-in-depth 應該 wrap `await request.body()` 進 counting reader。 |
-| LOW | `log_prompts` dead config flag | assistant-can-do | [config.py:52](../llm_server/config.py#L52) parse 進 Settings 但 main.py / engine.py grep 都找不到使用。資安角度算好（任何 path 都不會 log prompt），但 dead flag 誤導 operator。 |
-| LOW | `MoodNote.ai_feedback` 沒加密 | **user-must-do** | [models.py:95](../backend/api/models.py#L95) `ai_feedback` 是 plaintext `TextField`。系統 prompt 禁止 verbatim echo + `scrub_llm_output` 切 boundary，但推論出來的情緒 + paraphrase 還是 plaintext。如果 threat model 加 DB-dump 場景才要 Fernet 包，**需要 product owner 決定**（list-view 不需要 decrypt 是 trade-off；retroactive 加密要 data migration 而且打掉 LIKE search）。 |
-| LOW | 註解還寫 OpenAI | assistant-can-do | [notes.py:273,278](../backend/api/views/notes.py#L273) 還寫「5-15s OpenAI roundtrip」「failed OpenAI call」。[tasks.py:16](../backend/api/tasks.py#L16) 還寫「OpenAI throttle」。[tests.py:1518](../backend/api/tests.py#L1518) docstring 還提「OpenAI key is missing」。純文件 drift，實際呼叫已走本地 TAIDE seam。改成「LLM roundtrip / LLM throttle / LLM provider unconfigured」。 |
-| LOW | 本機 venv 殘留 `openai` 1.78.1 + `langchain-openai` 0.3.18 | **user-must-do** | `backend/venv/Lib/site-packages` 裡有殘留。**`requirements.txt` 沒釘**，**沒被任何非 venv source import**，Cloud Run 每次都 reinstall 所以 deploy 0 影響。純本機磁碟衛生問題。在你的工作站跑 `rm -rf backend/venv && python -m venv backend/venv && pip install -r requirements.txt` 即可。 |
-| LOW | Archive docs 還提 OpenAI | assistant-can-do | `docs/archive/專案全面審查與改進建議.md:71` 還列 `OPENAI_API_KEY`。`docs/archive/全面改進建議報告.md:291` 還寫「AI: OpenAI GPT-4, LangChain, ChromaDB」。在 `/docs/archive/` 下可接受，但加一行 deprecation banner 避免被 defense panel grep 到舊版。 |
-| INFO | `search_text` plaintext 預覽要文件化 | assistant-can-do | [models.py:96,133](../backend/api/models.py#L96) `search_text` 存 `strip_tags(raw)[:500]` plaintext 給 LIKE search。設計可接受但要在 `docs/defense-qa.md` 寫清楚——「AES-256 加密日記」claim 要 qualify「除了前 500 字明文預覽以外」。若 panel 問「日記是不是完全加密」runbook 要先答到避免 gotcha。 |
-| INFO | `sanitize._ROLE_NAMES` 含 bot 名字 | assistant-can-do | `小心` 是 AI persona name 但也是中文「小心、注意」動詞。理論上 `小心：你應該休息一下` 會被剝。替換成空白所以後面文字會留下。Cosmetic — 加 comment 註明 trade-off 即可。 |
-| INFO | huggingface.co cold-cache load path | **user-must-do** | llm_server 沒設 `HF_HUB_OFFLINE` / `TRANSFORMERS_OFFLINE`。如果 HF_HOME cache 被清光，下次載入會去 huggingface.co。**不是日記資料外流**（只是模型權重），但是維運顧慮。Mitigation：透過 [backend/download_models.py](../backend/download_models.py) 預熱，然後設 `TRANSFORMERS_OFFLINE=1`。 |
+8 項機械化修法已 deploy：
+
+| 原 Severity | 維度 | Commit 處理方式 |
+|---|---|---|
+| **MEDIUM** | llm_server rate limiting | ✅ 新 `_rate_limit_middleware`（[main.py](../llm_server/main.py)）— sliding-window per-API-key + burst guard。SHA256 fingerprint key（raw key 永不進記憶體 dump）。預設 60 req/min + burst 10 in 5s。返回 429 + `Retry-After`。skip /health；3 個新測試 |
+| LOW | API_KEY 最小長度 | ✅ `create_app()` 拒絕 boot 如 `len(api_key) < 32`；指向 `secrets.token_hex(32)`。新測試 `test_short_api_key_refused_at_startup` |
+| LOW | Body-size streamed-bytes 計數 | ✅ `_body_size_limit` 包 `request._receive()` 加 counter；超過上限就 truncate chunk + signal end-of-body 返 413。Defense-in-depth 對抗未來 transport bypass |
+| LOW | `log_prompts` dead config flag | ✅ 從 config.py 移除（永遠是 no-op 的 trap） |
+| LOW | 註解寫 OpenAI | ✅ notes.py / tasks.py / tests.py 三處改成 LLM roundtrip / LLM provider throttle / LLM provider unconfigured |
+| LOW | Archive docs deprecation banner | ✅ `專案全面審查與改進建議.md` + `全面改進建議報告.md` 加 4 行警告 + 指向 `.env.example` + `phase0b-status.md` |
+| INFO | `search_text` plaintext caveat | ✅ `docs/defense-qa.md` Q4 加 caveat 段：前 500 字明文 trade-off 因 Fernet ciphertext 不能 LIKE。pre-empt「日記是不是完全加密」的 gotcha |
+| INFO | `sanitize._ROLE_NAMES` 含 `小心` 註解 | ✅ 加 7 行 comment 說明 trade-off：catch parrot case at cost of 罕見「小心：注意安全」誤剝（替換為空白所以後文存留） |
+
+## 剩餘待辦（3 個，全部需要你親手做）
+
+| Severity | 維度 | 你要做什麼 |
+|---|---|---|
+| LOW | `MoodNote.ai_feedback` 沒加密 | 設計決定：要不要 Fernet 包 `ai_feedback`？trade-off：list-view 不需 decrypt vs 防 DB-dump scenario。回 mainline 一句話我就 land migration |
+| LOW | 本機 venv 殘留 `openai` 1.78.1 + `langchain-openai` 0.3.18 | 在你工作站跑：`Remove-Item -Recurse -Force backend\venv; python -m venv backend\venv; backend\venv\Scripts\pip install -r requirements.txt`。Cloud Run 不受影響 |
+| INFO | 設 `TRANSFORMERS_OFFLINE=1` 在家裡 GPU 主機 | 第一次 boot 成功（HF cache 已熱）後，編輯 `~/.heartbox-llm.env` 加一行 `TRANSFORMERS_OFFLINE=1` 並 restart llm_server。防 HF 主站 outage |
 
 ---
 
@@ -133,7 +140,7 @@
 
 ## 資安判決（一段）
 
-**端到端資安狀態為 defense 窗口可接受。** 日記內容用 Fernet（含 MultiFernet rotation）靜態加密，`ENCRYPTION_KEY` 在 boot 驗證為 32-byte url-safe-b64；傳輸用 HTTPS 終結於 Cloudflare Tunnel 內部 `127.0.0.1:8765`，全程無 `verify=False`。llm_server 在 Pydantic parse 前先用 `hmac.compare_digest` 比 API key、雙 pass SSRF 防禦（用對的 httpcore `server_addr` extension 關閉 DNS-rebind TOCTOU window）、8MB/16MP 圖片限制 + 中段 abort、雙層 body-size 強制（拒絕 chunked-encoding 繞道）、嚴格 CORS allowlist 無 wildcard 且 credentials disabled、docs surface 關閉（無 swagger fingerprint）、cooperative-cancel 完整（StoppingCriteria + thread join + atomic-swap loader）讓 timed-out / 客戶端斷線的 generation 不會留 GPU-holding zombie 在 `_swap_lock` 後面。Django provider seam 在單一 chokepoint 跑 `scrub_llm_output`、消費端再二次清洗、CrisisGuard 在每個 LLM path 和每個 non-LLM fallback path 都對稱跑 BEFORE（preamble inject）+ AFTER（hotline prepend），NFKC + per-clause normalization 抗 obfuscation + HIGH-first severity sweep。Logging 不寫 prompt / reply / system prompt / user content / key 內容——只寫 structured field（provider/op/model/latency_ms/status）+ `removed_chars` 計數。兩個實質 gap 是 llm_server 沒 in-process rate limit（MEDIUM，可用性問題，被 GPU 序列化 + Cloudflare edge throttle 自然緩解）+ API_KEY 沒最小長度檢查（LOW，operator hygiene）；其餘都是 cosmetic 用詞 drift、dead config flag、或已 document 的設計 trade-off（ai_feedback plaintext、search_text plaintext 預覽）。
+**端到端資安狀態 defense-ready。** 日記內容用 Fernet（含 MultiFernet rotation）靜態加密，`ENCRYPTION_KEY` 在 boot 驗證為 32-byte url-safe-b64；傳輸用 HTTPS 終結於 Cloudflare Tunnel 內部 `127.0.0.1:8765`，全程無 `verify=False`。**commit 4f43145 後** llm_server 還加上 in-process rate limit（SHA256-fingerprint per-key sliding window + 5s burst guard，預設 60/min + burst 10）+ API_KEY 32 字元最小長度（boot 時拒絕短 key）+ streaming-bytes body counter，與既有 SSRF + body-size cap + chunked-bypass refuse + CORS-on-401 等防禦疊在一起。在 Pydantic parse 前用 `hmac.compare_digest` 比 API key、雙 pass SSRF（httpcore `server_addr` extension 關閉 DNS-rebind TOCTOU）、8MB/16MP 圖片限制 + 中段 abort、cooperative-cancel（StoppingCriteria + thread join + atomic-swap loader）讓 timed-out / 客戶端斷線的 generation 不留 GPU zombie。Django provider seam 在單一 chokepoint 跑 `scrub_llm_output`、消費端再二次清洗、CrisisGuard 在每個 LLM path 和每個 non-LLM fallback path 都對稱跑 BEFORE（preamble inject）+ AFTER（hotline prepend），NFKC + per-clause normalization 抗 obfuscation + HIGH-first severity sweep。Logging 不寫 prompt / reply / system prompt / user content / key 內容——只寫 structured field（provider/op/model/latency_ms/status）+ `removed_chars` 計數。**所有 critical / high / medium 已關閉**；剩 3 個 LOW/INFO 全部要你親手做：`ai_feedback` 是否加密的設計判斷（產品決定）、本機 venv 殘留清理（不影響 prod）、家裡 GPU 設 `TRANSFORMERS_OFFLINE=1`（防 HF 主站 outage）。
 
 ---
 
@@ -141,24 +148,23 @@
 
 **準備好。** 遷移 production-complete、prompt-leak 修法（5c430d6 / 0749431 / 7a349f5）已 deploy、migration 0058 已掃過歷史 row、本機 llm_server PID 66980 已 patch、`llm.heartbox.tw` tunnel 健康。Data-sovereignty 論述寫在 [docs/defense-qa.md](defense-qa.md)，runbook 在 [docs/llm-runbook.md](llm-runbook.md)。
 
-**最大殘餘風險是維運不是資安**：Cloud Run 在 demo 時還是要靠你家 GPU 主機透過 Cloudflare Tunnel 通——如果家裡停電或 tunnel flap 在演講中，AI feedback path 會掉到 `_basic_feedback_with_crisis_guard` 那層 canned response（誠實但明顯降級）。次要風險是 llm_server 沒 rate limit；只要 `LLM_SERVER_API_KEY` 在 8 天內不洩漏就沒事，**6/29 晚上輪換 key 是標準衛生動作**。
+**最大殘餘風險是維運不是資安**：Cloud Run 在 demo 時還是要靠你家 GPU 主機透過 Cloudflare Tunnel 通——如果家裡停電或 tunnel flap 在演講中，AI feedback path 會掉到 `_basic_feedback_with_crisis_guard` 那層 canned response（誠實但明顯降級）。Rate limit 已在 commit 4f43145 加上，key 洩漏不再會把 GPU 打爛；**6/29 晚上輪換 key 仍是建議動作**。
 
 ### Defense 前要鎖定的事項
 1. 確認你家 GPU 主機有 UPS、tunnel 設定 auto-reconnect
 2. Demo 前 30 分鐘預熱 chat + vision 模型避免 first-token latency
 3. **錄一段成功 end-to-end 寫日記 + AI 回饋的螢幕錄影**當網路降級時的 fallback
-4. （Optional）freeze 前 land llm_server slowapi rate-limit patch（若你願意再改一輪 code）
+4. （Optional）家裡 GPU 主機設 `TRANSFORMERS_OFFLINE=1` 防 HF 主站 outage
 
 ---
 
-## 我可以接下來幫你做的（如果你想繼續）
+## Commit 時間軸（最後 5 天）
 
-按優先序：
-
-1. **llm_server slowapi rate limit**（MEDIUM）— 防禦 key 洩漏後的 GPU 耗盡
-2. **API_KEY min-length validator**（LOW）— 一行 Pydantic field
-3. **註解 / docstring 改 OpenAI → LLM**（LOW）— 純文字 drift
-4. **Archive docs 加 deprecation banner**（LOW）— 防 defense panel grep 到舊版
-5. **`docs/defense-qa.md` 補一段 `search_text` 預覽明文的 caveat**（INFO）
-
-需要哪幾個就跟我說。本機 venv 清理 + `TRANSFORMERS_OFFLINE` 設定要你自己在工作站做（我沒辦法摸你的 PowerShell）。
+| Commit | 變更 | 影響 |
+|---|---|---|
+| 5c430d6 | engine.py token-slice 修 prompt-leak 根因 + scrub at chokepoint | 新輸出永不漏 |
+| 8922495 | 11 autofix（dashboard crash / push SSRF / email enum / 等） | 全項目消除 critical/high |
+| 0749431 | sanitize boundary cut + AIFeedbackText 前端排版 | 歷史污染清乾淨 + UI 美化 |
+| 7a349f5 | migration 0058 re-scrub | 1 row（note 952）已清 |
+| ce3df57 | docs/phase0b-status.md | 本份文件初版 |
+| **4f43145** | **rate limit + min-length + body counter + 註解/banner/caveat** | **本份文件覆蓋的 8 項全關** |
