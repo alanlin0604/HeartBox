@@ -151,16 +151,36 @@ class PublicPostViewSet(viewsets.ModelViewSet):
 
         return Response(body, status=status.HTTP_201_CREATED)
 
+    def _require_owner(self, post, request):
+        """Shared IDOR guard: refuse any mutating verb when caller is not
+        the post owner. Without this PATCH/PUT against another user's post
+        succeeded because DRF's default ``update`` doesn't check ownership."""
+        if post.user_id != request.user.id:
+            return Response(
+                {'detail': 'You can only modify your own posts.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+
+    def update(self, request, *args, **kwargs):
+        """PUT — IDOR guard before the default update runs."""
+        post = self.get_object()
+        if (refusal := self._require_owner(post, request)) is not None:
+            return refusal
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        """PATCH — IDOR guard before the default partial_update runs."""
+        post = self.get_object()
+        if (refusal := self._require_owner(post, request)) is not None:
+            return refusal
+        return super().partial_update(request, *args, **kwargs)
+
     def destroy(self, request, *args, **kwargs):
         """Delete own post (soft delete by setting is_active=False)."""
         post = self.get_object()
-
-        # Only owner can delete
-        if post.user != request.user:
-            return Response(
-                {'detail': 'You can only delete your own posts.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        if (refusal := self._require_owner(post, request)) is not None:
+            return refusal
 
         # Soft delete
         post.is_active = False

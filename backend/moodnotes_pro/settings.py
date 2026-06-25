@@ -128,9 +128,20 @@ AUTH_USER_MODEL = 'api.CustomUser'
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+# Argon2 first so new passwords use the modern memory-hard hash; PBKDF2 stays
+# in the list so existing PBKDF2 hashes still verify (Django will transparently
+# upgrade them to Argon2 on the next successful login).
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
 ]
 
 LANGUAGE_CODE = 'zh-hant'
@@ -215,8 +226,12 @@ REST_FRAMEWORK = {
 }
 
 # JWT
+# 15-min access keeps the bearer-token blast radius tight; refresh rotation
+# + blacklist makes the long-lived refresh single-use. token_version is
+# bumped on logout/password change/2FA disable so any access token issued
+# before that moment is rejected immediately on its next use.
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -365,10 +380,17 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
     SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+    # CORP defaults to same-origin so attached resources (avatars, exports)
+    # can't be embedded cross-origin; pairs with COOP above.
+    SECURE_CROSS_ORIGIN_RESOURCE_POLICY = 'same-origin'
     X_FRAME_OPTIONS = 'DENY'
     # Lock the cookie to first-party context only
     SESSION_COOKIE_SAMESITE = 'Lax'
     CSRF_COOKIE_SAMESITE = 'Lax'
+    # CSRF cookie is read by the JS frontend on regular Django form submission
+    # but not on our DRF JWT API. Make it HttpOnly so a successful XSS payload
+    # can't steal it for a CSRF chain.
+    CSRF_COOKIE_HTTPONLY = True
 
 # Upload limits — Django defaults are 2.5 MB; tighten the JSON / form body
 # accepted by APIs and rely on per-endpoint magic-byte validation for files.

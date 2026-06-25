@@ -12,6 +12,7 @@ dj-database-url==2.3.0
 python-dotenv==1.1.0
 psycopg2-binary==2.9.10
 cryptography==44.0.3
+argon2-cffi==23.1.0
 langchain==0.3.25
 langchain-chroma==0.2.6
 chromadb==1.0.20

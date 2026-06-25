@@ -382,9 +382,23 @@ class PushSubscriptionView(APIView):
         if not _is_allowed_push_endpoint(endpoint) or not p256dh or not auth:
             return error_response('push_invalid_endpoint', 'Invalid push endpoint.', 400)
 
-        PushSubscription.objects.update_or_create(
+        # Subscription-hijack defense: if THIS endpoint is already bound to
+        # another user, refuse rather than transferring it. Lookup uses
+        # (user, endpoint) composite to scope writes to the current user.
+        other_user_owned = PushSubscription.objects.filter(
             endpoint=endpoint,
-            defaults={'user': request.user, 'p256dh': p256dh, 'auth': auth},
+        ).exclude(user=request.user).exists()
+        if other_user_owned:
+            logger.warning(
+                'push_subscription_hijack_attempt user=%s endpoint_host=%s',
+                request.user.id, urlparse(endpoint).hostname,
+            )
+            return error_response('push_invalid_endpoint',
+                                  'Invalid push endpoint.', 400)
+        PushSubscription.objects.update_or_create(
+            user=request.user,
+            endpoint=endpoint,
+            defaults={'p256dh': p256dh, 'auth': auth},
         )
         return Response({'detail': 'Push subscription registered'})
 

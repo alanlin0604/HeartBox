@@ -253,6 +253,23 @@ class RegisterView(generics.CreateAPIView):
             logger.exception('Failed to send verification email to %s', user.email)
 
 
+def _issue_2fa_partial_token(user) -> str:
+    """Short-lived (3 min) access token scoped ONLY to /api/auth/login/2fa/.
+
+    The custom ``scope='2fa_pending'`` claim is checked by Login2FAView and
+    rejected by ``VersionedJWTAuthentication`` everywhere else, so this token
+    cannot be used to authenticate a regular API call before the second
+    factor is supplied. Without this, a stolen first-factor-only token gave
+    the attacker ACCESS_TOKEN_LIFETIME of regular API access.
+    """
+    from datetime import timedelta as _td
+    from rest_framework_simplejwt.tokens import AccessToken
+    tok = AccessToken.for_user(user)
+    tok['scope'] = '2fa_pending'
+    tok.set_exp(lifetime=_td(minutes=3))
+    return str(tok)
+
+
 def _issue_tokens(user):
     refresh = RefreshToken.for_user(user)
     refresh['token_version'] = user.token_version
@@ -277,7 +294,17 @@ class VersionedTokenRefreshSerializer(TokenRefreshSerializer):
             raise exceptions.AuthenticationFailed('User not found')
         if int(token.get('token_version', -1)) != int(user.token_version):
             raise exceptions.AuthenticationFailed('Token no longer valid')
-        return super().validate(attrs)
+        data = super().validate(attrs)
+        # SimpleJWT's parent validate() does NOT propagate custom claims onto
+        # the rotated access token. Mint a fresh one with token_version so
+        # the next request still validates against the user's current
+        # generation (otherwise a logout-rotated user could keep working
+        # off a refreshed access for the full ACCESS_TOKEN_LIFETIME window).
+        from rest_framework_simplejwt.tokens import AccessToken
+        access = AccessToken(data['access'])
+        access['token_version'] = user.token_version
+        data['access'] = str(access)
+        return data
 
 
 class LoginView(TokenObtainPairView):
@@ -309,11 +336,14 @@ class LoginView(TokenObtainPairView):
             totp_device = user.totp_device
             if totp_device.confirmed:
                 log_action(user, 'auth.login_2fa_required', request=request)
-                # Return partial token indicating 2FA is needed
-                partial_token = str(RefreshToken.for_user(user).access_token)
+                # Mint a SCOPED partial token that is ONLY accepted by
+                # Login2FAView (scope=2fa_pending) and rejected by every
+                # other endpoint. Without the scope check, the access half
+                # of this token would authenticate normal API requests
+                # before the second factor was supplied.
                 return Response({
                     'requires_2fa': True,
-                    'partial_token': partial_token,
+                    'partial_token': _issue_2fa_partial_token(user),
                 })
         except TOTPDevice.DoesNotExist:
             pass
@@ -814,17 +844,41 @@ class LogoutView(APIView):
             # Token already blacklisted / malformed — treat as idempotent
             pass
         if request.user.is_authenticated:
+            # Bump token_version so any STILL-VALID access tokens (which we
+            # can't blacklist — they're stateless) are rejected on the next
+            # request. Without this, a stolen access token survives logout
+            # for up to ACCESS_TOKEN_LIFETIME minutes.
+            request.user.token_version = (request.user.token_version or 0) + 1
+            request.user.save(update_fields=['token_version'])
             log_action(request.user, 'auth.logout', request=request)
         return Response(status=status.HTTP_205_RESET_CONTENT)
 
 
 class TOTPDisableView(APIView):
     def post(self, request):
+        import pyotp
         password = request.data.get('password', '')
+        code = request.data.get('code', '')
         if not request.user.check_password(password):
             return error_response('error.incorrect_password', 'Incorrect password.', 400)
 
+        # Require a fresh TOTP digit as well — disabling 2FA must NOT be a
+        # password-only operation, otherwise a stolen-password attacker can
+        # disable the second factor and then escalate.
+        if not code:
+            return error_response('totp_code_required', 'TOTP code is required to disable 2FA.', 400)
+        try:
+            device = request.user.totp_device
+        except TOTPDevice.DoesNotExist:
+            return error_response('totp_not_found', 'No 2FA device found.', 400)
+        if not pyotp.TOTP(device.secret).verify(code, valid_window=1):
+            log_action(request.user, 'auth.2fa_disabled_failed', request=request)
+            return error_response('totp_invalid_code', 'Invalid TOTP code.', 400)
+
         TOTPDevice.objects.filter(user=request.user).delete()
+        # Rotate sessions so any token issued before 2FA was disabled is killed.
+        request.user.token_version = (request.user.token_version or 0) + 1
+        request.user.save(update_fields=['token_version'])
         log_action(request.user, 'auth.2fa_disabled', request=request)
         return Response({'detail': '2FA disabled successfully'})
 
@@ -845,6 +899,11 @@ class Login2FAView(APIView):
 
         try:
             token = AccessToken(partial_token)
+            # Reject any non-2FA-pending token presented here, even if the
+            # signature is valid — prevents a regular access token from
+            # being used to skip the second factor entirely.
+            if token.get('scope') != '2fa_pending':
+                return error_response('totp_invalid_token', 'Invalid token.', 400)
             user = User.objects.get(pk=token['user_id'])
         except Exception:
             logger.exception('Login2FA token validation failed')
@@ -888,13 +947,24 @@ class GoogleLoginCallbackView(APIView):
         except ValueError:
             return error_response('oauth_invalid_credential', 'Invalid Google credential.', 400)
 
+        # CRITICAL: only trust Google's email claim if Google says it's verified.
+        # Otherwise an attacker who controls a Google-Workspace domain could
+        # mint id_tokens for an unverified address that matches an existing
+        # HeartBox account and pre-empt that user.
+        if not idinfo.get('email_verified'):
+            log_action(None, 'auth.oauth_email_not_verified', request=request,
+                       details={'provider': 'google'})
+            return error_response('oauth_email_not_verified',
+                                  'Google has not verified this email.', 400)
+
         email = idinfo.get('email', '')
         if not email:
             return error_response('oauth_no_email', 'Email not provided by Google.', 400)
 
-        # Find or create user
+        # Find or create user. iexact: avoid case-sensitivity gotchas where
+        # 'Alan@x.com' bypasses the local 'alan@x.com' row.
         try:
-            user = User.objects.filter(email=email).first()
+            user = User.objects.filter(email__iexact=email).first()
             if user is None:
                 raise User.DoesNotExist
         except User.DoesNotExist:
@@ -915,16 +985,15 @@ class GoogleLoginCallbackView(APIView):
             user.save(update_fields=['email_verified'])
 
         # 2FA bypass guard: if user has password-flow 2FA enabled, Google
-        # OAuth must NOT issue a full token. Return a partial token and let
-        # the frontend prompt for the TOTP code (same flow as password login).
+        # OAuth must NOT issue a full token. Return a SCOPED partial token
+        # (same shape as password login) so the frontend prompts for TOTP.
         try:
             totp_device = user.totp_device
             if totp_device.confirmed:
                 log_action(user, 'auth.login_2fa_required', request=request, details={'provider': 'google'})
-                partial_token = str(RefreshToken.for_user(user).access_token)
                 return Response({
                     'requires_2fa': True,
-                    'partial_token': partial_token,
+                    'partial_token': _issue_2fa_partial_token(user),
                 })
         except TOTPDevice.DoesNotExist:
             pass

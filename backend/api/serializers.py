@@ -46,6 +46,26 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('age_gate_required')
         return value
 
+    def validate_password(self, value):
+        """Apply the AUTH_PASSWORD_VALIDATORS configured in settings.py
+        (UserAttributeSimilarity / MinimumLength / CommonPassword /
+        NumericPassword). Without this hook DRF only enforces the
+        min_length=8 declared above. Pass a draft user so the similarity
+        validator can compare against the username + email we're about to
+        create the account with.
+        """
+        from django.contrib.auth import password_validation
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        draft = User(
+            username=self.initial_data.get('username', '') or '',
+            email=self.initial_data.get('email', '') or '',
+        )
+        try:
+            password_validation.validate_password(value, user=draft)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+        return value
+
     def create(self, validated_data):
         from django.utils import timezone
         validated_data.pop('accepts_terms', None)
