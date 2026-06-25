@@ -1,6 +1,7 @@
 // HIDDEN PRE-LAUNCH — Sub-tab of CounselorListPage (also hidden). Re-enable
 // via TODO.md "諮商師功能反向恢復計畫".
 import EmptyState from '../../components/EmptyState'
+import AIFeedbackText from '../../components/AIFeedbackText'
 import { LOCALE_MAP } from '../../utils/locales'
 
 export default function SharedNotesTab({
@@ -61,7 +62,7 @@ export default function SharedNotesTab({
                   {sn.note_ai_feedback && (
                     <div className="glass-card p-3 border-l-4 border-orange-500/50 mt-2">
                       <p className="text-xs font-semibold text-orange-400 mb-1">{t('noteDetail.aiFeedback')}</p>
-                      <p className="text-xs opacity-70 whitespace-pre-wrap">{sn.note_ai_feedback}</p>
+                      <AIFeedbackText text={sn.note_ai_feedback} className="text-xs opacity-70" />
                     </div>
                   )}
                 </>

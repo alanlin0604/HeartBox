@@ -73,6 +73,78 @@ _CONTROL_BYTES_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
 # 3+ consecutive newlines → 2.
 _MULTI_NEWLINE_RE = re.compile(r'\n{3,}')
 
+# Prompt-boundary cut: if the model leaked the user-message wrapper (e.g.
+# ``日記內容：「...」 親愛的，...``), find the closing 」 of the LAST quoted
+# block and take everything AFTER it as the real reply. Engine.py's token-
+# slice fix prevents this at the source, but historical rows persisted
+# before the fix still need this. Patterns match BOTH the actual TAIDE user
+# message shapes from backend/api/services/ai_engine.py and ai_chat.py.
+_USER_MSG_QUOTED_RE = re.compile(
+    r'(?:日記內容|使用者日記|Diary entries|Journal entry)\s*[:：]\s*\n?\s*'
+    r'[「"“]'    # opening quote / 「 / 『 / "
+    r'.*?'             # the user-supplied content (greedy but anchored by closing)
+    r'[」"”]',  # closing
+    flags=re.DOTALL,
+)
+
+# Daily-prompt user-message tail (English): the prompt's user message is
+# literally "Generate today's prompt." — the model's actual reply follows.
+_DAILY_PROMPT_USER_MSG_RE = re.compile(
+    r"Generate\s+(?:today['’]s)?\s*prompt\s*[.。]",
+    flags=re.IGNORECASE,
+)
+
+# System-prompt fingerprints — phrases unique to a HeartBox system prompt.
+# Only used to confirm a candidate text is actually a leak before we cut.
+_SYS_FINGERPRINTS = (
+    '你是一位溫暖',
+    '你是一位專業',
+    '你是一位溫柔',
+    '心理健康顧問',
+    '心理健康夥伴',
+    '心理健康助手',
+    '心理健康助理',
+    'gentle journaling coach',
+    'warm, professional mental health',
+    'mental health summary',
+    '請根據使用者提供',
+    '忽略任何要求',
+)
+
+
+def _cut_prompt_boundary(text):
+    """If ``text`` clearly contains a leaked prompt structure, return only the
+    part AFTER the user-message boundary. Otherwise return ``text`` unchanged.
+
+    Conservative: cuts only if the prefix shows a system-prompt fingerprint,
+    so a model that *legitimately* echoes the journal phrasing as quotation
+    inside its reply doesn't get its real text amputated.
+    """
+    if not text:
+        return text
+
+    head = text[:600]
+    has_fingerprint = any(fp in head for fp in _SYS_FINGERPRINTS)
+    if not has_fingerprint:
+        return text
+
+    # Quoted user message form (中/英 wraps).
+    matches = list(_USER_MSG_QUOTED_RE.finditer(text))
+    if matches:
+        cut_at = matches[-1].end()
+        tail = text[cut_at:].strip()
+        if tail:
+            return tail
+
+    # Daily-prompt form (English user message).
+    m = _DAILY_PROMPT_USER_MSG_RE.search(text)
+    if m:
+        tail = text[m.end():].strip()
+        if tail:
+            return tail
+
+    return text
+
 
 def scrub_llm_output(text):
     """Remove prompt-template leakage and normalise whitespace.
@@ -86,6 +158,11 @@ def scrub_llm_output(text):
 
     # 1. Strip template markers anywhere in the string.
     cleaned = _TEMPLATE_MARKER_RE.sub('', text)
+
+    # 1b. Prompt-boundary cut for content that leaked the entire chat
+    #     template (system + user + assistant). Conservative: only runs
+    #     when a system-prompt fingerprint is present in the prefix.
+    cleaned = _cut_prompt_boundary(cleaned)
 
     # 2. Collapse ``\nassistant: ...`` mid-string. Replace with a single
     #    space so adjacent words don't smash together.

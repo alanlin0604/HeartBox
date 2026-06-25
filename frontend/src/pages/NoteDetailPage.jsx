@@ -6,6 +6,7 @@ import { useLang } from '../context/LanguageContext'
 import MoodBadge from '../components/MoodBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ConfirmModal from '../components/ConfirmModal'
+import AIFeedbackText from '../components/AIFeedbackText'
 // Counselor share UI hidden pre-launch — re-enable along with /counselors.
 // import ShareNoteButton from '../components/ShareNoteButton'
 // import { getNoteShares, unshareNote } from '../api/notes'
@@ -305,9 +306,7 @@ export default function NoteDetailPage() {
         {note.ai_feedback ? (
           <div className="glass-card p-4 border-l-4 border-orange-500/50">
             <h3 className="text-sm font-semibold text-orange-500 mb-2">{t('noteDetail.aiFeedback')}</h3>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap opacity-80">
-              {note.ai_feedback}
-            </p>
+            <AIFeedbackText text={note.ai_feedback} />
             <p className="text-xs opacity-40 mt-3 italic">
               {t('noteDetail.aiDisclaimer')}
             </p>
