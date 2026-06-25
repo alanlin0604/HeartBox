@@ -1,8 +1,56 @@
 # Phase 0b 狀態報告：OpenAI → 自架 LLM 遷移
 
-**日期**：2026-06-25（最後更新 commit 4f43145）
+**日期**：2026-06-25（最後更新 commit f49e1fd / 9d73639 / 99e7c42 — 三波 max-security 硬化）
 **Capstone Defense**：2026-06-30（5 天後）
-**生產環境**：Cloud Run `heartbox-api-00181-5bm`（4Gi） + Cloudflare Tunnel `llm.heartbox.tw` → 家裡 GPU `127.0.0.1:8765`
+**生產環境**：Cloud Run `heartbox-api-00183-cm6`（4Gi） + Cloudflare Tunnel `llm.heartbox.tw` → 家裡 GPU `127.0.0.1:8765`
+
+## Max-security 硬化結果（2026-06-25 連續 commits）
+
+`Workflow wf_15244f50-751` 4 phase audit 找到 61 個 finding；以下已 landed：
+
+### 🔒 加密（全部 user-content 欄位現在都 Fernet-encrypt at rest）
+- `MoodNote.encrypted_content` ✅（原本就有）
+- `MoodNote.ai_feedback` ✅ commit 99e7c42 — 55 rows backfilled
+- `AIChatMessage.content` ✅ commit 99e7c42 — 22 rows backfilled
+- `WeeklySummary.ai_summary` ✅ commit 99e7c42 — 4 rows backfilled
+- `Message.content`（私訊 DM）✅ commit f49e1fd — 3 rows backfilled
+- `Notification.message` ✅ commit f49e1fd — **78 rows backfilled**
+- `FriendComment.content` ✅ commit f49e1fd — 0 rows (no data yet)
+- `PostReport.note` ✅ commit f49e1fd — 1 row backfilled
+
+**總共 163 個歷史 row 從 plaintext 升級到 Fernet AES-128。**
+**剩餘明文僅 `MoodNote.search_text`（前 500 字）**為 LIKE search 必要，已記錄在 [defense-qa.md](defense-qa.md)。
+
+### 🔑 Auth 強化（commit 9d73639）
+- **CRITICAL** Google OAuth 強制 `email_verified=True` claim + `email__iexact` 匹配（修 pre-emption attack）
+- **HIGH** Argon2PasswordHasher 取代 PBKDF2 默認；舊 hash 仍可 verify 並 next-login 升級
+- **HIGH** `validate_password()` 接上 4 個 AUTH_PASSWORD_VALIDATORS（之前是 dead config）
+- **HIGH** `ACCESS_TOKEN_LIFETIME` 30→15min；`token_version` 在 logout / 2FA disable / refresh 都正確 bump 與 propagate
+- **HIGH** TOTPDisable 強制要 password + TOTP code（之前只要 password）
+- **HIGH** 2FA partial token 改成 `scope='2fa_pending'` 3-min expiry；`VersionedJWTAuthentication` 拒絕任何 scoped token
+
+### 🛡️ IDOR + push subscription（commit 9d73639）
+- **HIGH** `PublicPostViewSet.update/partial_update` 加 IDOR 守門（之前只有 destroy 守）
+- **HIGH** `PushSubscription` 改 `(user, endpoint)` composite + 拒絕跨 user 註冊既有 endpoint
+
+### 🌐 Headers / CSP / Sentry（commit f49e1fd）
+- **HSTS preload** 2 年 + includeSubDomains
+- **CSP** 嚴格 allowlist（GSI Google sign-in + Cloud Run API + WSS）；frame-ancestors `'none'` / base-uri `'self'` / form-action `'self'` / object-src `'none'`
+- **COOP** `same-origin-allow-popups` + **CORP** `same-site` (frontend) / `same-origin` (backend)
+- **Permissions-Policy** 加 `browsing-topics=()` 阻擋 Topics API
+- 後端 CSP middleware 補 emit `base-uri` / `form-action` / `object-src`（settings 早有宣告但 middleware mapping 沒接）
+- Sentry `beforeSend` + `beforeBreadcrumb` 用 `scrubUrl()` 清掉 `/notes/<id>` / `/ai-chat/sessions/<id>` / `/share/<token>` 等 PII 路徑；`replaysSessionSampleRate` 降為 0（mental-health app 不錄背景 session，只錄 error）
+
+### ☑️ Headers live 驗證
+```
+strict-transport-security: max-age=63072000; includeSubDomains; preload  ✓
+content-security-policy: default-src 'self'; script-src 'self' ...      ✓
+cross-origin-opener-policy: same-origin-allow-popups                     ✓
+cross-origin-resource-policy: same-site                                  ✓
+permissions-policy: ...interest-cohort=(), browsing-topics=()            ✓
+referrer-policy: strict-origin-when-cross-origin                         ✓
+x-frame-options: DENY                                                    ✓
+```
 
 ---
 
