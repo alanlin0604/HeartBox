@@ -40,9 +40,12 @@ import ipaddress
 import logging
 import os
 import socket
+import time
 import uuid
 import warnings
+from collections import deque
 from contextlib import asynccontextmanager
+from threading import Lock as _ThreadLock
 from typing import Literal
 from urllib.parse import urlparse
 
@@ -341,6 +344,14 @@ def create_app(settings: Settings | None = None) -> 'FastAPI':
         raise RuntimeError(
             'API_KEY missing. Set it in ~/.heartbox-llm.env or env var API_KEY.'
         )
+    # Floor on entropy: a 1-character placeholder would otherwise boot a
+    # server over a public Cloudflare Tunnel and accept that 1-char key.
+    if len(settings.api_key) < settings.api_key_min_length:
+        raise RuntimeError(
+            f'API_KEY too short ({len(settings.api_key)} chars). '
+            f'Minimum {settings.api_key_min_length} required. '
+            'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
+        )
 
     if settings.hf_home:
         os.environ['HF_HOME'] = settings.hf_home
@@ -368,13 +379,16 @@ def create_app(settings: Settings | None = None) -> 'FastAPI':
     )
 
     # ------------------------------------------------------------------
-    # Body-size middleware. Two attack shapes to defuse:
-    #   1. Honest oversize: Content-Length > cap → 413.
+    # Body-size middleware. Three attack shapes to defuse:
+    #   1. Honest oversize: Content-Length > cap → 413 up front.
     #   2. Chunked-encoding bypass: ``Transfer-Encoding: chunked`` omits
-    #      Content-Length so the prior check let unlimited bodies through.
-    #      We refuse chunked uploads outright — clients to this server
-    #      never need streaming.
-    # Also a malformed Content-Length (negative, non-int) → 400 not crash.
+    #      Content-Length so the declared-size check would let unlimited
+    #      bodies through. Refuse chunked outright — clients never need it.
+    #   3. Streamed-bytes overrun: a client could declare a small CL but
+    #      send more bytes. Uvicorn/Starlette enforces declared CL at
+    #      transport, but defense-in-depth wraps `receive` with a counter
+    #      and aborts mid-stream if the cap is exceeded.
+    # A malformed Content-Length (negative, non-int) → 400 not crash.
     # ------------------------------------------------------------------
     @app.middleware('http')
     async def _body_size_limit(request: Request, call_next):
@@ -396,9 +410,39 @@ def create_app(settings: Settings | None = None) -> 'FastAPI':
                 return JSONResponse(
                     {'detail': 'body too large'}, status_code=413,
                 )
+
+        # Wrap the ASGI receive() so actual streamed bytes are tallied
+        # against the cap. Triggers only when transport-level enforcement
+        # was somehow bypassed — should never fire under normal Uvicorn.
+        body_limit = settings.body_limit_bytes
+        original_receive = request._receive
+        bytes_seen = 0
+        overran = False
+
+        async def _counted_receive():
+            nonlocal bytes_seen, overran
+            msg = await original_receive()
+            if msg.get('type') == 'http.request':
+                chunk = msg.get('body') or b''
+                bytes_seen += len(chunk)
+                if bytes_seen > body_limit:
+                    overran = True
+                    # Truncate the chunk and signal end-of-body so downstream
+                    # parsers don't keep waiting.
+                    return {'type': 'http.request', 'body': b'', 'more_body': False}
+            return msg
+
+        request._receive = _counted_receive  # type: ignore[assignment]
+
         rid = request.headers.get('x-request-id') or str(uuid.uuid4())
         request.state.request_id = rid
-        return await call_next(request)
+        response = await call_next(request)
+        if overran:
+            return JSONResponse(
+                {'detail': 'body too large (streamed bytes exceeded cap)'},
+                status_code=413,
+            )
+        return response
 
     # ------------------------------------------------------------------
     # Auth middleware. Runs BEFORE FastAPI's body parsing — an
@@ -413,6 +457,82 @@ def create_app(settings: Settings | None = None) -> 'FastAPI':
         api_key = request.headers.get('x-api-key', '')
         if not api_key or not hmac.compare_digest(api_key, settings.api_key):
             return JSONResponse({'detail': 'invalid API key'}, status_code=401)
+        return await call_next(request)
+
+    # ------------------------------------------------------------------
+    # Rate limit middleware. Per-API-key sliding window keyed on a hash of
+    # the X-API-Key header (storing raw keys would be a secondary leak
+    # surface in heapdumps / sigterm dumps). Skips /health to keep uptime
+    # pings free; runs AFTER auth so unauthenticated traffic isn't counted
+    # against legitimate keys.
+    #
+    # Stops sustained GPU exhaustion if API_KEY leaks: the GPU naturally
+    # serialises requests via _swap_lock at ~1 req per 5-15s, but a leaked
+    # key could chain bursts across many TCP connections and starve the
+    # legitimate caller. Cloudflare edge throttling is the outer layer,
+    # this is the in-process backstop.
+    #
+    # Set rate_limit_per_minute=0 in settings to disable (e.g. for tests).
+    # ------------------------------------------------------------------
+    _rate_buckets: dict[str, deque] = {}
+    _rate_lock = _ThreadLock()
+    rate_limit = max(0, int(settings.rate_limit_per_minute))
+    rate_burst = max(0, int(settings.rate_limit_burst))
+
+    def _key_fingerprint(api_key: str) -> str:
+        # SHA256-fingerprint of the key, never the raw key. Truncate to 16
+        # bytes — collision probability is negligible for the handful of
+        # keys we ever issue.
+        import hashlib
+        return hashlib.sha256(api_key.encode('utf-8')).hexdigest()[:16]
+
+    @app.middleware('http')
+    async def _rate_limit_middleware(request: Request, call_next):
+        if rate_limit == 0:
+            return await call_next(request)
+        if request.method == 'OPTIONS' or request.url.path == '/health':
+            return await call_next(request)
+        api_key = request.headers.get('x-api-key', '')
+        if not api_key:
+            return await call_next(request)  # auth middleware will 401
+
+        key_id = _key_fingerprint(api_key)
+        now = time.monotonic()
+        window_start = now - 60.0
+
+        with _rate_lock:
+            bucket = _rate_buckets.get(key_id)
+            if bucket is None:
+                bucket = deque()
+                _rate_buckets[key_id] = bucket
+            # Evict timestamps older than the sliding window.
+            while bucket and bucket[0] < window_start:
+                bucket.popleft()
+            # Burst guard: also cap the last 5 seconds at rate_burst to stop
+            # a thundering herd that fits inside the 60s window.
+            burst_start = now - 5.0
+            burst_count = sum(1 for t in bucket if t >= burst_start)
+            if burst_count >= rate_burst:
+                logger.warning(
+                    'rate_limit burst exceeded key=%s count=%d',
+                    key_id, burst_count,
+                )
+                return JSONResponse(
+                    {'detail': 'rate limited (burst)'},
+                    status_code=429,
+                    headers={'Retry-After': '5'},
+                )
+            if len(bucket) >= rate_limit:
+                logger.warning(
+                    'rate_limit minute exceeded key=%s count=%d',
+                    key_id, len(bucket),
+                )
+                return JSONResponse(
+                    {'detail': 'rate limited'},
+                    status_code=429,
+                    headers={'Retry-After': '60'},
+                )
+            bucket.append(now)
         return await call_next(request)
 
     # CORS LAST so it wraps the auth/body-limit middleware. Otherwise a

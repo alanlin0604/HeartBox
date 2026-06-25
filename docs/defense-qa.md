@@ -25,6 +25,8 @@
 
 **60 秒答**：分四層。**儲存**：日記用 AES-256（Fernet symmetric encryption）加密後寫 Neon Postgres，金鑰存環境變數，DBA 直接查表看到亂碼。**傳輸**：前端到 Cloud Run 走 TLS，Cloud Run 到家裡 GPU 走 Cloudflare Tunnel（加密 outbound only，不開家裡 port），請求帶 `X-API-Key` 用 `hmac.compare_digest` 比對，防 timing attack。**推論**：TAIDE 模型 4-bit 量化跑本機 GPU，HuggingFace 模型權重已下載，純離線推論，沒有任何外部 API call。**Auth**：JWT + refresh token rotation + 可選 TOTP 2FA，2FA 啟用後新裝置強制再驗一次。
 
+**Caveat**（被問才答）：`MoodNote.search_text` 欄位存日記原文 strip HTML 後 **前 500 字** 為明文，用於 DB LIKE 搜尋（Fernet ciphertext 不能 LIKE）。設計取捨——使用者打開「搜尋」功能就要犧牲這 500 字的列搜尋能力。500 字之後的長文 + AI 衍生的 `ai_feedback` 同樣明文（推論結果不含原始密語但含 paraphrase）。若 threat model 包含 DB dump 場景，下一階段會 Fernet 包整欄並換成 client-side encrypted search。
+
 ## Q5. 「Crisis case 進 review queue 後，誰看？多快回應？」
 
 **30 秒答**：誠實答：目前是「single operator」（就是我）會收 email 通知，原型階段。產品階段需要：(1) 簽約輔導員值班輪表，(2) SLA（建議 HIGH 30 分鐘內接觸），(3) 與生命線等專業機構正式合作協議。這部分我們在 docs/defense-qa.md 第 11 題會說「現階段是 MVP，不取代專業諮商，介面上有明確 disclaimer」。

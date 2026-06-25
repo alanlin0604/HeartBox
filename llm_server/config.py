@@ -31,7 +31,22 @@ class Settings(BaseSettings):
         )
 
     # --- Auth ----------------------------------------------------------
-    api_key: str = ''  # REQUIRED in practice — validated in main()
+    # API_KEY is REQUIRED. Minimum 32 chars enforced in create_app() so a
+    # typo / placeholder like API_KEY=x can't accidentally boot a server
+    # over a public Cloudflare Tunnel. Generate with secrets.token_hex(32)
+    # (64 hex chars) or secrets.token_urlsafe(32).
+    api_key: str = ''
+    api_key_min_length: int = 32
+
+    # --- Rate limit ----------------------------------------------------
+    # Per-API-key sliding window. The GPU naturally serializes requests via
+    # _swap_lock (~1 req per 5-15s during inference), but if API_KEY leaks
+    # an attacker could chain requests across multiple TCP connections and
+    # hold the GPU hostage. This is the in-process backstop; Cloudflare
+    # edge throttling is the outer layer. 0 = disabled.
+    rate_limit_per_minute: int = 60
+    rate_limit_burst: int = 10
+
 
     # --- Network -------------------------------------------------------
     host: str = '127.0.0.1'
@@ -47,9 +62,6 @@ class Settings(BaseSettings):
     max_context_tokens: int = 8192
     sticky_vision: bool = False                # if True, don't auto-swap back
     autoload_on_startup: bool = True           # load TAIDE in lifespan
-
-    # --- Logging -------------------------------------------------------
-    log_prompts: bool = False                  # opt-in PII for debugging only
 
     # --- HuggingFace cache --------------------------------------------
     hf_home: str = ''                          # if set, exported before any HF import

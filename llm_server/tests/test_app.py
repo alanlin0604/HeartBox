@@ -25,7 +25,9 @@ from llm_server import main as main_module
 from llm_server import engine as engine_module
 
 
-def _make_settings() -> Settings:
+def _make_settings(*, rate_limit_per_minute: int = 0, rate_limit_burst: int = 0) -> Settings:
+    # Rate-limit defaults to 0 (disabled) in tests so each suite isn't
+    # accidentally throttled by an earlier test in the same class.
     return Settings(
         api_key='test-key-' + 'a' * 56,         # 64 chars total
         autoload_on_startup=False,              # do NOT load HF weights
@@ -33,14 +35,17 @@ def _make_settings() -> Settings:
         cors_allow_origins='https://example.com',
         body_limit_bytes=100_000,
         request_timeout_s=2,
+        rate_limit_per_minute=rate_limit_per_minute,
+        rate_limit_burst=rate_limit_burst,
     )
 
 
-def _make_app_and_client():
+def _make_app_and_client(settings: Settings | None = None):
     """Build a TestClient with the inference loader stubbed out so no GPU
     or HF model is required. The client is a context manager so lifespan
     startup/shutdown actually fire."""
-    settings = _make_settings()
+    if settings is None:
+        settings = _make_settings()
 
     # Stub both atomic loaders so swap_to() returns sentinels rather than
     # trying to load a 7B model into VRAM.
@@ -142,6 +147,19 @@ class BodyLimitTests(unittest.TestCase):
         )
         self.assertEqual(r.status_code, 413)
 
+    def test_short_api_key_refused_at_startup(self):
+        """API_KEY shorter than the configured minimum (32) must refuse to
+        boot — operator hygiene against a 1-char placeholder being deployed
+        over a public Cloudflare Tunnel."""
+        bad_settings = Settings(
+            api_key='x',  # 1 char — far below 32
+            autoload_on_startup=False,
+            bnb_disable=True,
+        )
+        with self.assertRaises(RuntimeError) as ctx:
+            main_module.create_app(bad_settings)
+        self.assertIn('too short', str(ctx.exception).lower())
+
     def test_chunked_transfer_encoding_rejected(self):
         """``Transfer-Encoding: chunked`` previously bypassed the
         Content-Length cap. Must now 411."""
@@ -158,6 +176,56 @@ class BodyLimitTests(unittest.TestCase):
         # mean the body was parsed despite chunked).
         self.assertIn(r.status_code, (411, 400),
                       f'chunked must be rejected at middleware, got {r.status_code}')
+
+
+# ======================================================================
+# Rate limit middleware — sliding-window per-key throttle.
+# ======================================================================
+class RateLimitTests(unittest.TestCase):
+    def tearDown(self):
+        if hasattr(self, 'client'):
+            self.client.__exit__(None, None, None)
+
+    def test_burst_returns_429(self):
+        """Burst threshold: > rate_limit_burst requests within 5s with the
+        same key must return 429 with Retry-After. We set burst=3 so the
+        4th request inside the window is throttled."""
+        settings = _make_settings(rate_limit_per_minute=120, rate_limit_burst=3)
+        self.client, self.settings = _make_app_and_client(settings)
+        url = '/v1/switch_model'  # auth-gated but cheap; no model touched
+        headers = {'X-API-Key': settings.api_key}
+        body = {'target': 'taide'}
+        statuses = []
+        for _ in range(5):
+            r = self.client.post(url, headers=headers, json=body)
+            statuses.append(r.status_code)
+        # First 3 may 200/400/500 (we don't care which non-429), 4th onward 429.
+        self.assertNotEqual(statuses[3], 429 - 1,
+            'burst should trigger by 4th request')
+        self.assertIn(429, statuses[3:],
+            f'expected 429 by burst threshold, got {statuses}')
+
+    def test_health_not_rate_limited(self):
+        """Uptime ping must remain free. Hammer /health past the burst cap
+        and confirm every response is 200."""
+        settings = _make_settings(rate_limit_per_minute=60, rate_limit_burst=1)
+        self.client, self.settings = _make_app_and_client(settings)
+        for _ in range(10):
+            r = self.client.get('/health')
+            self.assertEqual(r.status_code, 200)
+
+    def test_rate_limit_disabled_when_zero(self):
+        """rate_limit_per_minute=0 disables middleware (test convenience).
+        Many requests must all succeed gate-wise (no 429)."""
+        settings = _make_settings(rate_limit_per_minute=0)
+        self.client, self.settings = _make_app_and_client(settings)
+        headers = {'X-API-Key': settings.api_key}
+        for _ in range(10):
+            r = self.client.post(
+                '/v1/chat/completions', headers=headers,
+                json={'messages': [{'role': 'user', 'content': 'hi'}]},
+            )
+            self.assertNotEqual(r.status_code, 429)
 
 
 # ======================================================================

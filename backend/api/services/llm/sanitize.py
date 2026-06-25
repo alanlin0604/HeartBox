@@ -53,6 +53,14 @@ _TEMPLATE_MARKER_RE = re.compile(
 # colon. Looped (up to 4 passes) so stacked prefixes like ``assistant:\nuser:``
 # fully unwind. Accepts either ``role:`` / ``role：`` OR ``role`` followed by
 # a bare newline (the Qwen / Llama-3 shape ``<|im_start|>assistant\n...``).
+#
+# Trade-off note on ``小心`` and ``HeartBot``: these are AI persona names used
+# in ai_chat system prompts, so the model often parrots them back as a role
+# label (``小心：...`` / ``HeartBot:...``). Including them in the strip list
+# catches the parrot case at the cost of false-positively stripping a
+# legitimate imperative ``小心：注意安全`` (Chinese "be careful: stay safe").
+# Replacement is a single space so the content after the marker survives;
+# the cost is only a missing 2-character "小心" prefix in rare model outputs.
 _ROLE_NAMES = r'(?:assistant|system|user|助理|系統|使用者|HeartBot|小心)'
 _LEADING_ROLE_RE = re.compile(
     r'^\s*' + _ROLE_NAMES + r'\s*(?:[:：]\s*|\n)',

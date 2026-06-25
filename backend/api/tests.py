@@ -1515,7 +1515,7 @@ class AISentimentTests(APITestCase):
         self.assertTrue(note.encrypted_content)
 
     def test_ai_chat_fallback(self):
-        """AI chat should return a fallback response when OpenAI key is missing."""
+        """AI chat should return a fallback response when LLM provider is unconfigured."""
         session_resp = self.client.post('/api/ai-chat/sessions/')
         session_id = session_resp.data['id']
         resp = self.client.post(f'/api/ai-chat/sessions/{session_id}/messages/', {

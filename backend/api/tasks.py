@@ -13,8 +13,8 @@ def generate_weekly_summaries(self):
     """Generate weekly summaries for all active users. Scheduled every Monday.
 
     bind=True + retry: external aggregations + notification creates can fail
-    transiently (DB blip, OpenAI throttle). Retry once after 5 min, then
-    twice more. After 3 attempts we give up and surface the error to logs.
+    transiently (DB blip, LLM provider throttle/timeout). Retry once after
+    5 min, then twice more. After 3 attempts we give up and surface to logs.
 
     Connection hygiene: with `.iterator()` over a potentially large user
     set on Cloud Run + Neon's pgbouncer, we can outlast the connection's

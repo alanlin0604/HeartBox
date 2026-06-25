@@ -270,12 +270,12 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         """Schedule AI sentiment analysis to run in a background thread.
 
         Returns immediately so the HTTP response isn't blocked by the
-        5-15 s OpenAI roundtrip (sentiment + RAG retrieval + feedback gen).
+        5-15 s LLM roundtrip (sentiment + RAG retrieval + feedback gen).
         The note row is updated when the analysis finishes; the frontend
         listens for the `note_analyzed` WebSocket event to refresh its
         view, or falls back to a one-shot GET /notes/{id}/ poll a few
         seconds later. AI engine has its own three-tier fallback so a
-        failed OpenAI call still produces some feedback.
+        failed LLM call still produces some feedback.
         """
         # `threading` and `transaction` are imported at module-level. Defer
         # the thread spawn until the outer DB transaction commits, otherwise
