@@ -6,6 +6,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.html import strip_tags
 
+from api.services.encryption import EncryptedTextField
+
 
 class CustomUser(AbstractUser):
     bio = models.TextField(blank=True, default='')
@@ -92,7 +94,11 @@ class MoodNote(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(10)],
         help_text='0 (calm) to 10 (extreme stress)',
     )
-    ai_feedback = models.TextField(blank=True, default='')
+    # Fernet-encrypted at rest (transparent via EncryptedTextField).
+    # Plaintext on Python access, ciphertext in the DB cell. AI-derived
+    # paraphrase of journal sentiment + advice — protected against DB dumps
+    # / DBA inspection / BAK leakage. See [docs/phase0b-status.md].
+    ai_feedback = EncryptedTextField(blank=True, default='')
     search_text = models.TextField(blank=True, default='', help_text='Plaintext index (first 500 chars) for DB-level search')
     is_pinned = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
@@ -484,7 +490,11 @@ class AIChatMessage(models.Model):
         related_name='messages',
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
-    content = models.TextField()
+    # Fernet-encrypted at rest. Both user messages and assistant replies
+    # are highly sensitive (it's a counselling-style conversation about
+    # mental health). Transparent via EncryptedTextField — readers see
+    # plaintext, the DB cell holds ciphertext.
+    content = EncryptedTextField()
     sentiment_score = models.FloatField(null=True, blank=True)
     stress_index = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -496,6 +506,7 @@ class AIChatMessage(models.Model):
         ]
 
     def __str__(self):
+        # ``content`` is decrypted on access; slicing decrypted str is safe.
         return f'{self.role}: {self.content[:50]}'
 
 
@@ -614,7 +625,10 @@ class WeeklySummary(models.Model):
     stress_avg = models.FloatField(null=True, blank=True)
     note_count = models.IntegerField(default=0)
     top_activities = models.JSONField(default=list, blank=True)
-    ai_summary = models.TextField(blank=True, default='')
+    # Fernet-encrypted at rest. Week-level AI summary derived from journals
+    # — themes, suggestions, paraphrase of the user's emotional arc. Same
+    # protection rationale as MoodNote.ai_feedback.
+    ai_summary = EncryptedTextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

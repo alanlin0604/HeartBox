@@ -3,6 +3,7 @@ import threading
 
 from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 from django.conf import settings
+from django.db import models
 
 logger = logging.getLogger(__name__)
 
@@ -51,5 +52,79 @@ class EncryptionService:
             logger.error('Failed to decrypt content — invalid token or wrong key')
             return '[Decryption failed]'
 
+    def try_decrypt(self, ciphertext: str) -> str | None:
+        """Strict decrypt that returns ``None`` on InvalidToken instead of
+        swallowing the error into a sentinel string. Used by
+        ``EncryptedTextField`` to discriminate "already ciphertext" from
+        "plaintext, please encrypt" without confusing a legitimate
+        ``'[Decryption failed]'`` plaintext payload with a failure result.
+        """
+        try:
+            return self._multi.decrypt(ciphertext.encode('utf-8')).decode('utf-8')
+        except InvalidToken:
+            return None
+
 
 encryption_service = EncryptionService()
+
+
+class EncryptedTextField(models.TextField):
+    """Transparent Fernet-encrypted TextField.
+
+    Reads decrypt automatically (``from_db_value``); writes encrypt
+    automatically (``get_prep_value``). At the schema layer this is still a
+    ``text`` column so migrations don't change DB topology — only the cell
+    contents become ciphertext.
+
+    Why this is the right abstraction here:
+      * `MoodNote.ai_feedback` / `WeeklySummary.ai_summary` /
+        `AIChatMessage.content` are AI-derived paraphrases of user mental-
+        health journals. They never participate in LIKE/regex/icontains
+        filters in this codebase (audited 2026-06-25), only in
+        empty/non-empty existence checks (e.g. `__gt=''`), which keep
+        working on ciphertext because Fernet ciphertext is always non-empty.
+      * Existing MoodNote.encrypted_content uses an explicit `set_content()`
+        + property pair to encrypt content; that pattern requires every
+        caller to switch to a setter. The transparent field is a drop-in
+        replacement that requires zero call-site changes, which is exactly
+        what we want for paraphrased AI output that flows through many
+        consumers (ai_engine x3, ai_chat, health.py, scrub migrations, etc.).
+      * Empty string is preserved as empty string — we don't encrypt ''
+        into a multi-byte ciphertext, so `__gt=''` continues to identify
+        rows with real content.
+
+    Trade-off: serializer fields that expose the column will return decrypted
+    plaintext to authorized API consumers. Authorization is the existing DRF
+    permission layer (per-user scoping); the encryption layer only protects
+    against DB-tier compromise (dump, BAK file, DBA snooping).
+    """
+
+    def from_db_value(self, value, expression, connection):
+        if value is None or value == '':
+            return value
+        plain = encryption_service.try_decrypt(value)
+        if plain is None:
+            # Pre-migration plaintext row, or somehow a non-Fernet value
+            # snuck into the column. Don't 500 the API — surface the raw
+            # bytes (no key material involved) and log so an operator can
+            # run the 0059 backfill.
+            logger.warning(
+                'EncryptedTextField.from_db_value: raw value not Fernet; '
+                'returning as-is. Run migration 0059 to backfill.'
+            )
+            return value
+        return plain
+
+    def get_prep_value(self, value):
+        if value is None or value == '':
+            return value
+        if not isinstance(value, str):
+            value = str(value)
+        # Idempotency guard: if the in-memory value happens to already be
+        # Fernet ciphertext (e.g. when Django re-saves a freshly loaded row
+        # without touching the field), don't double-encrypt. ``try_decrypt``
+        # returns None on InvalidToken so we discriminate "plaintext, must
+        # encrypt" from "already ciphertext, pass through".
+        if encryption_service.try_decrypt(value) is not None:
+            return value
+        return encryption_service.encrypt(value)
