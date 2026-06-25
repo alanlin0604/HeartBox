@@ -102,6 +102,14 @@ class ContentSecurityPolicyMiddleware:
             'CSP_CONNECT_SRC': 'connect-src',
             'CSP_FONT_SRC': 'font-src',
             'CSP_FRAME_ANCESTORS': 'frame-ancestors',
+            # These three were declared in settings.py but never emitted.
+            # base-uri prevents an injected <base href> from rebasing every
+            # relative URL to an attacker host; form-action stops a planted
+            # <form action=evil>; object-src 'none' kills the legacy
+            # plugin/Flash surface entirely.
+            'CSP_BASE_URI': 'base-uri',
+            'CSP_FORM_ACTION': 'form-action',
+            'CSP_OBJECT_SRC': 'object-src',
         }
         for setting_name, directive in mapping.items():
             values = getattr(settings, setting_name, None)

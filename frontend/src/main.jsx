@@ -17,6 +17,28 @@ import App from './App.jsx'
 // and we're in prod. Dynamic import keeps it out of the critical bundle.
 const SENTRY_DSN = config.sentryDsn
 if (SENTRY_DSN && import.meta.env.PROD) {
+  // PII scrubbing: HeartBox URLs encode user-owned IDs (note, chat session,
+  // message, post, share token). Strip ID segments AND any query string
+  // before the event ships to Sentry so a leaked Sentry token doesn't
+  // become a cross-user content index. Layers over maskAllText +
+  // blockAllMedia + replaysSessionSampleRate=0 (only errors recorded).
+  const scrubUrl = (u) => {
+    if (!u || typeof u !== 'string') return u
+    try {
+      const url = new URL(u, window.location.origin)
+      url.search = ''
+      url.pathname = url.pathname
+        .replace(/\/notes\/\d+/g, '/notes/:id')
+        .replace(/\/ai-chat\/sessions\/\d+/g, '/ai-chat/sessions/:id')
+        .replace(/\/messages\/\d+/g, '/messages/:id')
+        .replace(/\/community\/posts\/\d+/g, '/community/posts/:id')
+        .replace(/\/share\/[^/?#]+/g, '/share/:token')
+      return url.toString()
+    } catch {
+      return u.split('?')[0]
+    }
+  }
+
   import('@sentry/react').then((Sentry) => {
     Sentry.init({
       dsn: SENTRY_DSN,
@@ -29,8 +51,20 @@ if (SENTRY_DSN && import.meta.env.PROD) {
         }),
       ],
       tracesSampleRate: 0.1,
-      replaysSessionSampleRate: 0.1,
+      // Drop background session recording entirely — for a mental-health
+      // app even masked DOM + breadcrumb timing leaks emotional state.
+      // Errors still record full context via replaysOnErrorSampleRate.
+      replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 1.0,
+      beforeSend(event) {
+        if (event.request?.url) event.request.url = scrubUrl(event.request.url)
+        if (event.transaction) event.transaction = scrubUrl(event.transaction)
+        return event
+      },
+      beforeBreadcrumb(crumb) {
+        if (crumb?.data?.url) crumb.data.url = scrubUrl(crumb.data.url)
+        return crumb
+      },
     })
   }).catch(() => { /* Sentry load failure must not break the app */ })
 }

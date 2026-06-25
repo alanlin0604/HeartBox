@@ -240,7 +240,8 @@ class Message(models.Model):
         on_delete=models.CASCADE,
         related_name='sent_messages',
     )
-    content = models.TextField()
+    # Private DMs — Fernet-encrypted at rest (same protection as MoodNote).
+    content = EncryptedTextField()
     message_type = models.CharField(max_length=10, choices=MESSAGE_TYPE_CHOICES, default='text')
     metadata = models.JSONField(default=dict, blank=True)
     is_read = models.BooleanField(default=False)
@@ -279,7 +280,9 @@ class Notification(models.Model):
     )
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     title = models.CharField(max_length=200)
-    message = models.TextField()
+    # Notification bodies often quote user content (e.g. "Alice 對你說：感覺很...");
+    # encrypt at rest so a DB dump can't reconstruct social-graph + content.
+    message = EncryptedTextField()
     data = models.JSONField(default=dict, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -291,7 +294,9 @@ class Notification(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.get_type_display()} → {self.user.username}: {self.title}'
+        # title intentionally — message is encrypted and decryption shouldn't
+        # be triggered by repr / admin list display.
+        return f'<Notification id={self.pk}>'
 
 
 class NoteAttachment(models.Model):
@@ -1201,7 +1206,9 @@ class FriendComment(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
     )
-    content = models.TextField()
+    # Friend comments on shared notes — Fernet-encrypted (same threat model
+    # as Message/DM content).
+    content = EncryptedTextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -1309,7 +1316,9 @@ class PostReport(models.Model):
         related_name='post_reports_filed',
     )
     reason = models.CharField(max_length=20, choices=REASON_CHOICES)
-    note = models.TextField(blank=True, default='')
+    # Reporter-supplied free-form note may quote the offending content;
+    # Fernet-encrypt at rest.
+    note = EncryptedTextField(blank=True, default='')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,

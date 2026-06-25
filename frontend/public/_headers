@@ -33,5 +33,9 @@
   Cache-Control: public, max-age=0, must-revalidate
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: camera=(self), microphone=(self), geolocation=(), interest-cohort=()
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(), interest-cohort=(), browsing-topics=()
   X-Frame-Options: DENY
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Cross-Origin-Resource-Policy: same-site
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://accounts.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://storage.googleapis.com https://heartbox.tw; connect-src 'self' https://heartbox-api-598139488748.asia-east1.run.app wss://heartbox-api-598139488748.asia-east1.run.app https://accounts.google.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; worker-src 'self'
