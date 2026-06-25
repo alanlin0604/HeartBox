@@ -305,7 +305,7 @@ class AIEngine:
             # Strip KB citation markers (e.g. ``[參考1]``) that the RAG prompt
             # injects — those are internal indices, not for users.
             import re as _re
-            reply = _re.sub(r'\[\s*參考\s*\d+\s*\][^\n]*', '', reply).strip()
+            reply = _re.sub(r'\[\s*參考\s*\d+\s*\]', '', reply).strip()
             if not reply:
                 return self._generate_personalized_feedback(text, sentiment_score)
             if crisis is not None and crisis.severity == 'HIGH':

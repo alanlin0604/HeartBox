@@ -9,6 +9,7 @@ bottom of views/__init__.py preserves that path.
 """
 
 import os
+from urllib.parse import urlparse
 
 import rest_framework.pagination
 from django.conf import settings
@@ -344,6 +345,33 @@ class NotificationPreferenceView(APIView):
         return Response(results)
 
 
+# SSRF defense: pywebpush later POSTs to whatever endpoint we persist here.
+# Without an allowlist, an authenticated user could register internal /
+# metadata URLs and pivot the notification flow (friend request, achievement,
+# weekly summary) into outbound HTTP calls from inside the trust boundary.
+_ALLOWED_PUSH_HOSTS = (
+    'fcm.googleapis.com',
+    'updates.push.services.mozilla.com',
+)
+_ALLOWED_PUSH_SUFFIXES = (
+    '.notify.windows.com',
+    '.push.apple.com',
+)
+
+
+def _is_allowed_push_endpoint(endpoint: str) -> bool:
+    if not endpoint or len(endpoint) > 2048:
+        return False
+    try:
+        parsed = urlparse(endpoint)
+    except ValueError:
+        return False
+    if parsed.scheme != 'https' or not parsed.hostname:
+        return False
+    host = parsed.hostname.lower()
+    return host in _ALLOWED_PUSH_HOSTS or host.endswith(_ALLOWED_PUSH_SUFFIXES)
+
+
 class PushSubscriptionView(APIView):
     def post(self, request):
         endpoint = request.data.get('endpoint', '')
@@ -351,8 +379,8 @@ class PushSubscriptionView(APIView):
         p256dh = keys.get('p256dh', '')
         auth = keys.get('auth', '')
 
-        if not endpoint or not p256dh or not auth:
-            return error_response('push_missing_data', 'Missing push subscription data.', 400)
+        if not _is_allowed_push_endpoint(endpoint) or not p256dh or not auth:
+            return error_response('push_invalid_endpoint', 'Invalid push endpoint.', 400)
 
         PushSubscription.objects.update_or_create(
             endpoint=endpoint,

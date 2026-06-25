@@ -15,6 +15,7 @@ import ProgressCompareCard from '../components/ProgressCompareCard'
 import DashboardSection from '../components/DashboardSection'
 import SectionAnchorBar from '../components/SectionAnchorBar'
 import { Card } from '../components/ui'
+import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from 'recharts'
 const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
 const LazyScatterChart = lazy(() => import('../components/charts/LazyScatterChart'))
 const LazyBarChart = lazy(() => import('../components/charts/LazyBarChart'))

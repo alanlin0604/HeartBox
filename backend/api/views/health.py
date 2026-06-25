@@ -452,10 +452,13 @@ class SleepInsightsView(APIView):
         # 洞察 4: 深度睡眠與品質的關係
         deep_sleep_records = [s for s in sleeps if s.deep_sleep_minutes is not None and s.deep_sleep_minutes > 0]
         if len(deep_sleep_records) >= 10:
-            total_minutes = sum([s.deep_sleep_minutes + s.light_sleep_minutes + s.rem_sleep_minutes
-                                for s in deep_sleep_records
-                                if s.light_sleep_minutes and s.rem_sleep_minutes])
-            total_deep = sum([s.deep_sleep_minutes for s in deep_sleep_records])
+            # Numerator and denominator MUST come from the same record set or
+            # avg_deep_pct can exceed 100% (e.g. when a record has only deep
+            # minutes but no light/rem — its deep counts toward total_deep but
+            # the row is dropped from total_minutes).
+            complete_records = [s for s in deep_sleep_records if s.light_sleep_minutes and s.rem_sleep_minutes]
+            total_minutes = sum(s.deep_sleep_minutes + s.light_sleep_minutes + s.rem_sleep_minutes for s in complete_records)
+            total_deep = sum(s.deep_sleep_minutes for s in complete_records)
 
             if total_minutes > 0:
                 avg_deep_pct = (total_deep / total_minutes) * 100

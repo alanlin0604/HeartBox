@@ -39,7 +39,7 @@ Write-Host "=== Deploy revision (no traffic shift yet) ===" -ForegroundColor Cya
 # faster on the rare second cold start (scale-up beyond 1 instance).
 gcloud run deploy $Service `
     --image $ImageByDigest --region $Region --project $Project `
-    --no-traffic --memory 1Gi --min-instances 1 --cpu-boost --quiet
+    --no-traffic --memory 4Gi --min-instances 1 --cpu-boost --quiet
 if ($LASTEXITCODE -ne 0) { throw "gcloud run deploy failed" }
 
 $NewRevision = (gcloud run services describe $Service --region $Region `

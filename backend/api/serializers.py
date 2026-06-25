@@ -1060,8 +1060,11 @@ class UserSearchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'avatar', 'bio', 'is_friend', 'has_pending_request']
-        read_only_fields = ['id', 'username', 'email', 'avatar', 'bio']
+        # `email` deliberately excluded — exposing it to any logged-in user
+        # turned UserSearch into an authenticated email-enumeration oracle
+        # (PII / PDPA / GDPR risk). Frontend friends.js doesn't reference it.
+        fields = ['id', 'username', 'avatar', 'bio', 'is_friend', 'has_pending_request']
+        read_only_fields = ['id', 'username', 'avatar', 'bio']
 
     def _friend_id_set(self):
         """Memoize set of friend IDs for the current request user."""

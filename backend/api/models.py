@@ -540,7 +540,10 @@ class AuditLog(models.Model):
     )
     action = models.CharField(max_length=30, choices=ACTION_CHOICES)
     target_type = models.CharField(max_length=50, blank=True, default='')
-    target_id = models.IntegerField(null=True, blank=True)
+    # BigInt because every PK in this schema is BigAutoField (8-byte); a
+    # signed 32-bit target_id would silently overflow once any referenced
+    # row's PK exceeds 2.1B.
+    target_id = models.BigIntegerField(null=True, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

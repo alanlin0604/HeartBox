@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { submitFeedback } from '../api/feedback'
 import { useLang } from '../context/LanguageContext'
 import { useToast } from '../context/ToastContext'
@@ -14,6 +14,8 @@ export default function FeedbackWidget() {
   const [content, setContent] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const closeTimerRef = useRef(null)
+  useEffect(() => () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current) }, [])
 
   const handleSubmit = async () => {
     if (rating === 0 || !content.trim()) return
@@ -22,7 +24,7 @@ export default function FeedbackWidget() {
       await submitFeedback(rating, content.trim())
       toast?.success(t('feedback.success'))
       setSubmitted(true)
-      setTimeout(() => {
+      closeTimerRef.current = setTimeout(() => {
         setOpen(false)
         setSubmitted(false)
         setRating(0)

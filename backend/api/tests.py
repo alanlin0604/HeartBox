@@ -364,6 +364,12 @@ class PasswordChangeTokenTests(APITestCase):
 
 
 class ThrottleTests(APITestCase):
+    def setUp(self):
+        # DRF throttle counters live in Django cache and bleed across test
+        # classes; AchievementTests does this for the same reason.
+        from django.core.cache import cache
+        cache.clear()
+
     def test_login_throttle(self):
         """Verify login endpoint has throttle (won't block first few attempts)."""
         for i in range(3):

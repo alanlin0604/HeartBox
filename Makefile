@@ -6,7 +6,7 @@
 PY = backend/venv/Scripts/python.exe
 PIP = backend/venv/Scripts/pip.exe
 
-.PHONY: help test test-fast test-crisis test-llm-server test-django \
+.PHONY: help test test-fast test-crisis test-llm-server test-django test-clean \
         load-kb runserver runserver-llm smoke check-env \
         pre-deploy lint deps-backend deps-llm gpu
 
@@ -17,6 +17,7 @@ help:
 	@echo "  make test-crisis    - just crisis_guard (53 tests)"
 	@echo "  make test-llm-server - just llm_server (21 tests)"
 	@echo "  make test-django    - just Django backend (no crisis_guard / no llm_server)"
+	@echo "  make test-clean     - full Django suite without --keepdb (CI parity, catches migration drift)"
 	@echo ""
 	@echo "  make runserver      - start Django dev server on :8000"
 	@echo "  make runserver-llm  - start llm_server (FastAPI + TAIDE) on :8765"
@@ -44,6 +45,9 @@ test-llm-server:
 
 test-django:
 	cd backend && DISABLE_AI_PREWARM=1 venv/Scripts/python.exe manage.py test api.tests --keepdb --noinput
+
+test-clean:
+	cd backend && DISABLE_AI_PREWARM=1 venv/Scripts/python.exe manage.py test api --settings=moodnotes_pro.test_settings --noinput
 
 runserver:
 	cd backend && venv/Scripts/python.exe manage.py runserver 0.0.0.0:8000
