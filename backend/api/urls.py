@@ -31,6 +31,7 @@ from .views import (
     CourseDetailView,
     CourseListView,
     DailyPromptView,
+    PersonalSuggestionView,
     DailySleepListView,
     DailySleepView,
     DashboardLayoutResetView,
@@ -224,6 +225,7 @@ urlpatterns = [
     path('ai-chat/sessions/<int:session_id>/messages/', AIChatSendMessageView.as_view(), name='ai-chat-send-message'),
     # Daily Prompt
     path('daily-prompt/', DailyPromptView.as_view(), name='daily-prompt'),
+    path('personal-suggestion/', PersonalSuggestionView.as_view(), name='personal-suggestion'),
     # Assessments
     path('assessments/', SelfAssessmentListCreateView.as_view(), name='assessments'),
     path('assessments/<int:pk>/share/', ShareAssessmentView.as_view(), name='assessment-share'),

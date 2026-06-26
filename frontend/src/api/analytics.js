@@ -16,6 +16,13 @@ export const getAnalytics = (period = 'week', lookbackDays = 180) => {
   });
 };
 
+// LLM-generated paragraph stitching together long-term mood patterns +
+// today's local weather. Server caches per (user, day, ~10km grid) so
+// repeated calls in a day are cheap.
+export const getPersonalSuggestion = (lat, lon) => {
+  return api.post('/personal-suggestion/', { lat, lon });
+};
+
 export const getCalendarData = (year, month) => {
   const key = `calendar:${year}:${month}`;
   const cached = getCached(key);

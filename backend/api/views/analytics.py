@@ -494,6 +494,76 @@ def _sanitize_daily_prompt(raw, *, mood_avg=None, stress_avg=None):
 CACHE_TTL_DAILY_PROMPT_FALLBACK = 600
 
 
+class PersonalSuggestionView(APIView):
+    """LLM-generated daily wellness paragraph for the journal page.
+
+    POST body: {lat, lon} (client browser geolocation, or Taipei fallback).
+    Response: {paragraph, weather, triggers, fallback_used}.
+
+    Result cached per (user, day, ~10km grid, lang) for 12h on success and
+    10min when the LLM declined / failed, so a transient outage doesn't
+    pin the cache for the whole day.
+    """
+    CACHE_KEY_VERSION = 'v1'
+
+    def post(self, request):
+        from datetime import date as date_cls
+        from ..services.personal_suggestion import (
+            compute_triggers, fetch_today_weather, generate_paragraph_zh,
+        )
+
+        try:
+            lat = float(request.data.get('lat', 25.0478))
+            lon = float(request.data.get('lon', 121.5319))
+        except (TypeError, ValueError):
+            return error_response('invalid_coords', 'lat/lon must be numbers', 400)
+
+        # Round to ~10km grid for cache locality + privacy (we never log exact coords)
+        lat_k = round(lat, 1)
+        lon_k = round(lon, 1)
+        today = date_cls.today()
+        lang = request.headers.get('Accept-Language', 'zh-TW')
+
+        cache_key = (
+            f'personal_sugg_{self.CACHE_KEY_VERSION}_{request.user.id}_'
+            f'{today.isoformat()}_{lat_k}_{lon_k}_{lang}'
+        )
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+
+        # Weather cached separately by grid (1h) so multiple users in the
+        # same area share one Open-Meteo fetch
+        weather_key = f'weather_{today.isoformat()}_{lat_k}_{lon_k}'
+        weather = cache.get(weather_key)
+        if weather is None:
+            weather = fetch_today_weather(lat, lon)
+            if weather:
+                cache.set(weather_key, weather, 3600)
+
+        qs = MoodNote.objects.filter(user=request.user, is_deleted=False)
+        insights = get_personal_insights(qs, lookback_days=180)
+
+        triggers = compute_triggers(insights, weather, today)
+
+        paragraph = None
+        if lang == 'zh-TW':
+            paragraph = generate_paragraph_zh(insights, weather, today, triggers)
+
+        response_data = {
+            'paragraph': paragraph,
+            'weather': weather,
+            'triggers': triggers,
+            'fallback_used': paragraph is None,
+        }
+        # 12h on success so the same user hitting the page twice in a day
+        # gets the same coherent suggestion; 10min on fallback so a TAIDE
+        # blip doesn't pin a bad/missing paragraph.
+        ttl = 43200 if paragraph else 600
+        cache.set(cache_key, response_data, ttl)
+        return Response(response_data)
+
+
 class DailyPromptView(APIView):
     # Cache-key version bumped to invalidate any historical entries when the
     # validator rules tighten. Bump again on future format changes so old

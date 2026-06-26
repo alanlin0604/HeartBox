@@ -1,14 +1,21 @@
-// Cross-references the user's personal_insights (historical mood patterns)
-// with today's local weather to produce 2–4 personalised one-line tips
-// (practical weather + insight-based nudges) above the journal write form.
+// Renders today's personalised suggestion on the journal page.
 //
-// Weather: Open-Meteo current/daily, no API key.
-// Location: navigator.geolocation, cached in localStorage for 24h so we
-// don't re-prompt every page load. Falls back to Taipei on denial /
-// timeout / unsupported.
+// Primary path: POST /api/personal-suggestion/ with {lat, lon}. The backend
+// pulls the user's personal_insights, fetches today's weather from
+// Open-Meteo, calls TAIDE to write a 2-3 sentence warm paragraph, and
+// caches per (user, day, ~10km grid). zh-TW only on the LLM side; for
+// en/ja the backend returns paragraph=null and we render the local
+// template tips instead.
+//
+// Secondary path (paragraph=null OR backend fails): build the template-
+// tip list client-side from the same insights + a fresh Open-Meteo call.
+//
+// Location: navigator.geolocation, cached 24h in localStorage. Falls back
+// to Taipei on denial/timeout/unsupported.
 
 import { useEffect, useState, useMemo } from 'react'
 import { useLang } from '../context/LanguageContext'
+import { getPersonalSuggestion } from '../api/analytics'
 
 const DEFAULT_LAT = 25.0478   // Taipei
 const DEFAULT_LON = 121.5319
@@ -137,6 +144,8 @@ export default function DailySuggestion({ insights }) {
   const [coords, setCoords] = useState(null)   // { lat, lon, fallback }
   const [weather, setWeather] = useState(null)
   const [failed, setFailed] = useState(false)
+  const [paragraph, setParagraph] = useState(null)   // LLM-written, server-side
+  const [paragraphTried, setParagraphTried] = useState(false)
 
   // Resolve coords first. Cache hit -> use immediately. Cache miss ->
   // ask the browser; on denial/timeout/error, fall back to Taipei AND
@@ -172,23 +181,48 @@ export default function DailySuggestion({ insights }) {
     return () => { cancelled = true }
   }, [])
 
-  // Fetch weather once coords are resolved.
+  // Once coords resolve, ask the backend for the LLM paragraph + weather
+  // in one round-trip. Backend handles both Open-Meteo + TAIDE and caches
+  // per user-day-grid, so this is cheap on the second hit of the day.
   useEffect(() => {
     if (!coords) return
     let cancelled = false
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
-    fetch(url)
-      .then((r) => r.ok ? r.json() : Promise.reject(new Error('http')))
-      .then((data) => {
+    getPersonalSuggestion(coords.lat, coords.lon)
+      .then((res) => {
         if (cancelled) return
-        const code = data?.daily?.weather_code?.[0] ?? data?.current?.weather_code ?? 0
-        const tempMax = data?.daily?.temperature_2m_max?.[0]
-        const tempMin = data?.daily?.temperature_2m_min?.[0]
-        const tempNow = data?.current?.temperature_2m
-        if (tempMax == null || tempMin == null) throw new Error('shape')
-        setWeather({ code, bucket: bucketFromCode(code), tempMax, tempMin, tempNow })
+        const data = res?.data || {}
+        setParagraphTried(true)
+        if (data.paragraph) setParagraph(data.paragraph)
+        const w = data.weather
+        if (w && w.tempMax != null && w.tempMin != null) {
+          setWeather({
+            code: w.code ?? 0,
+            bucket: w.bucket || bucketFromCode(w.code || 0),
+            tempMax: w.tempMax,
+            tempMin: w.tempMin,
+            tempNow: w.tempNow,
+          })
+        }
       })
-      .catch(() => { if (!cancelled) setFailed(true) })
+      .catch(() => {
+        if (cancelled) return
+        setParagraphTried(true)
+        // Backend down — fall back to client-side weather fetch so we can
+        // still render template tips
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
+        fetch(url)
+          .then((r) => r.ok ? r.json() : Promise.reject(new Error('http')))
+          .then((data) => {
+            if (cancelled) return
+            const code = data?.daily?.weather_code?.[0] ?? data?.current?.weather_code ?? 0
+            const tempMax = data?.daily?.temperature_2m_max?.[0]
+            const tempMin = data?.daily?.temperature_2m_min?.[0]
+            const tempNow = data?.current?.temperature_2m
+            if (tempMax == null || tempMin == null) throw new Error('shape')
+            setWeather({ code, bucket: bucketFromCode(code), tempMax, tempMin, tempNow })
+          })
+          .catch(() => { if (!cancelled) setFailed(true) })
+      })
     return () => { cancelled = true }
   }, [coords])
 
@@ -198,11 +232,13 @@ export default function DailySuggestion({ insights }) {
     [insights, weather, today, t],
   )
 
-  // Hide entirely if weather fetch failed AND no insight-only tips, or if
-  // we have no tips at all. Avoids a half-empty card.
-  if (failed && tips.length === 0) return null
-  if (!weather && tips.length === 0) return null
-  if (weather && tips.length === 0) return null
+  // Decide what body to render. Priority: LLM paragraph > template tips.
+  // Hide entirely if backend's done trying AND we have nothing to say.
+  const hasParagraph = !!paragraph
+  const hasTips = tips.length > 0
+  const stillLoading = !paragraphTried && !weather && !failed
+  if (stillLoading) return null
+  if (!hasParagraph && !hasTips) return null
 
   const conditionLabel = weather ? t(`dailySuggestion.weather.${weather.bucket}`) : ''
   const tempDate = new Intl.DateTimeFormat(lang || 'zh-TW', { month: 'short', day: 'numeric' }).format(today)
@@ -227,13 +263,17 @@ export default function DailySuggestion({ insights }) {
           )}
         </div>
       </div>
-      <ul className="space-y-1.5">
-        {tips.map((tip, i) => (
-          <li key={i} className={`text-sm rounded-r px-3 py-1.5 ${toneClasses(tip.tone)}`}>
-            {tip.text}
-          </li>
-        ))}
-      </ul>
+      {hasParagraph ? (
+        <p className="text-sm leading-relaxed whitespace-pre-line">{paragraph}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {tips.map((tip, i) => (
+            <li key={i} className={`text-sm rounded-r px-3 py-1.5 ${toneClasses(tip.tone)}`}>
+              {tip.text}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
