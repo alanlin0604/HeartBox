@@ -94,7 +94,11 @@ function buildTips({ insights, weather, today, t }) {
       if (ins.key === 'weekday_weekend') {
         const todaySide = isWeekend ? 'weekend' : 'weekday'
         if (ins.better && ins.better !== todaySide) {
-          tips.push({ tone: 'support', text: t('dailySuggestion.tip.lowDay') })
+          const todayLabel = t(isWeekend ? 'insights.weekend' : 'insights.weekday')
+          tips.push({
+            tone: 'support',
+            text: t('dailySuggestion.tip.lowDay', { today: todayLabel }),
+          })
         }
       }
       if (ins.key === 'month_extremes' && ins.worst_month === month) {
