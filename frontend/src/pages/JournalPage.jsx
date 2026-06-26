@@ -17,6 +17,7 @@ import ConfirmModal from '../components/ConfirmModal'
 import SleepTracker from '../components/SleepTracker'
 import { useToast } from '../context/ToastContext'
 import FeedbackWidget from '../components/FeedbackWidget'
+import DailySuggestion from '../components/DailySuggestion'
 
 export default function JournalPage() {
   const { user } = useAuth()
@@ -31,6 +32,7 @@ export default function JournalPage() {
   const [totalCount, setTotalCount] = useState(0)
   const [streak, setStreak] = useState(0)
   const [weekAvgMood, setWeekAvgMood] = useState(null)
+  const [personalInsights, setPersonalInsights] = useState(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState(new Set())
   const [batchConfirmOpen, setBatchConfirmOpen] = useState(false)
@@ -182,6 +184,7 @@ export default function JournalPage() {
           const sum = trends.reduce((acc, t) => acc + (t.avg_sentiment ?? 0), 0)
           setWeekAvgMood((sum / trends.length).toFixed(2))
         }
+        setPersonalInsights(res.data.personal_insights || null)
       })
       .catch(() => {})
   }, [])
@@ -300,6 +303,9 @@ export default function JournalPage() {
         {/* Left column: main content */}
         <div className="space-y-6">
           <AlertBanner />
+
+          {/* Today's personalized suggestion: weather + insight cross-ref */}
+          <DailySuggestion insights={personalInsights} />
 
           {/* Daily AI Prompt */}
           {dailyPrompt && (
