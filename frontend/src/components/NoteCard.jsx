@@ -5,6 +5,7 @@ import { useLang } from '../context/LanguageContext'
 import { LOCALE_MAP } from '../utils/locales'
 import MoodBadge from './MoodBadge'
 import HighlightText from './HighlightText'
+import { ACTIVITY_ICONS } from './icons/ActivityIcons'
 
 // Strip any residual HTML tags from content_preview (safety net)
 const stripHtml = (str) => str ? str.replace(/<[^>]*>/g, '').replace(/&lt;|&gt;|&amp;|&quot;|&#39;/g, m => ({ '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'" })[m] || m) : ''
@@ -22,7 +23,31 @@ export default memo(function NoteCard({ note, highlight }) {
     minute: '2-digit',
   })
 
-  const tags = note.metadata?.tags || []
+  // Merge tag sources: M2M ``note.tags`` array (new system, objects with
+  // .name) and legacy ``metadata.tags`` (string list). Display names dedup
+  // by lowercased value so a note with both new + old tags doesn't show
+  // "#happy #Happy" twice.
+  const tagsM2M = Array.isArray(note.tags) ? note.tags : []
+  const tagsLegacy = Array.isArray(note.metadata?.tags) ? note.metadata.tags : []
+  const tagNamesSeen = new Set()
+  const tags = []
+  for (const t of tagsM2M) {
+    const name = (t?.name || '').trim()
+    if (!name) continue
+    const key = name.toLowerCase()
+    if (tagNamesSeen.has(key)) continue
+    tagNamesSeen.add(key)
+    tags.push(name)
+  }
+  for (const name of tagsLegacy) {
+    if (typeof name !== 'string') continue
+    const trimmed = name.trim()
+    const key = trimmed.toLowerCase()
+    if (!trimmed || tagNamesSeen.has(key)) continue
+    tagNamesSeen.add(key)
+    tags.push(trimmed)
+  }
+  const activities = Array.isArray(note.metadata?.activities) ? note.metadata.activities : []
 
   return (
     <Link
@@ -48,11 +73,24 @@ export default memo(function NoteCard({ note, highlight }) {
         <p className="text-sm leading-relaxed mb-3 opacity-80">
           <HighlightText text={stripHtml(note.content_preview) || '...'} keyword={highlight} />
         </p>
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+        {(tags.length > 0 || activities.length > 0) && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {activities.map((act) => {
+              const ActivityIcon = ACTIVITY_ICONS[act]
+              return (
+                <span
+                  key={`act-${act}`}
+                  className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-500 border border-blue-500/20"
+                  title={t(`activities.${act}`) !== `activities.${act}` ? t(`activities.${act}`) : act}
+                >
+                  {ActivityIcon ? <ActivityIcon className="w-3 h-3" /> : null}
+                  <span>{t(`activities.${act}`) !== `activities.${act}` ? t(`activities.${act}`) : act}</span>
+                </span>
+              )
+            })}
             {tags.map((tag) => (
               <span
-                key={tag}
+                key={`tag-${tag}`}
                 className="text-xs px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-500 border border-orange-500/20"
               >
                 #{tag}

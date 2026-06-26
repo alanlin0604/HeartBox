@@ -27,6 +27,21 @@ const ChartSkeleton = () => (
   </div>
 )
 
+// Detect whether the user is on the native mobile shell or the browser.
+// Web users have no Apple Health / Health Connect / native sensors, so
+// widgets that ONLY light up with those data sources should be hidden on
+// web instead of showing a persistent "no data" placeholder that the user
+// can't act on (the "去設定健康同步" button leads to a settings tab whose
+// integrations are mobile-only).
+function isNativePlatform() {
+  try {
+    return (typeof window !== 'undefined') &&
+           !!window?.Capacitor?.isNativePlatform?.()
+  } catch {
+    return false
+  }
+}
+
 export default function DashboardPage() {
   usePerformance('DashboardPage', 50)
   const navigate = useNavigate()
@@ -324,17 +339,17 @@ export default function DashboardPage() {
                   count: b.count,
                 }))}
                 xAxisKey="name"
-                yAxisKey="value"
-                height={250}
+                height={260}
                 gridStroke={gridStroke}
                 axisStroke={axisStroke}
                 tooltipStyle={tooltipStyle}
-                bars={[{ name: t('dashboard.avgMood') || 'Avg mood', fill: '#fb923c', dataKey: 'value' }]}
+                bars={[{ name: t('dashboard.avgMood'), fill: '#fb923c', dataKey: 'value' }]}
                 yDomain={[-1, 1]}
+                showCountLabel={true}
               />
             </Suspense>
             <p className="text-xs opacity-50 mt-2">
-              {t('dashboard.weatherHint') || '長條圖：每個溫度區間的平均心情（-1 最負面 → +1 最正面）。'}
+              {t('dashboard.weatherHint')}
             </p>
           </>
         ) : (
@@ -347,39 +362,8 @@ export default function DashboardPage() {
         )}
       </Card>
 
-      {/* Frequent Tags */}
-      {/* (continues in same Patterns section) */}
-      <div className="glass p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">{t('dashboard.frequentTags')}</h2>
-        </div>
-        {tags.length === 0 ? (
-          <EmptyState
-            title={t('dashboard.noTags')}
-            description={t('dashboard.noTagsDesc')}
-            actionText={t('dashboard.goWrite')}
-            onAction={() => navigate('/')}
-          />
-        ) : (
-          <div role="img" aria-label={t('dashboard.frequentTags')}>
-            <Suspense fallback={<ChartSkeleton />}>
-              <LazyBarChart
-                data={tags}
-                xAxisKey="name"
-                height={250}
-                gridStroke={gridStroke}
-                axisStroke={axisStroke}
-                tooltipStyle={tooltipStyle}
-                bars={[
-                  { dataKey: 'count', name: t('dashboard.tagCount'), fill: '#C2410C' },
-                ]}
-              />
-            </Suspense>
-          </div>
-        )}
-      </div>
-
-      {/* Activity-Mood Correlation */}
+      {/* Activity-Mood Correlation (placed before tag widgets so the
+          tag-driven cards group together below). */}
       {activityCorrelation.length > 0 && (
         <div className="glass p-6">
           <h2 className="text-lg font-semibold mb-4">{t('dashboard.activityCorrelation')}</h2>
@@ -399,26 +383,66 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Stress Radar — pulled up from page-bottom into Patterns where
-          it conceptually belongs (tag-driven self-report signal). */}
-      <Suspense fallback={<ChartSkeleton />}>
-        <StressRadarChart data={stressByTag} />
-      </Suspense>
+      {/* Tag-driven widgets grouped: 常用標籤 + 壓力雷達 are BOTH derived
+          from the user's tag usage. Side-by-side on desktop, stacked on
+          mobile. Single Card wrapper so the visual "this is one section
+          about your tags" reads at a glance. */}
+      <div className="glass p-6">
+        <h2 className="text-lg font-semibold mb-4">{t('dashboard.tagsSectionTitle')}</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <h3 className="text-sm font-medium opacity-70 mb-2">{t('dashboard.frequentTags')}</h3>
+            {tags.length === 0 ? (
+              <EmptyState
+                title={t('dashboard.noTags')}
+                description={t('dashboard.noTagsDesc')}
+                actionText={t('dashboard.goWrite')}
+                onAction={() => navigate('/')}
+              />
+            ) : (
+              <div role="img" aria-label={t('dashboard.frequentTags')}>
+                <Suspense fallback={<ChartSkeleton />}>
+                  <LazyBarChart
+                    data={tags}
+                    xAxisKey="name"
+                    height={250}
+                    gridStroke={gridStroke}
+                    axisStroke={axisStroke}
+                    tooltipStyle={tooltipStyle}
+                    bars={[
+                      { dataKey: 'count', name: t('dashboard.tagCount'), fill: '#C2410C' },
+                    ]}
+                  />
+                </Suspense>
+              </div>
+            )}
+          </div>
+          <div>
+            <h3 className="text-sm font-medium opacity-70 mb-2">{t('dashboard.stressRadarTitle')}</h3>
+            <Suspense fallback={<ChartSkeleton />}>
+              <StressRadarChart data={stressByTag} />
+            </Suspense>
+          </div>
+        </div>
+      </div>
       </DashboardSection>
 
       {/* ===== C. BODY & MIND ===== */}
+      {/* Web has no Apple Health / Health Connect / native sensors, so
+          sleep/heart-rate/steps correlations can never light up without
+          the mobile app. Skip the entire section on web when there's
+          no data — the "set up health sync" CTA leads to a tab whose
+          integrations are mobile-only, so it's actively misleading. On
+          native, keep the empty state so the user knows what to enable. */}
+      {(sleepCorrelation.scatter_data?.length > 0 ||
+        Object.keys(healthMoodCorr).length > 0 ||
+        isNativePlatform()) && (
       <DashboardSection
         id="body-mind"
         title={t('dashboard.section.bodyMind')}
         subtitle={t('dashboard.section.bodyMindSub')}
         icon="/icons/brain.svg"
       >
-      {/* If neither Sleep-Mood nor any Health-Mood correlation has ≥3
-          days of overlap, both inner blocks render nothing and the
-          section header floats above a void (reported 2026-06-01). Show
-          an actionable empty state so users know what to do to fill it
-          — usually they need either more sleep records or a Health
-          Connect / HealthKit sync from the mobile app. */}
       {sleepCorrelation.scatter_data?.length > 0 || Object.keys(healthMoodCorr).length > 0 ? null : (
         <EmptyState
           title={t('dashboard.bodyMindEmptyTitle')}
@@ -504,8 +528,14 @@ export default function DashboardPage() {
       )}
 
       </DashboardSection>
+      )}
 
       {/* ===== D. HEALTH SNAPSHOT ===== */}
+      {/* Same web-skip rule as Body & Mind: the Health Snapshot widget
+          (steps / heart rate / HRV trend) is driven entirely by native
+          Health-platform sync. On web the section has nothing to show,
+          so suppress it instead of rendering a permanent empty card. */}
+      {(healthData?.summary && Object.keys(healthData.summary).length > 0) || isNativePlatform() ? (
       <DashboardSection
         id="health"
         title={t('dashboard.section.healthSnapshot')}
@@ -633,6 +663,7 @@ export default function DashboardPage() {
       {/* Old bottom-of-page Stress Radar moved up into Patterns section
           where it conceptually belongs. */}
       </DashboardSection>
+      ) : null}
 
       {/* ===== E. HISTORY ===== */}
       <DashboardSection

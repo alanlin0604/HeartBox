@@ -7,6 +7,7 @@ import MoodBadge from '../components/MoodBadge'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ConfirmModal from '../components/ConfirmModal'
 import AIFeedbackText from '../components/AIFeedbackText'
+import { ACTIVITY_ICONS } from '../components/icons/ActivityIcons'
 // Counselor share UI hidden pre-launch — re-enable along with /counselors.
 // import ShareNoteButton from '../components/ShareNoteButton'
 // import { getNoteShares, unshareNote } from '../api/notes'
@@ -156,7 +157,27 @@ export default function NoteDetailPage() {
     minute: '2-digit',
   })
 
-  const tags = note.metadata?.tags || []
+  // Merge tag sources: M2M ``note.tags`` (new system, objects with .name)
+  // and legacy ``metadata.tags`` (string list). Dedup by lowercased name.
+  const tagsM2M = Array.isArray(note.tags) ? note.tags : []
+  const tagsLegacy = Array.isArray(note.metadata?.tags) ? note.metadata.tags : []
+  const _tagSeen = new Set()
+  const tags = []
+  for (const tt of tagsM2M) {
+    const name = (tt?.name || '').trim()
+    if (!name) continue
+    const key = name.toLowerCase()
+    if (_tagSeen.has(key)) continue
+    _tagSeen.add(key); tags.push(name)
+  }
+  for (const name of tagsLegacy) {
+    if (typeof name !== 'string') continue
+    const trimmed = name.trim()
+    const key = trimmed.toLowerCase()
+    if (!trimmed || _tagSeen.has(key)) continue
+    _tagSeen.add(key); tags.push(trimmed)
+  }
+  const activities = Array.isArray(note.metadata?.activities) ? note.metadata.activities : []
   const attachments = note.attachments || []
 
   return (
@@ -250,8 +271,10 @@ export default function NoteDetailPage() {
           </div>
         )}
 
-        {/* Metadata: weather, temperature, tags */}
-        {(note.metadata?.weather || note.metadata?.temperature != null || tags.length > 0) && (
+        {/* Metadata chips: weather, temperature, activities, tags. All
+            three colour groups render in one row so the user gets the
+            full context (what kind of day this was) at a glance. */}
+        {(note.metadata?.weather || note.metadata?.temperature != null || activities.length > 0 || tags.length > 0) && (
           <div className="flex flex-wrap items-center gap-2">
             {note.metadata?.weather && (
               <span className="text-xs px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-500 border border-blue-500/20">
@@ -259,13 +282,27 @@ export default function NoteDetailPage() {
               </span>
             )}
             {note.metadata?.temperature != null && (
-              <span className="text-xs px-2.5 py-1 rounded-full bg-orange-500/15 text-orange-500 border border-orange-500/20">
+              <span className="text-xs px-2.5 py-1 rounded-full bg-blue-400/15 text-blue-400 border border-blue-400/20">
                 {note.metadata.temperature}°C
               </span>
             )}
+            {activities.map((act) => {
+              const ActivityIcon = ACTIVITY_ICONS[act]
+              const label = t(`activities.${act}`) !== `activities.${act}` ? t(`activities.${act}`) : act
+              return (
+                <span
+                  key={`act-${act}`}
+                  className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-500 border border-purple-500/20"
+                  title={label}
+                >
+                  {ActivityIcon ? <ActivityIcon className="w-3 h-3" /> : null}
+                  <span>{label}</span>
+                </span>
+              )
+            })}
             {tags.map((tag) => (
               <span
-                key={tag}
+                key={`tag-${tag}`}
                 className="text-xs px-2.5 py-1 rounded-full bg-orange-500/15 text-orange-500 border border-orange-500/20"
               >
                 #{tag}

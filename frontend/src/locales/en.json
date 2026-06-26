@@ -152,6 +152,8 @@
   "dashboard.avgStress": "Avg Stress",
   "dashboard.weatherCorrelation": "Mood & Temperature Correlation",
   "dashboard.pearson": "Pearson r = {r} (p = {p}), sample size n = {n}",
+  "dashboard.tagsSectionTitle": "Tag Analysis",
+  "dashboard.stressRadarTitle": "Stress Distribution Radar",
   "dashboard.bestMoodAt": "You're happiest around:",
   "dashboard.avgMood": "Avg mood",
   "dashboard.weatherHint": "Bar chart: average mood per temperature range (-1 most negative -> +1 most positive). Number under each bar is sample count.",
