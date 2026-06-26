@@ -26,7 +26,8 @@ from ..serializers import SelfAssessmentSerializer, SharedAssessmentSerializer
 from ..services.analytics import (
     get_activity_mood_correlation, get_calendar_data, get_frequent_tags,
     get_gratitude_stats, get_mood_trends, get_mood_weather_correlation,
-    get_sleep_mood_correlation, get_stress_by_tag, get_year_pixels,
+    get_personal_insights, get_sleep_mood_correlation, get_stress_by_tag,
+    get_year_pixels,
 )
 from ..services.alerts import check_mood_alerts
 
@@ -38,10 +39,11 @@ from . import (
 
 
 class AnalyticsView(APIView):
-    # Cache-key version bumped to evict the v1 caches that froze the dashboard
-    # in an empty state for irregular journalers. Bumped again to v3 when
-    # default lookback grew 90 -> 180.
-    CACHE_KEY_VERSION = 'v3'
+    # Cache-key version bumped on every analytics schema addition so old
+    # responses don't survive long enough to look broken to the user.
+    #   v3 — default lookback 90 -> 180
+    #   v4 — added personal_insights bundle field
+    CACHE_KEY_VERSION = 'v4'
 
     def get(self, request):
         period = request.query_params.get('period', 'week')
@@ -115,6 +117,7 @@ class AnalyticsView(APIView):
                 'stress_by_tag': get_stress_by_tag(qs, lookback_days=days),
                 'activity_correlation': get_activity_mood_correlation(qs, lookback_days=days),
                 'sleep_correlation': get_sleep_mood_correlation(qs, lookback_days=days),
+                'personal_insights': get_personal_insights(qs, lookback_days=days),
             }
 
         def _sample_size(block):
@@ -139,7 +142,8 @@ class AnalyticsView(APIView):
                 _sample_size(b['stress_by_tag']) == 0 and
                 _sample_size(b['weather_correlation']) < 3 and
                 _sample_size(b['sleep_correlation']) < 3 and
-                _sample_size(b['activity_correlation']) < 3
+                _sample_size(b['activity_correlation']) < 3 and
+                len(b.get('personal_insights') or []) == 0
             )
 
         bundle = _bundle(lookback_days)

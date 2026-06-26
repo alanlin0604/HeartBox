@@ -14,6 +14,7 @@ import MoodPrediction from '../components/MoodPrediction'
 import ProgressCompareCard from '../components/ProgressCompareCard'
 import DashboardSection from '../components/DashboardSection'
 import SectionAnchorBar from '../components/SectionAnchorBar'
+import PersonalInsights from '../components/PersonalInsights'
 import { Card } from '../components/ui'
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from 'recharts'
 const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
@@ -691,6 +692,14 @@ export default function DashboardPage() {
         subtitle={t('dashboard.section.historySub')}
         icon="/icons/weekly-report.svg"
       >
+      {/* PersonalInsights renders null when backend hasn't found any
+          significant pattern yet — so the section just shows the calendar
+          + year pixels for new users, and adds the insight cards on top
+          once they accumulate enough data to surface trends. */}
+      <PersonalInsights
+        insights={data?.personal_insights}
+        lookbackDays={data?.actual_lookback_days || lookback}
+      />
       <MoodCalendar />
       <YearInPixels />
       </DashboardSection>

@@ -425,6 +425,184 @@ def get_sleep_mood_correlation(queryset, lookback_days=90):
     return _sanitize(result)
 
 
+def get_personal_insights(queryset, lookback_days=180):
+    """Cross-dimensional pattern detection over the user's mood history.
+
+    Returns a list of insight DICTS that the frontend renders as templated
+    strings. Each entry shape::
+
+        {key: 'month_phase' | 'weekday_weekend' | 'month_extremes' |
+              'weather_sun_rain' | 'temperature_band',
+         severity: 'positive' | 'caution' | 'neutral',
+         <key-specific fields like best_phase / best_avg / sample_count>}
+
+    Frontend has a template per key so messaging can be localised without
+    the backend doing string concatenation. Empty list = not enough data
+    yet (each insight has its own ``>= N`` sample-size floor below).
+
+    Lookback default 180d so a casual journaler accumulates enough
+    cross-section to see a real signal — < 30d hides everything.
+    """
+    since = timezone.now() - timedelta(days=lookback_days)
+    rows = list(queryset.filter(
+        created_at__gte=since,
+        sentiment_score__isnull=False,
+    ).values('created_at', 'sentiment_score', 'stress_index', 'metadata'))
+
+    if len(rows) < 5:
+        return []
+
+    insights = []
+    MIN_DIFF = 0.2  # 0.2 on a [-1, +1] sentiment scale = ~10% of total range
+    MIN_SAMPLES_PER_BUCKET = 2
+
+    def _avg(scores):
+        return sum(scores) / len(scores) if scores else None
+
+    def _severity(diff):
+        # Magnitude > 0.4 is "noticeable", 0.2-0.4 is "mild"
+        if diff >= 0.4:
+            return 'strong'
+        return 'mild'
+
+    # ------------------------------------------------------------------
+    # 1) Month-phase (月初 / 月中 / 月底)
+    # ------------------------------------------------------------------
+    phases = {'early': [], 'mid': [], 'late': []}
+    for r in rows:
+        day = r['created_at'].day
+        if day <= 10:
+            phases['early'].append(r['sentiment_score'])
+        elif day <= 20:
+            phases['mid'].append(r['sentiment_score'])
+        else:
+            phases['late'].append(r['sentiment_score'])
+    valid = {k: v for k, v in phases.items() if len(v) >= MIN_SAMPLES_PER_BUCKET}
+    if len(valid) >= 2:
+        avgs = {k: _avg(v) for k, v in valid.items()}
+        best_k = max(avgs, key=avgs.get)
+        worst_k = min(avgs, key=avgs.get)
+        diff = avgs[best_k] - avgs[worst_k]
+        if diff >= MIN_DIFF:
+            insights.append({
+                'key': 'month_phase',
+                'severity': _severity(diff),
+                'best_phase': best_k,
+                'best_avg': round(avgs[best_k], 2),
+                'best_count': len(valid[best_k]),
+                'worst_phase': worst_k,
+                'worst_avg': round(avgs[worst_k], 2),
+                'worst_count': len(valid[worst_k]),
+            })
+
+    # ------------------------------------------------------------------
+    # 2) Weekday vs weekend
+    # ------------------------------------------------------------------
+    weekday = [r['sentiment_score'] for r in rows if r['created_at'].weekday() < 5]
+    weekend = [r['sentiment_score'] for r in rows if r['created_at'].weekday() >= 5]
+    if len(weekday) >= 3 and len(weekend) >= 3:
+        wd_avg, we_avg = _avg(weekday), _avg(weekend)
+        diff = abs(we_avg - wd_avg)
+        if diff >= MIN_DIFF:
+            insights.append({
+                'key': 'weekday_weekend',
+                'severity': _severity(diff),
+                'better': 'weekend' if we_avg > wd_avg else 'weekday',
+                'weekday_avg': round(wd_avg, 2),
+                'weekday_count': len(weekday),
+                'weekend_avg': round(we_avg, 2),
+                'weekend_count': len(weekend),
+                'diff': round(we_avg - wd_avg, 2),
+            })
+
+    # ------------------------------------------------------------------
+    # 3) Best / worst month (only fires when range covers ≥2 months with
+    #    enough samples — typically lookback >= 90d)
+    # ------------------------------------------------------------------
+    from collections import defaultdict
+    by_month = defaultdict(list)
+    for r in rows:
+        by_month[r['created_at'].month].append(r['sentiment_score'])
+    valid_m = {m: s for m, s in by_month.items() if len(s) >= 3}
+    if len(valid_m) >= 2:
+        m_avgs = {m: _avg(s) for m, s in valid_m.items()}
+        best_m, worst_m = max(m_avgs, key=m_avgs.get), min(m_avgs, key=m_avgs.get)
+        diff = m_avgs[best_m] - m_avgs[worst_m]
+        if diff >= 0.3:
+            insights.append({
+                'key': 'month_extremes',
+                'severity': _severity(diff),
+                'best_month': int(best_m),
+                'best_avg': round(m_avgs[best_m], 2),
+                'best_count': len(valid_m[best_m]),
+                'worst_month': int(worst_m),
+                'worst_avg': round(m_avgs[worst_m], 2),
+                'worst_count': len(valid_m[worst_m]),
+            })
+
+    # ------------------------------------------------------------------
+    # 4) Weather: sun vs rain
+    # ------------------------------------------------------------------
+    SUN_TOKENS = ('晴', 'sun', 'clear', '☀')
+    RAIN_TOKENS = ('雨', 'rain', '☂', '🌧')
+    sunny, rainy = [], []
+    for r in rows:
+        meta = r.get('metadata') or {}
+        w = str(meta.get('weather') or '').lower()
+        if not w:
+            continue
+        if any(t in w for t in SUN_TOKENS):
+            sunny.append(r['sentiment_score'])
+        elif any(t in w for t in RAIN_TOKENS):
+            rainy.append(r['sentiment_score'])
+    if len(sunny) >= 3 and len(rainy) >= 3:
+        s_avg, r_avg = _avg(sunny), _avg(rainy)
+        diff = abs(s_avg - r_avg)
+        if diff >= MIN_DIFF:
+            insights.append({
+                'key': 'weather_sun_rain',
+                'severity': _severity(diff),
+                'better': 'sunny' if s_avg > r_avg else 'rainy',
+                'sunny_avg': round(s_avg, 2),
+                'sunny_count': len(sunny),
+                'rainy_avg': round(r_avg, 2),
+                'rainy_count': len(rainy),
+            })
+
+    # ------------------------------------------------------------------
+    # 5) Temperature band (cold <20°C vs warm >=25°C)
+    # ------------------------------------------------------------------
+    cold, warm = [], []
+    for r in rows:
+        meta = r.get('metadata') or {}
+        temp = meta.get('temperature')
+        if temp is None:
+            continue
+        try:
+            tt = float(temp)
+        except (ValueError, TypeError):
+            continue
+        if tt < 20:
+            cold.append(r['sentiment_score'])
+        elif tt >= 25:
+            warm.append(r['sentiment_score'])
+    if len(cold) >= 3 and len(warm) >= 3:
+        c_avg, w_avg = _avg(cold), _avg(warm)
+        diff = abs(c_avg - w_avg)
+        if diff >= MIN_DIFF:
+            insights.append({
+                'key': 'temperature_band',
+                'severity': _severity(diff),
+                'better': 'warm' if w_avg > c_avg else 'cold',
+                'cold_avg': round(c_avg, 2),
+                'cold_count': len(cold),
+                'warm_avg': round(w_avg, 2),
+                'warm_count': len(warm),
+            })
+
+    return _sanitize(insights)
+
+
 def get_gratitude_stats(queryset):
     """Count gratitude notes and calculate consecutive gratitude days streak."""
     gratitude_notes = queryset.filter(metadata__type='gratitude')
