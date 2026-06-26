@@ -290,29 +290,52 @@ export default function DashboardPage() {
       {/* Weather Correlation */}
       <Card padding="lg">
         <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">{t('dashboard.weatherCorrelation')}</h2>
-        {correlation.correlation != null ? (
+        {(correlation.mood_by_temperature?.length || 0) >= 2 ? (
           <>
-            <p className="text-sm opacity-60 mb-4">
-              {t('dashboard.pearson', {
-                r: correlation.correlation,
-                p: correlation.p_value,
-                n: correlation.sample_size,
-              })}
-            </p>
+            {/* Headline: which temperature range correlates with the
+                user's best mood. Reads at a glance — no statistics
+                background required. */}
+            {correlation.best_temp_bucket && (
+              <p className="text-base mb-3">
+                <span className="opacity-70">{t('dashboard.bestMoodAt')}</span>{' '}
+                <span className="font-bold text-orange-500">
+                  {correlation.best_temp_bucket.bucket}°C
+                </span>
+                <span className="opacity-70 text-sm ml-2">
+                  ({t('dashboard.avgMood')}: {correlation.best_temp_bucket.avg_sentiment.toFixed(2)},{' '}
+                  n={correlation.best_temp_bucket.count})
+                </span>
+              </p>
+            )}
+            {correlation.correlation != null && (
+              <p className="text-xs opacity-50 mb-4">
+                {t('dashboard.pearson', {
+                  r: correlation.correlation,
+                  p: correlation.p_value,
+                  n: correlation.sample_size,
+                })}
+              </p>
+            )}
             <Suspense fallback={<ChartSkeleton />}>
-              <LazyScatterChart
-                data={correlation.scatter_data}
-                xAxisKey="temperature"
-                yAxisKey="sentiment"
+              <LazyBarChart
+                data={correlation.mood_by_temperature.map(b => ({
+                  name: `${b.bucket}°C`,
+                  value: b.avg_sentiment,
+                  count: b.count,
+                }))}
+                xAxisKey="name"
+                yAxisKey="value"
                 height={250}
                 gridStroke={gridStroke}
                 axisStroke={axisStroke}
                 tooltipStyle={tooltipStyle}
-                scatters={[
-                  { name: t('dashboard.temperatureLabel'), fill: '#fb923c', data: correlation.scatter_data },
-                ]}
+                bars={[{ name: t('dashboard.avgMood') || 'Avg mood', fill: '#fb923c', dataKey: 'value' }]}
+                yDomain={[-1, 1]}
               />
             </Suspense>
+            <p className="text-xs opacity-50 mt-2">
+              {t('dashboard.weatherHint') || '長條圖：每個溫度區間的平均心情（-1 最負面 → +1 最正面）。'}
+            </p>
           </>
         ) : (
           <EmptyState

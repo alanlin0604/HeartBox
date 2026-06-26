@@ -1,12 +1,12 @@
 import api from './axios';
 import { getCached, setCache } from './cache';
 
-// Default lookback widened 30 -> 90 days because the analytics widgets
-// (correlation / tag aggregation) need >=3 paired observations to render
-// anything, and a casual journaler often doesn't hit that in 30 days.
-// Backend also auto-expands to 180d / 365d when the requested span is too
-// sparse, and reports the actually-used window via actual_lookback_days.
-export const getAnalytics = (period = 'week', lookbackDays = 90) => {
+// Default lookback 180 days. A casual journaler doesn't accumulate
+// enough tagged notes in 90d to populate the tag-driven widgets; 180d
+// catches the long-tail without going to lifetime semantics. Backend
+// auto-expands further (365d) on sparse and reports the actual span via
+// actual_lookback_days.
+export const getAnalytics = (period = 'week', lookbackDays = 180) => {
   const key = `analytics:${period}:${lookbackDays}`;
   const cached = getCached(key);
   if (cached) return Promise.resolve(cached);

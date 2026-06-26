@@ -102,7 +102,22 @@ def get_mood_trends(queryset, period='week', lookback_days=30):
 
 
 def get_mood_weather_correlation(queryset, lookback_days=90):
-    """Pearson correlation between sentiment and temperature + heatmap buckets."""
+    """Mood vs temperature analytics.
+
+    Returns three views of the same paired data so the frontend can pick the
+    most informative shape:
+      * ``scatter_data``: raw (temperature, sentiment) pairs for the
+        original scatter plot
+      * ``mood_by_temperature``: BAR-CHART-READY buckets — temperature is
+        cut into climate-meaningful ranges (``<15``, ``15-20``, ``20-25``,
+        ``25-30``, ``>=30`` deg C) and we report avg sentiment + count per
+        bucket. This is what the dashboard renders; the scatter is kept
+        for power users and inspection.
+      * ``best_temp_bucket``: the bucket with the highest avg sentiment,
+        ready for a "你在 20-25°C 時心情最好" headline.
+      * ``correlation`` / ``p_value`` / ``sample_size``: kept for the
+        Pearson r line under the chart.
+    """
     since = timezone.now() - timedelta(days=lookback_days)
     notes = queryset.filter(
         created_at__gte=since,
@@ -123,25 +138,51 @@ def get_mood_weather_correlation(queryset, lookback_days=90):
                 continue
 
     if len(pairs) < 3:
-        return {'correlation': None, 'p_value': None, 'scatter_data': pairs, 'sample_size': len(pairs)}
+        return {
+            'correlation': None, 'p_value': None,
+            'scatter_data': pairs, 'mood_by_temperature': [],
+            'best_temp_bucket': None, 'sample_size': len(pairs),
+        }
 
     df = pd.DataFrame(pairs)
     try:
         r, p = stats.pearsonr(df['sentiment'], df['temperature'])
     except Exception:
-        return {'correlation': None, 'p_value': None, 'scatter_data': pairs, 'sample_size': len(pairs)}
+        r, p = None, None
 
-    # Heatmap buckets (temp ranges × sentiment ranges)
-    temp_bins = pd.cut(df['temperature'], bins=5, labels=False)
-    sent_bins = pd.cut(df['sentiment'], bins=5, labels=False)
-    heatmap = df.assign(temp_bin=temp_bins, sent_bin=sent_bins)\
-        .groupby(['temp_bin', 'sent_bin']).size().reset_index(name='count')
+    # Climate-meaningful temperature buckets. Edges chosen for TW context.
+    bucket_edges = [(-100.0, 15.0), (15.0, 20.0), (20.0, 25.0), (25.0, 30.0), (30.0, 100.0)]
+    bucket_labels = ['<15', '15-20', '20-25', '25-30', '>=30']
+    buckets = []
+    for (lo, hi), label in zip(bucket_edges, bucket_labels):
+        subset = df[(df['temperature'] >= lo) & (df['temperature'] < hi)]
+        if len(subset) == 0:
+            continue
+        buckets.append({
+            'bucket': label,
+            'avg_sentiment': round(float(subset['sentiment'].mean()), 3),
+            'count': int(len(subset)),
+            # The center is kept for ordering when the frontend sorts; the
+            # default order is already low-to-high so the chart reads
+            # left-to-right cold-to-warm.
+            'center': (lo + hi) / 2.0,
+        })
+
+    # Best bucket: the temperature range where the user's mood was highest.
+    # Restricted to buckets with at least 2 observations so a one-shot
+    # outlier doesn't get crowned "best."
+    eligible = [b for b in buckets if b['count'] >= 2]
+    best_temp_bucket = (
+        max(eligible, key=lambda b: b['avg_sentiment'])
+        if eligible else None
+    )
 
     return _sanitize({
-        'correlation': round(r, 3),
-        'p_value': round(p, 4),
+        'correlation': round(r, 3) if r is not None else None,
+        'p_value': round(p, 4) if p is not None else None,
         'scatter_data': pairs,
-        'heatmap': heatmap.to_dict(orient='records'),
+        'mood_by_temperature': buckets,
+        'best_temp_bucket': best_temp_bucket,
         'sample_size': len(pairs),
     })
 

@@ -39,23 +39,21 @@ from . import (
 
 class AnalyticsView(APIView):
     # Cache-key version bumped to evict the v1 caches that froze the dashboard
-    # in an empty state for irregular journalers. v2 widens the default
-    # lookback window AND adds auto-fallback (see _expand_lookback_if_sparse).
-    CACHE_KEY_VERSION = 'v2'
+    # in an empty state for irregular journalers. Bumped again to v3 when
+    # default lookback grew 90 -> 180.
+    CACHE_KEY_VERSION = 'v3'
 
     def get(self, request):
         period = request.query_params.get('period', 'week')
-        # Default lookback widened 30 -> 90 days. A user who writes 2x/week
-        # has only ~8 notes in 30 days; correlation/heatmap widgets need 3+
-        # paired observations and a tag aggregation needs >=2 occurrences,
-        # so 30 days is below the threshold for typical real usage. 90d is
-        # a better default — still recent enough to feel current, and gives
-        # the analytics views something to render. See dashboard regression
-        # report 2026-06-26.
+        # Default lookback widened to 180 days. Even at 90d a casual
+        # journaler often doesn't accumulate enough tagged notes to show
+        # the "常用標籤" widget; 180d catches the long-tail without going
+        # all the way to "lifetime" semantics. The auto-expand fallback
+        # below stretches further (365d) if even 180d returns sparse.
         try:
-            lookback_days = min(max(int(request.query_params.get('lookback_days', 90)), 1), 365)
+            lookback_days = min(max(int(request.query_params.get('lookback_days', 180)), 1), 365)
         except (ValueError, TypeError):
-            lookback_days = 90
+            lookback_days = 180
 
         cache_key = f'analytics_{self.CACHE_KEY_VERSION}_{request.user.id}_{period}_{lookback_days}'
         cached = cache.get(cache_key)
@@ -341,72 +339,78 @@ class YearPixelsView(APIView):
 # ===== Daily Prompt View =====
 
 DEFAULT_PROMPTS_ZH = [
-    "今天的心情如何？",
-    "最近有什麼讓你開心的小事嗎？",
-    "今天最想對自己說的一句話是什麼？",
-    "此刻你的身體感覺如何？",
-    "今天有什麼讓你印象深刻的事？",
-    "最近有什麼讓你感到感恩的事嗎？",
-    "今天遇到了什麼挑戰？你怎麼面對的？",
-    "現在最想做的一件事是什麼？",
-    "今天和誰有了愉快的互動？",
-    "用三個詞形容你現在的狀態。",
-    "今天學到了什麼新東西？",
-    "如果可以重來，今天你會做什麼不同的事？",
-    "最近什麼事情讓你感到驕傲？",
-    "今天有沒有一個讓你微笑的瞬間？",
-    "你現在最需要什麼？",
-    "今天有什麼事情超出你的預期？",
-    "最近有什麼讓你擔心的事嗎？",
-    "你上次真正放鬆是什麼時候？",
-    "如果此刻可以跟任何人說話，你會選誰？",
-    "今天你為自己做了什麼好事？",
+    # Sentence-starter shape: when the user clicks "使用此提示" the editor
+    # is pre-filled with a sentence they can continue typing from instead
+    # of staring at a question and a blank page. Mix in a few direct
+    # questions for variety, but most should be openings.
+    "今天我感謝的事是…",
+    "讓我微笑的一個瞬間是…",
+    "今天最讓我印象深刻的是…",
+    "現在的我感覺…",
+    "今天我學到的一件事是…",
+    "今天和我有愉快互動的人是…",
+    "我今天最想對自己說：",
+    "現在身體告訴我的是…",
+    "今天我為自己做的小事是…",
+    "我最近感到驕傲的一件事是…",
+    "今天超出我預期的是…",
+    "如果可以重來今天，我會…",
+    "我現在最需要的是…",
+    "我最近擔心的是…",
+    "上次我真正放鬆是在…",
+    "今天遇到的挑戰是…，我這樣面對：",
+    "今天的我可以用三個詞形容：",
+    "我最想跟說話的人是…",
+    "今天的小確幸：",
+    "今天的天氣讓我聯想到…",
 ]
 
 DEFAULT_PROMPTS_EN = [
-    "How are you feeling right now?",
-    "What's something small that made you happy recently?",
-    "What would you say to yourself today?",
-    "How does your body feel at this moment?",
-    "What stood out to you today?",
-    "What's something you feel grateful for recently?",
-    "What challenge did you face today? How did you handle it?",
-    "What's one thing you'd like to do for yourself right now?",
-    "Who did you enjoy spending time with today?",
-    "Describe your current state in three words.",
-    "What did you learn today?",
-    "If you could redo today, what would you do differently?",
-    "What have you felt proud of recently?",
-    "Was there a moment today that made you smile?",
-    "What do you need most right now?",
-    "What surprised you today?",
-    "Is there something that's been worrying you lately?",
-    "When was the last time you truly relaxed?",
-    "If you could talk to anyone right now, who would it be?",
-    "What's one kind thing you did for yourself today?",
+    # Sentence-starter shape — see DEFAULT_PROMPTS_ZH note.
+    "Today I'm grateful for…",
+    "A moment that made me smile today was…",
+    "What stood out most today was…",
+    "Right now I'm feeling…",
+    "One thing I learned today is…",
+    "Someone who made today better was…",
+    "Today I want to remind myself that…",
+    "My body is telling me that…",
+    "A small kindness I did for myself today was…",
+    "Something I'm proud of lately is…",
+    "What surprised me today was…",
+    "If I could redo today, I would…",
+    "What I need most right now is…",
+    "What's been on my mind lately is…",
+    "The last time I really relaxed was…",
+    "Today's challenge: …  How I handled it: …",
+    "Three words for me today:",
+    "Someone I'd love to talk to right now is…",
+    "Today's small joy:",
+    "Today's weather makes me feel…",
 ]
 
 DEFAULT_PROMPTS_JA = [
-    "今日の気分はどうですか？",
-    "最近、嬉しかった小さなことはありますか？",
-    "今日、自分に言いたい一言は？",
-    "今、体はどんな感じですか？",
-    "今日、印象に残ったことは何ですか？",
-    "最近、感謝していることはありますか？",
-    "今日どんな挑戦がありましたか？どう対処しましたか？",
-    "今一番やりたいことは何ですか？",
-    "今日、誰と楽しい時間を過ごしましたか？",
-    "今の状態を三つの言葉で表すと？",
-    "今日、何か新しいことを学びましたか？",
-    "もし今日をやり直せるなら、何を変えますか？",
-    "最近、誇りに思ったことは何ですか？",
-    "今日、思わず笑顔になった瞬間はありましたか？",
-    "今、一番必要なものは何ですか？",
-    "今日、予想外だったことはありますか？",
-    "最近、心配していることはありますか？",
-    "最後に心からリラックスしたのはいつですか？",
-    "今、誰とでも話せるなら、誰を選びますか？",
-    "今日、自分に優しくしたことは何ですか？",
+    # Sentence-starter shape — see DEFAULT_PROMPTS_ZH note.
+    "今日感謝していることは…",
+    "今日笑顔になった瞬間は…",
+    "今日一番印象に残ったのは…",
+    "今の私の気持ちは…",
+    "今日学んだことは…",
+    "今日嬉しい時間を過ごした相手は…",
+    "今日自分に言いたいことは：",
+    "体が今教えてくれているのは…",
+    "今日自分にしてあげた小さなことは…",
+    "最近誇りに思っていることは…",
+    "今日予想外だったのは…",
+    "もし今日をやり直せるなら…",
+    "今一番必要なのは…",
+    "最近気にかかっていることは…",
+    "前回本当にリラックスできたのは…",
+    "今日の挑戦：　その対処：",
+    "今日の私を三つの言葉で：",
+    "今話したい相手は…",
+    "今日のささやかな幸せ：",
+    "今日の天気が思い出させてくれるのは…",
 ]
 
 DEFAULT_PROMPTS_MAP = {

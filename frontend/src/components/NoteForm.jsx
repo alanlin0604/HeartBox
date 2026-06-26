@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from 'react'
 import { useLang } from '../context/LanguageContext'
+import { useToast } from '../context/ToastContext'
 import { ACTIVITY_ICONS } from './icons/ActivityIcons'
 import TagInput from './TagInput'
 
@@ -69,6 +70,7 @@ const GRATITUDE_TEMPLATES = [
 
 export default function NoteForm({ onSubmit, loading, initialPrompt }) {
   const { t, lang } = useLang()
+  const toast = useToast()
 
   const TEMPLATES_KEY = 'heartbox_custom_templates'
   const PINS_KEY = 'heartbox_template_pins'
@@ -222,8 +224,23 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
-    const content = editorRef.current?.getHTML() || ''
-    if (!content.trim() || content === '<p></p>') return
+    // Defensive logging path — every bail returns visible feedback instead
+    // of silently doing nothing. This is what caused the 2026-06-26 "save
+    // button doesn't react" report: an empty editor or a flush() throw
+    // would fall out without telling the user anything.
+    const editor = editorRef.current
+    if (!editor) {
+      console.error('[NoteForm] save: editorRef is null')
+      toast?.error?.(t('common.errorTryAgain') || 'Editor not ready. Refresh and try again.')
+      return
+    }
+    const content = editor.getHTML?.() || ''
+    const textOnly = content.replace(/<[^>]*>/g, '').trim()
+    if (!textOnly) {
+      console.warn('[NoteForm] save: empty content', { content })
+      toast?.error?.(t('noteForm.emptyContent') || 'Write something before saving.')
+      return
+    }
 
     const metadata = {}
     if (weather) metadata.weather = weather
@@ -236,22 +253,31 @@ export default function NoteForm({ onSubmit, loading, initialPrompt }) {
     }
 
     // Materialize any pending text in TagInput as a real Tag row before
-    // assembling tag_ids. Without this, a user who typed "happy" but
-    // clicked Submit without pressing Enter would save a note with no
-    // tags, and the Dashboard "常用標籤" widget would stay empty even
-    // though they thought they tagged the entry.
-    const pendingTags = (await tagInputRef.current?.flush()) || []
+    // assembling tag_ids. flush() is try/catch'd inside but wrap an extra
+    // safety so a tag-create network failure can NEVER block note save.
+    let pendingTags = []
+    try {
+      pendingTags = (await tagInputRef.current?.flush()) || []
+    } catch (err) {
+      console.error('[NoteForm] tag flush failed (ignored, saving without)', err)
+    }
     const tag_ids = [...selectedTags, ...pendingTags].map(tag => tag.id)
-    onSubmit(content, metadata, files, tag_ids)
+    try {
+      await onSubmit(content, metadata, files, tag_ids)
+    } catch (err) {
+      console.error('[NoteForm] onSubmit threw', err)
+      toast?.error?.(t('common.saveFailed') || 'Save failed. Try again in a moment.')
+      return
+    }
     try { localStorage.removeItem('heartbox_draft') } catch { /* ignore */ }
-    editorRef.current?.clear()
+    editorRef.current?.clear?.()
     setWeather('')
     setTemperature('')
     setSelectedTags([])
     setFiles([])
     setSelectedActivities([])
     setMetadataType(null)
-  }, [weather, temperature, selectedTags, files, selectedActivities, metadataType, onSubmit])
+  }, [weather, temperature, selectedTags, files, selectedActivities, metadataType, onSubmit, toast, t])
 
   const handleFileChange = useCallback((e) => {
     const selected = Array.from(e.target.files)
