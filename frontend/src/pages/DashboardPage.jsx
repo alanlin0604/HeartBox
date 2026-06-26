@@ -428,6 +428,7 @@ export default function DashboardPage() {
                     bars={[
                       { dataKey: 'count', name: t('dashboard.tagCount'), fill: '#C2410C' },
                     ]}
+                    yDomain={[0, 'auto']}
                   />
                 </Suspense>
               </div>
