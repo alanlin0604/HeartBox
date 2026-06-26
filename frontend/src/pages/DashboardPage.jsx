@@ -396,27 +396,32 @@ export default function DashboardPage() {
           mobile. Single Card wrapper so the visual "this is one section
           about your tags" reads at a glance. */}
       <div className="glass p-6">
-        <h2 className="text-lg font-semibold mb-4">{t('dashboard.tagsSectionTitle')}</h2>
-        <p className="text-xs opacity-50 mb-4">
+        <h2 className="text-lg font-semibold mb-1">{t('dashboard.tagsSectionTitle')}</h2>
+        <p className="text-xs opacity-50 mb-5">
           {t('dashboard.dataWindowNoCount', { days: data?.actual_lookback_days || lookback })}
         </p>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-sm font-medium opacity-70 mb-2">{t('dashboard.frequentTags')}</h3>
+        {/* 2-col grid on desktop, stack on mobile. Each side gets a
+            matching mini-card so left and right have visual parity (no
+            more "left is bare, right has a card" asymmetry). */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-4 min-h-[320px] flex flex-col">
+            <h3 className="text-sm font-medium opacity-80 mb-3">{t('dashboard.frequentTags')}</h3>
             {tags.length === 0 ? (
-              <EmptyState
-                title={t('dashboard.noTags')}
-                description={t('dashboard.noTagsDesc')}
-                actionText={t('dashboard.goWrite')}
-                onAction={() => navigate('/')}
-              />
+              <div className="flex-1 flex items-center">
+                <EmptyState
+                  title={t('dashboard.noTags')}
+                  description={t('dashboard.noTagsDesc')}
+                  actionText={t('dashboard.goWrite')}
+                  onAction={() => navigate('/')}
+                />
+              </div>
             ) : (
-              <div role="img" aria-label={t('dashboard.frequentTags')}>
+              <div role="img" aria-label={t('dashboard.frequentTags')} className="flex-1">
                 <Suspense fallback={<ChartSkeleton />}>
                   <LazyBarChart
                     data={tags}
                     xAxisKey="name"
-                    height={250}
+                    height={280}
                     gridStroke={gridStroke}
                     axisStroke={axisStroke}
                     tooltipStyle={tooltipStyle}
@@ -428,11 +433,13 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-          <div>
-            <h3 className="text-sm font-medium opacity-70 mb-2">{t('dashboard.stressRadarTitle')}</h3>
-            <Suspense fallback={<ChartSkeleton />}>
-              <StressRadarChart data={stressByTag} />
-            </Suspense>
+          <div className="rounded-xl border border-white/5 bg-white/[0.03] p-4 min-h-[320px] flex flex-col">
+            <h3 className="text-sm font-medium opacity-80 mb-3">{t('dashboard.stressRadarTitle')}</h3>
+            <div className="flex-1">
+              <Suspense fallback={<ChartSkeleton />}>
+                <StressRadarChart data={stressByTag} bare />
+              </Suspense>
+            </div>
           </div>
         </div>
       </div>

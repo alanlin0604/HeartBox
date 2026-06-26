@@ -82,18 +82,38 @@ def get_mood_trends(queryset, period='week', lookback_days=30):
     df['date'] = pd.to_datetime(df['created_at']).dt.tz_localize(None)
 
     if period == 'week':
+        # User-friendly label: the Monday of that ISO week as ``M/D``
+        # (e.g. ``2/9`` instead of ``2026-W07``). Year added only when the
+        # range crosses a year boundary so the axis stays readable.
+        # ``sort_key`` keeps ISO ``YYYY-Www`` for stable ordering.
         iso = df['date'].dt.isocalendar()
-        df['period'] = iso.year.astype(str) + '-W' + iso.week.astype(str).str.zfill(2)
-        df['sort_key'] = df['period']
+        df['sort_key'] = iso.year.astype(str) + '-W' + iso.week.astype(str).str.zfill(2)
+        # Monday of the same ISO week (weekday=0). dt.weekday: Mon=0..Sun=6
+        monday = df['date'] - pd.to_timedelta(df['date'].dt.weekday, unit='D')
+        spans_years = monday.dt.year.nunique() > 1
+        if spans_years:
+            df['period'] = monday.dt.strftime('%Y/%m/%d')
+        else:
+            df['period'] = monday.dt.strftime('%m/%d')
     else:  # month
-        df['period'] = df['date'].dt.strftime('%Y-%m')
+        # Same idea — ``M月`` (zh) translates poorly across locales, so
+        # keep the numeric ``YYYY/MM`` form (everyone reads dates this way).
+        spans_years = df['date'].dt.year.nunique() > 1
+        if spans_years:
+            df['period'] = df['date'].dt.strftime('%Y/%m')
+        else:
+            df['period'] = df['date'].dt.strftime('%m')
         df['sort_key'] = df['date'].dt.to_period('M').astype(str)
 
-    grouped = df.groupby('period').agg(
+    grouped = df.groupby(['period', 'sort_key']).agg(
         avg_sentiment=('sentiment_score', 'mean'),
         avg_stress=('stress_index', 'mean'),
         count=('sentiment_score', 'count'),
     ).reset_index()
+    # Sort by the ISO key so the line chart reads left-to-right
+    # chronologically even when string labels wouldn't naturally sort
+    # that way (e.g. '12/29' < '01/05' lexically).
+    grouped = grouped.sort_values('sort_key').drop(columns=['sort_key'])
 
     grouped['avg_sentiment'] = grouped['avg_sentiment'].round(2)
     grouped['avg_stress'] = grouped['avg_stress'].round(1)
