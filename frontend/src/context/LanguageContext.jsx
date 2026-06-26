@@ -26,7 +26,7 @@ export function LanguageProvider({ children }) {
         key
       if (vars) {
         Object.entries(vars).forEach(([k, v]) => {
-          text = text.replace(`{${k}}`, v)
+          text = text.replaceAll(`{${k}}`, v)
         })
       }
       return text

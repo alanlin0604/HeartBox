@@ -158,7 +158,7 @@
   "monthPhase.late": "月末（21日以降）",
   "insights.monthPhase.title": "{best}に気分が良い傾向",
   "insights.monthPhase.detail": "{best}：平均 {bestAvg}（{bestCount}件）／{worst}：平均 {worstAvg}（{worstCount}件）。低調期に休息を確保しましょう。",
-  "insights.weekdayWeekend.title": "{better}のほうが気分が良い",
+  "insights.weekdayWeekend.title": "{better}のほうが{worse}より気分が良い",
   "insights.weekdayWeekend.detail": "{better}：平均 {betterAvg}／{worse}：平均 {worseAvg}（差 {diff}）。{worse}が続いて低い場合は生活リズムの見直しを。",
   "insights.monthExtremes.title": "{best}が最も気分が良い月／{worst}が最も重い月",
   "insights.monthExtremes.detail": "{best}：平均 {bestAvg}（{bestCount}件）／{worst}：平均 {worstAvg}（{worstCount}件）。次の{worst}に備えてサポートを準備しましょう。",

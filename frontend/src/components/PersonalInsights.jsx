@@ -54,7 +54,7 @@ function InsightCard({ insight, t, monthLabel }) {
     return (
       <div className={classes}>
         <p className="text-sm font-semibold mb-1">
-          {t('insights.weekdayWeekend.title', { better })}
+          {t('insights.weekdayWeekend.title', { better, worse })}
         </p>
         <p className="text-xs opacity-70">
           {t('insights.weekdayWeekend.detail', {

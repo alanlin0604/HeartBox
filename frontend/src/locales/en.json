@@ -175,7 +175,7 @@
   "monthPhase.late": "end of month (21st+)",
   "insights.monthPhase.title": "Your mood is usually better around {best}",
   "insights.monthPhase.detail": "{best}: avg {bestAvg} ({bestCount} entries); {worst}: avg {worstAvg} ({worstCount}). Plan breathing room in the lower phase.",
-  "insights.weekdayWeekend.title": "{better} mood beats the other side",
+  "insights.weekdayWeekend.title": "{better} mood is clearly better than {worse}",
   "insights.weekdayWeekend.detail": "{better}: avg {betterAvg}; {worse}: avg {worseAvg} (gap {diff}). If {worse} stays low, reconsider the pace.",
   "insights.monthExtremes.title": "{best} is your strongest month; {worst} is the heaviest",
   "insights.monthExtremes.detail": "{best}: avg {bestAvg} ({bestCount}); {worst}: avg {worstAvg} ({worstCount}). Pre-arrange support next time {worst} comes round.",

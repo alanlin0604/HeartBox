@@ -154,7 +154,7 @@
   "monthPhase.late": "月底（21 號之後）",
   "insights.monthPhase.title": "你在{best}心情通常比較好",
   "insights.monthPhase.detail": "{best} 平均心情 {bestAvg}（{bestCount} 筆），{worst} 平均 {worstAvg}（{worstCount} 筆）。試著在低谷期多排些喘息空間。",
-  "insights.weekdayWeekend.title": "{better}心情明顯好過另一邊",
+  "insights.weekdayWeekend.title": "{better}心情明顯好過{worse}",
   "insights.weekdayWeekend.detail": "{better} 平均 {betterAvg}，{worse} 平均 {worseAvg}，差距 {diff}。若是{worse}心情持續較低，想想是否需要調整節奏。",
   "insights.monthExtremes.title": "{best} 是你心情最好的月份；{worst} 最沉重",
   "insights.monthExtremes.detail": "{best} 平均 {bestAvg}（{bestCount} 筆），{worst} 平均 {worstAvg}（{worstCount} 筆）。每年類似時期可以提前安排支持。",
