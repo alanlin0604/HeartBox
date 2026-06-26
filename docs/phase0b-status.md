@@ -79,12 +79,19 @@ x-frame-options: DENY                                                    ✓
 ### 🔢 此波加密總計
 **165 個歷史 row 升級到 Fernet at rest**（migration 0059: 81 + 0060: 82 + 0061: 2 = 165 rows）
 
-### 📋 你還要做的 operator action
-1. **設定 Cloud Scheduler** invoke 新 security-gc cron endpoints（2 行 gcloud command，commit message 裡有）
-2. **Submit hstspreload.org** for heartbox.tw（HSTS preload list 加入）
-3. **設 `MEDIA_PUBLIC_BASE_URL` env var** on Cloud Run（不設則 dev 回退 build_absolute_uri，安全；設了 prod 更安全）
-4. **設 `TRUSTED_PROXIES` env var** (Cloudflare + Cloud Run IP ranges) 讓 XFF parsing 精準
-5. **submit URL 到 Google Search Console** force re-index favicon
+### 📋 Operator actions (post 6-wave audit)
+
+**完成（assistant 已做）**
+- ✅ Cloud Scheduler `security-gc` (daily 03:00 UTC) — verified HTTP 200
+- ✅ Cloud Scheduler `security-gc-weekly` (Sun 04:00 UTC)
+- ✅ `MEDIA_PUBLIC_BASE_URL=https://api.heartbox.tw` on Cloud Run
+- ✅ `TRUSTED_PROXIES=169.254.169.126,169.254.0.0/16` (Cloud Run internal proxy range)
+- ✅ NSSM `HeartBoxLLM` service — boot-auto-start, auto-restart 5s, log rotation
+- ✅ Confirmed `cloudflared` Windows service already `AUTO_START` + 20s restart (no action needed)
+
+**剩下你親手做的（只有 web form 自動化不了）**
+- 🌐 **HSTS preload submission**: 開 https://hstspreload.org/?domain=heartbox.tw → 確認 4 個條件都 ✓（HSTS header live ≥ 2y / includeSubDomains / preload / HTTPS redirect）→ 按 Submit。Chrome 加入 preload list 大約 8-12 週。
+- 🔍 **Google Search Console URL submission**: 開 https://search.google.com/search-console → 用 `alan930604@gmail.com` 登入 → 加入 `heartbox.tw` property（若還沒驗證）→ URL Inspection → 貼 `https://heartbox.tw/` → 按 **Request Indexing**。對 `/about`、`/faq` 重複。Google 24-72h 內會更新 favicon + snippet（取代你截圖裡舊版紫色 logo）。
 
 ---
 
