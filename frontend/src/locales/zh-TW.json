@@ -164,6 +164,7 @@
   "insights.temperatureBand.detail": "<20°C 平均 {coldAvg}（{coldCount} 筆），≥25°C 平均 {warmAvg}（{warmCount} 筆）。極端溫度時段可特別留意自我照顧。",
   "dailySuggestion.title": "今日個人化建議",
   "dailySuggestion.now": "目前 {temp}°C",
+  "dailySuggestion.fallbackLoc": "使用預設位置（台北）",
   "dailySuggestion.weather.clear": "晴朗",
   "dailySuggestion.weather.cloudy": "多雲",
   "dailySuggestion.weather.fog": "起霧",

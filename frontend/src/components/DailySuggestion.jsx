@@ -2,18 +2,41 @@
 // with today's local weather to produce 2–4 personalised one-line tips
 // (practical weather + insight-based nudges) above the journal write form.
 //
-// Weather: Open-Meteo current/daily, no API key. Location defaults to
-// Taipei (HeartBox is TW-first and the Pages site has geolocation=()
-// in Permissions-Policy, so we can't ask the browser).
-//
-// Renders null until weather resolves AND there's at least one tip — the
-// section is meant to feel earned, not noisy.
+// Weather: Open-Meteo current/daily, no API key.
+// Location: navigator.geolocation, cached in localStorage for 24h so we
+// don't re-prompt every page load. Falls back to Taipei on denial /
+// timeout / unsupported.
 
 import { useEffect, useState, useMemo } from 'react'
 import { useLang } from '../context/LanguageContext'
 
 const DEFAULT_LAT = 25.0478   // Taipei
 const DEFAULT_LON = 121.5319
+const LOC_CACHE_KEY = 'heartbox:loc'
+const LOC_TTL_MS = 24 * 60 * 60 * 1000   // 24h
+const GEO_TIMEOUT_MS = 8000
+
+function readCachedLoc() {
+  try {
+    const raw = localStorage.getItem(LOC_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    const { lat, lon, ts, fallback } = parsed || {}
+    if (typeof lat !== 'number' || typeof lon !== 'number') return null
+    if (typeof ts !== 'number') return null
+    if (Date.now() - ts > LOC_TTL_MS) return null
+    return { lat, lon, fallback: !!fallback }
+  } catch { return null }
+}
+
+function writeCachedLoc(lat, lon, fallback) {
+  try {
+    localStorage.setItem(
+      LOC_CACHE_KEY,
+      JSON.stringify({ lat, lon, ts: Date.now(), fallback: !!fallback }),
+    )
+  } catch { /* private mode / quota — silently skip */ }
+}
 
 // WMO weather code → coarse bucket for our copy
 function bucketFromCode(code) {
@@ -107,12 +130,49 @@ function toneClasses(tone) {
 
 export default function DailySuggestion({ insights }) {
   const { t, lang } = useLang()
+  const [coords, setCoords] = useState(null)   // { lat, lon, fallback }
   const [weather, setWeather] = useState(null)
   const [failed, setFailed] = useState(false)
 
+  // Resolve coords first. Cache hit -> use immediately. Cache miss ->
+  // ask the browser; on denial/timeout/error, fall back to Taipei AND
+  // cache that fallback (with same TTL) so we don't re-prompt every load.
   useEffect(() => {
     let cancelled = false
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${DEFAULT_LAT}&longitude=${DEFAULT_LON}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
+    const cached = readCachedLoc()
+    if (cached) {
+      setCoords(cached)
+      return
+    }
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      const c = { lat: DEFAULT_LAT, lon: DEFAULT_LON, fallback: true }
+      writeCachedLoc(c.lat, c.lon, true)
+      setCoords(c)
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (cancelled) return
+        const lat = pos.coords.latitude
+        const lon = pos.coords.longitude
+        writeCachedLoc(lat, lon, false)
+        setCoords({ lat, lon, fallback: false })
+      },
+      () => {
+        if (cancelled) return
+        writeCachedLoc(DEFAULT_LAT, DEFAULT_LON, true)
+        setCoords({ lat: DEFAULT_LAT, lon: DEFAULT_LON, fallback: true })
+      },
+      { timeout: GEO_TIMEOUT_MS, maximumAge: LOC_TTL_MS, enableHighAccuracy: false },
+    )
+    return () => { cancelled = true }
+  }, [])
+
+  // Fetch weather once coords are resolved.
+  useEffect(() => {
+    if (!coords) return
+    let cancelled = false
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
     fetch(url)
       .then((r) => r.ok ? r.json() : Promise.reject(new Error('http')))
       .then((data) => {
@@ -126,7 +186,7 @@ export default function DailySuggestion({ insights }) {
       })
       .catch(() => { if (!cancelled) setFailed(true) })
     return () => { cancelled = true }
-  }, [])
+  }, [coords])
 
   const today = useMemo(() => new Date(), [])
   const tips = useMemo(
@@ -155,6 +215,9 @@ export default function DailySuggestion({ insights }) {
               {tempDate}．{conditionLabel}．{Math.round(weather.tempMin)}° / {Math.round(weather.tempMax)}°C
               {weather.tempNow != null && (
                 <> ．{t('dailySuggestion.now', { temp: Math.round(weather.tempNow) })}</>
+              )}
+              {coords?.fallback && (
+                <> ．<span className="opacity-70">{t('dailySuggestion.fallbackLoc')}</span></>
               )}
             </p>
           )}

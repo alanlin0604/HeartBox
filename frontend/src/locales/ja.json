@@ -168,6 +168,7 @@
   "insights.temperatureBand.detail": "<20°C：平均 {coldAvg}（{coldCount}件）／≥25°C：平均 {warmAvg}（{warmCount}件）。極端な気温時はセルフケアを意識しましょう。",
   "dailySuggestion.title": "今日のパーソナル提案",
   "dailySuggestion.now": "現在 {temp}°C",
+  "dailySuggestion.fallbackLoc": "デフォルト位置（台北）",
   "dailySuggestion.weather.clear": "晴れ",
   "dailySuggestion.weather.cloudy": "曇り",
   "dailySuggestion.weather.fog": "霧",

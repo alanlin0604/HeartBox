@@ -185,6 +185,7 @@
   "insights.temperatureBand.detail": "<20°C: avg {coldAvg} ({coldCount}); >=25°C: avg {warmAvg} ({warmCount}). Watch self-care at temperature extremes.",
   "dailySuggestion.title": "Today's personal note",
   "dailySuggestion.now": "now {temp}°C",
+  "dailySuggestion.fallbackLoc": "default location (Taipei)",
   "dailySuggestion.weather.clear": "Clear",
   "dailySuggestion.weather.cloudy": "Cloudy",
   "dailySuggestion.weather.fog": "Foggy",
