@@ -38,14 +38,26 @@ from . import (
 
 
 class AnalyticsView(APIView):
+    # Cache-key version bumped to evict the v1 caches that froze the dashboard
+    # in an empty state for irregular journalers. v2 widens the default
+    # lookback window AND adds auto-fallback (see _expand_lookback_if_sparse).
+    CACHE_KEY_VERSION = 'v2'
+
     def get(self, request):
         period = request.query_params.get('period', 'week')
+        # Default lookback widened 30 -> 90 days. A user who writes 2x/week
+        # has only ~8 notes in 30 days; correlation/heatmap widgets need 3+
+        # paired observations and a tag aggregation needs >=2 occurrences,
+        # so 30 days is below the threshold for typical real usage. 90d is
+        # a better default — still recent enough to feel current, and gives
+        # the analytics views something to render. See dashboard regression
+        # report 2026-06-26.
         try:
-            lookback_days = min(max(int(request.query_params.get('lookback_days', 30)), 1), 365)
+            lookback_days = min(max(int(request.query_params.get('lookback_days', 90)), 1), 365)
         except (ValueError, TypeError):
-            lookback_days = 30
+            lookback_days = 90
 
-        cache_key = f'analytics_{request.user.id}_{period}_{lookback_days}'
+        cache_key = f'analytics_{self.CACHE_KEY_VERSION}_{request.user.id}_{period}_{lookback_days}'
         cached = cache.get(cache_key)
         if cached is not None:
             return Response(cached)
@@ -91,17 +103,69 @@ class AnalyticsView(APIView):
 
         gratitude = get_gratitude_stats(qs)
 
+        # Auto-expand the lookback window when the requested span returned
+        # an "all empty" analytics page. Users who write infrequently would
+        # otherwise see a fully-empty dashboard for weeks; widening to up
+        # to 365 days catches the long-tail correlations they HAVE recorded
+        # without forcing them to manually fiddle with the query param.
+        # Stops at the first span that produces ANY data.
+        def _bundle(days):
+            return {
+                'mood_trends': get_mood_trends(qs, period=period, lookback_days=days),
+                'weather_correlation': get_mood_weather_correlation(qs, lookback_days=days),
+                'frequent_tags': get_frequent_tags(qs, lookback_days=days),
+                'stress_by_tag': get_stress_by_tag(qs, lookback_days=days),
+                'activity_correlation': get_activity_mood_correlation(qs, lookback_days=days),
+                'sleep_correlation': get_sleep_mood_correlation(qs, lookback_days=days),
+            }
+
+        def _sample_size(block):
+            """Returns the count of meaningful observations in a service-
+            function result regardless of whether it shaped its return as
+            ``{sample_size: int}`` (weather/sleep correlations) or as a
+            plain ``list`` (frequent_tags, stress_by_tag, activity_correlation).
+            """
+            if isinstance(block, dict):
+                return int(block.get('sample_size') or 0)
+            if isinstance(block, list):
+                return len(block)
+            return 0
+
+        def _is_sparse(b):
+            """Treat the dashboard as 'no useful content' iff every analytic
+            block came back empty / below-threshold. Gates the auto-expand
+            fallback that widens the lookback window when a casual journaler
+            wouldn't otherwise see any data."""
+            return (
+                _sample_size(b['frequent_tags']) == 0 and
+                _sample_size(b['stress_by_tag']) == 0 and
+                _sample_size(b['weather_correlation']) < 3 and
+                _sample_size(b['sleep_correlation']) < 3 and
+                _sample_size(b['activity_correlation']) < 3
+            )
+
+        bundle = _bundle(lookback_days)
+        actual_lookback = lookback_days
+        if _is_sparse(bundle):
+            for fallback_days in (180, 365):
+                if fallback_days <= lookback_days:
+                    continue
+                bigger = _bundle(fallback_days)
+                if not _is_sparse(bigger):
+                    bundle = bigger
+                    actual_lookback = fallback_days
+                    break
+
         result = {
-            'mood_trends': get_mood_trends(qs, period=period, lookback_days=lookback_days),
-            'weather_correlation': get_mood_weather_correlation(qs, lookback_days=lookback_days),
-            'frequent_tags': get_frequent_tags(qs, lookback_days=lookback_days),
-            'stress_by_tag': get_stress_by_tag(qs, lookback_days=lookback_days),
-            'activity_correlation': get_activity_mood_correlation(qs, lookback_days=lookback_days),
-            'sleep_correlation': get_sleep_mood_correlation(qs, lookback_days=lookback_days),
+            **bundle,
             'current_streak': current_streak,
             'longest_streak': longest_streak,
             'gratitude_count': gratitude['gratitude_count'],
             'gratitude_streak': gratitude['gratitude_streak'],
+            # Surface the actual window so the frontend can show
+            # "showing last 365 days because no recent activity" hint.
+            'actual_lookback_days': actual_lookback,
+            'requested_lookback_days': lookback_days,
         }
         cache.set(cache_key, result, CACHE_TTL_ANALYTICS)
         return Response(result)
