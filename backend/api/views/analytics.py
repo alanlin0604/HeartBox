@@ -370,10 +370,15 @@ def _sanitize_daily_prompt(raw, *, mood_avg=None, stress_avg=None):
     """Clean a generated daily prompt. Returns the cleaned string, or ``None``
     if the output should be rejected and fallback used.
 
-    Rejection criteria:
+    Rejection criteria (a daily prompt should be ONE short question that the
+    user can act on immediately; anything longer is friction not a prompt):
       * scrub leaves empty / template-only text
-      * length > 200 chars (real prompts are 1 line)
-      * contains a blank-line pair (means it's multi-paragraph prose)
+      * length > 80 chars after strip (real CJK question is ~15-30 chars)
+      * length < 6 chars (model hallucinated a fragment)
+      * more than ONE question mark — 連問 = not actionable
+      * contains a newline (multi-paragraph prose, not a prompt)
+      * contains an instruction shape ("請寫下" + further clause / "花十分鐘" /
+        "獨自一人" — those are coaching essays, not journal prompts)
       * contains a system-prompt fingerprint
       * contains the mood/stress numeric strings injected into the system prompt
     """
@@ -382,14 +387,28 @@ def _sanitize_daily_prompt(raw, *, mood_avg=None, stress_avg=None):
     cleaned = scrub_llm_output(raw)
     if not cleaned:
         return None
-    # Strip wrapping quotes / 「」 / 『』 / 「」 the model often adds.
+    # Strip wrapping quotes / 「」 / 『』 / 「」 / 『 the model often adds.
     cleaned = cleaned.strip().strip('"\'').strip('「」『』').strip()
-    if not cleaned or len(cleaned) > 200:
+    if not cleaned:
         return None
-    if '\n\n' in cleaned:
+    # Tight bounds — a 1-line question. Previous 200-char cap allowed the
+    # TAIDE "獨自一人在自然環境中觀察並傾聽自己的內心..." essay to slip through.
+    if len(cleaned) > 80 or len(cleaned) < 6:
+        return None
+    # Reject newlines outright (was: only blank-line pairs).
+    if '\n' in cleaned or '\r' in cleaned:
+        return None
+    # Multi-question rejection: a prompt must contain AT MOST one ？/?
+    qmark_count = cleaned.count('？') + cleaned.count('?')
+    if qmark_count > 1:
         return None
     lowered = cleaned.lower()
     if any(fp in lowered for fp in _DAILY_PROMPT_FINGERPRINTS):
+        return None
+    # Reject essay-shape instructions that pretend to be a question.
+    essay_markers = ('花十分鐘', '花十分钟', '獨自一人', '獨自一個',
+                     '寫下關於', '寫下你對', '讓內在', '療癒的指南')
+    if any(m in cleaned for m in essay_markers):
         return None
     # Numeric fingerprints from the system prompt's mood_ctx.
     if mood_avg is not None and f'{mood_avg:.2f}' in cleaned:
@@ -404,10 +423,13 @@ CACHE_TTL_DAILY_PROMPT_FALLBACK = 600
 
 
 class DailyPromptView(APIView):
-    # Cache-key version bumped to invalidate any historical template-leak
-    # entries (workflow audit wf_ba1ab074-010). Bump again on future format
-    # changes so old cache rows die naturally.
-    CACHE_KEY_VERSION = 'v2'
+    # Cache-key version bumped to invalidate any historical entries when the
+    # validator rules tighten. Bump again on future format changes so old
+    # cache rows die naturally.
+    #   v2 -- post-prompt-template-leak fix (wf_ba1ab074-010)
+    #   v3 -- post-essay-prompt rejection (stricter validator: <=80 chars,
+    #         1 question mark max, no essay markers)
+    CACHE_KEY_VERSION = 'v3'
 
     def get(self, request):
         today = timezone.now().date().isoformat()
@@ -444,14 +466,20 @@ class DailyPromptView(APIView):
                 raw = provider.chat(
                     system=(
                         f'You are a gentle journaling coach. {mood_ctx}'
-                        f'Generate one short, open-ended journaling prompt in {lang_name}. '
-                        f'Keep it to ONE simple question (under 20 words). '
-                        f'The prompt should be easy to start writing from directly. '
-                        f'Avoid long instructions or multi-part questions. No quotes or labels.'
+                        f'Generate ONE short question in {lang_name} that the user '
+                        f'can start answering in their journal within 5 seconds.\n\n'
+                        f'STRICT RULES:\n'
+                        f'  - Output MUST be a single question, ending with one ? or ？\n'
+                        f'  - Maximum 25 Chinese characters / 15 English words.\n'
+                        f'  - NO instructions like "花十分鐘", "獨自一人", "寫下".\n'
+                        f'  - NO multi-part / compound questions joined by "and" or "，"\n'
+                        f'  - NO quotes, labels, prefixes, explanations.\n'
+                        f'  - Example shape: "今天最讓你感謝的一件事是什麼？" / '
+                        f'"What surprised you today?" / "今は何が必要ですか？"'
                     ),
                     user='Generate today’s prompt.',
-                    max_tokens=60,
-                    temperature=0.8,
+                    max_tokens=40,
+                    temperature=0.7,
                     timeout=15,
                 )
                 prompt_text = _sanitize_daily_prompt(
