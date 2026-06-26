@@ -11,12 +11,36 @@ import logging
 
 from django.contrib.auth import get_user_model
 
-from rest_framework import generics
+from rest_framework import generics, permissions
 from rest_framework.response import Response
 
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+class IsOwner(permissions.BasePermission):
+    """Object-level permission: caller must own the object.
+
+    Defense in depth: every view already filters its queryset by
+    ``user=request.user``, but if a future refactor weakens that filter
+    (or a fan-out via ``select_related``/``prefetch_related`` exposes a
+    cross-user row), this object-level check still refuses on
+    ``has_object_permission``. Attach as a second permission class on
+    Retrieve/Update/Destroy views.
+    """
+    message = 'You do not have permission to access this object.'
+
+    def has_object_permission(self, request, view, obj):
+        owner_id = getattr(obj, 'user_id', None)
+        if owner_id is None:
+            # Fallback for objects whose owner is on a different attr name
+            # (e.g. SharedNote.shared_with). Caller views with non-standard
+            # ownership shape should set ``owner_attr`` on the view.
+            attr = getattr(view, 'owner_attr', 'user')
+            owner = getattr(obj, attr, None)
+            owner_id = getattr(owner, 'id', None) if owner is not None else None
+        return owner_id == getattr(request.user, 'id', None)
 
 
 def error_response(code, fallback, status_code=400):
@@ -130,6 +154,7 @@ from .auth import (  # noqa: E402
     ResetPasswordView,
     SubmitConsentView,
     GuardianConfirmView,
+    TOTPBackupCodesView,
     TOTPDisableView,
     TOTPSetupView,
     TOTPVerifyView,
@@ -289,8 +314,8 @@ _UNDOCUMENTED_VIEWS = [
     'ResetPasswordView', 'ShareAssessmentView', 'ShareNoteView',
     'ShareNoteWithFriendsView', 'SleepAnalysisView', 'SleepCalendarView',
     'SleepInsightsView', 'SleepTrendsView', 'TherapistReportPublicView',
-    'TimeSlotListView', 'TOTPDisableView', 'TOTPSetupView',
-    'TOTPVerifyView', 'UnshareNoteView', 'UserMetricDetailView',
+    'TimeSlotListView', 'TOTPBackupCodesView', 'TOTPDisableView',
+    'TOTPSetupView', 'TOTPVerifyView', 'UnshareNoteView', 'UserMetricDetailView',
     'UserMetricListView', 'UserMetricRefreshView', 'UserSearchView',
     'VerifyEmailView', 'WeeklySummaryView', 'YearlyReviewView',
     'YearPixelsView',

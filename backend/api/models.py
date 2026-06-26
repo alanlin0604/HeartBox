@@ -16,6 +16,12 @@ class CustomUser(AbstractUser):
     timezone = models.CharField(max_length=50, default='Asia/Taipei')
     onboarding_completed = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
+    # Account-lockout state. failed_login_count is bumped on each
+    # AuthenticationFailed and cleared on every successful login. locked_until
+    # is set by LoginView once the count crosses the threshold; subsequent
+    # auth attempts return 423 Locked until the clock catches up.
+    failed_login_count = models.PositiveIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
     # Captured at signup so we can prove (per GDPR Art. 7 / 台灣 PDPA §7)
     # exactly when this user agreed to which version of ToS / Privacy.
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
@@ -818,12 +824,47 @@ class TOTPDevice(models.Model):
         on_delete=models.CASCADE,
         related_name='totp_device',
     )
-    secret = models.CharField(max_length=64)
+    # Fernet-encrypted at rest. The TOTP secret is the key material for the
+    # second factor — leaking it from a DB dump would let an attacker mint
+    # valid 6-digit codes indefinitely. EncryptedTextField is transparent so
+    # pyotp.TOTP(device.secret) still gets the plaintext on access.
+    secret = EncryptedTextField()
     confirmed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'TOTP for {self.user.username} ({"confirmed" if self.confirmed else "pending"})'
+        return f'<TOTPDevice user_id={self.user_id} confirmed={self.confirmed}>'
+
+
+class TOTPBackupCode(models.Model):
+    """Single-use recovery codes generated when a user enables 2FA.
+
+    UX trap closed: requiring TOTP code to disable 2FA (commit 9d73639) means
+    a user who loses their authenticator device cannot otherwise recover —
+    backup codes are the standard escape hatch. We generate 10 codes at
+    enrolment, store their bcrypt-style hashes (NOT plaintext), and accept
+    one in lieu of a TOTP digit on Login2FAView / TOTPDisableView. Each code
+    is marked ``used`` on consumption so the same code cannot be replayed.
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='totp_backup_codes',
+    )
+    # PBKDF2-style hash from django.contrib.auth.hashers.make_password.
+    # Codes themselves are 10-char base32 alphabet (~50 bits of entropy).
+    code_hash = models.CharField(max_length=128)
+    used = models.BooleanField(default=False)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'used'], name='totpbackup_user_used'),
+        ]
+
+    def __str__(self):
+        return f'<TOTPBackupCode id={self.pk} used={self.used}>'
 
 
 class SubscriptionPlan(models.Model):

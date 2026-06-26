@@ -496,12 +496,11 @@ class WeeklySummaryView(APIView):
         summary_id = request.query_params.get('id')
         if summary_id and self._is_pdf_request(request):
             try:
-                # Try with user filter first, then without (in case of user mismatch)
                 summary = WeeklySummary.objects.filter(id=summary_id, user=request.user).first()
                 if not summary:
-                    # Log for debugging
-                    exists = WeeklySummary.objects.filter(id=summary_id).exists()
-                    logger.warning('Weekly PDF by ID=%s: user=%s, exists_any_user=%s', summary_id, request.user.id, exists)
+                    # 404 without leaking whether the row exists for a
+                    # different user — the prior `exists_any_user=` log line
+                    # was a cross-user ID-enumeration oracle.
                     return error_response('summary_not_found', 'Summary not found.', 404)
                 return self._generate_pdf_response(summary, request)
             except Exception as e:
@@ -611,9 +610,16 @@ class WeeklySummaryView(APIView):
                     # Verbatim diary echo defense: model occasionally copies a
                     # journal sentence into the summary. Mask any 80+-char run
                     # of a diary excerpt that appears verbatim in ai_summary.
-                    for excerpt in note_previews:
+                    # Cap inputs to bound worst-case runtime; quadratic
+                    # masking on a 1000-note week is a pathological case.
+                    import time as _time
+                    _mask_deadline = _time.monotonic() + 2.0
+                    for excerpt in note_previews[:50]:
                         if not excerpt or len(excerpt) < 80:
                             continue
+                        if _time.monotonic() > _mask_deadline:
+                            logger.warning('Weekly summary diary-echo mask aborted at 2s wall-clock')
+                            break
                         for start in range(0, len(excerpt) - 80 + 1, 40):
                             window = excerpt[start:start + 80]
                             if window in ai_summary:

@@ -10,7 +10,9 @@ import time
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
-from django.db import transaction
+from datetime import timedelta
+
+from django.db import models, transaction
 from django.utils.encoding import force_bytes, force_str
 from django.utils.html import escape as html_escape
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
@@ -312,19 +314,57 @@ class LoginView(TokenObtainPairView):
     serializer_class = VersionedTokenObtainPairSerializer
     throttle_classes = [LoginRateThrottle, LoginPerUsernameThrottle]
 
+    # Sliding-window lockout. After 5 failed logins inside the window, lock
+    # the account for an exponentially growing duration capped at 1 hour.
+    LOCKOUT_THRESHOLD = 5
+    LOCKOUT_WINDOW = timedelta(minutes=15)
+
     def post(self, request, *args, **kwargs):
+        from django.utils import timezone as _tz
+        # Pre-check: refuse outright if the targeted account is currently
+        # locked. We resolve the user from the credential FIRST so a wrong
+        # password against a locked account still returns 423, not 401 —
+        # otherwise an attacker can tell "wrong password vs locked" apart.
+        attempted_username = (request.data.get('email') or request.data.get('username') or '').strip()
+        locked_user = User.objects.filter(
+            models.Q(username__iexact=attempted_username) | models.Q(email__iexact=attempted_username)
+        ).first() if attempted_username else None
+        if locked_user and locked_user.locked_until and locked_user.locked_until > _tz.now():
+            log_action(locked_user, 'auth.login_locked', request=request,
+                       details={'until': locked_user.locked_until.isoformat()})
+            return Response(
+                {'detail': 'Account temporarily locked due to repeated failed logins.',
+                 'code': 'account_locked',
+                 'locked_until': locked_user.locked_until.isoformat()},
+                status=423,
+            )
+
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
         except exceptions.AuthenticationFailed:
             # Audit failed logins so brute-force attempts are visible.
-            attempted = (request.data.get('email') or request.data.get('username') or '').strip()
+            if locked_user is not None:
+                locked_user.failed_login_count = (locked_user.failed_login_count or 0) + 1
+                fields_to_update = ['failed_login_count']
+                if locked_user.failed_login_count >= self.LOCKOUT_THRESHOLD:
+                    # Exponential backoff: 1 min, 2 min, 4 min, 8 min, ... cap 60 min
+                    over = locked_user.failed_login_count - self.LOCKOUT_THRESHOLD
+                    minutes = min(60, 2 ** over)
+                    locked_user.locked_until = _tz.now() + timedelta(minutes=minutes)
+                    fields_to_update.append('locked_until')
+                locked_user.save(update_fields=fields_to_update)
             log_action(
                 None, 'auth.login_failed', request=request,
-                details={'attempted_identifier': attempted[:120]},
+                details={'attempted_identifier': attempted_username[:120]},
             )
             raise
         user = serializer.user
+        # Reset lockout counters on successful auth.
+        if user.failed_login_count or user.locked_until:
+            user.failed_login_count = 0
+            user.locked_until = None
+            user.save(update_fields=['failed_login_count', 'locked_until'])
         # Auto-cancel a pending account deletion the moment the user logs
         # back in. The user has clearly changed their mind — they're back.
         if user.deletion_scheduled_at:
@@ -474,6 +514,16 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         # Handle password change
         old_pw = request.data.get('old_password')
         new_pw = request.data.get('new_password')
+        # Refuse a half-submitted change: ``new_password`` alone (no
+        # ``old_password``) silently used to fall through to super().update()
+        # which would persist the rest of the body without rotating the
+        # password — opening the door to a profile-edit UI bug that thought
+        # it had changed the password but didn't.
+        if new_pw and not old_pw:
+            return Response(
+                {'old_password': ['OLD_PASSWORD_REQUIRED']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         if old_pw and new_pw:
             user = request.user
             if not user.check_password(old_pw):
@@ -819,8 +869,105 @@ class TOTPVerifyView(APIView):
 
         device.confirmed = True
         device.save(update_fields=['confirmed'])
+        # Issue 10 single-use backup codes — these are the escape hatch when
+        # the user loses their authenticator device. Returned ONCE in the
+        # response; we only persist their hashes server-side.
+        backup_codes = _generate_backup_codes(user)
         log_action(user, 'auth.2fa_enabled', request=request)
-        return Response({'detail': '2FA enabled successfully'})
+        return Response({
+            'detail': '2FA enabled successfully',
+            'backup_codes': backup_codes,
+            'backup_codes_warning': 'Save these codes now — they will not be shown again. Each code works once.',
+        })
+
+
+# ---- 2FA backup-code helpers ----------------------------------------------
+
+_BACKUP_CODE_ALPHABET = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'  # Crockford-style: no I/O/1
+_BACKUP_CODE_LEN = 10
+_BACKUP_CODE_COUNT = 10
+
+
+def _generate_backup_codes(user) -> list[str]:
+    """Generate ``_BACKUP_CODE_COUNT`` random codes, store hashes, return
+    plaintext codes to caller for one-time display.
+
+    Replaces any existing codes for the user so "regenerate" is a
+    drop-old-add-new operation, never a leak window.
+    """
+    import secrets
+    from django.contrib.auth.hashers import make_password
+    from api.models import TOTPBackupCode
+
+    TOTPBackupCode.objects.filter(user=user).delete()
+
+    codes = []
+    objs = []
+    for _ in range(_BACKUP_CODE_COUNT):
+        code = ''.join(secrets.choice(_BACKUP_CODE_ALPHABET) for _ in range(_BACKUP_CODE_LEN))
+        codes.append(code)
+        objs.append(TOTPBackupCode(user=user, code_hash=make_password(code)))
+    TOTPBackupCode.objects.bulk_create(objs)
+    log_action(user, 'auth.2fa_backup_codes_issued', details={'count': _BACKUP_CODE_COUNT})
+    return codes
+
+
+def _consume_backup_code(user, code: str) -> bool:
+    """Return True iff ``code`` matches a non-used backup code for ``user``
+    AND mark it used in the same transaction. Constant-time comparison via
+    ``check_password`` per stored hash.
+
+    Returns False on miss without leaking which hashes were checked. After
+    the last unused code is consumed, the user is back to TOTP-only.
+    """
+    from django.contrib.auth.hashers import check_password
+    from django.utils import timezone as _tz
+    from api.models import TOTPBackupCode
+
+    if not code:
+        return False
+    norm = code.strip().upper().replace('-', '').replace(' ', '')
+    if len(norm) != _BACKUP_CODE_LEN:
+        return False
+
+    candidates = TOTPBackupCode.objects.select_for_update().filter(user=user, used=False)
+    for bc in candidates:
+        if check_password(norm, bc.code_hash):
+            bc.used = True
+            bc.used_at = _tz.now()
+            bc.save(update_fields=['used', 'used_at'])
+            log_action(user, 'auth.2fa_backup_code_consumed', details={'remaining': candidates.filter(used=False).count() - 1})
+            return True
+    return False
+
+
+class TOTPBackupCodesView(APIView):
+    """GET /api/auth/2fa/backup-codes/ — count of remaining codes (no plaintext).
+    POST /api/auth/2fa/backup-codes/ — regenerate (requires fresh TOTP digit).
+    """
+    throttle_classes = [GeneralWriteThrottle]
+
+    def get(self, request):
+        from api.models import TOTPBackupCode
+        if not TOTPDevice.objects.filter(user=request.user, confirmed=True).exists():
+            return error_response('totp_not_enabled', '2FA is not enabled.', 400)
+        remaining = TOTPBackupCode.objects.filter(user=request.user, used=False).count()
+        return Response({'remaining': remaining})
+
+    def post(self, request):
+        import pyotp
+        code = request.data.get('code', '')
+        try:
+            device = request.user.totp_device
+        except TOTPDevice.DoesNotExist:
+            return error_response('totp_not_enabled', '2FA is not enabled.', 400)
+        if not code or not pyotp.TOTP(device.secret).verify(code, valid_window=1):
+            return error_response('totp_invalid_code', 'TOTP code required to regenerate backup codes.', 400)
+        codes = _generate_backup_codes(request.user)
+        return Response({
+            'backup_codes': codes,
+            'backup_codes_warning': 'Save these codes now — they will not be shown again.',
+        })
 
 
 class LogoutView(APIView):
@@ -857,29 +1004,37 @@ class LogoutView(APIView):
 class TOTPDisableView(APIView):
     def post(self, request):
         import pyotp
+        from api.models import TOTPBackupCode
+
         password = request.data.get('password', '')
         code = request.data.get('code', '')
         if not request.user.check_password(password):
             return error_response('error.incorrect_password', 'Incorrect password.', 400)
 
-        # Require a fresh TOTP digit as well — disabling 2FA must NOT be a
-        # password-only operation, otherwise a stolen-password attacker can
-        # disable the second factor and then escalate.
+        # Require a fresh TOTP digit OR a backup code as well — disabling 2FA
+        # must NOT be a password-only operation, otherwise a stolen-password
+        # attacker can remove the second factor and escalate. Backup code is
+        # the escape hatch when the authenticator device is lost.
         if not code:
-            return error_response('totp_code_required', 'TOTP code is required to disable 2FA.', 400)
+            return error_response('totp_code_required', 'TOTP code or backup code is required to disable 2FA.', 400)
         try:
             device = request.user.totp_device
         except TOTPDevice.DoesNotExist:
             return error_response('totp_not_found', 'No 2FA device found.', 400)
-        if not pyotp.TOTP(device.secret).verify(code, valid_window=1):
+
+        ok_totp = pyotp.TOTP(device.secret).verify(code, valid_window=1)
+        ok_backup = (not ok_totp) and _consume_backup_code(request.user, code)
+        if not (ok_totp or ok_backup):
             log_action(request.user, 'auth.2fa_disabled_failed', request=request)
             return error_response('totp_invalid_code', 'Invalid TOTP code.', 400)
 
         TOTPDevice.objects.filter(user=request.user).delete()
+        TOTPBackupCode.objects.filter(user=request.user).delete()
         # Rotate sessions so any token issued before 2FA was disabled is killed.
         request.user.token_version = (request.user.token_version or 0) + 1
         request.user.save(update_fields=['token_version'])
-        log_action(request.user, 'auth.2fa_disabled', request=request)
+        log_action(request.user, 'auth.2fa_disabled', request=request,
+                   details={'via': 'totp' if ok_totp else 'backup_code'})
         return Response({'detail': '2FA disabled successfully'})
 
 
@@ -915,11 +1070,17 @@ class Login2FAView(APIView):
             return error_response('totp_not_found', 'No 2FA device found.', 400)
 
         totp = pyotp.TOTP(device.secret)
-        if not totp.verify(code, valid_window=1):
+        ok_totp = totp.verify(code, valid_window=1)
+        # If the TOTP digit failed, fall through to backup-code check — the
+        # user may have lost their authenticator device and is using one of
+        # the recovery codes printed at enrolment.
+        ok_backup = (not ok_totp) and _consume_backup_code(user, code)
+        if not (ok_totp or ok_backup):
             log_action(user, 'auth.login_2fa_failed', request=request)
             return error_response('totp_invalid_code', 'Invalid verification code.', 400)
 
-        log_action(user, 'auth.login_2fa', request=request)
+        log_action(user, 'auth.login_2fa', request=request,
+                   details={'via': 'totp' if ok_totp else 'backup_code'})
         tokens = _issue_tokens(user)
         return Response(tokens)
 

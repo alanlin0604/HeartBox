@@ -383,10 +383,24 @@ class MoodNoteViewSet(viewsets.ModelViewSet):
         note = self.get_object()
         # FileField.url returns a relative path (``/media/xxx.jpg``). The
         # vision LLM lives on a separate host (llm_server) and cannot resolve
-        # that path; it MUST receive an absolute URL. Use the incoming
-        # request's host so dev/prod both work without a hardcoded base.
+        # that path; it MUST receive an absolute URL.
+        #
+        # Build from settings.MEDIA_PUBLIC_BASE_URL (the canonical
+        # browser-facing media host — Cloud Storage URL or api.heartbox.tw)
+        # rather than the Host header, so a forged Host doesn't redirect the
+        # vision provider to an attacker-controlled URL. Falls back to
+        # request.build_absolute_uri only in dev (no MEDIA_PUBLIC_BASE_URL
+        # configured), where the host header isn't a trust boundary.
+        from django.conf import settings as _s
+        media_base = getattr(_s, 'MEDIA_PUBLIC_BASE_URL', '').rstrip('/')
+        def _abs(file_url: str) -> str:
+            if media_base and file_url.startswith('/'):
+                return f'{media_base}{file_url}'
+            if file_url.startswith(('http://', 'https://')):
+                return file_url  # already absolute (e.g. GCS)
+            return request.build_absolute_uri(file_url)
         image_urls = [
-            request.build_absolute_uri(att.file.url)
+            _abs(att.file.url)
             for att in note.attachments.filter(file_type='image')[:3]
         ]
         if image_urls and note.content:
