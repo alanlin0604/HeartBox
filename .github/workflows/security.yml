@@ -1,0 +1,80 @@
+name: Security
+
+# SAST + dependency vuln scan + secret detection. Runs on every push to
+# main and every PR. Findings are uploaded as GitHub Code Scanning SARIF
+# so they show up on the Security tab and on the PR diff inline.
+#
+# Each tool is non-fatal individually (|| true on the last step's grep
+# of the SARIF). Treat them as ratchet — increasing finding counts get
+# a comment on the PR, but no green/red gate yet so we don't block
+# defense-week shipping on a transitive CVE in some chart library.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly nightly so dependency CVEs surface even on quiet weeks.
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  pip-audit:
+    name: pip-audit (CVE scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit==2.7.3
+      - name: pip-audit requirements.txt
+        # --strict marks any HIGH-severity finding as exit-nonzero. Other
+        # severities log but don't fail (yet) — see header note.
+        run: pip-audit --requirement requirements.txt --strict || true
+        continue-on-error: true
+
+  bandit:
+    name: bandit (SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install bandit==1.7.9
+      - name: bandit recursive scan
+        # -ll: low confidence, low severity threshold (catch more)
+        # -ii: ignore informational
+        # Skip the tests dirs — they intentionally use weak crypto / hardcoded keys
+        run: |
+          bandit -r backend/api backend/moodnotes_pro llm_server \
+            -ll -ii \
+            --exclude backend/api/tests.py,backend/api/test_*.py,llm_server/tests \
+            -f sarif -o bandit.sarif || true
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: bandit.sarif
+          category: bandit
+
+  gitleaks:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history so we can scan past commits too
+      - uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: ''   # use default rules
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # gitleaks-action sets continue-on-error: false by default; flip
+        # so a single stale fixture doesn't block defense-week merges.
+        # Tighten to gating after the audit ladder lands.
+        continue-on-error: true

@@ -106,11 +106,16 @@ class EncryptedTextField(models.TextField):
         if plain is None:
             # Pre-migration plaintext row, or somehow a non-Fernet value
             # snuck into the column. Don't 500 the API — surface the raw
-            # bytes (no key material involved) and log so an operator can
-            # run the 0059 backfill.
+            # bytes (no key material involved) and log with row context so
+            # an operator can locate + repair / backfill it.
+            model_name = getattr(self.model, '__name__', '?') if hasattr(self, 'model') else '?'
+            field_name = getattr(self, 'name', '?')
             logger.warning(
-                'EncryptedTextField.from_db_value: raw value not Fernet; '
-                'returning as-is. Run migration 0059 to backfill.'
+                'EncryptedTextField decrypt_failed model=%s field=%s len=%d '
+                '(pre-migration plaintext, or post-key-rotation orphan). '
+                'Run reencrypt_notes management command to repair.',
+                model_name, field_name, len(value) if value else 0,
+                extra={'event': 'decrypt_failed', 'model': model_name, 'field': field_name},
             )
             return value
         return plain

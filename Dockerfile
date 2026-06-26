@@ -1,7 +1,14 @@
-FROM python:3.12-slim AS builder
+# Pinned by digest so the build is reproducible; bump quarterly via
+# scripts/bump-base-image.ps1 (sha picked from docker hub). The bare
+# `python:3.12-slim` tag drifts and can introduce unrelated CVEs
+# between builds.
+FROM python:3.12-slim@sha256:751b9d9b0c4b04acf30b07cccd1a86d83a59f1aea15b71fdd5d0ad4e76d72ad7 AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
+
+# Pull in any security patches the pinned base hasn't merged yet.
+RUN apt-get update && apt-get -y upgrade && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -10,7 +17,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # --- Runtime stage ---
-FROM python:3.12-slim
+# Pinned by digest so the build is reproducible; bump quarterly via
+# scripts/bump-base-image.ps1 (sha picked from docker hub). The bare
+# `python:3.12-slim` tag drifts and can introduce unrelated CVEs
+# between builds.
+FROM python:3.12-slim@sha256:751b9d9b0c4b04acf30b07cccd1a86d83a59f1aea15b71fdd5d0ad4e76d72ad7
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1

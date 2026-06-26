@@ -341,9 +341,19 @@ else:
     }
 
 # Logging
+# RedactEmailFilter scrubs email addresses out of log records before they
+# leave the process. Cloud Logging / Sentry indexes log bodies; an email
+# in there becomes a PII pivot point. The replacement is u<sha256[:8]>@<domain>
+# so two log lines about the same user can still be correlated for
+# operational debugging without exposing the actual address.
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'redact_email': {
+            '()': 'api.services.log_filters.RedactEmailFilter',
+        },
+    },
     'formatters': {
         'verbose': {
             'format': '{levelname} {asctime} {name} {message}',
@@ -354,6 +364,7 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
+            'filters': ['redact_email'],
         },
     },
     'loggers': {

@@ -246,9 +246,99 @@ def hard_delete_scheduled_accounts():
     cutoff = tz.now()
     qs = User.objects.filter(deletion_scheduled_at__lte=cutoff, deletion_scheduled_at__isnull=False)
     n = qs.count()
+    user_ids = list(qs.values_list('id', flat=True))
     qs.delete()
+    # Purge per-user cache entries left behind by analytics / daily-prompt /
+    # year-pixels — otherwise a recycled user_id (rare in Postgres but
+    # possible after manual reset) would inherit stale data.
+    for uid in user_ids:
+        _purge_user_cache(uid)
     if n:
         logger.info('hard_delete_scheduled_accounts removed %d users', n)
+    return n
+
+
+def _purge_user_cache(user_id):
+    """Delete every cache key namespaced to ``user_id``. Shape-based, not
+    per-key, because the analytics endpoints generate a variable suffix
+    (week start / month / year / period) and tracking every variant is
+    impractical. Cache keys MUST stay namespaced with the user_id prefix.
+    """
+    from django.core.cache import cache
+    today = None
+    try:
+        from django.utils import timezone as _tz
+        today = _tz.now().date().isoformat()
+    except Exception:
+        pass
+    candidates = [
+        f'analytics_{user_id}_week',
+        f'analytics_{user_id}_month',
+        f'analytics_{user_id}_year',
+        f'calendar_{user_id}',
+        f'year_pixels_{user_id}',
+        f'daily_prompt_v2_{user_id}_{today}' if today else None,
+        f'counselor_rec_tags:{user_id}',
+    ]
+    for k in candidates:
+        if k:
+            cache.delete(k)
+
+
+@shared_task
+def purge_trashed_notes(retention_days=30):
+    """Daily Celery beat — hard-delete soft-deleted notes older than
+    ``retention_days``. Frees up encrypted DB rows that the user already
+    intended to discard. Cascades to NoteAttachment + SharedNote rows.
+    """
+    from datetime import timedelta
+    from django.utils import timezone as tz
+    from api.models import MoodNote
+    cutoff = tz.now() - timedelta(days=retention_days)
+    qs = MoodNote.objects.filter(is_deleted=True, deleted_at__lt=cutoff)
+    n = qs.count()
+    qs.delete()
+    if n:
+        logger.info('purge_trashed_notes removed %d notes older than %d days', n, retention_days)
+    return n
+
+
+@shared_task
+def purge_stale_push_subscriptions(stale_days=90):
+    """Weekly Celery beat — delete PushSubscription rows that haven't been
+    used to deliver successfully in ``stale_days``. Cleans up dead browser
+    profiles, expired tokens, devices the user wiped.
+    """
+    from datetime import timedelta
+    from django.utils import timezone as tz
+    from api.models import PushSubscription
+    cutoff = tz.now() - timedelta(days=stale_days)
+    qs = PushSubscription.objects.filter(updated_at__lt=cutoff) if hasattr(
+        PushSubscription, 'updated_at'
+    ) else PushSubscription.objects.filter(created_at__lt=cutoff)
+    n = qs.count()
+    qs.delete()
+    if n:
+        logger.info('purge_stale_push_subscriptions removed %d rows', n)
+    return n
+
+
+@shared_task
+def purge_old_audit_log_ips(retention_days=90):
+    """Daily Celery beat — null out AuditLog.ip_address on rows older than
+    ``retention_days``. Keeps the audit trail (user_id, action, timestamp)
+    forever for forensics, but drops the IP after the retention window
+    to satisfy PDPA/GDPR data-minimization.
+    """
+    from datetime import timedelta
+    from django.utils import timezone as tz
+    from api.models import AuditLog
+    cutoff = tz.now() - timedelta(days=retention_days)
+    n = AuditLog.objects.filter(created_at__lt=cutoff).exclude(
+        ip_address__isnull=True
+    ).update(ip_address=None)
+    if n:
+        logger.info('purge_old_audit_log_ips nulled %d IPs older than %d days', n, retention_days)
     return n
 
 
