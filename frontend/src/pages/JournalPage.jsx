@@ -170,7 +170,10 @@ export default function JournalPage() {
   }, [filters, fetchNotes])
 
   useEffect(() => {
-    getAnalytics('week', 30)
+    // 180d default matches DashboardPage so the same widgets render
+    // consistently across pages. Short windows (30d) hide tag widgets
+    // for casual journalers — the tags they DO have are usually >30d old.
+    getAnalytics('week', 180)
       .then((res) => {
         setStreak(res.data.current_streak || 0)
         // Compute weekly average mood from mood_trends

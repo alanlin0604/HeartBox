@@ -53,7 +53,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [period, setPeriod] = useState('week')
-  const [lookback, setLookback] = useState(30)
+  // 180 days default: long enough for casual journalers to populate the
+  // tag-driven widgets (tags are usually accumulated over months, not
+  // days). Dropdown options below stretch from 7d to 365d so power
+  // users can narrow / widen explicitly.
+  const [lookback, setLookback] = useState(180)
   const fetchIdRef = useRef(0)
 
   useEffect(() => { document.title = `${t('nav.dashboard')} — ${t('app.name')}` }, [t])
@@ -250,15 +254,20 @@ export default function DashboardPage() {
             <option value={7}>{t('dashboard.days7')}</option>
             <option value={30}>{t('dashboard.days30')}</option>
             <option value={90}>{t('dashboard.days90')}</option>
+            <option value={180}>{t('dashboard.days180')}</option>
+            <option value={365}>{t('dashboard.days365')}</option>
           </select>
         </div>
       </Card>
 
       {/* Mood Trends */}
       <Card padding="lg">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-2xl font-bold text-[var(--text-primary)]">{t('dashboard.moodTrends')}</h2>
         </div>
+        <p className="text-xs opacity-50 mb-4">
+          {t('dashboard.dataWindowNoCount', { days: data?.actual_lookback_days || lookback })}
+        </p>
         {trends.length === 0 ? (
           <EmptyState
             title={t('dashboard.noTrends')}
@@ -309,9 +318,11 @@ export default function DashboardPage() {
           <>
             {/* Headline: which temperature range correlates with the
                 user's best mood. Reads at a glance — no statistics
-                background required. */}
+                background required. Pearson r line removed — meaningless
+                to a non-stats user; the chart + headline together
+                communicate the relationship plenty. */}
             {correlation.best_temp_bucket && (
-              <p className="text-base mb-3">
+              <p className="text-base mb-2">
                 <span className="opacity-70">{t('dashboard.bestMoodAt')}</span>{' '}
                 <span className="font-bold text-orange-500">
                   {correlation.best_temp_bucket.bucket}°C
@@ -322,15 +333,9 @@ export default function DashboardPage() {
                 </span>
               </p>
             )}
-            {correlation.correlation != null && (
-              <p className="text-xs opacity-50 mb-4">
-                {t('dashboard.pearson', {
-                  r: correlation.correlation,
-                  p: correlation.p_value,
-                  n: correlation.sample_size,
-                })}
-              </p>
-            )}
+            <p className="text-xs opacity-50 mb-4">
+              {t('dashboard.dataWindow', { days: data?.actual_lookback_days || lookback, count: correlation.sample_size })}
+            </p>
             <Suspense fallback={<ChartSkeleton />}>
               <LazyBarChart
                 data={correlation.mood_by_temperature.map(b => ({
@@ -367,6 +372,9 @@ export default function DashboardPage() {
       {activityCorrelation.length > 0 && (
         <div className="glass p-6">
           <h2 className="text-lg font-semibold mb-4">{t('dashboard.activityCorrelation')}</h2>
+          <p className="text-xs opacity-50 mb-3">
+            {t('dashboard.dataWindowNoCount', { days: data?.actual_lookback_days || lookback })}
+          </p>
           <Suspense fallback={<ChartSkeleton />}>
             <LazyBarChart
               data={activityCorrelation}
@@ -389,6 +397,9 @@ export default function DashboardPage() {
           about your tags" reads at a glance. */}
       <div className="glass p-6">
         <h2 className="text-lg font-semibold mb-4">{t('dashboard.tagsSectionTitle')}</h2>
+        <p className="text-xs opacity-50 mb-4">
+          {t('dashboard.dataWindowNoCount', { days: data?.actual_lookback_days || lookback })}
+        </p>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div>
             <h3 className="text-sm font-medium opacity-70 mb-2">{t('dashboard.frequentTags')}</h3>
