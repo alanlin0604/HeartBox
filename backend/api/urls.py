@@ -321,6 +321,8 @@ urlpatterns = [
     # Internal cron (Cloud Scheduler -> shared-secret POST)
     path('internal/cron/habit-reminders/', cron_views.run_habit_reminders, name='cron-habit-reminders'),
     path('internal/cron/weekly-summaries/', cron_views.run_weekly_summaries, name='cron-weekly-summaries'),
+    path('internal/cron/security-gc/', cron_views.run_security_gc, name='cron-security-gc'),
+    path('internal/cron/security-gc-weekly/', cron_views.run_weekly_security_gc, name='cron-security-gc-weekly'),
     # Notes CRUD
     path('', include(router.urls)),
 ]

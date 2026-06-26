@@ -58,3 +58,46 @@ def run_weekly_summaries(request):
     from api.tasks import generate_weekly_summaries
     created = generate_weekly_summaries()
     return JsonResponse({'created': created})
+
+
+@csrf_exempt
+@require_POST
+def run_security_gc(request):
+    """POST /api/internal/cron/security-gc/ — daily data-minimisation sweep.
+
+    Runs three independent housekeeping tasks in sequence:
+      1. ``hard_delete_scheduled_accounts`` — wipe users past 30d grace
+      2. ``purge_trashed_notes`` — hard-delete soft-deleted notes > 30d
+      3. ``purge_old_audit_log_ips`` — NULL out IPs > 90d (audit row stays)
+
+    Schedule daily (e.g. 03:00 UTC). Safe to run more often — every task
+    is idempotent and operates on monotonically-shrinking sets.
+    """
+    if not _check_secret(request):
+        return JsonResponse({'detail': 'forbidden'}, status=403)
+    from api.tasks import (
+        hard_delete_scheduled_accounts,
+        purge_trashed_notes,
+        purge_old_audit_log_ips,
+    )
+    return JsonResponse({
+        'accounts_deleted': hard_delete_scheduled_accounts(),
+        'notes_purged': purge_trashed_notes(),
+        'audit_ips_nulled': purge_old_audit_log_ips(),
+    })
+
+
+@csrf_exempt
+@require_POST
+def run_weekly_security_gc(request):
+    """POST /api/internal/cron/security-gc-weekly/ — weekly cleanup.
+
+    Currently only ``purge_stale_push_subscriptions`` because dead push
+    rows aren't urgent. Schedule once a week (Sun 04:00 UTC).
+    """
+    if not _check_secret(request):
+        return JsonResponse({'detail': 'forbidden'}, status=403)
+    from api.tasks import purge_stale_push_subscriptions
+    return JsonResponse({
+        'push_subs_purged': purge_stale_push_subscriptions(),
+    })
