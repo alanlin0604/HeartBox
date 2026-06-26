@@ -1,8 +1,8 @@
 # Phase 0b 狀態報告：OpenAI → 自架 LLM 遷移
 
-**日期**：2026-06-25（最後更新 commit f49e1fd / 9d73639 / 99e7c42 — 三波 max-security 硬化）
-**Capstone Defense**：2026-06-30（5 天後）
-**生產環境**：Cloud Run `heartbox-api-00183-cm6`（4Gi） + Cloudflare Tunnel `llm.heartbox.tw` → 家裡 GPU `127.0.0.1:8765`
+**日期**：2026-06-26（最後更新 commits `99e7c42` → `9d73639` → `f49e1fd` → `6e943e4` → `d06247a` → `9452487` — 6 波 max-security 硬化）
+**Capstone Defense**：2026-06-30（4 天後）
+**生產環境**：Cloud Run `heartbox-api-00186-hl2`（4Gi） + Cloudflare Tunnel `llm.heartbox.tw` → 家裡 GPU `127.0.0.1:8765`
 
 ## Max-security 硬化結果（2026-06-25 連續 commits）
 
@@ -51,6 +51,40 @@ permissions-policy: ...interest-cohort=(), browsing-topics=()            ✓
 referrer-policy: strict-origin-when-cross-origin                         ✓
 x-frame-options: DENY                                                    ✓
 ```
+
+### 🔑 Auth Round 2（commits 6e943e4 / d06247a / 9452487）
+- **2FA backup codes**：新 `TOTPBackupCode` model — 啟用 2FA 時自動生 10 個一次性救援碼（10 字 Crockford base32，~50 bits entropy；hash 存 DB，明文回給使用者**只一次**）；Login2FA 跟 TOTPDisable 都接受 backup code 替代 TOTP digit；新 endpoint `/api/auth/2fa/backup-codes/`（GET 看剩幾個 / POST regenerate 需 TOTP）。**修了「掉手機 = 永遠進不來」UX trap**。
+- **Account lockout**：CustomUser 加 `failed_login_count` + `locked_until`；5 次失敗 in 15min sliding window → exponential backoff lock（1, 2, 4, 8…分鐘，cap 60）；返 423 而非 401（防 username enumeration via timing）；登入成功重置。
+- **TOTPDevice.secret encrypted**：之前是明文 CharField，現在 EncryptedTextField + migration 0061 已 backfill **2 rows**（你的 + 測試帳號）。
+- **IsOwner permission class**：object-level guard，has_object_permission 比對 obj.user_id，當作 belt-and-braces over queryset isolation。
+- **ProfileView reject new_password without old_password**：之前 silently fall-through 沒改 password（潛在 UI bug）；現在 400。
+- **Vision image URL from settings.MEDIA_PUBLIC_BASE_URL**：取代 Host header，防 Host injection 引導 vision provider 到攻擊者 URL。
+- **WeeklySummary diary-echo mask 加 caps + deadline**：50 篇 + 2s wall-clock cap，防 pathological 1000-note quadratic runtime。
+- **XFF trusted-proxy parsing**：右到左 walk + skip `settings.TRUSTED_PROXIES`，取代盲信最後一跳。
+- **Dropped cross-user .exists() enumeration probe** in WeeklySummary PDF handler。
+
+### 🛠 Ops / 維運（commits d06247a / 9452487）
+- **`reencrypt_notes` mgmt cmd**：key rotation playbook。MultiFernet decrypt → primary key re-encrypt，9 個 encrypted columns 全部覆蓋；`--dry-run` / `--model X` / `--from-id N` / `--chunk-size N`；CommandError on partial fail。
+- **3 個 Celery beat task + cron endpoints**：
+  - `purge_trashed_notes(30d)` — 硬刪過 30 天的 soft-deleted notes
+  - `purge_stale_push_subscriptions(90d)` — 清掉死的 push subs
+  - `purge_old_audit_log_ips(90d)` — NULL 掉 90 天前 audit IP（GDPR data-minimisation；其他 audit field 保留）
+  - Cache GC 加進 `hard_delete_scheduled_accounts`
+  - HTTP 端點 `POST /api/internal/cron/security-gc/` + `security-gc-weekly/`，X-Cron-Secret 驗證
+- **RedactEmailFilter**：log handlers 上掛 filter，把 email 改 `u<sha256[:8]>@<domain>`（deterministic 保留 correlatable，domain 保留 debug）。
+- **Decrypt-failure log 加 model/field 上下文** + `event=decrypt_failed` extra → Cloud Logging counter 可 alert。
+- **Dockerfile 釘 base by digest** + `apt-get upgrade`。
+- **GH Actions security workflow**（`security.yml`）：pip-audit + bandit (SARIF → Code Scanning) + gitleaks，每 push + PR + weekly schedule。
+
+### 🔢 此波加密總計
+**165 個歷史 row 升級到 Fernet at rest**（migration 0059: 81 + 0060: 82 + 0061: 2 = 165 rows）
+
+### 📋 你還要做的 operator action
+1. **設定 Cloud Scheduler** invoke 新 security-gc cron endpoints（2 行 gcloud command，commit message 裡有）
+2. **Submit hstspreload.org** for heartbox.tw（HSTS preload list 加入）
+3. **設 `MEDIA_PUBLIC_BASE_URL` env var** on Cloud Run（不設則 dev 回退 build_absolute_uri，安全；設了 prod 更安全）
+4. **設 `TRUSTED_PROXIES` env var** (Cloudflare + Cloud Run IP ranges) 讓 XFF parsing 精準
+5. **submit URL 到 Google Search Console** force re-index favicon
 
 ---
 
