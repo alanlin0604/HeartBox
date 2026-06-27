@@ -232,13 +232,15 @@ export default function DailySuggestion({ insights }) {
     [insights, weather, today, t],
   )
 
-  // Decide what body to render. Priority: LLM paragraph > template tips.
-  // Hide entirely if backend's done trying AND we have nothing to say.
+  // Decide what body to render. Priority: LLM paragraph > template tips
+  // > friendly empty-state copy (new-user case: weather loaded, no insights,
+  // no triggers — still better than a missing widget at demo time).
   const hasParagraph = !!paragraph
   const hasTips = tips.length > 0
   const stillLoading = !paragraphTried && !weather && !failed
   if (stillLoading) return null
-  if (!hasParagraph && !hasTips) return null
+  // True offline: nothing at all to render → hide
+  if (!hasParagraph && !hasTips && !weather) return null
 
   const conditionLabel = weather ? t(`dailySuggestion.weather.${weather.bucket}`) : ''
   const tempDate = new Intl.DateTimeFormat(lang || 'zh-TW', { month: 'short', day: 'numeric' }).format(today)
@@ -265,7 +267,7 @@ export default function DailySuggestion({ insights }) {
       </div>
       {hasParagraph ? (
         <p className="text-sm leading-relaxed whitespace-pre-line">{paragraph}</p>
-      ) : (
+      ) : hasTips ? (
         <ul className="space-y-1.5">
           {tips.map((tip, i) => (
             <li key={i} className={`text-sm rounded-r px-3 py-1.5 ${toneClasses(tip.tone)}`}>
@@ -273,6 +275,10 @@ export default function DailySuggestion({ insights }) {
             </li>
           ))}
         </ul>
+      ) : (
+        <p className="text-sm leading-relaxed opacity-80">
+          {t('dailySuggestion.empty')}
+        </p>
       )}
     </div>
   )

@@ -17,9 +17,12 @@ const PHASE_LABELS = { early: 'monthPhase.early', mid: 'monthPhase.mid', late: '
 
 function severityClasses(severity) {
   if (severity === 'strong') {
-    return 'border-l-4 border-orange-500 bg-orange-500/5'
+    return 'border-l-4 border-orange-500 bg-orange-500/10'
   }
-  return 'border-l-4 border-slate-400/40 bg-slate-400/5'
+  // Mild severity: bumped from 40% -> 70% border opacity and 5% -> 10% bg
+  // because the original values washed out completely on light theme
+  // (slate-400/40 on white reads as the same gray as body text).
+  return 'border-l-4 border-slate-500/70 bg-slate-500/10'
 }
 
 function InsightCard({ insight, t, monthLabel }) {

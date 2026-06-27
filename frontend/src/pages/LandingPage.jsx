@@ -14,8 +14,6 @@ export default function LandingPage() {
     { icon: '/icons/ai-chat.svg', titleKey: 'landing.featureAI', descKey: 'landing.featureAIDesc' },
     { icon: '/icons/mood-report.svg', titleKey: 'landing.featureAnalytics', descKey: 'landing.featureAnalyticsDesc' },
     { icon: '/icons/breathing.svg', titleKey: 'landing.featureBreathe', descKey: 'landing.featureBreatheDesc' },
-    // Counselor feature hidden pre-launch — re-enable with /counselors.
-    // { icon: '/icons/諮商師.webp', titleKey: 'landing.featureCounselor', descKey: 'landing.featureCounselorDesc' },
     { icon: '/icons/survey.svg', titleKey: 'landing.featureAssessment', descKey: 'landing.featureAssessmentDesc' },
   ]
 
@@ -103,7 +101,7 @@ export default function LandingPage() {
               <div className="mb-4 transform group-hover:scale-110 transition-transform duration-300">
                 <img
                   src={f.icon}
-                  alt=""
+                  alt={t(f.titleKey)}
                   className="w-16 h-16 mx-auto drop-shadow-lg"
                   loading="lazy"
                   decoding="async"

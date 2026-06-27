@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [totpCode, setTotpCode] = useState('')
   const [twoFALoading, setTwoFALoading] = useState(false)
   const [warmingUp, setWarmingUp] = useState(false)
+  const [warmElapsed, setWarmElapsed] = useState(0)
   const googleBtnRef = useRef(null)
   const googleCallbackRef = useRef()
 
@@ -86,7 +87,19 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     setWarmingUp(false)
-    const warmTimer = setTimeout(() => setWarmingUp(true), 3000)
+    setWarmElapsed(0)
+    // Show the "waking server" banner after 3s. Once shown, tick an
+    // elapsed-seconds counter every second so the user can see progress
+    // is being made — silent spinners over 10s read as "broken".
+    const startedAt = Date.now()
+    let elapsedTimer
+    const warmTimer = setTimeout(() => {
+      setWarmingUp(true)
+      setWarmElapsed(Math.floor((Date.now() - startedAt) / 1000))
+      elapsedTimer = setInterval(() => {
+        setWarmElapsed(Math.floor((Date.now() - startedAt) / 1000))
+      }, 1000)
+    }, 3000)
     try {
       const data = await login(username, password, rememberMe)
       if (data?.requires_2fa) {
@@ -105,7 +118,9 @@ export default function LoginPage() {
       setError(message)
     } finally {
       clearTimeout(warmTimer)
+      if (elapsedTimer) clearInterval(elapsedTimer)
       setWarmingUp(false)
+      setWarmElapsed(0)
       setLoading(false)
     }
   }
@@ -186,10 +201,12 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Warming up notice (shown after 3s while login still pending — explains Cloud Run cold start) */}
+        {/* Warming up notice (shown after 3s while login still pending — explains Cloud Run cold start).
+            Elapsed counter + indeterminate progress bar reassure the user that the request is alive. */}
         {warmingUp && !error && (
           <div
             role="status"
+            aria-live="polite"
             className="mb-6 p-4 rounded-lg bg-[var(--color-primary-500)]/10 border border-[var(--color-primary-500)]/20 text-[var(--color-primary-400)]"
           >
             <div className="flex items-start gap-3">
@@ -197,7 +214,15 @@ export default function LoginPage() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span className="text-sm">{t('login.warmingUp')}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm">{t('login.warmingUp')}</p>
+                <p className="text-xs opacity-80 mt-1">
+                  {t('login.warmingUpElapsed', { seconds: warmElapsed })}
+                </p>
+                <div className="mt-2 h-1 rounded-full overflow-hidden bg-[var(--color-primary-500)]/20">
+                  <div className="h-full bg-[var(--color-primary-500)]/60 animate-pulse" style={{ width: `${Math.min(100, (warmElapsed / 30) * 100)}%`, transition: 'width 0.5s linear' }} />
+                </div>
+              </div>
             </div>
           </div>
         )}
