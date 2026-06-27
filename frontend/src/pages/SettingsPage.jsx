@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LanguageContext'
 import { useTheme } from '../context/ThemeContext'
+import { useFontScale } from '../context/FontScaleContext'
 import { LOCALE_MAP } from '../utils/locales'
 import { logoutOtherDevices, updateProfile, deleteAccount } from '../api/auth'
 import PasswordField from '../components/PasswordField'
@@ -25,7 +26,7 @@ export default function SettingsPage() {
   const [bio, setBio] = useState(user?.bio || '')
   const [avatar, setAvatar] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [fontScale, setFontScale] = useState(() => parseFloat(localStorage.getItem('heartbox_font_scale') || '1'))
+  const { scale: fontScale, setScale: setFontScale, options: fontScaleOptions } = useFontScale()
 
   // Track initial profile values for unsaved-changes detection
   const initialProfile = useRef({ email: user?.email || '', bio: user?.bio || '' })
@@ -339,32 +340,45 @@ export default function SettingsPage() {
       {/* === Preferences Tab === */}
       {activeTab === 'preferences' && (
         <Card variant="default" padding="lg" className="space-y-6" animate staggerDelay={0.1}>
-          {/* Font Size */}
-          <div className="space-y-4">
+          {/* Font Size — 5-step segmented control. The 'A' previews grow
+              in proportion to the scale so users can see the change
+              before committing. Whole row wraps on narrow viewports. */}
+          <div className="space-y-3">
             <h2 className="text-lg font-semibold">{t('settings.fontSize')}</h2>
-            <div className="flex gap-3 flex-wrap">
-              {[
-                { label: t('settings.fontSmall'), scale: 0.875 },
-                { label: t('settings.fontMedium'), scale: 1 },
-                { label: t('settings.fontLarge'), scale: 1.125 },
-              ].map((opt) => (
+            <p className="text-xs opacity-60">{t('settings.fontSizeHint')}</p>
+            <div
+              role="radiogroup"
+              aria-label={t('settings.fontSize')}
+              className="grid grid-cols-5 gap-1.5 p-1.5 rounded-xl bg-white/[0.04] border border-[var(--card-border)] max-w-md"
+            >
+              {fontScaleOptions.map((opt) => {
+                const selected = Math.abs(fontScale - opt.scale) < 0.001
+                return (
                   <button
-                    key={opt.scale}
+                    key={opt.key}
                     type="button"
-                    onClick={() => {
-                      localStorage.setItem('heartbox_font_scale', String(opt.scale))
-                      document.documentElement.style.fontSize = opt.scale * 16 + 'px'
-                      setFontScale(opt.scale)
-                    }}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
-                      fontScale === opt.scale
-                        ? 'bg-orange-500/30 text-orange-400'
-                        : 'opacity-60 hover:opacity-100 border border-[var(--card-border)]'
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setFontScale(opt.scale)}
+                    className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-lg transition-colors cursor-pointer min-w-0 ${
+                      selected
+                        ? 'bg-orange-500/20 text-orange-500 ring-1 ring-orange-500/40'
+                        : 'opacity-70 hover:opacity-100 hover:bg-white/[0.04]'
                     }`}
                   >
-                    {opt.label}
+                    <span
+                      className="font-serif leading-none"
+                      style={{ fontSize: `${10 + opt.scale * 8}px` }}
+                      aria-hidden="true"
+                    >
+                      A
+                    </span>
+                    <span className="text-[10px] sm:text-xs truncate w-full text-center">
+                      {t(opt.labelKey)}
+                    </span>
                   </button>
-                ))}
+                )
+              })}
             </div>
           </div>
 

@@ -116,12 +116,6 @@ export default function Layout() {
     }
   }, [])
 
-  // Font scale from localStorage
-  useEffect(() => {
-    const scale = localStorage.getItem('heartbox_font_scale') || '1'
-    document.documentElement.style.fontSize = parseFloat(scale) * 16 + 'px'
-  }, [])
-
   // Single high-traffic route shown standalone on desktop.
   const journalLink = { to: '/', label: t('nav.journal'), icon: '/icons/nav-journal.svg', end: true }
 

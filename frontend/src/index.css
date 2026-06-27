@@ -791,3 +791,29 @@ textarea:focus-visible {
 .drag-handle:active {
   cursor: grabbing;
 }
+
+/* ===== Font-scale RWD safety net =====
+ * The user-selectable font scale (FontScaleContext) writes
+ * `data-font-scale` on <html> with the chosen multiplier (0.875..1.25).
+ * Tailwind's rem-based spacing scales automatically with the root size,
+ * which preserves the rhythm but can squeeze tight rows at scale=1.25
+ * on narrow viewports. These rules catch the common breakage modes:
+ *
+ *   1) Don't let iOS auto-shrink text when the user has chosen large.
+ *   2) Prevent horizontal scroll bleed from a single long unbreakable
+ *      word (often happens with hashtags / URLs in note previews).
+ *   3) On phones (<640px) at the two largest steps, tighten card
+ *      padding a hair so content doesn't get pushed off-screen.
+ */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+body { overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  html[data-font-scale="1.125"] .glass-card,
+  html[data-font-scale="1.125"] .glass,
+  html[data-font-scale="1.25"]  .glass-card,
+  html[data-font-scale="1.25"]  .glass {
+    padding: 0.875rem;
+  }
+}
