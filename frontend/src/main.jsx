@@ -7,7 +7,6 @@ import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { LanguageProvider } from './context/LanguageContext'
-import { FontScaleProvider } from './context/FontScaleContext'
 import { ToastProvider } from './context/ToastContext'
 import { CrisisBannerProvider } from './context/CrisisBannerContext'
 import { initHealthService } from './services/healthKit'
@@ -78,15 +77,13 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <LanguageProvider>
         <ThemeProvider>
-          <FontScaleProvider>
-            <AuthProvider>
-              <ToastProvider>
-                <CrisisBannerProvider>
-                  <App />
-                </CrisisBannerProvider>
-              </ToastProvider>
-            </AuthProvider>
-          </FontScaleProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <CrisisBannerProvider>
+                <App />
+              </CrisisBannerProvider>
+            </ToastProvider>
+          </AuthProvider>
         </ThemeProvider>
       </LanguageProvider>
     </BrowserRouter>
