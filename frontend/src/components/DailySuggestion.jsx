@@ -238,7 +238,23 @@ export default function DailySuggestion({ insights }) {
   const hasParagraph = !!paragraph
   const hasTips = tips.length > 0
   const stillLoading = !paragraphTried && !weather && !failed
-  if (stillLoading) return null
+
+  // Skeleton while backend round-trip is in flight (typically <2s, can be
+  // 8-20s on TAIDE cold start). Showing the card outline immediately
+  // signals "something is loading" instead of a delayed pop-in.
+  if (stillLoading) {
+    return (
+      <div className="glass-card p-4 border-l-4 border-orange-500/30 animate-pulse" aria-busy="true">
+        <div className="h-4 w-32 rounded bg-orange-500/20 mb-2" />
+        <div className="h-3 w-48 rounded bg-white/10 mb-4" />
+        <div className="space-y-2">
+          <div className="h-3 w-full rounded bg-white/10" />
+          <div className="h-3 w-5/6 rounded bg-white/10" />
+          <div className="h-3 w-3/4 rounded bg-white/10" />
+        </div>
+      </div>
+    )
+  }
   // True offline: nothing at all to render → hide
   if (!hasParagraph && !hasTips && !weather) return null
 

@@ -72,6 +72,31 @@ api.interceptors.response.use(
 
     const original = error.config;
 
+    // Transient-error retry (429 rate-limit / 503 service unavailable —
+    // typical signatures of a Cloud Run cold start, scaling event, or a
+    // brief upstream blip). Up to 2 retries with exponential backoff so
+    // the demo doesn't show a "server error" toast on a transient hiccup.
+    // Only safe HTTP methods + 503 (which means the server didn't process
+    // anything) are auto-retried; we never blindly retry POST on a 429
+    // because the action may have partially completed.
+    const status = error.response?.status;
+    const method = (original?.method || 'get').toLowerCase();
+    const isSafeMethod = method === 'get' || method === 'head';
+    const isRetryable = status === 503 || (status === 429 && isSafeMethod);
+    if (original && isRetryable) {
+      original._retryCount = (original._retryCount || 0);
+      if (original._retryCount < 2) {
+        original._retryCount += 1;
+        // Honor Retry-After if the server hinted it; otherwise exp backoff
+        const retryAfter = parseInt(error.response.headers?.['retry-after'], 10);
+        const backoffMs = Number.isFinite(retryAfter) && retryAfter > 0
+          ? Math.min(retryAfter * 1000, 5000)
+          : 500 * Math.pow(2, original._retryCount - 1);  // 500ms, 1s
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+        return api(original);
+      }
+    }
+
     // Auto-refresh on 401 with global lock to prevent race conditions
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
