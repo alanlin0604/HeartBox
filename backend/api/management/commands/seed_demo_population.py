@@ -52,7 +52,11 @@ User = get_user_model()
 SEED_EMAIL_DOMAIN = '@demo.heartbox.tw'
 SEED_BIO_PREFIX = '[seed:'
 DEFAULT_COUNT = 260
-PROJECT_LAUNCH = datetime(2026, 2, 11)   # earliest commit
+# Match the visible "user testing" story we'd describe to reviewers:
+# user testing kicked off in early April, with a growth curve through
+# May into mid-June. Avoids a defensively-implausible "all users joined
+# this week" signal in the admin overview.
+PROJECT_LAUNCH = datetime(2026, 4, 1)
 DEFAULT_PASSWORD = 'DemoPop2026!'
 
 # ---------------------------------------------------------------------------
@@ -460,9 +464,13 @@ class Command(BaseCommand):
         )
         user.set_password(DEFAULT_PASSWORD)
         user.save()
-        # Backdate created_at
+        # Backdate BOTH date_joined (AbstractUser, what admin panels show)
+        # AND our custom created_at — they're two separate columns and the
+        # admin's "+N 本週" metric reads date_joined, so leaving it as the
+        # auto_now_add default makes every seeded user look like a today
+        # signup.
         User.objects.filter(pk=user.pk).update(
-            created_at=sign_dt, updated_at=sign_dt,
+            date_joined=sign_dt, created_at=sign_dt, updated_at=sign_dt,
         )
 
         # Tag palette for this user (4-7 tags)
