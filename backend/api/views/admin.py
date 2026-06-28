@@ -89,7 +89,13 @@ class AdminStatsView(APIView):
 
 
 class AdminUserPagination(rest_framework.pagination.PageNumberPagination):
-    page_size = 50
+    # Default raised from 50 to 500 so the admin user-management tab can
+    # render the full population without paging UI (no UI was wired up for
+    # paging anyway — the existing call only reads results[0..N]).
+    # Allow ?page_size=N override capped at 1000.
+    page_size = 500
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
 
 
 class AdminUserListView(generics.ListAPIView):
