@@ -55,11 +55,18 @@ export default function WeeklySummaryPage() {
   useEffect(() => { document.title = `${t('nav.weeklySummary')} — ${t('app.name')}` }, [t])
 
   useEffect(() => {
+    let cancelled = false
     setListLoading(true)
     getWeeklySummaryList()
-      .then((res) => setSummaries(res.data?.results || res.data || []))
-      .catch(() => { toast?.error(t('common.operationFailed')); setSummaries([]) })
-      .finally(() => setListLoading(false))
+      .then((res) => { if (!cancelled) setSummaries(res.data?.results || res.data || []) })
+      .catch(() => {
+        if (cancelled) return
+        toast?.error(t('common.operationFailed'))
+        setSummaries([])
+      })
+      .finally(() => { if (!cancelled) setListLoading(false) })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleGenerate = async () => {

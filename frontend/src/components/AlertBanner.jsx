@@ -16,11 +16,14 @@ export default memo(function AlertBanner() {
   const [dismissed, setDismissed] = useState([])
 
   useEffect(() => {
+    let cancelled = false
     getAlerts()
-      .then((res) => setAlerts(res.data.alerts || []))
+      .then((res) => { if (!cancelled) setAlerts(res.data.alerts || []) })
       .catch(() => {
-        toast?.error(t('common.operationFailed'))
+        if (!cancelled) toast?.error(t('common.operationFailed'))
       })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const visibleAlerts = alerts.filter((_, i) => !dismissed.includes(i))

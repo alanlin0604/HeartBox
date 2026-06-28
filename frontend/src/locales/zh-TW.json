@@ -140,7 +140,6 @@
   "dashboard.bestMoodAt": "你心情最好的氣溫範圍：",
   "dashboard.avgMood": "平均心情",
   "dashboard.weatherHint": "長條圖：每個溫度區間的平均心情（-1 最負面 → +1 最正面）。需要至少 2 筆紀錄才會列為「最佳區間」。",
-  "dashboard.bucketSampleCount": "{count} 筆紀錄",
 
   "insights.sectionTitle": "個人化洞察",
   "insights.sectionHint": "綜合過去 {days} 天的日記，找出影響你心情的時間 / 天氣 / 溫度規律。",

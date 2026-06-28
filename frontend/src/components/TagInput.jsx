@@ -72,6 +72,7 @@ function TagInputImpl({ value = [], onChange }, ref) {
       return existing
     }
     try {
+      // eslint-disable-next-line react-hooks/purity -- Math.random is intentional for unique tag color; this runs on user-triggered async submit, not during render
       const color = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)]
       const newTag = await tagAPI.create({ name, color })
       setAllTags(prev => [...prev, newTag])
