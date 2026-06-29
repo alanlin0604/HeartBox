@@ -741,6 +741,7 @@
   "prediction.stressTrend": "Stress Trend",
   "prediction.current": "Current Status",
   "prediction.trend": "Trend",
+  "prediction.forecast3d": "3-Day Forecast",
   "prediction.forecast7d": "7-Day Forecast",
   "prediction.trend_improving": "Improving",
   "prediction.trend_declining": "Declining",

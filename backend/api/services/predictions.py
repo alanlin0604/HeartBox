@@ -87,6 +87,13 @@ def get_mood_prediction(user):
     current_stress = statistics.mean(stresses[-7:] if len(stresses) >= 7 else stresses)
 
     # Generate prediction
+    #
+    # Horizon note: the Random Forest model is trained on a 3-day-ahead target
+    # (see ml/models/*_v3.summary.json, horizon_days=3). The trend baseline
+    # below now also extrapolates 3 days so the displayed number lines up with
+    # both the RF prediction and the labels on the dashboard
+    # ("3 天後預測" / "3-Day Forecast"). The legacy 7-day field is kept as
+    # ``forecast_7d`` for any older clients still calling the API contract.
     prediction = {
         'has_prediction': True,
         'sentiment': {
@@ -94,6 +101,7 @@ def get_mood_prediction(user):
             'trend': 'improving' if sentiment_slope > 0.01 else 'declining' if sentiment_slope < -0.01 else 'stable',
             'slope': round(sentiment_slope, 3),
             'strength': round(sentiment_strength, 2),
+            'forecast_3d': round(current_sentiment + (sentiment_slope * 3), 2) if abs(sentiment_slope) > 0.01 else current_sentiment,
             'forecast_7d': round(current_sentiment + (sentiment_slope * 7), 2) if abs(sentiment_slope) > 0.01 else current_sentiment,
         },
         'stress': {
@@ -101,6 +109,7 @@ def get_mood_prediction(user):
             'trend': 'increasing' if stress_slope > 0.05 else 'decreasing' if stress_slope < -0.05 else 'stable',
             'slope': round(stress_slope, 3),
             'strength': round(stress_strength, 2),
+            'forecast_3d': round(current_stress + (stress_slope * 3), 1) if abs(stress_slope) > 0.05 else current_stress,
             'forecast_7d': round(current_stress + (stress_slope * 7), 1) if abs(stress_slope) > 0.05 else current_stress,
         },
         'warnings': [],

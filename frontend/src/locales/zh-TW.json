@@ -745,6 +745,7 @@
   "prediction.stressTrend": "壓力趨勢",
   "prediction.current": "當前狀態",
   "prediction.trend": "趨勢",
+  "prediction.forecast3d": "3 天後預測",
   "prediction.forecast7d": "7 天後預測",
   "prediction.trend_improving": "改善中",
   "prediction.trend_declining": "下降中",

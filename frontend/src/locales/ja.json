@@ -741,6 +741,7 @@
   "prediction.stressTrend": "ストレストレンド",
   "prediction.current": "現在の状態",
   "prediction.trend": "トレンド",
+  "prediction.forecast3d": "3日後の予測",
   "prediction.forecast7d": "7日後の予測",
   "prediction.trend_improving": "改善中",
   "prediction.trend_declining": "低下中",

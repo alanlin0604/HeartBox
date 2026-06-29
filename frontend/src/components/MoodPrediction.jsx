@@ -245,10 +245,18 @@ export default function MoodPrediction() {
                 {getTrendIcon(prediction.sentiment.trend)} {t(`prediction.trend_${prediction.sentiment.trend}`)}
               </p>
             </div>
-            {Math.abs(prediction.sentiment.slope) > 0.01 && (
+            {(prediction.sentiment.rf_forecast_3d != null || Math.abs(prediction.sentiment.slope) > 0.01) && (
               <div>
-                <p className="text-xs text-[var(--text-secondary)]">{t('prediction.forecast7d')}</p>
-                <p className="text-base text-[var(--text-primary)]">{prediction.sentiment.forecast_7d}</p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('prediction.forecast3d')}</p>
+                <p className="text-base text-[var(--text-primary)]">
+                  {/* Prefer Random Forest 3-day forecast (trained on a real
+                      3-day-ahead target); fall back to the linear slope ×3
+                      extrapolation when RF isn't available (e.g. very new
+                      account with <14 days of data). */}
+                  {prediction.sentiment.rf_forecast_3d != null
+                    ? prediction.sentiment.rf_forecast_3d
+                    : prediction.sentiment.forecast_3d}
+                </p>
               </div>
             )}
           </div>
@@ -271,10 +279,14 @@ export default function MoodPrediction() {
                 {getTrendIcon(prediction.stress.trend)} {t(`prediction.trend_${prediction.stress.trend}`)}
               </p>
             </div>
-            {Math.abs(prediction.stress.slope) > 0.05 && (
+            {(prediction.stress.rf_forecast_3d != null || Math.abs(prediction.stress.slope) > 0.05) && (
               <div>
-                <p className="text-xs text-[var(--text-secondary)]">{t('prediction.forecast7d')}</p>
-                <p className="text-base text-[var(--text-primary)]">{prediction.stress.forecast_7d} / 10</p>
+                <p className="text-xs text-[var(--text-secondary)]">{t('prediction.forecast3d')}</p>
+                <p className="text-base text-[var(--text-primary)]">
+                  {prediction.stress.rf_forecast_3d != null
+                    ? prediction.stress.rf_forecast_3d
+                    : prediction.stress.forecast_3d} / 10
+                </p>
               </div>
             )}
           </div>
