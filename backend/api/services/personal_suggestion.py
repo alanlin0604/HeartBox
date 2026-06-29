@@ -169,33 +169,38 @@ def compute_triggers(
 
 
 def _insights_summary_zh(insights: Optional[list[dict]]) -> str:
+    """Summarise long-term mood patterns WITHOUT exposing raw month numbers
+    or month-phase labels to the LLM.
+
+    Why no months/phases: TAIDE-LX-7B confidently misinterprets a literal
+    "4 月最好" as "今天即將進入 4 月" or "六月中" gets read as "month
+    phase 月中" referring to today. Both happen ~30% of the time on this
+    model. Cross-references against today's date are already resolved in
+    ``compute_triggers`` (which the LLM sees separately as a list of
+    today-grounded statements), so this summary only needs to describe
+    the dimension at a high level — not feed the model raw numerics it
+    will confuse with the current date.
+    """
     if not insights:
         return '尚無明顯規律'
     lines = []
     for ins in insights:
         k = ins.get('key')
         try:
-            if k == 'month_phase':
-                lines.append(
-                    f"月段：{PHASE_LABEL_ZH.get(ins['best_phase'], ins['best_phase'])} "
-                    f"平均 {ins['best_avg']:.2f} 最高，"
-                    f"{PHASE_LABEL_ZH.get(ins['worst_phase'], ins['worst_phase'])} "
-                    f"{ins['worst_avg']:.2f} 最低"
-                )
-            elif k == 'weekday_weekend':
+            if k == 'weekday_weekend':
                 better_zh = '週末' if ins['better'] == 'weekend' else '平日'
-                lines.append(f"平日/週末：{better_zh} 心情較好")
-            elif k == 'month_extremes':
-                lines.append(
-                    f"月份：{ins['best_month']} 月最好（{ins['best_avg']:.2f}），"
-                    f"{ins['worst_month']} 月最低（{ins['worst_avg']:.2f}）"
-                )
+                lines.append(f"{better_zh}心情通常較好")
             elif k == 'weather_sun_rain':
                 better_zh = '晴天' if ins['better'] == 'sunny' else '雨天'
-                lines.append(f"天氣：{better_zh} 心情較好")
+                lines.append(f"{better_zh}心情通常較好")
             elif k == 'temperature_band':
                 better_zh = '溫暖天氣' if ins['better'] == 'warm' else '涼爽天氣'
-                lines.append(f"溫度：{better_zh} 心情較好")
+                lines.append(f"{better_zh}心情通常較好")
+            # NOTE: month_phase + month_extremes are deliberately omitted.
+            # Their cross-reference against today's date is generated in
+            # compute_triggers() as a today-grounded sentence; the raw
+            # "4 月 / 月初" labels confuse the model and produce
+            # hallucinated dates in the output paragraph.
         except (KeyError, TypeError, ValueError):
             continue
     return '；'.join(lines) if lines else '尚無明顯規律'
@@ -246,7 +251,7 @@ def generate_paragraph_zh(
         text = provider.chat(
             system=(
                 '你是 HeartBox 心事盒 App 的暖心建議助理，扮演一位關心使用者的好朋友。\n'
-                '請根據使用者的長期心情習慣與今日天氣，寫一段「今日個人化建議」。\n\n'
+                '請根據今日資訊，寫一段「今日個人化建議」。\n\n'
                 '嚴格規則（違反會被拒絕）：\n'
                 '- 必須用繁體中文。\n'
                 '- 只寫一段，60-120 個字，2 到 3 句。\n'
@@ -255,14 +260,16 @@ def generate_paragraph_zh(
                 '- 不要寫「根據資料」「統計顯示」「分析結果」這類分析句。\n'
                 '- 不要列點、不要 emoji、不要前言或後綴。\n'
                 '- 語氣溫暖、像朋友在說話，避免冷冰冰的告知句。\n'
+                '- 內容只能談「今天」，絕對不要提到其他月份、其他日子、「明天」、「昨天」、「上週」、「下週」、「即將」等時間詞。\n'
+                '- 不要提到「月初」「月中」「月底」這類分段，也不要說「X 月」（除了今天所在的月份）。\n'
                 '- 如果今天有需要留意的情況，請自然地把它融入句子裡（不要照抄條列）。'
             ),
             user=(
                 f'今天：{date_str}\n'
                 f'今天天氣：{weather_str}\n\n'
-                f'使用者長期心情習慣：\n{insights_str}\n\n'
+                f'使用者長期習慣（高層次，不要照抄）：\n{insights_str}\n\n'
                 f'今天需要關注的情況：\n{triggers_str}\n\n'
-                '請寫一段給使用者的暖心建議（只一段，60-120 字）。'
+                '請寫一段給使用者的「今日」暖心建議（只一段，60-120 字，只談今天）。'
             ),
             temperature=0.75,
             max_tokens=110,
@@ -275,10 +282,60 @@ def generate_paragraph_zh(
         if len(text) < 20 or len(text) > 250:
             logger.warning('personal_suggestion length_reject len=%d', len(text))
             return None
+        # Date/time hallucination check. TAIDE freely fabricates dates from
+        # the insights data ("即將進入 4 月", "明天雖然是雷雨天") — both make
+        # the widget look broken to the user. Reject any paragraph that:
+        #   (a) mentions a month OTHER than today's month, OR
+        #   (b) uses forbidden relative time words (明天/昨天/上週/下週/即將/月初/月中/月底).
+        if _has_date_hallucination(text, today.month):
+            logger.warning(
+                'personal_suggestion date_hallucination_reject text=%r',
+                text[:120],
+            )
+            return None
         return text
     except LLMProviderError as e:
         logger.warning('personal_suggestion llm_call failed: %s', e)
         return None
+
+
+# Forbidden relative-time markers. Any of these in the paragraph means the
+# model drifted off "today" — reject. Curated to avoid common false positives:
+# we do NOT block "下次"/"上次" (refer to events, not days), "未來"/"以後"
+# (vague future tense is fine), or "之前"/"接下來" (sentence flow words).
+_FORBIDDEN_TIME_WORDS = (
+    '明天', '後天', '昨天', '前天',
+    '上週', '下週', '上周', '下周',
+    '即將進入', '即將迎來', '即將到來', '即將到', '即將來臨',
+    '月初', '月中', '月底',
+)
+
+
+def _has_date_hallucination(text: str, today_month: int) -> bool:
+    """Return True if the paragraph likely hallucinated a date that isn't today.
+
+    Two checks:
+      1. Any month NUMBER other than today's appears (matches '4 月' / '4月'
+         / 'X 月份'). Today's month is allowed since legitimate suggestions
+         can naturally mention the current month name.
+      2. Any forbidden relative-time word from _FORBIDDEN_TIME_WORDS appears.
+    """
+    if not text:
+        return False
+    # Check (2) first — cheap and high-signal
+    for w in _FORBIDDEN_TIME_WORDS:
+        if w in text:
+            return True
+    # Check (1): scan for `N 月` / `N月` references. Allow today's month.
+    import re
+    for m in re.finditer(r'(\d{1,2})\s*月', text):
+        try:
+            mo = int(m.group(1))
+        except ValueError:
+            continue
+        if 1 <= mo <= 12 and mo != today_month:
+            return True
+    return False
 
 
 def _strip_duplicate_paragraphs(text: str) -> str:

@@ -21,10 +21,13 @@ function reportError(error, errorInfo) {
       userAgent: navigator.userAgent,
       timestamp: new Date().toISOString(),
     }
-    // Send to backend error reporting endpoint (fire-and-forget)
+    // Send to backend error reporting endpoint (fire-and-forget).
+    // VITE_API_URL already ends in `/api` in production (`https://api.heartbox.tw/api`),
+    // so don't prepend another `/api/` — that produced `/api/api/error-report/`
+    // which 404'd silently, swallowing every frontend crash.
     const apiBase = import.meta.env.VITE_API_URL || ''
     if (apiBase) {
-      fetch(`${apiBase}/api/error-report/`, {
+      fetch(`${apiBase}/error-report/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

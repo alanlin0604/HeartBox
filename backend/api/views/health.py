@@ -833,3 +833,34 @@ class HabitAnalyticsView(APIView):
 
         results.sort(key=lambda x: abs(x['mood_difference']), reverse=True)
         return Response({'analytics': results})
+
+
+class ErrorReportView(APIView):
+    """Receives uncaught-error reports from the frontend ErrorBoundary.
+
+    The frontend POSTs ``{message, stack, componentStack, url, userAgent,
+    timestamp}`` here. We log to the Django logger (so it lands in Cloud
+    Run logs as a structured ERROR) and 204 back — fire-and-forget. No
+    auth required because errors can happen before/around auth flows and
+    silently dropping them defeats the point of having a reporter.
+
+    Rate-limited via DRF's default throttle since an infinite-loop bug
+    on the frontend could otherwise spam this endpoint.
+    """
+    permission_classes = []  # public — error reports should not be gated
+
+    def post(self, request):
+        try:
+            data = request.data if isinstance(request.data, dict) else {}
+            msg = str(data.get('message', ''))[:500]
+            stack = str(data.get('stack', ''))[:2000]
+            comp = str(data.get('componentStack', ''))[:2000]
+            url = str(data.get('url', ''))[:300]
+            ua = str(data.get('userAgent', ''))[:200]
+            logger.error(
+                'frontend_error_report msg=%r url=%r ua=%r stack=%r componentStack=%r',
+                msg, url, ua, stack, comp,
+            )
+        except Exception:
+            logger.exception('error_report parse failed')
+        return Response(status=204)

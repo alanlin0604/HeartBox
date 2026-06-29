@@ -37,6 +37,7 @@ from .views import (
     DashboardLayoutResetView,
     DashboardLayoutView,
     DashboardWidgetDataView,
+    ErrorReportView,
     HabitAnalyticsView,
     HabitViewSet,
     HealthMetricListView,
@@ -226,6 +227,7 @@ urlpatterns = [
     # Daily Prompt
     path('daily-prompt/', DailyPromptView.as_view(), name='daily-prompt'),
     path('personal-suggestion/', PersonalSuggestionView.as_view(), name='personal-suggestion'),
+    path('error-report/', ErrorReportView.as_view(), name='error-report'),
     # Assessments
     path('assessments/', SelfAssessmentListCreateView.as_view(), name='assessments'),
     path('assessments/<int:pk>/share/', ShareAssessmentView.as_view(), name='assessment-share'),

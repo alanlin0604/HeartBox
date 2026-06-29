@@ -198,6 +198,7 @@ from .analytics import (  # noqa: E402
 from .health import (  # noqa: E402
     DailySleepListView,
     DailySleepView,
+    ErrorReportView,
     HabitAnalyticsView,
     HabitViewSet,
     HealthMetricListView,
@@ -303,7 +304,7 @@ _UNDOCUMENTED_VIEWS = [
     'PersonalSuggestionView',
     'DailySleepView', 'DashboardLayoutResetView', 'DashboardLayoutView',
     'CancelAccountDeletionView', 'DashboardWidgetDataView', 'DeleteAccountView', 'DeleteCommentView',
-    'ExportCSVView', 'ExportDataView', 'ExportPDFView',
+    'ErrorReportView', 'ExportCSVView', 'ExportDataView', 'ExportPDFView',
     'ForgotPasswordView', 'FriendActivityView', 'FriendRequestCreateView',
     'GoogleLoginCallbackView', 'HabitAnalyticsView', 'HealthSummaryView',
     'HealthSyncView', 'ImportCSVView', 'ImportJobStatusView', 'JournalStreakView',
