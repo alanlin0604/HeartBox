@@ -34,13 +34,25 @@ _POSITIVE_WORDS = {
     '興奮', '驚喜', '成功', '順利', '進步', '成長', '充實', '能量', '活力', '享受',
     '樂', '笑', '甜', '暖', '陽光', '美', '贊', '太好了', '開朗', '正面',
     '平靜', '安心', '踏實', '放鬆', '悠閒', '自由', '精彩', '完美', '優秀', '厲害',
+    # 補：日常 / 工作成就感詞彙（之前漏掉導致 "累但有成就感" 變極端 -1.0）
+    '成就感', '成就', '不錯', '還算', '還行', '辦到', '完成', '解決', '搞定',
+    '收穫', '值得', '欣慰', '感動', '心安', '舒坦', '安穩', '感覺好', '有意思',
+    '有趣', '專注', '投入', '熟練', '進度', '突破', '夠好', '幫到', '謝謝',
 }
 _NEGATIVE_WORDS = {
-    '難過', '傷心', '痛苦', '焦慮', '壓力', '煩', '煩躁', '生氣', '憤怒', '失望',
-    '沮喪', '憂鬱', '孤單', '寂寞', '害怕', '恐懼', '擔心', '緊張', '累', '疲憊',
+    '難過', '傷心', '痛苦', '焦慮', '煩', '煩躁', '生氣', '憤怒', '失望',
+    '沮喪', '憂鬱', '孤單', '寂寞', '害怕', '恐懼', '擔心', '緊張', '疲憊',
     '無聊', '無力', '崩潰', '絕望', '悲傷', '哭', '淚', '糟糕', '討厭', '恨',
     '煩惱', '不安', '挫折', '委屈', '失落', '迷茫', '困惑', '無奈', '後悔', '自責',
-    '痛', '苦', '慘', '差', '爛', '厭', '怒', '鬱悶', '低落', '消沉',
+    '苦', '慘', '差', '爛', '厭', '怒', '鬱悶', '低落', '消沉',
+    # '累' 移到 _MILD_NEGATIVE（單獨出現不應拉到極端負面）
+    # '壓力' 移到 _STRESS_WORDS 已有
+    # '痛' 移除（太通用，「腳痛、嘴痛」不該算情緒負面）
+}
+# 弱負面詞 — 計入 neg 但僅 0.4 權重，避免 "有點累" 變 -1.0
+_MILD_NEGATIVE_WORDS = {
+    '累', '疲倦', '困', '想睡', '提不起勁', '懶', '麻煩', '無感', '冷淡',
+    '無聊', '無奈', '尷尬', '不太舒服', '小事',
 }
 _STRESS_WORDS = {
     '壓力', '焦慮', '緊張', '崩潰', '失眠', '頭痛', '加班', '趕', 'deadline',
@@ -80,18 +92,42 @@ class AIEngine:
 
     @staticmethod
     def _analyze_sentiment_local(words: list[str]) -> dict:
+        """Rule-based sentiment + stress estimate.
+
+        Used as Tier-2 fallback when TAIDE fails. Earlier version did
+        ``(pos - neg) / (pos + neg)`` which made a SINGLE negative word
+        match (e.g. "累" in "今天很累但有成就感") produce score=-1.0 —
+        a clear over-reaction that triggered the most severe Tier-3
+        template (with 1925 hotline) for a slightly-tired-but-fulfilled
+        note. New formula:
+
+          - Mild-negative words ("累", "懶" etc.) carry 0.4× weight.
+          - Concession markers ("但是", "還算") add a half positive vote
+            because they signal sentiment reversal.
+          - Denominator uses a Laplace-smoothed total (+3) so a single
+            match can't produce extreme scores.
+        """
         pos = sum(1 for w in words if w in _POSITIVE_WORDS)
-        neg = sum(1 for w in words if w in _NEGATIVE_WORDS)
+        neg_full = sum(1 for w in words if w in _NEGATIVE_WORDS)
+        neg_mild = sum(0.4 for w in words if w in _MILD_NEGATIVE_WORDS)
         stress_hits = sum(1 for w in words if w in _STRESS_WORDS)
 
-        total = pos + neg
-        if total == 0:
+        # Concession markers nudge positive — "雖然累但..." should not
+        # be classified the same as "累死了".
+        concession = sum(1 for w in words if w in {'但', '但是', '不過', '還算', '還好', '雖然'})
+        pos_effective = pos + 0.5 * concession
+
+        neg = neg_full + neg_mild
+        total = pos_effective + neg
+        if total < 0.5:
             score = 0.0
         else:
-            score = round((pos - neg) / total, 2)
+            # Laplace smoothing: denominator floor 3 prevents a single
+            # match from dragging the score to ±1.0 on short notes.
+            score = round((pos_effective - neg) / max(3.0, total), 2)
             score = max(-1.0, min(1.0, score))
 
-        stress = min(10, round(stress_hits * 2.5 + (neg * 0.8)))
+        stress = min(10, round(stress_hits * 2.5 + (neg_full * 0.8)))
         if score > 0.3:
             stress = max(0, stress - 2)
 
@@ -350,13 +386,19 @@ class AIEngine:
                 '3. 提醒自己：你已經很努力了，不需要對自己太苛刻'
             )
         else:
+            # NOTE: don't append the 1925 hotline here automatically.
+            # `_basic_feedback_with_crisis_guard` (the entry the analyze()
+            # function actually calls) wraps this output with
+            # CrisisGuard.prepend_hotline ONLY when crisis keywords are
+            # actually present. Hard-coding the hotline here meant any
+            # mildly tired-but-fulfilled note ("累但有成就感" → lexicon
+            # over-counted "累") got the most alarming template.
             return (
-                '我注意到你現在可能承受了不少壓力，你的感受是被理解的。\n\n'
+                '我注意到你今天承受了不少壓力，你的感受是真實且被理解的。\n\n'
                 '建議：\n'
                 '1. 允許自己感受這些情緒，不需要壓抑或否認\n'
-                '2. 試著做腹式呼吸：吸氣4秒、憋住4秒、吐氣6秒，重複幾次\n'
-                '3. 如果持續感到困擾，建議尋求專業心理諮商師的協助\n\n'
-                '你並不孤單，有需要請撥打安心專線：1925（24小時免費）'
+                '2. 試著做腹式呼吸：吸氣 4 秒、憋住 4 秒、吐氣 6 秒，重複幾次\n'
+                '3. 如果這份疲憊持續超過兩週，找信任的人或專業諮商師聊聊會是溫柔的選擇'
             )
 
     # --- Vision-based analysis (LLaVA) -------------------------------------
