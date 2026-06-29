@@ -40,8 +40,13 @@ COPY backend/ ./backend/
 
 WORKDIR /app/backend
 
-# Collect static files (needs a dummy secret key at build time)
-RUN DJANGO_SECRET_KEY=build-placeholder python manage.py collectstatic --noinput
+# Collect static files (needs a dummy secret key + dummy Fernet key at build
+# time — api.services.encryption.EncryptionService instantiates on module
+# import, so collectstatic fails without a valid-shape Fernet key. The real
+# ENCRYPTION_KEY is injected by Cloud Run env vars at container start).
+RUN DJANGO_SECRET_KEY=build-placeholder \
+    ENCRYPTION_KEY=KqdLq5t8ZpDwfyPJ92o6_71UmlWVG8VmPVQgz7OosDo= \
+    python manage.py collectstatic --noinput
 
 # Fix ownership
 RUN chown -R appuser:appuser /app
