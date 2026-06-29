@@ -18,9 +18,46 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from api.models import DailySleep, HealthMetric
+from api.models import DailySleep, Habit, HabitLog, HealthMetric, PublicPost
 
 User = get_user_model()
+
+# One habit per account, profile-aligned with the diary narrative.
+HABIT_DEFS = {
+    'test':  {'name': '每日散步 10 分鐘', 'icon': '🚶', 'color': '#10b981',
+              'category': '運動', 'completion_rate': 0.75},
+    'test1': {'name': '睡前不滑手機', 'icon': '📵', 'color': '#3b82f6',
+              'category': '睡眠', 'completion_rate': 0.55},
+    'test2': {'name': '讀書 30 分鐘', 'icon': '📚', 'color': '#8b5cf6',
+              'category': '學習', 'completion_rate': 0.82},
+    'test3': {'name': '4-7-8 呼吸法練習', 'icon': '🌬️', 'color': '#f59e0b',
+              'category': '正念',  'completion_rate': 0.42},
+}
+
+# One anonymous community post per account — matches the b9cac3a inline
+# seeds that were lost when --reset wiped the users.
+COMMUNITY_POSTS = {
+    'test':  ('平淡的日子過得有意思',
+              '今天沒什麼特別的事，但傍晚走回家的時候發現夕陽特別漂亮，'
+              '突然覺得這種沒事的日子也挺好的。以前總覺得要有大事發生才算「過生活」，'
+              '現在開始能享受這種平淡了。',
+              0.5, 'happiness'),
+    'test1': ('吵了一架',
+              '跟交往兩年的男友吵架，氣到把自己關在房間。'
+              '其實我也知道是小事，但累積太多沒講出來的不滿，'
+              '一次爆發就什麼都記得很清楚。冷靜下來後又開始懷疑是不是自己太敏感了。',
+              -0.5, 'stress'),
+    'test2': ('讀書會跨出第一步',
+              '今天終於去參加了同事邀請的讀書會。本來緊張到想取消，'
+              '但去了之後發現大家都很溫暖，連我講話時手會抖都沒人介意。'
+              '感覺像是把自己往前推了一點點，很值得。',
+              0.6, 'happiness'),
+    'test3': ('失眠快兩個月',
+              '又是凌晨三點睡不著的一天。'
+              '看了三個月前的日記，那時候還能一夜好眠。不知道從什麼時候開始變成這樣的，'
+              '白天累到不行，晚上躺下又精神到天亮。',
+              -0.6, 'anxiety'),
+}
 
 # Profiles per the original seed commit messages — kept here as the
 # canonical source so future re-runs reproduce the same demo narrative.
@@ -181,8 +218,58 @@ class Command(BaseCommand):
             DailySleep.objects.bulk_create(sleep_rows, batch_size=200)
             HealthMetric.objects.bulk_create(metric_rows, batch_size=500)
 
+            # --- Habit + HabitLog seed (one habit per account) ---
+            habit_def = HABIT_DEFS.get(username)
+            habit_logs_written = 0
+            if habit_def:
+                # Wipe existing habits for this user inside the window. Then
+                # recreate one habit + completion logs at the configured rate.
+                Habit.objects.filter(user=user).delete()  # cascades HabitLog
+                habit = Habit.objects.create(
+                    user=user,
+                    name=habit_def['name'],
+                    description='',
+                    category=habit_def['category'],
+                    color=habit_def['color'],
+                    icon=habit_def['icon'],
+                    target_frequency='daily',
+                    target_count=1,
+                    is_active=True,
+                )
+                log_rows = []
+                for offset in range(days):
+                    d = start_day + timedelta(days=offset)
+                    if rng.random() < habit_def['completion_rate']:
+                        log_rows.append(HabitLog(habit=habit, user=user, date=d))
+                HabitLog.objects.bulk_create(log_rows, batch_size=200)
+                habit_logs_written = len(log_rows)
+
+            # --- PublicPost seed (one anonymous community post per account) ---
+            community_written = 0
+            post_def = COMMUNITY_POSTS.get(username)
+            if post_def:
+                # Wipe THIS user's existing public posts so reruns don't pile up.
+                PublicPost.objects.filter(user=user).delete()
+                _title, content, sentiment, category = post_def
+                # Stagger created_at across the past 7 days so the feed
+                # doesn't show all 4 posts stamped at the same second.
+                stagger_days = (3 - list(PROFILES.keys()).index(username)) + 1
+                PublicPost.objects.create(
+                    user=user,
+                    content=content,
+                    sentiment_score=sentiment,
+                    category=category,
+                    is_active=True,
+                )
+                # bump created_at via update so it's slightly in the past.
+                # auto_now_add prevents direct setting on .create().
+                ago = timezone.now() - timedelta(days=stagger_days, hours=rng.randint(0, 18))
+                PublicPost.objects.filter(user=user).update(created_at=ago)
+                community_written = 1
+
             self.stdout.write(self.style.SUCCESS(
                 f'{username}: wrote {len(sleep_rows)} sleep + {len(metric_rows)} metrics '
+                f'+ {habit_logs_written} habit logs + {community_written} public post '
                 f'({start_day} → {today})'
             ))
             total_sleep += len(sleep_rows)

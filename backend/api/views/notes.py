@@ -67,6 +67,22 @@ def _ai_analysis_worker(note_id, user_id):
             return
 
         result = ai_engine.analyze(note.content)
+
+        # Race-avoidance: if image attachments now exist on this note, the
+        # vision worker (scheduled by /reanalyze immediately after upload)
+        # will produce a richer image-aware result that supersedes ours.
+        # Writing here too means the user sees this text-only version flash
+        # briefly before vision overwrites it — that's the "double render"
+        # the user reported. Bail and let vision do the single canonical write.
+        note.refresh_from_db(fields=['id'])
+        if note.attachments.filter(file_type='image').exists():
+            logger.info(
+                'text_worker bail note=%s — image attachments present, '
+                'vision worker will provide canonical analysis',
+                note.id,
+            )
+            return
+
         note.sentiment_score = result['sentiment_score']
         note.stress_index = result['stress_index']
         note.ai_feedback = result['ai_feedback']

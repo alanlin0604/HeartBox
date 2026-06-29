@@ -281,16 +281,18 @@ export default function DailySuggestion({ insights }) {
           )}
         </div>
       </div>
+      {/* Visual unification: both LLM paragraph + template tips render as
+          a single flowing paragraph. Previously the template path used a
+          coloured-border <ul> per-tip, making the same widget look like a
+          completely different feature when LLM was unavailable. Joining
+          tips with a leading space keeps the warmth without the box-list
+          treatment. */}
       {hasParagraph ? (
         <p className="text-sm leading-relaxed whitespace-pre-line">{paragraph}</p>
       ) : hasTips ? (
-        <ul className="space-y-1.5">
-          {tips.map((tip, i) => (
-            <li key={i} className={`text-sm rounded-r px-3 py-1.5 ${toneClasses(tip.tone)}`}>
-              {tip.text}
-            </li>
-          ))}
-        </ul>
+        <p className="text-sm leading-relaxed">
+          {tips.map((tip) => tip.text).join(' ')}
+        </p>
       ) : (
         <p className="text-sm leading-relaxed opacity-80">
           {t('dailySuggestion.empty')}

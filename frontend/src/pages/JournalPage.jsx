@@ -223,12 +223,18 @@ export default function JournalPage() {
           attachFailed = true
         }
       }
-      // Re-analyze with images if any were uploaded successfully
-      if (hasImages && !attachFailed) {
+      // Re-analyze with images if user attached any. We trigger this
+      // even on partial attach failure: the backend's text worker bails
+      // whenever attachments exist (to avoid the "text feedback flashes
+      // then vision overwrites" double-render), so the vision worker is
+      // the only path that produces ai_feedback in that case. Skipping it
+      // on partial failure used to leave the note permanently feedback-less.
+      // The vision worker tolerates empty image_urls and falls back to text.
+      if (hasImages) {
         try {
           await reanalyzeNote(noteId)
         } catch {
-          // Non-critical — text-only analysis already saved
+          // Non-critical — backend will eventually retry on next edit.
         }
       }
       await fetchNotes(1, filters)

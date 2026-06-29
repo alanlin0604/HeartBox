@@ -262,9 +262,15 @@ export default function Layout() {
         className="nav-bar sticky z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between"
         style={{ top: 'env(safe-area-inset-top)' }}
       >
-        <h1 className="text-xl font-bold bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text text-transparent flex items-center gap-2 flex-shrink-0">
-          <img src="/logo.png" alt="HeartBox" decoding="async" className="w-12 h-12 object-contain" />
-          {t('app.displayName')}
+        <h1 className="text-xl font-bold bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text text-transparent flex-shrink-0">
+          <Link
+            to="/"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            aria-label={t('nav.journal')}
+          >
+            <img src="/logo.png" alt="HeartBox" decoding="async" className="w-12 h-12 object-contain" />
+            {t('app.displayName')}
+          </Link>
         </h1>
 
         {/* Mobile: notification bell + hamburger (always visible) */}
