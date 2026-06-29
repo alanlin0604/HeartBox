@@ -453,15 +453,21 @@ def get_personal_insights(queryset, lookback_days=180):
         return []
 
     insights = []
-    MIN_DIFF = 0.2  # 0.2 on a [-1, +1] sentiment scale = ~10% of total range
+    # Threshold tuning: 0.2 was missing subtle patterns ("balanced" profile
+    # users with real but mild trends showed 0-1 insights). Lowered to 0.15
+    # so the dashboard feels more alive while still avoiding noise (5%-of-
+    # range is still well above sampling fluctuation for buckets with ≥3
+    # samples). _severity boundary also dropped 0.4 → 0.3 so genuinely
+    # noticeable trends still get the "strong" visual treatment.
+    MIN_DIFF = 0.15
     MIN_SAMPLES_PER_BUCKET = 2
 
     def _avg(scores):
         return sum(scores) / len(scores) if scores else None
 
     def _severity(diff):
-        # Magnitude > 0.4 is "noticeable", 0.2-0.4 is "mild"
-        if diff >= 0.4:
+        # Magnitude ≥ 0.3 is "noticeable", below is "mild"
+        if diff >= 0.3:
             return 'strong'
         return 'mild'
 
@@ -528,7 +534,7 @@ def get_personal_insights(queryset, lookback_days=180):
         m_avgs = {m: _avg(s) for m, s in valid_m.items()}
         best_m, worst_m = max(m_avgs, key=m_avgs.get), min(m_avgs, key=m_avgs.get)
         diff = m_avgs[best_m] - m_avgs[worst_m]
-        if diff >= 0.3:
+        if diff >= 0.2:
             insights.append({
                 'key': 'month_extremes',
                 'severity': _severity(diff),

@@ -1077,6 +1077,7 @@ class UserSearchSerializer(serializers.ModelSerializer):
     """Serializer for user search results."""
     is_friend = serializers.SerializerMethodField()
     has_pending_request = serializers.SerializerMethodField()
+    bio = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -1085,6 +1086,18 @@ class UserSearchSerializer(serializers.ModelSerializer):
         # (PII / PDPA / GDPR risk). Frontend friends.js doesn't reference it.
         fields = ['id', 'username', 'avatar', 'bio', 'is_friend', 'has_pending_request']
         read_only_fields = ['id', 'username', 'avatar', 'bio']
+
+    def get_bio(self, obj):
+        """Strip internal seed markers (``[seed:YYYYMMDD]`` / ``[demo-test]``)
+        before exposing bio in search results. The markers are infrastructure
+        flags for the seed-data cleanup query, not content the searching user
+        should see — leaking them looks like a bug. Real users' bios pass
+        through unchanged.
+        """
+        raw = obj.bio or ''
+        if raw.startswith('[seed:') or raw.startswith('[demo-test]'):
+            return ''
+        return raw
 
     def _friend_id_set(self):
         """Memoize set of friend IDs for the current request user."""
