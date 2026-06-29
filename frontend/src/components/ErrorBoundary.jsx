@@ -53,6 +53,26 @@ export default class ErrorBoundary extends Component {
   componentDidCatch(error, errorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo)
     reportError(error, errorInfo)
+
+    // Stale-chunk recovery: when a deploy ships new hashed bundle URLs and
+    // the user's currently-loaded page tries to lazy-load an old chunk
+    // (e.g. clicking into /notes/:id triggers `lazy(() => import(...))`
+    // for a now-404 chunk), Vite throws "Failed to fetch dynamically
+    // imported module …". Without recovery the user is stuck on the
+    // generic "something went wrong" page even though one reload would
+    // fix it. We trigger that reload automatically, but ONLY ONCE per
+    // session (sessionStorage flag) so a genuine offline / network outage
+    // doesn't reload-loop forever.
+    const msg = String(error?.message || '')
+    if (msg.includes('Failed to fetch dynamically imported module') ||
+        msg.includes('Importing a module script failed')) {
+      try {
+        if (!sessionStorage.getItem('heartbox_chunk_reload')) {
+          sessionStorage.setItem('heartbox_chunk_reload', '1')
+          window.location.reload()
+        }
+      } catch { /* private mode — give up, user reloads manually */ }
+    }
   }
 
   render() {

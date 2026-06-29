@@ -253,18 +253,22 @@ export default function HabitCard({ habit, onCheckIn, onUncheckIn, onEdit, onDel
 }
 
 /**
- * Compact 90-day heatmap. 13 weeks × 7 days, oldest top-left, today bottom-right.
- * Filled cells use the habit's accent color; empty cells are a faint slate.
+ * 8-week (≈56-day) heatmap with weekday labels on the left. Oldest top-left,
+ * today bottom-right. Previous 90-day grid was too dense — at 13×7 cells
+ * with no axis labels it looked like a random dot cloud. Cutting the
+ * window to 8 weeks gives a wider cell so the grid reads cleanly, and
+ * the M/W/F labels anchor the user to what each row represents.
  */
 function CalendarHeatmap({ completedDates, color = '#F97316' }) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+  const WEEKS = 8
+  const DAYS = WEEKS * 7
   const startOfRange = new Date(today)
-  startOfRange.setDate(today.getDate() - 89)
+  startOfRange.setDate(today.getDate() - (DAYS - 1))
 
-  // Build grid: column = week, row = day-of-week (Mon = 0). 13 columns covers 91 days.
   const cells = []
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < DAYS; i++) {
     const d = new Date(startOfRange)
     d.setDate(startOfRange.getDate() + i)
     const iso = d.toISOString().split('T')[0]
@@ -272,27 +276,37 @@ function CalendarHeatmap({ completedDates, color = '#F97316' }) {
     cells.push({ iso, filled: isFilled, day: d })
   }
 
+  // M / W / F labels (every other row) so the column is readable but not crowded.
+  const WEEKDAY_LABELS = ['一', '', '三', '', '五', '', '日']
+
   return (
-    <div className="flex gap-[2px]">
-      {Array.from({ length: 13 }, (_, w) => (
-        <div key={w} className="flex flex-col gap-[2px]">
-          {Array.from({ length: 7 }, (_, d) => {
-            const idx = w * 7 + d
-            const cell = cells[idx]
-            if (!cell) return <div key={d} className="w-3 h-3" />
-            return (
-              <div
-                key={d}
-                className="w-3 h-3 rounded-sm transition-colors"
-                style={{
-                  backgroundColor: cell.filled ? color : 'rgba(255,255,255,0.07)',
-                }}
-                title={`${cell.iso}${cell.filled ? ' ✓' : ''}`}
-              />
-            )
-          })}
-        </div>
-      ))}
+    <div className="flex gap-2">
+      <div className="flex flex-col gap-1 text-[10px] text-[var(--text-secondary)] pt-px">
+        {WEEKDAY_LABELS.map((label, i) => (
+          <div key={i} className="w-3 h-4 flex items-center justify-end">{label}</div>
+        ))}
+      </div>
+      <div className="flex gap-1">
+        {Array.from({ length: WEEKS }, (_, w) => (
+          <div key={w} className="flex flex-col gap-1">
+            {Array.from({ length: 7 }, (_, d) => {
+              const idx = w * 7 + d
+              const cell = cells[idx]
+              if (!cell) return <div key={d} className="w-4 h-4" />
+              return (
+                <div
+                  key={d}
+                  className="w-4 h-4 rounded transition-colors"
+                  style={{
+                    backgroundColor: cell.filled ? color : 'rgba(255,255,255,0.07)',
+                  }}
+                  title={`${cell.iso}${cell.filled ? ' ✓' : ''}`}
+                />
+              )
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

@@ -117,6 +117,26 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // Main app bundle (index-*.js / index-*.css): network-FIRST so a freshly
+  // deployed version with i18n updates / bug fixes wins over the stale
+  // copy from the last visit. Previously this fell under stale-while-
+  // revalidate, which meant the very first page-load after a deploy
+  // showed the OLD bundle — repeatedly reported as "i18n labels still
+  // English even after Cloudflare deploy". Fall back to the cached copy
+  // only when the network is unreachable.
+  if (url.pathname.match(/\/assets\/index-[\w-]+\.(js|css)$/)) {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const copy = networkResponse.clone()
+          caches.open(STATIC_CACHE).then((cache) => cache.put(event.request, copy))
+        }
+        return networkResponse
+      }).catch(() => caches.match(event.request))
+    )
+    return
+  }
+
   // Other static assets: stale-while-revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {

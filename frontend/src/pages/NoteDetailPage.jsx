@@ -19,6 +19,31 @@ const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
 import { LOCALE_MAP } from '../utils/locales'
 import { useAuth } from '../context/AuthContext'
 
+// Map raw weather values (stored by NoteForm or by the demo seed) to their
+// localised display strings via the existing dailySuggestion.weather.*
+// i18n bucket. Notes seeded by seed_demo_test_accounts persist plain
+// English values like 'cloudy' / 'sunny' / 'rainy' / 'stormy', which
+// previously rendered raw on the detail page.
+const WEATHER_KEY_BY_VALUE = {
+  sunny: 'clear', clear: 'clear', sun: 'clear',
+  cloudy: 'cloudy', overcast: 'cloudy', partly_cloudy: 'cloudy', 'partly-cloudy': 'cloudy',
+  rain: 'rain', rainy: 'rain', light_rain: 'rain', heavy_rain: 'rain', shower: 'rain',
+  storm: 'storm', stormy: 'storm', thunderstorm: 'storm',
+  snow: 'snow', snowy: 'snow',
+  fog: 'fog', foggy: 'fog', mist: 'fog',
+  windy: 'cloudy',
+}
+
+function localizeWeather(t, raw) {
+  if (!raw) return ''
+  // Already a localised label (NoteForm dropdown stores values like "⛅ 多雲")
+  if (/[一-鿿]/.test(raw)) return raw
+  const norm = String(raw).trim().toLowerCase().replace(/\s+/g, '_')
+  const key = WEATHER_KEY_BY_VALUE[norm]
+  if (key) return t(`dailySuggestion.weather.${key}`)
+  return raw
+}
+
 export default function NoteDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -278,7 +303,7 @@ export default function NoteDetailPage() {
           <div className="flex flex-wrap items-center gap-2">
             {note.metadata?.weather && (
               <span className="text-xs px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-500 border border-blue-500/20">
-                {note.metadata.weather}
+                {localizeWeather(t, note.metadata.weather)}
               </span>
             )}
             {note.metadata?.temperature != null && (
