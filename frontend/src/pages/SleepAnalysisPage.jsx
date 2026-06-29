@@ -243,12 +243,27 @@ export default function SleepAnalysisPage() {
           </h3>
           {issues.length > 0 ? (
             <ul className="space-y-3">
-              {issues.map((issue, idx) => (
-                <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-                  <span className="text-red-600 dark:text-red-400 mt-0.5">•</span>
-                  <span className="text-sm text-[var(--text-primary)]">{issue}</span>
-                </li>
-              ))}
+              {/* Backend returns {type, severity, description} objects. The
+                  prior code rendered `{issue}` directly — that triggered
+                  React error #31 ("Objects are not valid as a React child")
+                  and crashed the whole sleep-analysis page with the error
+                  boundary. Render the description string instead, and tint
+                  the bullet by severity for a touch more visual signal. */}
+              {issues.map((issue, idx) => {
+                const text = typeof issue === 'string'
+                  ? issue
+                  : (issue?.description || '')
+                const severity = typeof issue === 'object' ? issue?.severity : null
+                const bulletColor = severity === 'severe'
+                  ? 'text-red-700 dark:text-red-300'
+                  : 'text-red-500 dark:text-red-400'
+                return (
+                  <li key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                    <span className={`${bulletColor} mt-0.5`}>•</span>
+                    <span className="text-sm text-[var(--text-primary)]">{text}</span>
+                  </li>
+                )
+              })}
             </ul>
           ) : (
             <p className="text-[var(--text-secondary)] text-center py-8">{t('sleep.noIssues')}</p>

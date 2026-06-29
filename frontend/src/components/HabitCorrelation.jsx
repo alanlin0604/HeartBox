@@ -110,7 +110,8 @@ export default function HabitCorrelation() {
           />
           <YAxis
             tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
-            domain={[0, 10]}
+            domain={[-1, 1]}
+            tickFormatter={(v) => v.toFixed(1)}
             label={{
               value: t('habit.moodScore'),
               angle: -90,

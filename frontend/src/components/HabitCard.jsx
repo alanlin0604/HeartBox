@@ -219,7 +219,32 @@ export default function HabitCard({ habit, onCheckIn, onUncheckIn, onEdit, onDel
           {calendarLoading && !completedDates ? (
             <div className="text-xs text-center text-[var(--text-secondary)]">{t('common.loading')}</div>
           ) : (
-            <CalendarHeatmap completedDates={completedDates} color={habit.color} />
+            <>
+              {/* One-line title so the dot grid isn't just floating dots */}
+              <div className="text-xs text-[var(--text-secondary)] mb-2">
+                {t('habit.heatmapTitle')}
+              </div>
+              <CalendarHeatmap completedDates={completedDates} color={habit.color} />
+              {/* Legend: 已完成 vs 未完成 swatches + count summary */}
+              <div className="mt-3 flex items-center justify-between text-xs text-[var(--text-secondary)]">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="inline-block w-3 h-3 rounded-sm"
+                      style={{ backgroundColor: habit.color }}
+                    />
+                    {t('habit.heatmapLegendDone')}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-block w-3 h-3 rounded-sm bg-white/10" />
+                    {t('habit.heatmapLegendMissed')}
+                  </span>
+                </div>
+                <span>
+                  {t('habit.heatmapCount', { count: completedDates?.size ?? 0 })}
+                </span>
+              </div>
+            </>
           )}
         </div>
       )}

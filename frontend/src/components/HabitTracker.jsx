@@ -234,12 +234,11 @@ export default function HabitTracker() {
         </div>
       )}
 
-      {/* Correlation Analytics — temporarily hidden pre-defense. The chart
-          is technically correct but with only 1 habit per user the X-axis
-          shows a single bar which made the chart look broken. Re-enable
-          once we have multi-habit users or restructure to show per-habit
-          summary cards instead of one chart. */}
-      {false && habits.length > 0 && (
+      {/* Correlation Analytics — re-enabled with the YAxis domain fixed
+          ([-1, 1] for sentiment_score, not 0-10). A single-habit user
+          will see one pair of bars (completed vs not-completed) which is
+          still informative even if it isn't a multi-habit ranking chart. */}
+      {habits.length > 0 && (
         <div className="mt-12">
           <HabitCorrelation />
         </div>
