@@ -53,14 +53,15 @@ export default function ProgressCompareCard() {
   }
 
   // lowerIsBetter: true means a NEGATIVE delta is an improvement
-  // (stress goes from 9 to 4 = -5 = good = green). All others: positive
-  // delta = improvement.
+  // (stress goes from 9 to 4 = -5 = good). All others: positive delta =
+  // improvement. Colour mapping (red進步/綠退步) handled in DeltaPill per
+  // Taiwan stock-market convention. Sleep + habit metrics dropped per
+  // 2026-06-29 user feedback ("沒什麼用") — they were rendering as "—"
+  // for most accounts and the row clutter outweighed the signal.
   const METRIC_DEFS = [
-    { key: 'avg_sentiment',    label: t('progress.metric.avgSentiment'),    fmt: (v) => v?.toFixed(2),  lowerIsBetter: false },
-    { key: 'avg_stress',       label: t('progress.metric.avgStress'),       fmt: (v) => v?.toFixed(2),  lowerIsBetter: true },
-    { key: 'journal_days',     label: t('progress.metric.journalDays'),     fmt: (v) => `${v}/7`,       lowerIsBetter: false },
-    { key: 'avg_sleep_hours',  label: t('progress.metric.sleepHours'),      fmt: (v) => `${v?.toFixed(1)}h`, lowerIsBetter: false },
-    { key: 'habit_completion', label: t('progress.metric.habitCompletion'), fmt: (v) => `${Math.round(v * 100)}%`, lowerIsBetter: false },
+    { key: 'avg_sentiment', label: t('progress.metric.avgSentiment'), fmt: (v) => v?.toFixed(2), lowerIsBetter: false },
+    { key: 'avg_stress',    label: t('progress.metric.avgStress'),    fmt: (v) => v?.toFixed(2), lowerIsBetter: true },
+    { key: 'journal_days',  label: t('progress.metric.journalDays'),  fmt: (v) => `${v}/7`,      lowerIsBetter: false },
   ]
 
   return (
