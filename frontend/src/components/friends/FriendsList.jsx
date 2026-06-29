@@ -139,7 +139,7 @@ export default function FriendsList() {
                   disabled={removingId === friend.id}
                   aria-label={t('friends.unfriend')}
                   title={t('friends.unfriend')}
-                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50 min-h-[36px]"
+                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm border border-red-500/30 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50 min-h-[40px]"
                 >
                   <UnfriendIcon />
                   <span className="hidden sm:inline">

@@ -112,7 +112,10 @@ const Button = forwardRef(function Button({
   }
 
   const sizes = {
-    sm: 'px-3 py-1.5 text-xs min-h-[36px]',
+    // sm bumped 36 → 40 px so the touch target hits the Apple HIG / WCAG 2.5.5
+    // 44 px floor on most mobile chromes (a few px tolerance is OK and 40 keeps
+    // dense action rows from looking chunky). md/lg already meet the floor.
+    sm: 'px-3 py-1.5 text-xs min-h-[40px]',
     md: 'px-6 py-3 text-sm min-h-[44px]',
     lg: 'px-8 py-4 text-base min-h-[52px]'
   }
