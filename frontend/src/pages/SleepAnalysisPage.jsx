@@ -171,16 +171,6 @@ export default function SleepAnalysisPage() {
             </div>
             <img src="/icons/sleep-hours.svg" alt="" aria-hidden="true" className="w-12 h-12 object-contain" />
           </div>
-          {stats.sleep_debt != null && (
-            <p
-              className={`text-sm mt-2 ${stats.sleep_debt >= 0 ? 'text-green-600' : 'text-red-600'}`}
-              title={t('sleep.debtExplain')}
-            >
-              {stats.sleep_debt >= 0
-                ? `↑ ${Math.abs(stats.sleep_debt).toFixed(1)}h ${t('sleep.surplusTotal')}`
-                : `↓ ${Math.abs(stats.sleep_debt).toFixed(1)}h ${t('sleep.debtTotal')}`}
-            </p>
-          )}
         </Card>
 
         <Card className="p-6 bg-gradient-to-br from-rose-500/10 to-rose-600/10 border-rose-500/20">
