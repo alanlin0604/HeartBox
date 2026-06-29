@@ -151,9 +151,13 @@ class AIEngine:
             score = 0.0
         else:
             # Laplace smoothing: denominator floor 3 prevents a single
-            # match from dragging the score to ±1.0 on short notes.
-            score = round((pos_effective - neg) / max(3.0, total), 2)
-            score = max(-1.0, min(1.0, score))
+            # match from dragging the score to ±1.0 on short notes. The
+            # outer clamp at ±0.9 mirrors what the Tier-1 provider path
+            # does — extremes (±1.0) imply unrealistic certainty for a
+            # rule-based classifier and looked alarming in defense seed
+            # data where one positive word would peg a note at 1.0.
+            score = (pos_effective - neg) / max(3.0, total)
+            score = max(-0.9, min(0.9, score))
 
         stress = min(10, round(stress_hits * 2.5 + (neg_full * 0.8)))
         if score > 0.3:
