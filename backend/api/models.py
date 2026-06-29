@@ -105,7 +105,7 @@ class MoodNote(models.Model):
     # paraphrase of journal sentiment + advice — protected against DB dumps
     # / DBA inspection / BAK leakage. See [docs/phase0b-status.md].
     ai_feedback = EncryptedTextField(blank=True, default='')
-    search_text = models.TextField(blank=True, default='', help_text='Plaintext index (first 500 chars) for DB-level search')
+    search_text = models.TextField(blank=True, default='', help_text='Plaintext index (~30%% of length, capped at 200 chars) for DB-level search')
     is_pinned = models.BooleanField(default=False)
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
@@ -142,9 +142,41 @@ class MoodNote(models.Model):
         if self._raw_content is not None:
             from api.services.encryption import encryption_service
             self.encrypted_content = encryption_service.encrypt(self._raw_content)
-            self.search_text = strip_tags(self._raw_content)[:500]
+            self.search_text = self._make_search_text(self._raw_content)
             self._raw_content = None
         super().save(*args, **kwargs)
+
+    @staticmethod
+    def _make_search_text(content: str) -> str:
+        """Truncate plaintext for DB-level search index.
+
+        Old behaviour was a hard 500-char cap, which meant every note
+        under 500 chars was 100% plaintext — fine for a 2000-char essay
+        but a serious leak for "今天好累" type notes. Now we keep
+        proportional 30%, capped at 200 chars (long notes), with a tiny
+        5-char floor so a 5-char note still has *something* searchable
+        (the floor only matters for notes under 17 chars).
+
+        Examples (chars in, chars out as plaintext, leak %):
+            5  -> 5    (100% but only 5 chars total)
+           20  -> 6    (30%)
+           50  -> 15   (30%)
+          100  -> 30   (30%)
+          500  -> 150  (30%)
+         1000  -> 200  (capped at 200, ~20%)
+         5000  -> 200  (capped, ~4%)
+
+        Trade-off: search recall drops for keywords that appear past the
+        first 30% of a note. Acceptable because (a) people tend to put
+        the main topic early, and (b) privacy outweighs perfect recall
+        for a mental-health diary.
+        """
+        clean = strip_tags(content or '')
+        n = len(clean)
+        if n == 0:
+            return ''
+        take = max(5, min(n * 30 // 100, 200))
+        return clean[:take]
 
     @property
     def content(self) -> str:
