@@ -196,16 +196,25 @@ export default function SleepAnalysisPage() {
         </Card>
 
         <Card className="p-6 bg-gradient-to-br from-amber-500/10 to-amber-600/10 border-amber-500/20">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <p className="text-sm text-[var(--text-secondary)] mb-1">
                 {t('sleep.sleepPattern')}
               </p>
               <p className="text-xl font-bold text-amber-700 dark:text-amber-400">
                 {stats.most_common_pattern ? t(`sleep.chronotype.${stats.most_common_pattern}`, { defaultValue: stats.most_common_pattern }) : '--'}
               </p>
+              {/* One-line plain-language explanation directly under the label.
+                  Most users won't know what "早鳥型" means without context, and
+                  a tooltip-on-hover doesn't work on touch devices. Falls back
+                  to '' (no row) if no chronotype yet — keeps card height even. */}
+              {stats.most_common_pattern && (
+                <p className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed">
+                  {t(`sleep.chronotype.${stats.most_common_pattern}.desc`, { defaultValue: '' })}
+                </p>
+              )}
             </div>
-            <img src="/icons/sleep-pattern.svg" alt="" aria-hidden="true" className="w-12 h-12 object-contain" />
+            <img src="/icons/sleep-pattern.svg" alt="" aria-hidden="true" className="w-12 h-12 object-contain flex-shrink-0" />
           </div>
         </Card>
       </div>

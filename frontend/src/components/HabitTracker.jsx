@@ -234,8 +234,12 @@ export default function HabitTracker() {
         </div>
       )}
 
-      {/* Correlation Analytics */}
-      {habits.length > 0 && (
+      {/* Correlation Analytics — temporarily hidden pre-defense. The chart
+          is technically correct but with only 1 habit per user the X-axis
+          shows a single bar which made the chart look broken. Re-enable
+          once we have multi-habit users or restructure to show per-habit
+          summary cards instead of one chart. */}
+      {false && habits.length > 0 && (
         <div className="mt-12">
           <HabitCorrelation />
         </div>

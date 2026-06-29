@@ -262,10 +262,14 @@ export default function Layout() {
         className="nav-bar sticky z-50 mx-4 mt-4 px-6 py-3 flex items-center justify-between"
         style={{ top: 'env(safe-area-inset-top)' }}
       >
-        <h1 className="text-xl font-bold bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text text-transparent flex-shrink-0">
+        {/* Gradient-clip text needs to live on the SAME element as the
+            text — moving the <Link> in between broke the clip (text inherited
+            text-transparent but had no bg to clip), so the brand name went
+            invisible. Put the gradient classes on the <Link> itself. */}
+        <h1 className="text-xl font-bold flex-shrink-0">
           <Link
             to="/"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity bg-gradient-to-r from-orange-500 to-rose-500 bg-clip-text text-transparent"
             aria-label={t('nav.journal')}
           >
             <img src="/logo.png" alt="HeartBox" decoding="async" className="w-12 h-12 object-contain" />

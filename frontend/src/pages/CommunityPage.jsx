@@ -364,11 +364,17 @@ export default function CommunityPage() {
                 </p>
               </div>
 
-              {/* Category Badge */}
+              {/* Category Badge — i18n via existing community.category.* keys.
+                  Fall back to the raw value if a new server-side category
+                  ships without a matching translation (better than blanking). */}
               {post.category && (
                 <div className="mb-4">
                   <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">
-                    {post.category}
+                    {(() => {
+                      const key = `community.category.${post.category}`
+                      const translated = t(key)
+                      return translated === key ? post.category : translated
+                    })()}
                   </span>
                 </div>
               )}

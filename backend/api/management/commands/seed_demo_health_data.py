@@ -187,10 +187,31 @@ class Command(BaseCommand):
                 ))
 
                 # --- HealthMetrics: 5 types per day ---
+                # Per-day "activity mode": realistic days are not uniform —
+                # 18% high-activity, 18% low/rest, 64% normal. This widens
+                # the distribution enough that the dashboard's bucket-based
+                # insight (needs ≥2 buckets with ≥3 samples each) can find
+                # a real signal instead of dumping every day in one bucket.
+                roll = rng.random()
+                if roll < 0.18:
+                    mode = 'high'       # active day — gym / long walk
+                elif roll < 0.36:
+                    mode = 'low'        # rest day
+                else:
+                    mode = 'normal'
+
                 for metric_type, prof_key in METRIC_TYPES_FROM_PROFILE.items():
                     base = profile[prof_key]
-                    # Vary ±20% per day for realism
-                    val = base * rng.uniform(0.8, 1.2)
+                    if metric_type in ('heart_rate', 'hrv'):
+                        # Physiological metrics have a tight natural range —
+                        # don't push them wild even on "active days".
+                        val = base * rng.uniform(0.92, 1.08)
+                    elif mode == 'high':
+                        val = base * rng.uniform(1.5, 2.4)
+                    elif mode == 'low':
+                        val = base * rng.uniform(0.30, 0.65)
+                    else:  # normal
+                        val = base * rng.uniform(0.75, 1.25)
                     metric_rows.append(HealthMetric(
                         user=user, date=d,
                         metric_type=metric_type,
