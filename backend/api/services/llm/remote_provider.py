@@ -87,6 +87,7 @@ class RemoteTAIDEProvider(LLMProvider):
         max_tokens: int,
         timeout: float | None,
         op: str,
+        json_schema: dict | None = None,
     ) -> str:
         if not self.is_configured():
             raise LLMProviderError('LLM_SERVER_URL not configured')
@@ -99,6 +100,13 @@ class RemoteTAIDEProvider(LLMProvider):
             'max_tokens': max_tokens,
             'stream': False,
         }
+        if json_schema is not None:
+            # llm_server uses lm-format-enforcer to constrain generation
+            # at the logits level — no matter how the model wants to drift
+            # into prose, every token must keep a valid JSON-matching-schema
+            # completion path open. Critical for our small 7B TAIDE which
+            # otherwise produces non-JSON ~30% of the time.
+            payload['json_schema'] = json_schema
         t0 = time.monotonic()
         status = 'ok'
         try:
@@ -212,6 +220,7 @@ class RemoteTAIDEProvider(LLMProvider):
         system: str,
         user: str,
         schema_hint: str | None = None,
+        json_schema: dict | None = None,
         temperature: float = 0.3,
         max_tokens: int = 200,
         timeout: float | None = None,
@@ -236,6 +245,7 @@ class RemoteTAIDEProvider(LLMProvider):
             max_tokens=max_tokens,
             timeout=timeout,
             op='chat_json',
+            json_schema=json_schema,
         )
         return self.parse_json_tolerant(raw)
 

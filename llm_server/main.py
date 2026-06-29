@@ -79,12 +79,22 @@ if _HAS_FASTAPI:
         temperature: float = Field(0.7, ge=0.0, le=2.0)
         max_tokens: int = Field(500, ge=1, le=4096)
         stream: bool = False
+        # Optional schema-constrained generation (lm-format-enforcer).
+        # When set, every emitted token must be one that can still complete
+        # a JSON object matching this schema. Used by the Django sentiment
+        # pipeline to guarantee parseable JSON without prompt-engineering
+        # gymnastics. RFC 8259 / JSON Schema draft-07 shape.
+        json_schema: dict | None = None
 
     class ChatJsonRequest(BaseModel):
         model: str | None = None
         system: str
         user: str
         schema_hint: str | None = None
+        # Optional concrete JSON Schema (RFC 8259 / draft-07). When set we
+        # constrain generation at the logits level so the model literally
+        # cannot emit non-JSON tokens. See engine._generate_chat_sync.
+        json_schema: dict | None = None
         temperature: float = Field(0.3, ge=0.0, le=2.0)
         max_tokens: int = Field(200, ge=1, le=2048)
 
@@ -569,6 +579,7 @@ def create_app(settings: Settings | None = None) -> 'FastAPI':
                 temperature=req.temperature,
                 max_tokens=req.max_tokens,
                 timeout_s=float(settings.request_timeout_s),
+                json_schema=req.json_schema,
             )
         except TimeoutError:
             raise HTTPException(504, 'generation timeout')
@@ -609,6 +620,7 @@ def create_app(settings: Settings | None = None) -> 'FastAPI':
                 temperature=req.temperature,
                 max_tokens=req.max_tokens,
                 timeout_s=float(settings.request_timeout_s),
+                json_schema=req.json_schema,
             )
         except TimeoutError:
             raise HTTPException(504, 'generation timeout')

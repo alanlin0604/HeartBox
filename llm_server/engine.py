@@ -228,6 +228,7 @@ class InferenceEngine:
         temperature: float,
         max_tokens: int,
         stop_event: threading.Event,
+        json_schema: dict | None = None,
     ) -> tuple[str, int, int]:
         import torch
 
@@ -256,6 +257,31 @@ class InferenceEngine:
             'pad_token_id': tokenizer.pad_token_id or tokenizer.eos_token_id,
             'stopping_criteria': self._make_stop_criteria(stop_event),
         }
+
+        # When the caller supplied a JSON schema, constrain generation to
+        # tokens that can still complete a valid JSON object matching the
+        # schema. TAIDE-LX-7B is small enough that a plain "回傳 JSON" prompt
+        # drifts into prose ~30% of the time. With lm-format-enforcer the
+        # model literally cannot emit a non-JSON token — the logits are
+        # masked at every step. Falls back silently to free generation if
+        # the package isn't installed, so the server still works during a
+        # rolling dependency update.
+        if json_schema is not None:
+            try:
+                from lmformatenforcer import JsonSchemaParser
+                from lmformatenforcer.integrations.transformers import (
+                    build_transformers_prefix_allowed_tokens_fn,
+                )
+                parser = JsonSchemaParser(json_schema)
+                gen_kwargs['prefix_allowed_tokens_fn'] = (
+                    build_transformers_prefix_allowed_tokens_fn(tokenizer, parser)
+                )
+            except ImportError:
+                logger.warning(
+                    'lm-format-enforcer not installed; ignoring json_schema and '
+                    'falling back to unconstrained generation'
+                )
+
         with torch.inference_mode():
             output_ids = model.generate(**inputs, **gen_kwargs)
 
@@ -354,6 +380,7 @@ class InferenceEngine:
         temperature: float = 0.7,
         max_tokens: int = 500,
         timeout_s: float = 60.0,
+        json_schema: dict | None = None,
     ) -> dict:
         async with self._swap_lock:
             await self.swap_to('taide')
@@ -363,7 +390,7 @@ class InferenceEngine:
                 asyncio.to_thread(
                     self._generate_chat_sync, messages,
                     temperature=temperature, max_tokens=max_tokens,
-                    stop_event=stop_event,
+                    stop_event=stop_event, json_schema=json_schema,
                 )
             )
             reply, tokens_in, tokens_out = await self._await_with_cancel(

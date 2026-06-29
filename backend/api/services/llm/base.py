@@ -72,6 +72,7 @@ class LLMProvider(abc.ABC):
         system: str,
         user: str,
         schema_hint: str | None = None,
+        json_schema: dict | None = None,
         temperature: float = 0.3,
         max_tokens: int = 200,
         timeout: float | None = None,

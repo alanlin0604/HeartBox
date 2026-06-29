@@ -24,3 +24,8 @@ uvicorn[standard]==0.46.0
 # falls back to BaseModel (no env-file support) and start.bat dies with
 # RuntimeError('API_KEY missing') despite the file existing.
 pydantic-settings==2.11.0
+# lm-format-enforcer: token-level constraint that forces model.generate()
+# to only emit tokens leading to a valid JSON-schema-matching completion.
+# Lets TAIDE-LX-7B (which drifts into prose ~30% of the time on plain
+# "回傳 JSON" prompts) reliably output structured sentiment analysis.
+lm-format-enforcer==0.10.11

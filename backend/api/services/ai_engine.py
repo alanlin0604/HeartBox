@@ -62,6 +62,30 @@ _STRESS_WORDS = {
 
 _SENTIMENT_SCHEMA_HINT = '{"sentiment_score": float (-1.0..1.0), "stress_index": int (0..10)}'
 
+# Concrete JSON Schema for sentiment analysis. Passed to llm_server, which
+# uses lm-format-enforcer to constrain generation at the logits level so
+# TAIDE physically cannot emit tokens that don't fit this shape. The few-
+# shot prompt above is still useful for *picking good values* even when
+# the format is forced — without it the model would dutifully output
+# JSON but pick arbitrary numbers.
+_SENTIMENT_JSON_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'sentiment_score': {
+            'type': 'number',
+            'minimum': -1.0,
+            'maximum': 1.0,
+        },
+        'stress_index': {
+            'type': 'integer',
+            'minimum': 0,
+            'maximum': 10,
+        },
+    },
+    'required': ['sentiment_score', 'stress_index'],
+    'additionalProperties': False,
+}
+
 
 class AIEngine:
     """Singleton AI engine for sentiment analysis + RAG feedback."""
@@ -173,6 +197,7 @@ class AIEngine:
             system=system_prompt,
             user=f'日記：「{text[:1500]}」\n輸出：',
             schema_hint=_SENTIMENT_SCHEMA_HINT,
+            json_schema=_SENTIMENT_JSON_SCHEMA,
             temperature=0.2,
             max_tokens=60,
         )
