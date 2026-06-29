@@ -80,9 +80,19 @@ export default function HabitCorrelation() {
           const positive = row.difference > 0
           const diffPrefix = positive ? '+' : ''
           const diffColor = positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+          // Plain-language summary so the user doesn't have to mentally
+          // subtract the two numbers themselves. Magnitude buckets match
+          // the analytics MIN_DIFF (0.15) / "strong" (0.30) thresholds.
+          const mag = Math.abs(row.difference)
+          const diffStr = `${diffPrefix}${row.difference.toFixed(2)}`
+          let summaryKey
+          if (mag < 0.10) summaryKey = 'habit.summary.flat'
+          else if (mag < 0.30) summaryKey = positive ? 'habit.summary.mildPositive' : 'habit.summary.mildNegative'
+          else summaryKey = positive ? 'habit.summary.strongPositive' : 'habit.summary.strongNegative'
+          const summary = t(summaryKey, { name: row.name, diff: diffStr })
           return (
             <div key={row.name} className="rounded-xl border border-[var(--card-border)] p-4 bg-[var(--surface-secondary)]">
-              <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="min-w-0">
                   <div className="font-semibold text-[var(--text-primary)] truncate">{row.name}</div>
                   <div className="text-xs text-[var(--text-secondary)] mt-0.5">
@@ -90,9 +100,12 @@ export default function HabitCorrelation() {
                   </div>
                 </div>
                 <div className={`text-sm font-bold whitespace-nowrap ${diffColor}`}>
-                  {diffPrefix}{row.difference.toFixed(2)}
+                  {diffStr}
                 </div>
               </div>
+              <p className="text-sm leading-relaxed mb-3 text-[var(--text-primary)]">
+                {summary}
+              </p>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="rounded-lg p-3 bg-emerald-500/10 border border-emerald-500/20">
                   <div className="text-xs text-[var(--text-secondary)] mb-1">
