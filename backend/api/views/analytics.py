@@ -265,18 +265,21 @@ class MyProgressView(APIView):
         baseline = window_stats(baseline_start, baseline_end)
         current = window_stats(current_start, current_end)
 
-        # Deltas. Sign convention: positive = improvement.
-        # sentiment ↑ is good, stress ↓ is good — we invert stress so a
-        # positive delta always means "better".
-        def safe_delta(curr, base, *, invert=False):
+        # Raw arithmetic deltas. Earlier version inverted stress so a
+        # positive number always meant "improvement", but the inversion
+        # confused users who saw stress jump 4→9 displayed as "↓5.00"
+        # (mathematically the stress went UP by 5). Now we return the
+        # plain (current - baseline) for every metric; the frontend
+        # knows which metrics are "lower is better" and colours
+        # accordingly.
+        def safe_delta(curr, base):
             if curr is None or base is None:
                 return None
-            d = curr - base
-            return round(-d if invert else d, 3)
+            return round(curr - base, 3)
 
         deltas = {
             'avg_sentiment': safe_delta(current['avg_sentiment'], baseline['avg_sentiment']),
-            'avg_stress':    safe_delta(current['avg_stress'],    baseline['avg_stress'], invert=True),
+            'avg_stress':    safe_delta(current['avg_stress'],    baseline['avg_stress']),
             'journal_days':  safe_delta(current['journal_days'],  baseline['journal_days']),
             'avg_sleep_hours': safe_delta(current['avg_sleep_hours'], baseline['avg_sleep_hours']),
             'habit_completion': safe_delta(current['habit_completion'], baseline['habit_completion']),

@@ -52,12 +52,15 @@ export default function ProgressCompareCard() {
     )
   }
 
+  // lowerIsBetter: true means a NEGATIVE delta is an improvement
+  // (stress goes from 9 to 4 = -5 = good = green). All others: positive
+  // delta = improvement.
   const METRIC_DEFS = [
-    { key: 'avg_sentiment',    label: t('progress.metric.avgSentiment'),    fmt: (v) => v?.toFixed(2),  betterWhenPositive: true },
-    { key: 'avg_stress',       label: t('progress.metric.avgStress'),       fmt: (v) => v?.toFixed(2),  betterWhenPositive: false /* raw value: lower is better — but backend already inverted delta */ },
-    { key: 'journal_days',     label: t('progress.metric.journalDays'),     fmt: (v) => `${v}/7`,       betterWhenPositive: true },
-    { key: 'avg_sleep_hours',  label: t('progress.metric.sleepHours'),      fmt: (v) => `${v?.toFixed(1)}h`, betterWhenPositive: true },
-    { key: 'habit_completion', label: t('progress.metric.habitCompletion'), fmt: (v) => `${Math.round(v * 100)}%`, betterWhenPositive: true },
+    { key: 'avg_sentiment',    label: t('progress.metric.avgSentiment'),    fmt: (v) => v?.toFixed(2),  lowerIsBetter: false },
+    { key: 'avg_stress',       label: t('progress.metric.avgStress'),       fmt: (v) => v?.toFixed(2),  lowerIsBetter: true },
+    { key: 'journal_days',     label: t('progress.metric.journalDays'),     fmt: (v) => `${v}/7`,       lowerIsBetter: false },
+    { key: 'avg_sleep_hours',  label: t('progress.metric.sleepHours'),      fmt: (v) => `${v?.toFixed(1)}h`, lowerIsBetter: false },
+    { key: 'habit_completion', label: t('progress.metric.habitCompletion'), fmt: (v) => `${Math.round(v * 100)}%`, lowerIsBetter: false },
   ]
 
   return (
@@ -104,7 +107,7 @@ export default function ProgressCompareCard() {
                     {delta === null || delta === undefined ? (
                       <span className="opacity-30">—</span>
                     ) : (
-                      <DeltaPill delta={delta} />
+                      <DeltaPill delta={delta} lowerIsBetter={m.lowerIsBetter} />
                     )}
                   </td>
                 </tr>
@@ -119,20 +122,24 @@ export default function ProgressCompareCard() {
   )
 }
 
-function DeltaPill({ delta }) {
+function DeltaPill({ delta, lowerIsBetter = false }) {
   if (Math.abs(delta) < 0.005) {
     return <span className="text-xs opacity-50">≈</span>
   }
-  const improved = delta > 0
+  // Arrow shows DIRECTION (up/down). Color shows IMPACT (good/bad).
+  // For stress (lowerIsBetter=true): up arrow = bad = red, down = good = green.
+  // For everything else: up = good = green, down = bad = red.
+  const direction = delta > 0 ? 'up' : 'down'
+  const isImprovement = lowerIsBetter ? delta < 0 : delta > 0
   return (
     <span
       className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium ${
-        improved
+        isImprovement
           ? 'bg-green-500/15 text-green-500'
           : 'bg-red-500/15 text-red-400'
       }`}
     >
-      {improved ? '↑' : '↓'}
+      {direction === 'up' ? '↑' : '↓'}
       {Math.abs(delta).toFixed(2)}
     </span>
   )

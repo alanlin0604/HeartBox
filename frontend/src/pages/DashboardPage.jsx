@@ -20,6 +20,7 @@ import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, L
 const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
 const LazyScatterChart = lazy(() => import('../components/charts/LazyScatterChart'))
 const BucketedMoodBar = lazy(() => import('../components/charts/BucketedMoodBar'))
+const InsightHighlight = lazy(() => import('../components/charts/InsightHighlight'))
 
 // Bucket definitions per X-axis metric. Boundaries chosen for human readability
 // (sleep ≥7h is the public-health benchmark; steps 8000+ is moderate activity;
@@ -511,25 +512,21 @@ export default function DashboardPage() {
           onAction={() => navigate('/settings', { state: { tab: 'health' } })}
         />
       )}
-      {/* Sleep-Mood Correlation — bucketed bars, not scatter. The raw scatter
-          + Pearson r + p-value layout was unreadable for non-statisticians
-          (user feedback: "看不懂"). Bucketed bars give a 5-second readable
-          answer: "睡 7h+ 時心情比 <6h 時高 X 分". Pearson is kept on the
-          card as small subtext for users who care about statistical detail. */}
+      {/* Sleep-Mood Correlation — text-card highlight, no chart.
+          Iteration 3: started as scatter + Pearson r/p (incomprehensible),
+          moved to bucketed bar (still required reading numbers off bars),
+          now showing just the conclusion as two highlighted boxes plus a
+          plain-Chinese interpretation. The data is in the API for power
+          users; the dashboard's job is to surface the takeaway. */}
       {sleepCorrelation.scatter_data?.length > 0 && (
         <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-1">{t('dashboard.sleepCorrelation')}</h2>
-          <p className="text-xs opacity-50 mb-4">
-            {t('dashboard.bucketHint', { n: sleepCorrelation.sample_size })}
-          </p>
+          <h2 className="text-lg font-semibold mb-3">{t('dashboard.sleepCorrelation')}</h2>
           <Suspense fallback={<ChartSkeleton />}>
-            <BucketedMoodBar
+            <InsightHighlight
               scatterData={sleepCorrelation.scatter_data}
               buckets={SLEEP_BUCKETS}
               xKey="sleep_hours"
-              gridStroke={gridStroke}
-              axisStroke={axisStroke}
-              tooltipStyle={tooltipStyle}
+              metricName={t('dashboard.metric.sleep')}
             />
           </Suspense>
         </div>
@@ -552,18 +549,12 @@ export default function DashboardPage() {
                 <h3 className="text-md font-semibold mb-2">
                   {t('dashboard.healthMoodCardTitle', { metric: label })}
                 </h3>
-                <p className="text-xs opacity-50 mb-4">
-                  {t('dashboard.bucketHint', { n: corr.sample_size || 0 })}
-                </p>
                 <Suspense fallback={<ChartSkeleton />}>
-                  <BucketedMoodBar
+                  <InsightHighlight
                     scatterData={corr.scatter_data}
                     buckets={HEALTH_BUCKETS[metricType] || []}
                     xKey="value"
-                    height={200}
-                    gridStroke={gridStroke}
-                    axisStroke={axisStroke}
-                    tooltipStyle={tooltipStyle}
+                    metricName={label}
                   />
                 </Suspense>
               </div>
