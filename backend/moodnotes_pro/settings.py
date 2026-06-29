@@ -207,7 +207,14 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.UserRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'user': os.getenv('THROTTLE_USER', '200/hour'),
+        # The journal home page alone fires ~8 GET requests on first
+        # navigation (notes, sleep, daily-prompt, tags, analytics, alerts,
+        # notifications, personal-suggestion). Add WebSocket reconnects,
+        # tab switches, and an active session can blow past 200/hour in
+        # ~25 navigations. Raised default to 2000/hour (~33/min average,
+        # plenty of burst headroom for normal use). Set THROTTLE_USER in
+        # Cloud Run env to override per environment.
+        'user': os.getenv('THROTTLE_USER', '2000/hour'),
         'login': os.getenv('THROTTLE_LOGIN', '30/hour'),
         'login_per_username': os.getenv('THROTTLE_LOGIN_PER_USERNAME', '10/hour'),
         'register': os.getenv('THROTTLE_REGISTER', '5/hour'),
