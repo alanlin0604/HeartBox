@@ -1,6 +1,6 @@
 {
   "nav.journal": "日記",
-  "nav.dashboard": "心情週報 / 月報",
+  "nav.dashboard": "心情分析與視覺化",
   "nav.community": "匿名社群",
   "nav.sleepAnalysis": "睡眠分析",
   "nav.dataImport": "資料匯入",
@@ -1516,7 +1516,7 @@
   "onboarding.aiHint": "在導覽列開啟「AI 聊天」即可對話。",
   "onboarding.dashboardTitle": "數據視覺化",
   "onboarding.dashboardDesc": "情緒趨勢圖、壓力雷達、年度像素圖、AI 週報 — 一眼看清楚你的心理狀態。",
-  "onboarding.dashboardHint": "在導覽列找「心情週報 / 月報」查看長期趨勢。",
+  "onboarding.dashboardHint": "在導覽列找「心情分析與視覺化」查看長期趨勢。",
   "onboarding.healthTitle": "健康數據整合（選用）",
   "onboarding.healthDesc": "連結手機 Health Connect 後，自動同步步數、心率、睡眠等，讓 AI 分析更精準。",
   "onboarding.healthHint": "到「設定 → 健康數據」按「連結」依照畫面步驟設定（限手機 App）。",

@@ -355,7 +355,7 @@ export default function DashboardPage() {
       >
       {/* Weather Correlation */}
       <Card padding="lg">
-        <h2 className="text-2xl font-bold text-[var(--text-primary)] mb-4">{t('dashboard.weatherCorrelation')}</h2>
+        <h2 className="text-lg font-semibold mb-4">{t('dashboard.weatherCorrelation')}</h2>
         {(correlation.mood_by_temperature?.length || 0) >= 2 ? (
           <>
             {/* Headline: which temperature range correlates with the
@@ -546,9 +546,13 @@ export default function DashboardPage() {
             const label = t(meta.key)
             return (
               <div key={metricType} className="glass p-6">
-                <h3 className="text-md font-semibold mb-2">
+                {/* Per-metric correlation card title — unify with the
+                    other section h2's so the dashboard reads as one
+                    consistent visual hierarchy (was text-md, now text-lg
+                    font-semibold like 步數 ↔ 心情 / HRV ↔ 心情 etc.). */}
+                <h2 className="text-lg font-semibold mb-2">
                   {t('dashboard.healthMoodCardTitle', { metric: label })}
-                </h3>
+                </h2>
                 <Suspense fallback={<ChartSkeleton />}>
                   <InsightHighlight
                     scatterData={corr.scatter_data}
