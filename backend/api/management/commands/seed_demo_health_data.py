@@ -202,10 +202,27 @@ class Command(BaseCommand):
 
                 for metric_type, prof_key in METRIC_TYPES_FROM_PROFILE.items():
                     base = profile[prof_key]
-                    if metric_type in ('heart_rate', 'hrv'):
-                        # Physiological metrics have a tight natural range —
-                        # don't push them wild even on "active days".
-                        val = base * rng.uniform(0.92, 1.08)
+                    if metric_type == 'heart_rate':
+                        # Heart rate moves WITH activity — higher on active
+                        # days, lower at rest. Tied to mode so HR crosses
+                        # bucket boundaries (<60 / 60-80 / >=80) and the
+                        # ↔ mood insight has enough cross-bucket samples.
+                        if mode == 'high':
+                            val = base * rng.uniform(1.10, 1.28)
+                        elif mode == 'low':
+                            val = base * rng.uniform(0.82, 0.94)
+                        else:
+                            val = base * rng.uniform(0.93, 1.07)
+                    elif metric_type == 'hrv':
+                        # HRV moves OPPOSITE to strain — higher when relaxed,
+                        # lower when stressed/active. Same bucket-crossing
+                        # purpose as HR.
+                        if mode == 'high':
+                            val = base * rng.uniform(0.72, 0.90)
+                        elif mode == 'low':
+                            val = base * rng.uniform(1.10, 1.35)
+                        else:
+                            val = base * rng.uniform(0.92, 1.08)
                     elif mode == 'high':
                         val = base * rng.uniform(1.5, 2.4)
                     elif mode == 'low':
