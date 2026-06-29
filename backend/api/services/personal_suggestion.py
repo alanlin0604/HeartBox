@@ -287,12 +287,19 @@ def generate_paragraph_zh(
         # the widget look broken to the user. Reject any paragraph that:
         #   (a) mentions a month OTHER than today's month, OR
         #   (b) uses forbidden relative time words (明天/昨天/上週/下週/即將/月初/月中/月底).
-        if _has_date_hallucination(text, today.month):
+        if _has_date_hallucination(text, today.month, today.weekday()):
             logger.warning(
                 'personal_suggestion date_hallucination_reject text=%r',
                 text[:120],
             )
             return None
+        # Drop the model's repeated date prefix. The widget header already
+        # shows "6月30日 · 雷雨 · 25°/32°C" right above the paragraph, so a
+        # paragraph that starts "今天是 2026 年 6 月 30 日，週二。" is pure
+        # duplication. Strip the leading "今天是 X 年 X 月 X 日（週N）。" /
+        # "X 月 X 日（週N），..." patterns so the suggestion lands on the
+        # first content sentence.
+        text = _strip_date_prefix(text)
         return text
     except LLMProviderError as e:
         logger.warning('personal_suggestion llm_call failed: %s', e)
@@ -307,27 +314,32 @@ _FORBIDDEN_TIME_WORDS = (
     '明天', '後天', '昨天', '前天',
     '上週', '下週', '上周', '下周',
     '即將進入', '即將迎來', '即將到來', '即將到', '即將來臨',
+    '邁到週末', '邁到周末', '邁向週末', '邁向周末',
     '月初', '月中', '月底',
+    '最後一周', '最後一週', '本周末', '本週末',
 )
 
 
-def _has_date_hallucination(text: str, today_month: int) -> bool:
+def _has_date_hallucination(text: str, today_month: int, today_weekday: int = -1) -> bool:
     """Return True if the paragraph likely hallucinated a date that isn't today.
 
-    Two checks:
-      1. Any month NUMBER other than today's appears (matches '4 月' / '4月'
-         / 'X 月份'). Today's month is allowed since legitimate suggestions
-         can naturally mention the current month name.
-      2. Any forbidden relative-time word from _FORBIDDEN_TIME_WORDS appears.
+    Three checks:
+      1. Any forbidden relative-time word from _FORBIDDEN_TIME_WORDS appears.
+      2. Any month NUMBER other than today's appears (matches '4 月' / '4月').
+      3. Weekday/weekend mismatch: today is a weekday (Mon-Fri) but the text
+         calls today the weekend, OR today IS the weekend but the text calls
+         today a weekday. Only triggers when the word appears within ~12
+         chars of "今天" / "今日" so we don't flag legitimate historical
+         comparisons like "你週末心情通常較好".
     """
     if not text:
         return False
-    # Check (2) first — cheap and high-signal
+    # Check (1): forbidden relative-time words anywhere
     for w in _FORBIDDEN_TIME_WORDS:
         if w in text:
             return True
-    # Check (1): scan for `N 月` / `N月` references. Allow today's month.
     import re
+    # Check (2): wrong-month numerals
     for m in re.finditer(r'(\d{1,2})\s*月', text):
         try:
             mo = int(m.group(1))
@@ -335,7 +347,48 @@ def _has_date_hallucination(text: str, today_month: int) -> bool:
             continue
         if 1 <= mo <= 12 and mo != today_month:
             return True
+    # Check (3): weekday/weekend mismatch *near* "今天"/"今日"
+    if today_weekday >= 0:
+        is_weekend = today_weekday >= 5  # 5=Sat, 6=Sun
+        opposite_word = '平日' if is_weekend else '週末'
+        # ~12 chars window before or after "今天" / "今日"
+        for m in re.finditer(r'今[天日]', text):
+            start = max(0, m.start() - 12)
+            end = min(len(text), m.end() + 12)
+            window = text[start:end]
+            if opposite_word in window:
+                return True
     return False
+
+
+def _strip_date_prefix(text: str) -> str:
+    """Remove the model's tendency to start with "今天是 X 年 X 月 X 日（週N）。"
+    or similar date-restating openers. The widget already shows the date right
+    above the paragraph; repeating it eats 15-30 of our 60-120 char budget.
+    """
+    if not text:
+        return text
+    import re
+    # Patterns observed in real TAIDE outputs:
+    #   "今天是 2026 年 6 月 30 日，週二。雖然..."
+    #   "今天是 2026 年 6 月 30 日（週二），..."
+    #   "6 月 30 日（週二），..."
+    #   "今天 6 月 30 日 雷雨，..."
+    # 週N marker after 日 is optional and may be wrapped in parens OR preceded
+    # by a comma ("日，週二") — both shapes appear in real TAIDE outputs.
+    _DOW = r'(?:\s*[，,]?\s*[（(]?週[一二三四五六日]?[）)]?)?'
+    _TAIL = r'\s*[，,。.]?\s*'
+    patterns = (
+        r'^\s*今天是?\s*\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日' + _DOW + _TAIL,
+        r'^\s*\d{1,2}\s*月\s*\d{1,2}\s*日' + _DOW + _TAIL,
+        r'^\s*今天是?\s*\d{1,2}\s*月\s*\d{1,2}\s*日' + _DOW + _TAIL,
+    )
+    for pat in patterns:
+        new = re.sub(pat, '', text, count=1)
+        if new != text:
+            text = new
+            break
+    return text.lstrip(' \n，。、；')
 
 
 def _strip_duplicate_paragraphs(text: str) -> str:

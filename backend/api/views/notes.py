@@ -521,6 +521,19 @@ class NoteAttachmentUploadView(APIView):
         if not is_webp and not any(header.startswith(sig) for sig, _ in self.IMAGE_SIGNATURES):
             return error_response('invalid_file_content', 'File content does not match an image format.')
 
+        # Force the upload's content_type to a real image MIME so GCS persists
+        # ``Content-Type: image/webp`` (etc.) instead of the default
+        # ``application/octet-stream``. Without this, browsers refused to
+        # render the uploaded image — the user saw a broken-image icon next
+        # to the filename. mime_type above already prefers file.content_type;
+        # only override when we can derive a stronger image/* guess from the
+        # extension (e.g. user agent sent ``application/octet-stream``).
+        guessed = mimetypes.guess_type(file.name)[0]
+        if guessed and guessed.startswith('image/'):
+            file.content_type = guessed
+        elif is_webp:
+            file.content_type = 'image/webp'
+
         attachment = NoteAttachment.objects.create(
             note=note,
             file=file,

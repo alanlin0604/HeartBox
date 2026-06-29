@@ -186,6 +186,18 @@ _HIRAGANA_KATAKANA = re.compile(r'[぀-ヿ]')
 _CJK = re.compile(r'[一-鿿]')
 _ASCII_ALPHA = re.compile(r'[A-Za-z]')
 
+# Tiptap-style HTML wrappers + URLs that are NOT part of the user's writing.
+# Without stripping these, a 13-char zh-TW note in <p style="text-align: left;">
+# with an <img src="https://storage.googleapis.com/.../...webp"> attachment
+# counts ~80 ASCII letters vs 13 CJK chars → mis-routes to 'en' and the user
+# sees the US 988 hotline on a Taiwan note. Strip markup first, then count.
+_HTML_TAG_RE = re.compile(r'<[^>]+>')
+# Stop at quotes / angle brackets so we don't accidentally swallow the
+# closing ``">`` of an ``<img src="…">`` tag. Without the bracket guard
+# the HTML strip then fails to remove the tag remnant and the ``img src``
+# letters dominate the locale count.
+_URL_RE = re.compile(r'https?://[^\s"\'<>]+')
+
 # Hotline preamble per locale. Prepended verbatim by callers when HIGH.
 HOTLINE_MESSAGE: dict[Locale, str] = {
     'zh-TW': (
@@ -330,9 +342,18 @@ class CrisisGuard:
         # Search-first behavior misrouted code-switching text: one CJK char in
         # an otherwise-English sentence was routing US-style crisis content to
         # the Taiwan hotline.
-        h = len(_HIRAGANA_KATAKANA.findall(text))
-        c = len(_CJK.findall(text))
-        a = len(_ASCII_ALPHA.findall(text))
+        #
+        # Strip HTML tags + URLs first — Tiptap notes wrap zh-TW text in
+        # English markup (``<p style="text-align: left;">…</p>`` plus
+        # ``<img src="https://…">``), inflating the ASCII count past the
+        # CJK count and routing real zh-TW notes to the US 988 hotline.
+        # Stripping is conservative: it only removes literal markup/URLs,
+        # not natural-language English the user actually typed.
+        stripped = _URL_RE.sub('', text)
+        stripped = _HTML_TAG_RE.sub('', stripped)
+        h = len(_HIRAGANA_KATAKANA.findall(stripped))
+        c = len(_CJK.findall(stripped))
+        a = len(_ASCII_ALPHA.findall(stripped))
         if h > max(c, a):
             return 'ja'
         if a > max(h, c):

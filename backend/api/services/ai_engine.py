@@ -333,7 +333,7 @@ class AIEngine:
                 system=system_prompt,
                 user=f'日記內容：\n「{text[:800]}」',
                 temperature=0.8,
-                max_tokens=300,
+                max_tokens=500,
             )
             # Consumer-side scrub: this output is persisted to MoodNote.ai_feedback
             # and rendered in the journal detail card. Even though remote_provider
@@ -398,7 +398,7 @@ class AIEngine:
                 system=system_prompt,
                 user=f'使用者日記：「{text[:500]}」',
                 temperature=0.7,
-                max_tokens=400,
+                max_tokens=500,
             )
             reply = scrub_llm_output(reply)
             # Strip KB citation markers (e.g. ``[參考1]``) that the RAG prompt
@@ -535,7 +535,7 @@ class AIEngine:
                 image_urls=image_urls[:3],
                 response_format='text',
                 temperature=0.8,
-                max_tokens=300,
+                max_tokens=500,
                 max_images=3,
                 image_detail='low',
             )
