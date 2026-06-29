@@ -2,7 +2,7 @@
 # scripts/bump-base-image.ps1 (sha picked from docker hub). The bare
 # `python:3.12-slim` tag drifts and can introduce unrelated CVEs
 # between builds.
-FROM python:3.12-slim@sha256:751b9d9b0c4b04acf30b07cccd1a86d83a59f1aea15b71fdd5d0ad4e76d72ad7 AS builder
+FROM python:3.12-slim@sha256:423ed6ab25b1921a477529254bfeeabf5855151dc2c3141699a1bfc852199fbf AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # scripts/bump-base-image.ps1 (sha picked from docker hub). The bare
 # `python:3.12-slim` tag drifts and can introduce unrelated CVEs
 # between builds.
-FROM python:3.12-slim@sha256:751b9d9b0c4b04acf30b07cccd1a86d83a59f1aea15b71fdd5d0ad4e76d72ad7
+FROM python:3.12-slim@sha256:423ed6ab25b1921a477529254bfeeabf5855151dc2c3141699a1bfc852199fbf
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
