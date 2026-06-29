@@ -265,8 +265,8 @@ def generate_paragraph_zh(
                 '請寫一段給使用者的暖心建議（只一段，60-120 字）。'
             ),
             temperature=0.75,
-            max_tokens=150,
-            timeout=20,
+            max_tokens=110,
+            timeout=60,
         )
         text = (text or '').strip()
         text = _strip_duplicate_paragraphs(text)
@@ -282,30 +282,45 @@ def generate_paragraph_zh(
 
 
 def _strip_duplicate_paragraphs(text: str) -> str:
-    """TAIDE occasionally generates two near-identical paragraphs both
-    starting with '親愛的' or duplicate intros. Keep only the first one.
+    """Normalise TAIDE output: drop duplicate paragraphs AND strip the
+    forbidden '親愛的XX，' / '各位XX，' / '使用者XX，' leading greeting.
 
-    Strategies (in order):
+    Strategies (composed in order; later ones see the trimmed result):
       1. If text has multiple paragraphs (split on blank line), keep the
          first non-trivial one.
       2. If the same intro word ('親愛的', '今天') appears more than once
-         in close proximity (≤200 chars apart), cut at the second occurrence.
+         in close proximity, cut at the second occurrence.
+      3. Even a SINGLE leading '親愛的好友，' / '各位讀者，' / '使用者，'
+         gets stripped — the system prompt forbids these greetings, but
+         TAIDE-LX-7B emits them anyway ~90% of the time. We keep the rest
+         of the sentence intact so the suggestion starts on the real content.
     """
     if not text:
         return text
 
-    # Strategy 1: split on blank lines
     import re
+    # Strategy 1: keep only the first non-trivial paragraph
     parts = re.split(r'\n\s*\n', text)
     parts = [p.strip() for p in parts if len(p.strip()) >= 20]
     if len(parts) > 1:
-        return parts[0]
+        text = parts[0]
 
     # Strategy 2: detect repeated greeting patterns
     for pattern in (r'親愛的[好朋友者使用]', r'^今天在'):
         matches = list(re.finditer(pattern, text, re.MULTILINE))
         if len(matches) > 1:
-            # Cut just before the second occurrence
-            return text[:matches[1].start()].rstrip(' \n，。、；')
+            text = text[:matches[1].start()].rstrip(' \n，。、；')
+            break
+
+    # Strategy 3: strip a SINGLE forbidden leading greeting (system prompt
+    # says no '親愛的' / '各位' / '使用者' opener, but TAIDE still emits one).
+    # Bound the post-keyword run at 0-8 non-punct chars so we don't eat into
+    # real content, and require a trailing comma/colon so we never strip a
+    # word that legitimately starts a sentence.
+    text = re.sub(
+        r'^\s*(?:親愛的|各位|使用者)[^，,。.\n！!？?]{0,8}[，,：:]\s*',
+        '',
+        text,
+    )
 
     return text
