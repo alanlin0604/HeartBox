@@ -73,8 +73,12 @@ _SENTIMENT_JSON_SCHEMA = {
     'properties': {
         'sentiment_score': {
             'type': 'number',
-            'minimum': -1.0,
-            'maximum': 1.0,
+            # Bounds tightened from ±1.0 to ±0.95 so lm-format-enforcer
+            # physically can't let TAIDE anchor on the schema extremes.
+            # We saw 96% of test2's notes get exactly +1.0 because the 7B
+            # model picks the safest positive value when constrained.
+            'minimum': -0.95,
+            'maximum': 0.95,
         },
         'stress_index': {
             'type': 'integer',
@@ -180,18 +184,29 @@ class AIEngine:
             '你是一位心理健康分析專家。閱讀使用者的日記內容，輸出 JSON 物件。\n\n'
             '輸出格式：{"sentiment_score": <-1.0到1.0的浮點數>, '
             '"stress_index": <0到10的整數>}\n\n'
-            '規則：\n'
-            '- sentiment_score：-1.0 是極度負面，0 是中性，1.0 是極度正面。\n'
+            '評分規則（重要）：\n'
+            '- sentiment_score 使用細微的小數值，**避免使用 ±1.0 等極端值**：\n'
+            '  • +0.85～+0.95：極度興奮、人生最重要的時刻（如人生轉折、極端感動）\n'
+            '  • +0.55～+0.80：明顯開心、有成就感、被肯定的日子\n'
+            '  • +0.25～+0.50：輕微正向、平和愉悅、小確幸\n'
+            '  • -0.10～+0.20：中性、平淡、無特別感受\n'
+            '  • -0.25～-0.50：輕微負面、有點累、有點煩躁\n'
+            '  • -0.55～-0.80：明顯低落、壓力大、失望沮喪\n'
+            '  • -0.85～-0.95：極度痛苦、絕望、嚴重情緒困擾\n'
             '- stress_index：0 是平靜，5 是中等壓力，10 是極度壓力。\n'
             '- 注意轉折詞（雖然、但是、還算）— "雖然累但有成就感" 整體是正面的。\n'
             '- 嚴格遵守：只輸出一個 JSON 物件，不要解釋、不要前言、不要 markdown 框。\n\n'
-            '範例：\n'
+            '範例（注意小數值的多樣性）：\n'
             '日記：「今天工作壓力很大很沮喪」\n'
-            '輸出：{"sentiment_score": -0.7, "stress_index": 8}\n\n'
+            '輸出：{"sentiment_score": -0.65, "stress_index": 8}\n\n'
             '日記：「今天去爬山，雖然腿很痠但風景超棒」\n'
-            '輸出：{"sentiment_score": 0.6, "stress_index": 2}\n\n'
+            '輸出：{"sentiment_score": 0.55, "stress_index": 2}\n\n'
             '日記：「一般般的一天，吃了外送就睡了」\n'
-            '輸出：{"sentiment_score": 0.0, "stress_index": 3}'
+            '輸出：{"sentiment_score": 0.05, "stress_index": 3}\n\n'
+            '日記：「今天的工作比預期順利，多出來的時間我去書店逛了一下」\n'
+            '輸出：{"sentiment_score": 0.45, "stress_index": 2}\n\n'
+            '日記：「跟對方又吵了，這次是為了一件超小的事」\n'
+            '輸出：{"sentiment_score": -0.45, "stress_index": 6}'
         )
         return provider.chat_json(
             system=system_prompt,
