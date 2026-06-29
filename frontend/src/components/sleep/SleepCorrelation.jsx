@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts'
 import { useTheme } from '../../context/ThemeContext'
 import { useLang } from '../../context/LanguageContext'
 import { Card } from '../ui'
@@ -70,40 +70,12 @@ export default function SleepCorrelation({ data }) {
     <div className="space-y-6">
       {moodData.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">{t('sleep.moodCorrelation')}</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={moodData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
-              <XAxis
-                dataKey="name"
-                stroke={axisStroke}
-                tick={{ fill: axisStroke }}
-                style={{ fontSize: '12px' }}
-              />
-              <YAxis
-                stroke={axisStroke}
-                tick={{ fill: axisStroke }}
-                domain={[0, 10]}
-              />
-              <Tooltip
-                contentStyle={tooltipStyle}
-                formatter={(value) => [`${value.toFixed(1)} / 10`, t('sleep.avgScore')]}
-              />
-              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                {moodData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getBarColor(entry.value, index)} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
-
-      {stressData.length > 0 && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">{t('sleep.stressCorrelation')}</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={stressData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+          <h3 className="text-lg font-semibold mb-1">{t('sleep.moodCorrelation')}</h3>
+          <p className="text-sm text-[var(--text-secondary)] mb-4">
+            {t('sleep.moodCorrelationHint')}
+          </p>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={moodData} margin={{ top: 24, right: 30, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
               <XAxis
                 dataKey="name"
@@ -115,15 +87,68 @@ export default function SleepCorrelation({ data }) {
                 stroke={axisStroke}
                 tick={{ fill: axisStroke }}
                 domain={[-1, 1]}
+                ticks={[-1, -0.5, 0, 0.5, 1]}
               />
               <Tooltip
                 contentStyle={tooltipStyle}
-                formatter={(value) => [`${value.toFixed(2)}`, t('sleep.correlation')]}
+                formatter={(value) => [`${value.toFixed(2)}`, t('sleep.avgScore')]}
               />
               <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                {stressData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getBarColor(entry.value, index)} />
-                ))}
+                {moodData.map((entry, index) => {
+                  // Green if positive (better mood), red if negative.
+                  const fill = entry.value >= 0 ? '#10b981' : '#e11d48'
+                  return <Cell key={`cell-${index}`} fill={fill} />
+                })}
+                <LabelList
+                  dataKey="value"
+                  position="top"
+                  formatter={(v) => v.toFixed(2)}
+                  style={{ fill: axisStroke, fontSize: '13px', fontWeight: 600 }}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
+      {stressData.length > 0 && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-1">{t('sleep.stressCorrelation')}</h3>
+          <p className="text-sm text-[var(--text-secondary)] mb-4">
+            {t('sleep.stressCorrelationHint')}
+          </p>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={stressData} margin={{ top: 24, right: 30, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+              <XAxis
+                dataKey="name"
+                stroke={axisStroke}
+                tick={{ fill: axisStroke }}
+                style={{ fontSize: '12px' }}
+              />
+              <YAxis
+                stroke={axisStroke}
+                tick={{ fill: axisStroke }}
+                domain={[0, 10]}
+                ticks={[0, 2.5, 5, 7.5, 10]}
+              />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(value) => [`${value.toFixed(1)} / 10`, t('sleep.avgStress')]}
+              />
+              <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                {stressData.map((entry, index) => {
+                  // Red for higher stress (entry index 1 = insufficient sleep);
+                  // green for lower stress (entry index 0 = sufficient sleep).
+                  const fill = entry.value <= 4 ? '#10b981' : entry.value <= 6.5 ? '#f59e0b' : '#e11d48'
+                  return <Cell key={`cell-${index}`} fill={fill} />
+                })}
+                <LabelList
+                  dataKey="value"
+                  position="top"
+                  formatter={(v) => `${v.toFixed(1)} / 10`}
+                  style={{ fill: axisStroke, fontSize: '13px', fontWeight: 600 }}
+                />
               </Bar>
             </BarChart>
           </ResponsiveContainer>

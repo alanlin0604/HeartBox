@@ -172,8 +172,13 @@ export default function SleepAnalysisPage() {
             <img src="/icons/sleep-hours.svg" alt="" aria-hidden="true" className="w-12 h-12 object-contain" />
           </div>
           {stats.sleep_debt != null && (
-            <p className={`text-sm mt-2 ${stats.sleep_debt >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {stats.sleep_debt >= 0 ? '↑' : '↓'} {Math.abs(stats.sleep_debt).toFixed(1)}h {t('sleep.debtTotal')}
+            <p
+              className={`text-sm mt-2 ${stats.sleep_debt >= 0 ? 'text-green-600' : 'text-red-600'}`}
+              title={t('sleep.debtExplain')}
+            >
+              {stats.sleep_debt >= 0
+                ? `↑ ${Math.abs(stats.sleep_debt).toFixed(1)}h ${t('sleep.surplusTotal')}`
+                : `↓ ${Math.abs(stats.sleep_debt).toFixed(1)}h ${t('sleep.debtTotal')}`}
             </p>
           )}
         </Card>
@@ -181,7 +186,10 @@ export default function SleepAnalysisPage() {
         <Card className="p-6 bg-gradient-to-br from-rose-500/10 to-rose-600/10 border-rose-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-[var(--text-secondary)] mb-1">
+              <p
+                className="text-sm text-[var(--text-secondary)] mb-1"
+                title={t('sleep.qualityScoreExplain')}
+              >
                 {t('sleep.avgQuality')}
               </p>
               <p className="text-3xl font-bold text-rose-600 dark:text-rose-400">
