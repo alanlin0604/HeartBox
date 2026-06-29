@@ -13,7 +13,7 @@
 
 ```mermaid
 flowchart TB
-    User[使用者<br/>瀏覽器 / iOS App]
+    User[使用者<br/>瀏覽器 / Android App]
 
     subgraph CF[Cloudflare 邊緣]
         Pages[Cloudflare Pages<br/>前端 React]
@@ -56,7 +56,7 @@ flowchart TB
 
 ```
         ┌─────────────────┐
-        │ 使用者 (Web/iOS)│
+        │ 使用者(Web/Android)│
         └────────┬────────┘
                  │ HTTPS
         ┌────────▼────────────────┐
@@ -332,7 +332,7 @@ flowchart TD
 ┌─────────────────────────────────────────────────────────┐
 │                       前端                              │
 │  React 18 + Vite + Tailwind 4 + Tiptap + Recharts      │
-│  Capacitor (iOS App) + PWA Service Worker              │
+│  Capacitor (Android App) + PWA Service Worker          │
 └─────────────────────────────────────────────────────────┘
                         ↓
 ┌─────────────────────────────────────────────────────────┐

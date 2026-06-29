@@ -14,7 +14,7 @@
 
 **它是什麼**：
 - 一個結合 AI 情緒分析、長期心情統計、個人化洞察的心理日記 App
-- 網頁版（heartbox.tw）+ iOS App 雙端
+- 網頁版（heartbox.tw）+ Android App 雙端
 - 使用者寫日記 → AI 自動分析情緒 → 長期累積後給予個人化建議
 
 **最大特色**：
@@ -46,7 +46,7 @@
 這個專題的「全貌」— 評審看一眼就知道我做了哪些事。
 
 **圖中要有的元素**：
-- 使用者（瀏覽器 / iOS App）在最上方
+- 使用者（瀏覽器 / Android App）在最上方
 - Cloudflare 邊緣（Pages 前端 CDN + Tunnel）
 - Google Cloud Platform（Cloud Run 後端 + Cloud Storage 圖片）
 - Neon Postgres 資料庫（加密儲存）
@@ -187,7 +187,7 @@
 
 **第 1 層 前端**：
 - React 18 + Vite + Tailwind 4 + Tiptap + Recharts
-- Capacitor (iOS App) + PWA Service Worker
+- Capacitor (Android App) + PWA Service Worker
 
 **第 2 層 後端**：
 - Django 5 + DRF + Celery + JWT
