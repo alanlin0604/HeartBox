@@ -504,7 +504,9 @@ class AIEngine:
 
             score = float(sentiment_data.get('sentiment_score', 0))
             stress = int(sentiment_data.get('stress_index', 5))
-            result['sentiment_score'] = max(-1.0, min(1.0, score))
+            # Same 1-decimal rounding as the text-only path so vision-based
+            # notes display at the same precision as text-only ones.
+            result['sentiment_score'] = round(max(-0.9, min(0.9, score)), 1)
             result['stress_index'] = max(0, min(10, stress))
 
             # Feedback with image context
@@ -587,7 +589,12 @@ class AIEngine:
                 sentiment_data = self._analyze_sentiment_provider(text)
                 score = float(sentiment_data.get('sentiment_score', 0))
                 stress = int(sentiment_data.get('stress_index', 5))
-                result['sentiment_score'] = max(-1.0, min(1.0, score))
+                # Round to 1 decimal place. Two-decimal precision was over-
+                # promising — the underlying 7B model can't differentiate 0.65
+                # from 0.66, so showing 0.66 implies a precision we don't have.
+                # 1 decimal gives 19 meaningful buckets (-0.9 to 0.9), which
+                # is enough resolution for mood and reads cleanly in the UI.
+                result['sentiment_score'] = round(max(-0.9, min(0.9, score)), 1)
                 result['stress_index'] = max(0, min(10, stress))
                 provider_success = True
 
@@ -607,7 +614,10 @@ class AIEngine:
         if not provider_success:
             try:
                 local_data = self._analyze_sentiment_local(words)
-                result['sentiment_score'] = local_data['sentiment_score']
+                # Round Tier-2 lexicon output to 1 decimal too so all three
+                # tiers report at the same precision; the dashboard can't
+                # tell which tier produced a score and shouldn't have to.
+                result['sentiment_score'] = round(float(local_data['sentiment_score']), 1)
                 result['stress_index'] = local_data['stress_index']
                 local_feedback = self._generate_basic_feedback(local_data['sentiment_score'])
 
