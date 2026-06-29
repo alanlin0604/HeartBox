@@ -19,6 +19,46 @@ import { Card } from '../components/ui'
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from 'recharts'
 const LazyLineChart = lazy(() => import('../components/charts/LazyLineChart'))
 const LazyScatterChart = lazy(() => import('../components/charts/LazyScatterChart'))
+const BucketedMoodBar = lazy(() => import('../components/charts/BucketedMoodBar'))
+
+// Bucket definitions per X-axis metric. Boundaries chosen for human readability
+// (sleep ≥7h is the public-health benchmark; steps 8000+ is moderate activity;
+// HRV >50 indicates good recovery; etc). max=Infinity for the open-ended tail.
+const SLEEP_BUCKETS = [
+  { label: '<6h', min: 0, max: 6 },
+  { label: '6-7h', min: 6, max: 7 },
+  { label: '7-8h', min: 7, max: 8 },
+  { label: '≥8h', min: 8, max: Infinity },
+]
+const HEALTH_BUCKETS = {
+  steps: [
+    { label: '<5000', min: 0, max: 5000 },
+    { label: '5k-8k', min: 5000, max: 8000 },
+    { label: '8k-10k', min: 8000, max: 10000 },
+    { label: '≥10k', min: 10000, max: Infinity },
+  ],
+  heart_rate: [
+    { label: '<65', min: 0, max: 65 },
+    { label: '65-75', min: 65, max: 75 },
+    { label: '≥75', min: 75, max: Infinity },
+  ],
+  hrv: [
+    { label: '<35', min: 0, max: 35 },
+    { label: '35-50', min: 35, max: 50 },
+    { label: '≥50', min: 50, max: Infinity },
+  ],
+  active_calories: [
+    { label: '<200', min: 0, max: 200 },
+    { label: '200-400', min: 200, max: 400 },
+    { label: '≥400', min: 400, max: Infinity },
+  ],
+  exercise_minutes: [
+    { label: '0', min: 0, max: 1 },
+    { label: '1-30', min: 1, max: 30 },
+    { label: '30-60', min: 30, max: 60 },
+    { label: '≥60', min: 60, max: Infinity },
+  ],
+}
 const LazyBarChart = lazy(() => import('../components/charts/LazyBarChart'))
 const StressRadarChart = lazy(() => import('../components/StressRadarChart'))
 
@@ -471,31 +511,25 @@ export default function DashboardPage() {
           onAction={() => navigate('/settings', { state: { tab: 'health' } })}
         />
       )}
-      {/* Sleep-Mood Correlation */}
+      {/* Sleep-Mood Correlation — bucketed bars, not scatter. The raw scatter
+          + Pearson r + p-value layout was unreadable for non-statisticians
+          (user feedback: "看不懂"). Bucketed bars give a 5-second readable
+          answer: "睡 7h+ 時心情比 <6h 時高 X 分". Pearson is kept on the
+          card as small subtext for users who care about statistical detail. */}
       {sleepCorrelation.scatter_data?.length > 0 && (
         <div className="glass p-6">
-          <h2 className="text-lg font-semibold mb-2">{t('dashboard.sleepCorrelation')}</h2>
-          {sleepCorrelation.hours_correlation != null && (
-            <p className="text-sm opacity-60 mb-4">
-              {t('dashboard.pearson', {
-                r: sleepCorrelation.hours_correlation,
-                p: sleepCorrelation.hours_p_value,
-                n: sleepCorrelation.sample_size,
-              })}
-            </p>
-          )}
+          <h2 className="text-lg font-semibold mb-1">{t('dashboard.sleepCorrelation')}</h2>
+          <p className="text-xs opacity-50 mb-4">
+            {t('dashboard.bucketHint', { n: sleepCorrelation.sample_size })}
+          </p>
           <Suspense fallback={<ChartSkeleton />}>
-            <LazyScatterChart
-              data={sleepCorrelation.scatter_data}
-              xAxisKey="sleep_hours"
-              yAxisKey="sentiment"
-              height={250}
+            <BucketedMoodBar
+              scatterData={sleepCorrelation.scatter_data}
+              buckets={SLEEP_BUCKETS}
+              xKey="sleep_hours"
               gridStroke={gridStroke}
               axisStroke={axisStroke}
               tooltipStyle={tooltipStyle}
-              scatters={[
-                { name: t('dashboard.sleepHoursLabel'), fill: '#60a5fa', data: sleepCorrelation.scatter_data },
-              ]}
             />
           </Suspense>
         </div>
@@ -518,27 +552,18 @@ export default function DashboardPage() {
                 <h3 className="text-md font-semibold mb-2">
                   {t('dashboard.healthMoodCardTitle', { metric: label })}
                 </h3>
-                {corr.correlation != null && (
-                  <p className="text-sm opacity-60 mb-4">
-                    {t('dashboard.pearson', {
-                      r: corr.correlation,
-                      p: corr.p_value,
-                      n: corr.sample_size,
-                    })}
-                  </p>
-                )}
+                <p className="text-xs opacity-50 mb-4">
+                  {t('dashboard.bucketHint', { n: corr.sample_size || 0 })}
+                </p>
                 <Suspense fallback={<ChartSkeleton />}>
-                  <LazyScatterChart
-                    data={corr.scatter_data}
-                    xAxisKey="value"
-                    yAxisKey="sentiment"
-                    height={220}
+                  <BucketedMoodBar
+                    scatterData={corr.scatter_data}
+                    buckets={HEALTH_BUCKETS[metricType] || []}
+                    xKey="value"
+                    height={200}
                     gridStroke={gridStroke}
                     axisStroke={axisStroke}
                     tooltipStyle={tooltipStyle}
-                    scatters={[
-                      { name: label, fill: meta.color, data: corr.scatter_data },
-                    ]}
                   />
                 </Suspense>
               </div>
