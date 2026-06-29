@@ -44,7 +44,6 @@ ACCOUNTS = [
         'username': 'test',
         'password': 'test',
         'profile': 'balanced',
-        'display_name': '王雅婷',
         'note_count': 50,
         'baseline': 0.05,
         'sentiment_mix': [('pos', 30), ('neu', 40), ('neg', 30)],
@@ -58,7 +57,6 @@ ACCOUNTS = [
         'username': 'test1',
         'password': 'test1',
         'profile': 'volatile',
-        'display_name': '陳柏翰',
         'note_count': 60,
         'baseline': 0.0,
         'sentiment_mix': [('pos', 40), ('neu', 20), ('neg', 40)],
@@ -72,7 +70,6 @@ ACCOUNTS = [
         'username': 'test2',
         'password': 'test2',
         'profile': 'positive',
-        'display_name': '林思婷',
         'note_count': 50,
         'baseline': 0.35,
         'sentiment_mix': [('pos', 55), ('neu', 35), ('neg', 10)],
@@ -86,7 +83,6 @@ ACCOUNTS = [
         'username': 'test3',
         'password': 'test3',
         'profile': 'negative',
-        'display_name': '黃俊宏',
         'note_count': 50,
         'baseline': -0.3,
         'sentiment_mix': [('pos', 15), ('neu', 25), ('neg', 60)],
@@ -379,7 +375,7 @@ class Command(BaseCommand):
             username=username,
             defaults={
                 'email': f'{username}@demo.heartbox.tw',
-                'bio': f'{bio_marker}{profile} {spec["display_name"]}',
+                'bio': f'{bio_marker}{profile}',
                 'email_verified': True,
                 'onboarding_completed': True,
                 'timezone': 'Asia/Taipei',
@@ -390,7 +386,7 @@ class Command(BaseCommand):
         )
         # Always reset password to documented value + bump bio marker
         user.email = f'{username}@demo.heartbox.tw'
-        user.bio = f'{bio_marker}{profile} {spec["display_name"]}'
+        user.bio = f'{bio_marker}{profile}'
         user.email_verified = True
         user.onboarding_completed = True
         user.set_password(password)
@@ -404,7 +400,7 @@ class Command(BaseCommand):
             user = User.objects.create(
                 username=username,
                 email=f'{username}@demo.heartbox.tw',
-                bio=f'{bio_marker}{profile} {spec["display_name"]}',
+                bio=f'{bio_marker}{profile}',
                 email_verified=True,
                 onboarding_completed=True,
                 timezone='Asia/Taipei',
