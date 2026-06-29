@@ -247,13 +247,14 @@ def generate_paragraph_zh(
             system=(
                 '你是 HeartBox 心事盒 App 的暖心建議助理，扮演一位關心使用者的好朋友。\n'
                 '請根據使用者的長期心情習慣與今日天氣，寫一段「今日個人化建議」。\n\n'
-                '嚴格規則：\n'
+                '嚴格規則（違反會被拒絕）：\n'
                 '- 必須用繁體中文。\n'
-                '- 總長 60-120 個字，分成 2 到 3 句。\n'
-                '- 語氣溫暖、像朋友在說話，避免冷冰冰的告知句。\n'
+                '- 只寫一段，60-120 個字，2 到 3 句。\n'
+                '- 不要分多段、不要寫兩段相似的內容。\n'
+                '- 不要用「親愛的」「各位」「使用者」這種稱呼開頭，直接從建議本身開始。\n'
                 '- 不要寫「根據資料」「統計顯示」「分析結果」這類分析句。\n'
                 '- 不要列點、不要 emoji、不要前言或後綴。\n'
-                '- 直接從建議本身開始寫一段流暢的話。\n'
+                '- 語氣溫暖、像朋友在說話，避免冷冰冰的告知句。\n'
                 '- 如果今天有需要留意的情況，請自然地把它融入句子裡（不要照抄條列）。'
             ),
             user=(
@@ -261,19 +262,50 @@ def generate_paragraph_zh(
                 f'今天天氣：{weather_str}\n\n'
                 f'使用者長期心情習慣：\n{insights_str}\n\n'
                 f'今天需要關注的情況：\n{triggers_str}\n\n'
-                '請寫一段給使用者的暖心建議。'
+                '請寫一段給使用者的暖心建議（只一段，60-120 字）。'
             ),
             temperature=0.75,
-            max_tokens=220,
+            max_tokens=150,
             timeout=20,
         )
         text = (text or '').strip()
+        text = _strip_duplicate_paragraphs(text)
         # Length sanity. TAIDE occasionally returns the prompt back or a
         # one-word reply on degenerate inputs — drop both.
-        if len(text) < 20 or len(text) > 400:
+        if len(text) < 20 or len(text) > 250:
             logger.warning('personal_suggestion length_reject len=%d', len(text))
             return None
         return text
     except LLMProviderError as e:
         logger.warning('personal_suggestion llm_call failed: %s', e)
         return None
+
+
+def _strip_duplicate_paragraphs(text: str) -> str:
+    """TAIDE occasionally generates two near-identical paragraphs both
+    starting with '親愛的' or duplicate intros. Keep only the first one.
+
+    Strategies (in order):
+      1. If text has multiple paragraphs (split on blank line), keep the
+         first non-trivial one.
+      2. If the same intro word ('親愛的', '今天') appears more than once
+         in close proximity (≤200 chars apart), cut at the second occurrence.
+    """
+    if not text:
+        return text
+
+    # Strategy 1: split on blank lines
+    import re
+    parts = re.split(r'\n\s*\n', text)
+    parts = [p.strip() for p in parts if len(p.strip()) >= 20]
+    if len(parts) > 1:
+        return parts[0]
+
+    # Strategy 2: detect repeated greeting patterns
+    for pattern in (r'親愛的[好朋友者使用]', r'^今天在'):
+        matches = list(re.finditer(pattern, text, re.MULTILINE))
+        if len(matches) > 1:
+            # Cut just before the second occurrence
+            return text[:matches[1].start()].rstrip(' \n，。、；')
+
+    return text

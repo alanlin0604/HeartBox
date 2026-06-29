@@ -188,11 +188,22 @@ class MoodNote(models.Model):
 
     @property
     def content_preview(self) -> str:
-        """First 100 chars for list views (from pre-stored plaintext, no decryption)."""
-        full = self.search_text
-        if len(full) <= 100:
-            return full
-        return full[:100] + '...'
+        """First 100 chars of plaintext for list views.
+
+        Decrypts on access — Fernet decrypt is ~0.2ms per call, negligible
+        for typical 10-20 notes per list page. Used to rely on search_text
+        but that's now proportionally truncated (~30%, sometimes only 9
+        chars for short notes), which would make every list preview look
+        broken. The decoupling lets search_text stay minimal for privacy
+        while previews stay readable.
+        """
+        plain = self.content
+        if not plain:
+            return ''
+        text = strip_tags(plain)
+        if len(text) <= 100:
+            return text
+        return text[:100] + '...'
 
 
 class CounselorProfile(models.Model):
