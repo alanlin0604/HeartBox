@@ -1012,10 +1012,20 @@ class FriendRequestSerializer(serializers.ModelSerializer):
 
 
 class SharedWithFriendSerializer(serializers.ModelSerializer):
-    """Serializer for shared notes with friends."""
+    """Serializer for shared notes with friends.
+
+    Exposes BOTH sender (``shared_by_*``) AND recipient (``shared_with_*``)
+    fields so the same serializer drives both "Shared with me" (caller
+    cares about sender) and "Shared by me" (caller cares about recipient).
+    Extra fields are cheap and either view simply ignores the half it
+    doesn't display.
+    """
     shared_by_id = serializers.IntegerField(source='shared_by.id', read_only=True)
     shared_by_username = serializers.CharField(source='shared_by.username', read_only=True)
     shared_by_avatar = serializers.ImageField(source='shared_by.avatar', read_only=True)
+    shared_with_id = serializers.IntegerField(source='shared_with.id', read_only=True)
+    shared_with_username = serializers.CharField(source='shared_with.username', read_only=True)
+    shared_with_avatar = serializers.ImageField(source='shared_with.avatar', read_only=True)
     content_preview = serializers.SerializerMethodField()
     sentiment_score = serializers.FloatField(source='note.sentiment_score', read_only=True)
     created_at = serializers.DateTimeField(source='note.created_at', read_only=True)
@@ -1024,8 +1034,10 @@ class SharedWithFriendSerializer(serializers.ModelSerializer):
     class Meta:
         model = SharedWithFriend
         fields = [
-            'id', 'note', 'shared_by_id', 'shared_by_username', 'shared_by_avatar',
-            'shared_at', 'content_preview', 'sentiment_score', 'created_at', 'comment_count'
+            'id', 'note',
+            'shared_by_id', 'shared_by_username', 'shared_by_avatar',
+            'shared_with_id', 'shared_with_username', 'shared_with_avatar',
+            'shared_at', 'content_preview', 'sentiment_score', 'created_at', 'comment_count',
         ]
         read_only_fields = ['id', 'shared_at']
 

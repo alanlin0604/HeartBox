@@ -15,6 +15,7 @@ import { useToast } from '../context/ToastContext'
 import { Card, Button, Input } from '../components/ui'
 
 const RichTextEditor = lazy(() => import('../components/RichTextEditor'))
+const ShareNoteToFriends = lazy(() => import('../components/friends/ShareNoteToFriends'))
 
 import { LOCALE_MAP } from '../utils/locales'
 import { useAuth } from '../context/AuthContext'
@@ -59,6 +60,7 @@ export default function NoteDetailPage() {
   const [editTemp, setEditTemp] = useState('')
   const [editTags, setEditTags] = useState('')
   const [saving, setSaving] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const editorRef = useRef(null)
   const [editorContent, setEditorContent] = useState('')
 
@@ -233,6 +235,15 @@ export default function NoteDetailPage() {
             <Button onClick={handleStartEdit} variant="secondary" size="sm">
               {t('noteDetail.edit')}
             </Button>
+            <Button
+              onClick={() => setShareOpen(true)}
+              variant="secondary"
+              size="sm"
+              aria-label={t('friends.share.title')}
+              title={t('friends.share.title')}
+            >
+              {t('friends.share.shareButton')}
+            </Button>
             {/* Counselor share button hidden pre-launch — re-enable with /counselors. */}
             <Button onClick={() => setConfirmOpen(true)} disabled={deleting} variant="danger" size="sm">
               {deleting ? t('noteDetail.deleting') : t('noteDetail.delete')}
@@ -404,6 +415,15 @@ export default function NoteDetailPage() {
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}
       />
+      {shareOpen && (
+        <Suspense fallback={null}>
+          <ShareNoteToFriends
+            noteId={Number(id)}
+            onClose={() => setShareOpen(false)}
+            onShared={() => setShareOpen(false)}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

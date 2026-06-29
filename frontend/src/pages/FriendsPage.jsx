@@ -3,6 +3,7 @@ import { useLang } from '../context/LanguageContext'
 import PageTransition from '../components/PageTransition'
 import FriendsList from '../components/friends/FriendsList'
 import SharedWithMe from '../components/friends/SharedWithMe'
+import SharedByMe from '../components/friends/SharedByMe'
 import FriendsActivity from '../components/friends/FriendsActivity'
 import FriendsLeaderboard from '../components/friends/FriendsLeaderboard'
 
@@ -14,6 +15,7 @@ export default function FriendsPage() {
     { id: 'friends', label: t('friends.myFriends'), icon: UsersIcon },
     { id: 'leaderboard', label: t('friends.leaderboard'), icon: TrophyIcon },
     { id: 'shared', label: t('friends.share.sharedWithMe'), icon: ShareIcon },
+    { id: 'sharedByMe', label: t('friends.share.sharedByMe'), icon: SentIcon },
     { id: 'activity', label: t('friends.activity.title'), icon: ActivityIcon },
   ]
 
@@ -50,6 +52,7 @@ export default function FriendsPage() {
           {activeTab === 'friends' && <FriendsList />}
           {activeTab === 'leaderboard' && <FriendsLeaderboard />}
           {activeTab === 'shared' && <SharedWithMe />}
+          {activeTab === 'sharedByMe' && <SharedByMe />}
           {activeTab === 'activity' && <FriendsActivity />}
         </div>
       </div>
@@ -65,5 +68,8 @@ const tabIconImg = (src) => () => (
 )
 const UsersIcon = tabIconImg('/icons/my-friends.svg')
 const ShareIcon = tabIconImg('/icons/share.svg')
+// Reuse share.svg for the "sent by me" tab — it's the same conceptual
+// glyph (a fan-out) and we don't ship a separate sent-share icon yet.
+const SentIcon = tabIconImg('/icons/share.svg')
 const ActivityIcon = tabIconImg('/icons/activity.svg')
 const TrophyIcon = tabIconImg('/icons/ranking.svg')
