@@ -126,17 +126,22 @@ function DeltaPill({ delta, lowerIsBetter = false }) {
   if (Math.abs(delta) < 0.005) {
     return <span className="text-xs opacity-50">≈</span>
   }
-  // Arrow shows DIRECTION (up/down). Color shows IMPACT (good/bad).
-  // For stress (lowerIsBetter=true): up arrow = bad = red, down = good = green.
-  // For everything else: up = good = green, down = bad = red.
+  // Color convention follows Taiwan / 大中華 stock market style: RED = 進步
+  // (price up / improvement), GREEN = 退步 (price down / regression). The
+  // opposite of Western traffic-light convention. Arrow keeps showing the
+  // literal numeric direction (↑/↓) regardless.
+  //   sentiment 0.6 → 0.8  : delta +0.2, isImprovement=true  → 紅 (進步)
+  //   sentiment 0.8 → 0.5  : delta -0.3, isImprovement=false → 綠 (退步)
+  //   stress    7   → 5    : delta -2.0, isImprovement=true  → 紅 (進步)
+  //   stress    4   → 9    : delta +5.0, isImprovement=false → 綠 (退步)
   const direction = delta > 0 ? 'up' : 'down'
   const isImprovement = lowerIsBetter ? delta < 0 : delta > 0
   return (
     <span
       className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium ${
         isImprovement
-          ? 'bg-green-500/15 text-green-500'
-          : 'bg-red-500/15 text-red-400'
+          ? 'bg-red-500/15 text-red-500'
+          : 'bg-green-500/15 text-green-600 dark:text-green-400'
       }`}
     >
       {direction === 'up' ? '↑' : '↓'}

@@ -596,7 +596,7 @@
   "progress.metric.journalDays": "Journal days",
   "progress.metric.sleepHours": "Avg sleep hours",
   "progress.metric.habitCompletion": "Habit completion",
-  "progress.footer": "Green = improvement vs your first week. Red = regression. Higher stress is a regression (red); lower stress is improvement (green).",
+  "progress.footer": "Red = improvement vs your first week. Green = regression. (Taiwan / 大中華 convention — red is good, green is bad, mirroring stock-market colours.) Higher stress is a regression (green); lower stress is improvement (red).",
   "progress.notReadyTitle": "Check back in a few days",
   "progress.notReadyDesc": "We need at least 14 days of data to compare your first week with the last 7 days. Keep going!",
   "settings.exportData": "Export Data",

@@ -596,7 +596,7 @@
   "progress.metric.journalDays": "日記を書いた日数",
   "progress.metric.sleepHours": "平均睡眠時間",
   "progress.metric.habitCompletion": "習慣達成率",
-  "progress.footer": "緑＝最初の週より改善。赤＝退行。ストレスは上昇すると退行（赤）、低下すると改善（緑）です。",
+  "progress.footer": "赤＝最初の週より改善。緑＝退行。（台湾/大中華の慣例 — 株式チャートと同じく赤が好調、緑が下落）ストレスは上昇すると退行（緑）、低下すると改善（赤）。",
   "progress.notReadyTitle": "もう少し続けて成長を見てみましょう",
   "progress.notReadyDesc": "最初の週と最近7日の比較には少なくとも14日のデータが必要です。続けましょう！",
   "settings.exportData": "データエクスポート",
