@@ -112,9 +112,11 @@ export default function SharedNoteDetail({ shareId, onClose, onUpdate }) {
           </div>
         )}
 
-        {/* Note Content */}
+        {/* Note Content — used to be text-slate-200 which is nearly invisible
+            on the light theme. Switched to the theme's primary text variable
+            so it adapts in both light and dark modes. */}
         <div className="glass p-6 rounded-xl mb-6">
-          <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-200">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap text-[var(--text-primary)]">
             {shareData.decrypted_content || shareData.content_preview}
           </p>
         </div>

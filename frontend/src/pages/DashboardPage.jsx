@@ -227,17 +227,10 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
-              {data?.longest_streak > 0 && (
-                <div className="flex items-center gap-3 opacity-80">
-                  <img src="/icons/trophy.svg" alt="" aria-hidden="true" className="w-10 h-10 object-contain" />
-                  <div>
-                    <div className="text-sm text-[var(--text-tertiary)] mb-0.5">{t('dashboard.bestStreak')}</div>
-                    <div className="text-lg font-semibold text-[var(--text-primary)]">
-                      {data.longest_streak} {t(data.longest_streak === 1 ? 'dashboard.day' : 'dashboard.days')}
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* "最佳連續 X 天" card removed per user feedback — duplicates
+                  the current-streak info and clutters the dashboard. The
+                  longest_streak value is still returned by the API; just
+                  not rendered here. */}
             </div>
           </Card>
         )}
