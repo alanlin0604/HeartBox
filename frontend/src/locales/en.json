@@ -557,7 +557,7 @@
   "consent.subtitle": "Three quick steps, about 1 minute",
   "consent.step1Title": "How your data is used",
   "consent.s1WeCollect": "We collect: journal content, AI-analyzed sentiment / stress scores, (optional) health & sleep data",
-  "consent.s1WeStore": "Your data: stored AES-256 encrypted on our servers, only you can decrypt and read",
+  "consent.s1WeStore": "Your data: stored with Fernet symmetric encryption (AES-128-CBC + HMAC-SHA256) on our servers, encryption key kept separate from the database, only you can decrypt and read",
   "consent.s1WeNever": "We never: sell your data to advertisers or use it for marketing",
   "consent.s1Accept": "I have read and agree to the Terms of Service and Privacy Policy",
   "consent.step2Title": "AI Training Data Use",

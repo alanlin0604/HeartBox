@@ -557,7 +557,7 @@
   "consent.subtitle": "3ステップ、約1分",
   "consent.step1Title": "データの利用方法",
   "consent.s1WeCollect": "収集するもの：日記内容、AIが分析した感情・ストレススコア、（任意）健康・睡眠データ",
-  "consent.s1WeStore": "保存方法：AES-256で暗号化し、ご本人のみが復号できる形でサーバに保管",
+  "consent.s1WeStore": "保存方法：Fernet 対称暗号化（AES-128-CBC + HMAC-SHA256）でサーバに保管し、暗号鍵はデータベースから独立して管理。ご本人のみが復号できます",
   "consent.s1WeNever": "絶対にしないこと：広告主への販売、マーケティング目的での利用",
   "consent.s1Accept": "利用規約とプライバシーポリシーを読み、同意します",
   "consent.step2Title": "AIモデル学習データの利用",

@@ -561,7 +561,7 @@
   "consent.subtitle": "三個步驟，約 1 分鐘",
   "consent.step1Title": "資料如何被使用",
   "consent.s1WeCollect": "我們收集：日記內容、AI 分析的情緒/壓力分數、（選擇性）健康數據與睡眠記錄",
-  "consent.s1WeStore": "您的資料：以 AES-256 加密儲存於我們的伺服器，僅本人能解密閱讀",
+  "consent.s1WeStore": "您的資料：以 Fernet 對稱加密（AES-128-CBC + HMAC-SHA256）儲存於我們的伺服器，加密金鑰獨立於資料庫，僅本人能解密閱讀",
   "consent.s1WeNever": "我們絕不：販售您的資料給廣告商、用於行銷推播",
   "consent.s1Accept": "我已閱讀並同意《使用條款》與《隱私政策》",
   "consent.step2Title": "AI 模型訓練資料使用",
