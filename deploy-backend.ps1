@@ -12,10 +12,10 @@
 
 $ErrorActionPreference = "Stop"
 
-$Project = "heartbox-app"
+$Project = "heartbox-tw"
 $Region = "asia-east1"
 $Service = "heartbox-api"
-$Image = "asia-east1-docker.pkg.dev/$Project/cloud-run-source-deploy/$Service"
+$Image = "asia-east1-docker.pkg.dev/$Project/heartbox/$Service"
 $Tag = Get-Date -Format "yyyyMMdd-HHmmss"
 $FullTag = "${Image}:$Tag"
 

@@ -1,3 +1,65 @@
+# HeartBox 心事盒
+
+**An AI-powered encrypted mood-journaling platform** combining retrieval-grounded LLM
+feedback with machine-learning emotion forecasting.
+
+> ### 🔗 Live demo — [heartbox.tw](https://heartbox.tw)
+> **Sign in with `test1` / `test1` — no registration required.**
+> Two other seeded accounts show different emotional patterns:
+> `test2` (positive trend, progress tracking) and
+> `test3` (sustained low mood, triggers the support flow).
+
+---
+
+## English Summary
+
+Solo-developed capstone project. Two technical cores:
+
+### 1. RAG — grounding the AI so it cannot invent psychological advice
+
+BGE-M3 embeddings over a ChromaDB vector store built from seven clinical sources
+(WHO, APA, NHS, NIMH). Retrieval triggers when a journal entry's sentiment falls
+below −0.4, returns the top-3 relevant passages, and the model must cite them in
+its response — so advice is traceable to a source rather than hallucinated.
+
+### 2. Random Forest — forecasting emotion three days ahead
+
+53 engineered features (12 behavioural and physiological metrics × 4 lag windows,
+plus 5 calendar features) over 22,796 training rows, validated with 5-fold
+cross-validation:
+
+| Target | Metric | Result |
+|---|---|---|
+| Emotion score (−1 … +1) | MAE | **0.22** |
+| Stress index (0 … 10) | MAE | **1.04** |
+| High-stress-day classification | AUC | **0.948** |
+| High-stress-day classification | Recall | **88%** |
+
+Chosen over linear regression, a single decision tree, XGBoost and an LSTM: it
+trains on a few hundred rows per user, stays interpretable through feature
+importance, and runs inference in under 50 ms on CPU. Deliberately tuned for
+recall — a missed stress warning costs more than a false alarm.
+
+### Privacy and safety
+
+Journal contents are encrypted with Fernet (AES-128-CBC + HMAC-SHA256) using
+environment-injected keys. TAIDE-LX-7B and LLaVA run on a self-hosted GPU service
+behind a Cloudflare Tunnel, so journal text never leaves a controlled environment.
+Three-step separated consent modelled on GDPR Art. 7 and Taiwan's PDPA, with
+AI-training consent independently refusable and parental confirmation required for
+users aged 13–17. Crisis-keyword detection across journals, AI chat and the
+anonymous community surfaces national helplines immediately.
+
+### Stack
+
+Django REST Framework · Django Channels (WebSocket) · React · Vite · Tailwind ·
+PostgreSQL (Fernet-encrypted) · LangChain · ChromaDB · BGE-M3 · scikit-learn ·
+FastAPI · Capacitor (Android) · Google Cloud Run · Cloudflare
+
+*The detailed documentation below is in Traditional Chinese.*
+
+---
+
 # HeartBox - AI 心情筆記應用
 
 [![CI](https://github.com/alanlin0604/HeartBox/actions/workflows/ci.yml/badge.svg)](https://github.com/alanlin0604/HeartBox/actions)
