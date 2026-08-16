@@ -29,3 +29,9 @@ pydantic-settings==2.11.0
 # Lets TAIDE-LX-7B (which drifts into prose ~30% of the time on plain
 # "回傳 JSON" prompts) reliably output structured sentiment analysis.
 lm-format-enforcer==0.10.11
+# Simplified -> Traditional normalisation of every generated reply. General
+# Chinese models drift into Simplified mid-paragraph despite the 繁體中文
+# instruction in the prompts; engine._to_traditional() is the single choke
+# point. The "-reimplemented" package is pure Python — the original `opencc`
+# needs a C++ toolchain, which we don't want in this venv.
+opencc-python-reimplemented==0.1.7

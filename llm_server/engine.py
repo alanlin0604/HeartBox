@@ -35,6 +35,43 @@ from typing import Literal
 
 logger = logging.getLogger(__name__)
 
+
+# ----------------------------------------------------------------------
+# Simplified → Traditional normalisation
+# ----------------------------------------------------------------------
+# Every prompt in the Django backend demands 繁體中文, but general-purpose
+# Chinese models drift anyway — Qwen2.5-7B intermittently opens a reply in
+# Simplified and switches to Traditional mid-paragraph (observed 2026-08:
+# "听起来你现在非常疲惫和焦虑…" followed by "請記得，你的努力是有價值的").
+# HeartBox is a zh-Hant product for a Taiwanese audience, so normalise here,
+# at the only point every generated string passes through.
+#
+# s2twp (not s2t) so Taiwan vocabulary is applied too, e.g. 软件 → 軟體.
+# Pure-ASCII text is left alone, which keeps JSON keys from chat_json intact;
+# only the Chinese values are rewritten.
+try:
+    from opencc import OpenCC
+
+    _OPENCC = OpenCC('s2twp')
+except Exception:  # pragma: no cover - optional dependency
+    _OPENCC = None
+    logger.warning(
+        'opencc unavailable — replies will not be normalised to Traditional '
+        'Chinese. Install opencc-python-reimplemented.'
+    )
+
+
+def _to_traditional(text: str) -> str:
+    """Best-effort Simplified → Traditional. Never raises: a conversion
+    failure must not lose a reply the GPU already spent 60s producing."""
+    if not text or _OPENCC is None:
+        return text
+    try:
+        return _OPENCC.convert(text)
+    except Exception:
+        logger.exception('opencc conversion failed; returning raw reply')
+        return text
+
 ModelName = Literal['taide', 'llava']
 
 # How long we wait, after setting the stop event, for the HF worker thread
@@ -398,7 +435,7 @@ class InferenceEngine:
             )
             elapsed_ms = int((time.monotonic() - t0) * 1000)
             return {
-                'reply': reply,
+                'reply': _to_traditional(reply),
                 'tokens_in': tokens_in,
                 'tokens_out': tokens_out,
                 'latency_ms': elapsed_ms,
@@ -481,7 +518,7 @@ class InferenceEngine:
             )
             elapsed_ms = int((time.monotonic() - t0) * 1000)
             return {
-                'reply': reply,
+                'reply': _to_traditional(reply),
                 'tokens_in': tokens_in,
                 'tokens_out': tokens_out,
                 'latency_ms': elapsed_ms,

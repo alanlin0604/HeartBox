@@ -4,26 +4,36 @@
 > and unreachable, so this now runs on the RTX 4060 Laptop (8GB) alongside
 > development. Two things differ from the setup described below:
 >
-> * **Chat model is `Qwen/Qwen2.5-3B-Instruct`, not TAIDE.** TAIDE is a gated
+> * **Chat model is `Qwen/Qwen2.5-7B-Instruct`, not TAIDE.** TAIDE is a gated
 >   HuggingFace repo needing licence approval, which we didn't have time to
 >   wait for. `TAIDE_MODEL_ID` in `~/.heartbox-llm.env` selects it — the
 >   loader is generic (`AutoModelForCausalLM` + `apply_chat_template`), so
->   swapping back is a one-line change plus a download. Qwen honours the
->   繁體中文 instruction in the prompts; verified no Simplified output.
->   Measured: 4963/8188 MiB VRAM, ~3s for a suggestion, ~7s for note feedback.
+>   swapping back is a one-line change plus a download.
+> * **Replies are normalised to Traditional Chinese in `engine._to_traditional()`.**
+>   Qwen honours the 繁體中文 instruction most of the time but drifts — it opened
+>   one note reply with "听起来你现在非常疲惫和焦虑…" before switching to
+>   Traditional mid-paragraph. OpenCC `s2twp` runs on every generated string, so
+>   Taiwan vocabulary (軟體, 網路, 資料庫) comes out right too.
 > * **LLaVA was never downloaded**, so `/v1/vision` will fail. Image-attachment
 >   analysis is the only feature that needs it.
 >
-> **Do not switch to a 7B on this machine.** `Qwen2.5-7B-Instruct` was tried and
-> reverted: it loads (7314/8188 MiB) and is fine when freshly loaded (~7s), but
-> other desktop apps hold ~2.2GB of VRAM, leaving too little headroom. Under
-> real load the same generation degraded to **75s** — 10× slower — so every
-> ai_engine call blew its timeout and the pipeline silently dropped to its
-> third-tier keyword fallback. That tier is worse than useless for a demo: a
-> clearly negative journal entry came back as sentiment **+0.5** with "你今天的
-> 心情看起來很不錯！". 3B leaves ~4GB spare and produces correct sentiment
-> (−0.8, stress 8) in ~65-105s end-to-end. Headroom matters more than parameters
-> here.
+> **Keep games and other GPU-heavy apps closed while this runs.** 7B fits in
+> 8GB with the desktop idle (~1.6GB baseline → 7095/8188 MiB loaded, ~7s per
+> generation, stable across runs). With a game open the baseline climbs and
+> `device_map='auto'` offloads layers to CPU: the same generation measured
+> **75s instead of 7s**, every ai_engine call blew its timeout, and the pipeline
+> silently dropped to its third-tier keyword fallback — which scored a plainly
+> negative journal entry as sentiment **+0.5** with "你今天的心情看起來很不錯！".
+> The failure is silent and the output is confidently wrong, so if AI feedback
+> ever looks off, check VRAM first. 3B is the fallback if headroom is a problem:
+> ~3.7GB, correct sentiment, but noticeably shallower prose.
+>
+> **Latency note.** Note analysis takes **260-320s end-to-end** on 7B (3B: ~105s).
+> The bottleneck is the JSON-constrained sentiment step — lm-format-enforcer
+> filters logits across Qwen's ~152k vocabulary at every token, costing 60-68s
+> for 60 tokens. Free-form generation is only ~7s. Demoing "write a note and
+> watch the AI analyse it" needs that wait planned for; the frontend updates
+> in place over WebSocket, so you can talk through other features meanwhile.
 >
 > Start everything with [`start-all.ps1`](start-all.ps1). Anything that
 > generates *new* AI text needs this running; existing notes read their stored
