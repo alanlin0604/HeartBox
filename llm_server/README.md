@@ -1,5 +1,23 @@
 # HeartBox LLM Server
 
+> **Current deployment (2026-08-16).** The original RTX 3060 Ti box is offline
+> and unreachable, so this now runs on the RTX 4060 Laptop (8GB) alongside
+> development. Two things differ from the setup described below:
+>
+> * **Chat model is `Qwen/Qwen2.5-3B-Instruct`, not TAIDE.** TAIDE is a gated
+>   HuggingFace repo needing licence approval, which we didn't have time to
+>   wait for. `TAIDE_MODEL_ID` in `~/.heartbox-llm.env` selects it — the
+>   loader is generic (`AutoModelForCausalLM` + `apply_chat_template`), so
+>   swapping back is a one-line change plus a download. Qwen honours the
+>   繁體中文 instruction in the prompts; verified no Simplified output.
+>   Measured: 4963/8188 MiB VRAM, ~3s for a suggestion, ~7s for note feedback.
+> * **LLaVA was never downloaded**, so `/v1/vision` will fail. Image-attachment
+>   analysis is the only feature that needs it.
+>
+> Start everything with [`start-all.ps1`](start-all.ps1). Anything that
+> generates *new* AI text needs this running; existing notes read their stored
+> feedback from Postgres and are unaffected.
+
 Single-process FastAPI inference server. Hosts **TAIDE-LX-7B-Chat** (繁中
 chat) and **LLaVA-1.6-Mistral-7B** (vision) on one consumer GPU (RTX 3060 Ti
 8GB) via bitsandbytes 4-bit NF4 quantisation. Talks OpenAI-compatible JSON to

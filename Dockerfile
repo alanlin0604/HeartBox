@@ -35,6 +35,22 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
+# Bake the bge-m3 weights into the image.
+#
+# api/apps.py pre-warms the RAG retriever on a daemon thread at startup, and
+# sentence-transformers otherwise pulls ~2.3GB from HuggingFace on every cold
+# start. Cloud Run's filesystem is ephemeral, so that download repeats for
+# every new instance — and because CPU is throttled between requests, it
+# crawls, starving the note-analysis worker thread that runs after the POST
+# response is sent (observed 2026-08: AI feedback never appeared for new
+# notes). Shipping the weights makes pre-warm a local disk read.
+#
+# Costs ~2.3GB of image size; the Artifact Registry cleanup policy keeps only
+# the 2 most recent versions, so storage stays negligible.
+ENV HF_HOME=/app/.cache/huggingface
+RUN python -c "from huggingface_hub import snapshot_download; \
+    snapshot_download('BAAI/bge-m3', ignore_patterns=['*.pth', 'onnx/*', '*.onnx', 'imgs/*'])"
+
 # Copy backend code only
 COPY backend/ ./backend/
 
@@ -47,6 +63,28 @@ WORKDIR /app/backend
 RUN DJANGO_SECRET_KEY=build-placeholder \
     ENCRYPTION_KEY=KqdLq5t8ZpDwfyPJ92o6_71UmlWVG8VmPVQgz7OosDo= \
     python manage.py collectstatic --noinput
+
+# Build the ChromaDB RAG index at image-build time.
+#
+# _get_retriever() auto-bootstraps an empty collection by embedding
+# knowledge_base/ with bge-m3, and its docstring assumes min_instances=1 keeps
+# that work alive for the revision's lifetime. We run min_instances=0 to keep
+# the demo free, so every cold instance re-embedded the same 104 chunks on CPU
+# — and the apps.ready() pre-warm thread and the note-analysis worker thread
+# raced to do it simultaneously, thrashing both vCPUs so neither finished
+# (observed 2026-08: `Embedding 104 chunks with BGE-M3 (device=cpu)` twice in
+# the same second, AI feedback never written).
+#
+# Doing it here costs build time once instead of on every cold start. Keep
+# HF_HUB_OFFLINE=1 set at runtime so sentence-transformers reads the baked
+# weights instead of re-validating them against huggingface.co.
+RUN DJANGO_SECRET_KEY=build-placeholder \
+    ENCRYPTION_KEY=KqdLq5t8ZpDwfyPJ92o6_71UmlWVG8VmPVQgz7OosDo= \
+    python manage.py load_knowledge_base
+
+# Weights and the Chroma index are baked, so never revalidate against the Hub.
+ENV HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1
 
 # Fix ownership
 RUN chown -R appuser:appuser /app
