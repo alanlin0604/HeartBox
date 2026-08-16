@@ -1,4 +1,4 @@
-# Start the whole local AI stack: inference server + Cloudflare tunnel.
+﻿# Start the whole local AI stack: inference server + Cloudflare tunnel.
 #
 # The Cloud Run backend (project heartbox-tw) calls https://llm.heartbox.tw for
 # every AI feature that generates new text — note analysis, daily personalised

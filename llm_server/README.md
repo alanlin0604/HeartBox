@@ -14,6 +14,17 @@
 > * **LLaVA was never downloaded**, so `/v1/vision` will fail. Image-attachment
 >   analysis is the only feature that needs it.
 >
+> **Do not switch to a 7B on this machine.** `Qwen2.5-7B-Instruct` was tried and
+> reverted: it loads (7314/8188 MiB) and is fine when freshly loaded (~7s), but
+> other desktop apps hold ~2.2GB of VRAM, leaving too little headroom. Under
+> real load the same generation degraded to **75s** — 10× slower — so every
+> ai_engine call blew its timeout and the pipeline silently dropped to its
+> third-tier keyword fallback. That tier is worse than useless for a demo: a
+> clearly negative journal entry came back as sentiment **+0.5** with "你今天的
+> 心情看起來很不錯！". 3B leaves ~4GB spare and produces correct sentiment
+> (−0.8, stress 8) in ~65-105s end-to-end. Headroom matters more than parameters
+> here.
+>
 > Start everything with [`start-all.ps1`](start-all.ps1). Anything that
 > generates *new* AI text needs this running; existing notes read their stored
 > feedback from Postgres and are unaffected.
