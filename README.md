@@ -8,6 +8,12 @@ feedback with machine-learning emotion forecasting.
 > Two other seeded accounts show different emotional patterns:
 > `test2` (positive trend, progress tracking) and
 > `test3` (sustained low mood, triggers the support flow).
+>
+> **English-speaking reviewers:** use `test1_en` / `test1_en` instead
+> (plus `test2_en` and `test3_en`). Same three emotional profiles, but the
+> journals, tags, AI feedback and community posts are all written in
+> English — switching the UI language alone leaves the seeded content in
+> Traditional Chinese.
 
 ---
 

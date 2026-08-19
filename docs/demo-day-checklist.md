@@ -30,7 +30,9 @@
 
 ---
 
-## 4 個示範帳號
+## 示範帳號
+
+### 中文（4 個）
 
 | 帳號 | 密碼 | 屬性 | 拿來示範什麼 |
 |---|---|---|---|
@@ -38,6 +40,22 @@
 | `test1` | `test1` | volatile | 起伏大，月份/週末規律明顯 |
 | `test2` | `test2` | positive | 正向用戶，趨勢往上 |
 | `test3` | `test3` | negative+RAG | 負面內容，焦慮/倦怠主題，可示範 AI 暖心回饋 |
+
+### 英文（3 個，給國外評審 / 訪客）
+
+| 帳號 | 密碼 | 屬性 | 對應中文帳號 |
+|---|---|---|---|
+| `test1_en` | `test1_en` | volatile | `test1` |
+| `test2_en` | `test2_en` | positive | `test2` |
+| `test3_en` | `test3_en` | negative | `test3` |
+
+日記、標籤、AI 回饋、習慣名稱、社群貼文**全部都是英文**，時區設為
+`America/Los_Angeles`。單純把 UI 切成英文並不會翻譯這些已寫入 DB 的內容，
+所以給國外的人看時請直接用 `_en` 帳號。
+
+> 注意：`_en` 帳號的 `ai_feedback` 是預先寫好的英文文案，不是跑 TAIDE 產生的
+> —— 線上 pipeline 會用 OpenCC 把每則回覆正規化成繁體中文（commit db1e39c），
+> 餵英文日記進去還是會吐中文。要示範「即時 AI 分析」請用中文帳號。
 
 **alan** 是你自己的真實帳號（不要在 demo 前寫新日記，免得 streak 跳掉）。
 
@@ -180,8 +198,16 @@
 ```bash
 cd backend
 python manage.py seed_demo_test_accounts --reset    # 刪 test/test1/test2/test3
+python manage.py seed_demo_test_accounts_en --reset # 刪 test1_en/test2_en/test3_en
 python manage.py seed_demo_population --reset       # 刪 260 個 seed users
 python manage.py seed_demo_feedback --reset         # 刪 45 個 feedback
+```
+
+重新灌英文帳號（不需要 GPU，幾秒鐘就好，demo 中途跑也安全）：
+```bash
+cd backend
+python manage.py seed_demo_test_accounts_en
+python manage.py seed_demo_health_data --accounts test1_en test2_en test3_en
 ```
 
 ---
