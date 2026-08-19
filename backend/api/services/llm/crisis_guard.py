@@ -361,3 +361,15 @@ class CrisisGuard:
         if c > 0:
             return 'zh-TW'
         return 'zh-TW'
+
+
+def guess_locale(text: str) -> Locale:
+    """Public wrapper around CrisisGuard's script-dominance locale guess.
+
+    Exposed because ai_engine needs the same answer for a different reason:
+    CrisisGuard uses it to pick a hotline, ai_engine uses it to pick which
+    language to prompt the model in. Duplicating the heuristic would let the
+    two drift, and a note that routes to the US 988 hotline while getting
+    Traditional-Chinese feedback is exactly the mismatch worth avoiding.
+    """
+    return CrisisGuard._guess_locale(text)

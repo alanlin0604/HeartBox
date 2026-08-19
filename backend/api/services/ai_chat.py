@@ -85,10 +85,17 @@ def _locale_for_crisis(lang: str) -> str:
 
 
 def analyze_user_message(text):
-    """Quick local sentiment analysis (no provider call)."""
+    """Quick local sentiment analysis (no provider call).
+
+    Locale-aware: the lexicons are per-language, and running an English
+    message through the Chinese word sets matches nothing and returns a
+    silent 0.0 — indistinguishable in the UI from a genuinely neutral message.
+    """
     from api.services.ai_engine import AIEngine
-    words = AIEngine._segment_text(text)
-    return AIEngine._analyze_sentiment_local(words)
+    from api.services.llm.crisis_guard import guess_locale
+    locale = guess_locale(text)
+    words = AIEngine._segment_text(text, locale)
+    return AIEngine._analyze_sentiment_local(words, locale)
 
 
 def generate_ai_response(session_messages, lang='zh-TW'):
