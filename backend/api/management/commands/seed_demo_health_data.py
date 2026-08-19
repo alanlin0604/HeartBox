@@ -1,17 +1,27 @@
-"""Re-seed sleep + health-metric data for the 4 demo test accounts.
+"""Re-seed sleep + health-metric data for the demo test accounts.
 
-Background: ``seed_demo_test_accounts --reset`` deletes and recreates the
-``test`` / ``test1`` / ``test2`` / ``test3`` Users entirely. Because every
-related model is ``on_delete=CASCADE``, that wipes the per-account sleep
-records and health metrics that were seeded inline (one-off Django shell)
-in commits b9cac3a + 4151365. Running this command after a ``--reset`` puts
-them back, idempotently.
+Covers both language tracks:
+  zh-TW  ``test`` / ``test1`` / ``test2`` / ``test3``
+  en     ``test1_en`` / ``test2_en`` / ``test3_en``
+
+Background: ``seed_demo_test_accounts --reset`` (and its ``_en`` sibling)
+deletes and recreates those Users entirely. Because every related model is
+``on_delete=CASCADE``, that wipes the per-account sleep records and health
+metrics that were seeded inline (one-off Django shell) in commits b9cac3a
++ 4151365. Running this command after a ``--reset`` puts them back,
+idempotently.
+
+Bedtimes are staged in each account's own ``user.timezone``, so the
+America/Los_Angeles ``_en`` accounts read correctly for an overseas
+reviewer instead of showing a 7am bedtime.
 
     python manage.py seed_demo_health_data
     python manage.py seed_demo_health_data --days 60
+    python manage.py seed_demo_health_data --accounts test1_en test2_en test3_en
 """
 
 from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import random
 
 from django.core.management.base import BaseCommand
@@ -32,6 +42,15 @@ HABIT_DEFS = {
               'category': '學習', 'completion_rate': 0.82},
     'test3': {'name': '4-7-8 呼吸法練習', 'icon': '🌬️', 'color': '#f59e0b',
               'category': '正念',  'completion_rate': 0.42},
+    # English demo accounts (seed_demo_test_accounts_en) — same profiles as
+    # their zh-TW counterparts, habit names in English so an overseas
+    # reviewer never sees a half-translated screen.
+    'test1_en': {'name': 'No phone before bed', 'icon': '📵', 'color': '#3b82f6',
+                 'category': 'Sleep', 'completion_rate': 0.55},
+    'test2_en': {'name': 'Read for 30 minutes', 'icon': '📚', 'color': '#8b5cf6',
+                 'category': 'Learning', 'completion_rate': 0.82},
+    'test3_en': {'name': '4-7-8 breathing practice', 'icon': '🌬️', 'color': '#f59e0b',
+                 'category': 'Mindfulness',  'completion_rate': 0.42},
 }
 
 # One anonymous community post per account — matches the b9cac3a inline
@@ -57,6 +76,24 @@ COMMUNITY_POSTS = {
               '看了三個月前的日記，那時候還能一夜好眠。不知道從什麼時候開始變成這樣的，'
               '白天累到不行，晚上躺下又精神到天亮。',
               -0.6, 'anxiety'),
+    'test1_en': ('We had a fight',
+                 "Argued with my partner of two years and shut myself in the bedroom. "
+                 "I know it was a small thing, but too much unsaid resentment piled up, "
+                 "and when it finally blew I remembered every detail. Once I calmed down "
+                 "I started wondering whether I'm just too sensitive.",
+                 -0.5, 'stress'),
+    'test2_en': ('First step into a book club',
+                 "Finally went to the book club a coworker invited me to. I was nervous "
+                 "enough to almost cancel, but everyone turned out to be warm about it - "
+                 "nobody even minded that my hands shook while I was talking. "
+                 "Felt like pushing myself forward a little. Worth it.",
+                 0.6, 'happiness'),
+    'test3_en': ('Almost two months of insomnia',
+                 "Another day of lying awake at three in the morning. "
+                 "I read a journal entry from three months ago, back when I could still "
+                 "sleep through the night. I don't know when it turned into this - "
+                 "wrecked all day, wide awake the moment I lie down.",
+                 -0.6, 'anxiety'),
 }
 
 # Profiles per the original seed commit messages — kept here as the
@@ -89,6 +126,26 @@ PROFILES = {
         'steps': 3600, 'heart_rate': 78, 'hrv': 33, 'exercise_min': 12, 'calories': 180,
         'gap_rate': 0.10,
     },
+    # English demo accounts — numbers copied verbatim from their zh-TW
+    # counterparts so both language tracks show identical charts.
+    'test1_en': {
+        'sleep_mean': 6.8, 'sleep_std': 1.1, 'quality_mean': 3.2, 'quality_std': 0.8,
+        'bedtime_hour': 24, 'bedtime_jitter': 90,
+        'steps': 6200, 'heart_rate': 74, 'hrv': 38, 'exercise_min': 20, 'calories': 220,
+        'gap_rate': 0.12,
+    },
+    'test2_en': {
+        'sleep_mean': 7.8, 'sleep_std': 0.4, 'quality_mean': 4.3, 'quality_std': 0.4,
+        'bedtime_hour': 22, 'bedtime_jitter': 30,
+        'steps': 9000, 'heart_rate': 64, 'hrv': 55, 'exercise_min': 40, 'calories': 340,
+        'gap_rate': 0.08,
+    },
+    'test3_en': {
+        'sleep_mean': 5.6, 'sleep_std': 1.3, 'quality_mean': 2.3, 'quality_std': 0.7,
+        'bedtime_hour': 25, 'bedtime_jitter': 120,  # 25 = 01:00 next day
+        'steps': 3600, 'heart_rate': 78, 'hrv': 33, 'exercise_min': 12, 'calories': 180,
+        'gap_rate': 0.10,
+    },
 }
 
 METRIC_TYPES_FROM_PROFILE = {
@@ -106,13 +163,13 @@ def _gauss_clamp(rng, mean, std, lo, hi):
 
 
 class Command(BaseCommand):
-    help = 'Re-seed sleep + health-metric data for test/test1/test2/test3.'
+    help = 'Re-seed sleep + health-metric data for the zh-TW and _en demo accounts.'
 
     def add_arguments(self, parser):
         parser.add_argument('--days', type=int, default=60,
                             help='Backfill window (default 60).')
         parser.add_argument('--accounts', nargs='+', default=list(PROFILES.keys()),
-                            help='Subset of usernames to seed (default: all 4).')
+                            help='Subset of usernames to seed (default: every account in PROFILES).')
         parser.add_argument('--seed', type=int, default=20260629,
                             help='Random seed for reproducibility.')
         parser.add_argument('--dry-run', action='store_true',
@@ -141,6 +198,11 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'skip — user does not exist: {username}'))
                 continue
 
+            try:
+                account_tz = ZoneInfo(user.timezone)
+            except (ZoneInfoNotFoundError, ValueError):
+                account_tz = timezone.get_current_timezone()
+
             sleep_rows = []
             metric_rows = []
 
@@ -166,7 +228,11 @@ class Command(BaseCommand):
                 bedtime_anchor = datetime.combine(d - timedelta(days=1), time(0)) + timedelta(
                     hours=bed_h, minutes=jitter_min,
                 )
-                bedtime = timezone.make_aware(bedtime_anchor, timezone.get_current_timezone())
+                # Anchor to the account's own timezone, not the server's:
+                # the _en accounts are stored as America/Los_Angeles, and a
+                # bedtime staged in Asia/Taipei renders as ~7am once the
+                # browser converts it for an overseas reviewer.
+                bedtime = bedtime_anchor.replace(tzinfo=account_tz)
                 wake_time = bedtime + timedelta(hours=hours)
 
                 # Rough sleep-stage split — only used by the sleep insights page.
@@ -291,7 +357,13 @@ class Command(BaseCommand):
                 _title, content, sentiment, category = post_def
                 # Stagger created_at across the past 7 days so the feed
                 # doesn't show all 4 posts stamped at the same second.
-                stagger_days = (3 - list(PROFILES.keys()).index(username)) + 1
+                # Older accounts post further back. Counting from the end of
+                # PROFILES keeps every offset >= 1 no matter how many
+                # accounts the table grows to — the previous `3 - index`
+                # form went negative (i.e. posted in the future) as soon as
+                # the English accounts were added.
+                names = list(PROFILES.keys())
+                stagger_days = len(names) - names.index(username)
                 PublicPost.objects.create(
                     user=user,
                     content=content,
