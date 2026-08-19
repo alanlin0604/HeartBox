@@ -14,6 +14,20 @@ class CustomUser(AbstractUser):
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     token_version = models.PositiveIntegerField(default=0)
     timezone = models.CharField(max_length=50, default='Asia/Taipei')
+    # UI language. Previously the frontend kept this in localStorage only,
+    # which is per-browser rather than per-account: signing into an English
+    # demo account on a machine that had ever used the app showed a Chinese
+    # UI, and because the frontend sends `Accept-Language` from that same
+    # value, the AI-generated daily writing prompt came back in Chinese too.
+    LANGUAGE_CHOICES = (
+        ('zh-TW', '繁體中文'),
+        ('en', 'English'),
+        ('ja', '日本語'),
+    )
+    language = models.CharField(
+        max_length=10, choices=LANGUAGE_CHOICES, default='zh-TW',
+        help_text='Preferred UI language; the frontend adopts this on login.',
+    )
     onboarding_completed = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
     # Account-lockout state. failed_login_count is bumped on each

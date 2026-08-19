@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useMemo, useCallback } 
 import { login as apiLogin, register as apiRegister, getProfile } from '../api/auth';
 import { clearAll as clearCache } from '../api/cache';
 import { clearAuthTokens, getAccessToken, getRefreshToken, setAuthTokens } from '../utils/tokenStorage';
+import { useLang } from './LanguageContext';
 
 const AuthContext = createContext(null);
 
@@ -24,6 +25,10 @@ function setCachedUser(data) {
 }
 
 export function AuthProvider({ children }) {
+  // LanguageProvider wraps AuthProvider in main.jsx. Tolerate its absence
+  // anyway: a test or a future entry point that mounts AuthProvider alone
+  // should lose the language sync, not crash on a null context.
+  const adoptLang = useLang()?.adoptLang;
   const cached = getCachedUser();
   const token = getAccessToken();
   const [user, setUser] = useState(token ? cached : null);
@@ -35,6 +40,7 @@ export function AuthProvider({ children }) {
         .then((res) => {
           setUser(res.data);
           setCachedUser(res.data);
+          adoptLang?.(res.data?.language);
         })
         .catch(() => {
           clearAuthTokens();
@@ -46,7 +52,11 @@ export function AuthProvider({ children }) {
       setCachedUser(null);
       setLoading(false);
     }
-  }, []);
+    // Mount-only by design: this is the one-shot "restore session on app load"
+    // fetch. adoptLang is a stable useCallback, so listing it changes nothing.
+    // `token` stays out deliberately — re-running on token change would refetch
+    // the profile on every silent refresh.
+  }, [adoptLang]);
 
   const login = useCallback(async (username, password, rememberMe = true) => {
     const { data } = await apiLogin(username, password);
@@ -62,13 +72,15 @@ export function AuthProvider({ children }) {
     if (data.user) {
       setUser(data.user);
       setCachedUser(data.user);
+      adoptLang?.(data.user?.language);
     } else {
       const profile = await getProfile();
       setUser(profile.data);
       setCachedUser(profile.data);
+      adoptLang?.(profile.data?.language);
     }
     return data;
-  }, []);
+  }, [adoptLang]);
 
   const registerUser = useCallback(async (username, email, password, consent = {}) => {
     await apiRegister(username, email, password, consent);
@@ -102,8 +114,9 @@ export function AuthProvider({ children }) {
       const res = await getProfile();
       setUser(res.data);
       setCachedUser(res.data);
+      adoptLang?.(res.data?.language);
     } catch { /* ignore */ }
-  }, []);
+  }, [adoptLang]);
 
   const value = useMemo(() => ({ user, loading, login, register: registerUser, logout, refreshUser }), [user, loading, login, registerUser, logout, refreshUser]);
 

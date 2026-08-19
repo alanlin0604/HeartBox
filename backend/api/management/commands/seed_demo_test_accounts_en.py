@@ -69,6 +69,12 @@ WINDOW_START = datetime(2026, 3, 1)
 # These accounts exist for overseas reviewers, so everything (stored tz,
 # generated timestamps, weather/temperature climate) is US West Coast.
 ACCOUNT_TIMEZONE = 'America/Los_Angeles'
+# Persisted on the user so the frontend switches to English on login. Without
+# it the UI language lives only in the browser's localStorage, so signing into
+# an English account on a machine that had used the app showed a Chinese UI —
+# and since Accept-Language is sent from that same value, the AI daily writing
+# prompt came back in Chinese too.
+ACCOUNT_LANGUAGE = 'en'
 TZ = ZoneInfo(ACCOUNT_TIMEZONE)
 
 ACCOUNTS = [
@@ -436,6 +442,7 @@ class Command(BaseCommand):
                 'email_verified': True,
                 'onboarding_completed': True,
                 'timezone': ACCOUNT_TIMEZONE,
+                'language': ACCOUNT_LANGUAGE,
                 'age_band': '18_plus',
                 'age_confirmed_13_plus': True,
                 'terms_accepted_at': window_start,
@@ -447,6 +454,7 @@ class Command(BaseCommand):
         user.email_verified = True
         user.onboarding_completed = True
         user.timezone = ACCOUNT_TIMEZONE
+        user.language = ACCOUNT_LANGUAGE
         user.set_password(password)
         user.save()
 
@@ -461,6 +469,7 @@ class Command(BaseCommand):
                 email_verified=True,
                 onboarding_completed=True,
                 timezone=ACCOUNT_TIMEZONE,
+                language=ACCOUNT_LANGUAGE,
                 age_band='18_plus',
                 age_confirmed_13_plus=True,
                 terms_accepted_at=window_start,

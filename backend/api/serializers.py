@@ -95,7 +95,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'id', 'username', 'email', 'bio', 'avatar', 'is_counselor', 'is_staff',
-            'timezone', 'onboarding_completed', 'email_verified',
+            'timezone', 'language', 'onboarding_completed', 'email_verified',
             'deletion_scheduled_at', 'created_at', 'updated_at',
             'requires_consent', 'is_minor_pending_guardian',
         )
